@@ -18,6 +18,11 @@ import { runScannerProcess } from '../security/process.ts';
 import { scannerCompatibility } from './external.ts';
 import { writeSnapshotStage } from './staging.ts';
 import { redact } from '../security/redact.ts';
+import {
+  declarativeKnipConfiguration,
+  declarativeWorkspacePatterns,
+  sanitizedManifest,
+} from './declarative-config.ts';
 
 const sourceExtension = /\.[cm]?[jt]sx?$/i;
 const maximumHotspots = 200;
@@ -276,38 +281,6 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
   };
 }
 
-function rootManifest(snapshot: Snapshot): Record<string, unknown> {
-  const file = snapshot.files.find((item) => item.path === 'package.json');
-  if (!file) return { name: 'traceward-staged-project', private: true };
-  try {
-    const manifest = record(JSON.parse(file.content));
-    const dependencySections = Object.fromEntries(
-      ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies'].flatMap(
-        (key) => {
-          const section = record(manifest[key]);
-          const safe = Object.fromEntries(
-            Object.entries(section).filter(
-              (entry): entry is [string, string] => typeof entry[1] === 'string',
-            ),
-          );
-          return Object.keys(safe).length ? [[key, safe]] : [];
-        },
-      ),
-    );
-    return {
-      name:
-        typeof manifest.name === 'string'
-          ? manifest.name.slice(0, 214)
-          : 'traceward-staged-project',
-      private: true,
-      ...(manifest.type === 'module' ? { type: 'module' } : {}),
-      ...dependencySections,
-    };
-  } catch {
-    return { name: 'traceward-staged-project', private: true };
-  }
-}
-
 function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
   const entries = new Set(profile?.entrypoints.map((entrypoint) => entrypoint.file) ?? []);
   for (const file of snapshot.files.filter(supportedSource))
@@ -319,6 +292,90 @@ function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
     )
       entries.add(file.path);
   return [...entries].sort();
+}
+
+function packageDirectories(snapshot: Snapshot): string[] {
+  return snapshot.files
+    .filter((file) => isRuntimeSource(file) && file.path.split('/').at(-1) === 'package.json')
+    .map((file) => path.posix.dirname(file.path))
+    .filter((directory) => directory !== '.')
+    .sort((left, right) => right.length - left.length || left.localeCompare(right));
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function generatedKnipConfig(
+  snapshot: Snapshot,
+  profile: ProjectProfile | undefined,
+  imported: Record<string, unknown>,
+): Record<string, unknown> {
+  const entries = knipEntries(snapshot, profile);
+  const directories = packageDirectories(snapshot);
+  const rootEntries = entries.filter(
+    (entry) => !directories.some((directory) => entry.startsWith(`${directory}/`)),
+  );
+  const configuredWorkspaces =
+    imported.workspaces &&
+    typeof imported.workspaces === 'object' &&
+    !Array.isArray(imported.workspaces)
+      ? (imported.workspaces as Record<string, unknown>)
+      : {};
+  const workspaces: Record<string, unknown> = { ...configuredWorkspaces };
+  for (const directory of directories) {
+    const configured =
+      workspaces[directory] &&
+      typeof workspaces[directory] === 'object' &&
+      !Array.isArray(workspaces[directory])
+        ? (workspaces[directory] as Record<string, unknown>)
+        : {};
+    const generatedEntries = entries
+      .filter((entry) => entry.startsWith(`${directory}/`))
+      .map((entry) => entry.slice(directory.length + 1));
+    workspaces[directory] = {
+      ...configured,
+      entry: [...new Set([...stringArray(configured.entry), ...generatedEntries])],
+      project: stringArray(configured.project).length
+        ? stringArray(configured.project)
+        : ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
+    };
+  }
+  return {
+    ...imported,
+    entry: [...new Set([...stringArray(imported.entry), ...rootEntries])],
+    project: stringArray(imported.project).length
+      ? stringArray(imported.project)
+      : ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
+    ...(Object.keys(workspaces).length ? { workspaces } : {}),
+  };
+}
+
+async function writeSanitizedManifests(snapshot: Snapshot, sourceRoot: string): Promise<void> {
+  const workspacePatterns = declarativeWorkspacePatterns(snapshot).filter(
+    (pattern) => pattern !== '.',
+  );
+  const manifests = snapshot.files.filter(
+    (file) => isRuntimeSource(file) && file.path.split('/').at(-1) === 'package.json',
+  );
+  if (!manifests.some((file) => file.path === 'package.json'))
+    manifests.unshift({
+      path: 'package.json',
+      content: '{}',
+      bytes: 2,
+      digest: '',
+      scope: 'runtime',
+    });
+  for (const file of manifests) {
+    const target = path.join(sourceRoot, safeRelative(file.path));
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    await writeFile(target, JSON.stringify(sanitizedManifest(file, workspacePatterns)), {
+      mode: 0o600,
+      flag: 'wx',
+    });
+  }
 }
 
 function externalPackageName(specifier: string): string | undefined {
@@ -375,7 +432,29 @@ function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<str
   return packages;
 }
 
-function unusedRuntimeDependencies(snapshot: Snapshot, profile?: ProjectProfile): string[] {
+function dependencyPatternMatches(name: string, pattern: string): boolean {
+  const escaped = pattern.replace(/[|\\{}()[\]^$+?.]/g, '\\$&').replaceAll('*', '.*');
+  return new RegExp(`^${escaped}$`).test(name);
+}
+
+function ignoredDependencyPatterns(config: Record<string, unknown>): string[] {
+  const ignored = new Set(stringArray(config.ignoreDependencies));
+  const workspaces =
+    config.workspaces && typeof config.workspaces === 'object' && !Array.isArray(config.workspaces)
+      ? (config.workspaces as Record<string, unknown>)
+      : {};
+  for (const workspace of Object.values(workspaces))
+    if (workspace && typeof workspace === 'object' && !Array.isArray(workspace))
+      for (const pattern of stringArray((workspace as Record<string, unknown>).ignoreDependencies))
+        ignored.add(pattern);
+  return [...ignored];
+}
+
+function unusedRuntimeDependencies(
+  snapshot: Snapshot,
+  profile: ProjectProfile | undefined,
+  ignoredPatterns: string[],
+): string[] {
   const imported = importedPackages(snapshot, profile);
   const implicit = new Set<string>();
   if (profile?.frameworks.some((framework) => framework.id.startsWith('nextjs-')))
@@ -388,7 +467,12 @@ function unusedRuntimeDependencies(snapshot: Snapshot, profile?: ProjectProfile)
     try {
       const dependencies = record(record(JSON.parse(file.content)).dependencies);
       for (const name of Object.keys(dependencies))
-        if (!name.startsWith('@types/') && !imported.has(name) && !implicit.has(name))
+        if (
+          !name.startsWith('@types/') &&
+          !imported.has(name) &&
+          !implicit.has(name) &&
+          !ignoredPatterns.some((pattern) => dependencyPatternMatches(name, pattern))
+        )
           unused.add(name);
     } catch {
       // The inventory scanner reports malformed manifests separately.
@@ -432,16 +516,14 @@ async function scanDeadCode(
   const configName = 'traceward.knip.json';
   try {
     await writeSnapshotStage(snapshot, sourceRoot, supportedSource);
-    await writeFile(path.join(sourceRoot, 'package.json'), JSON.stringify(rootManifest(snapshot)), {
-      mode: 0o600,
-      flag: 'wx',
-    });
+    await writeSanitizedManifests(snapshot, sourceRoot);
+    const importedConfig = declarativeKnipConfiguration(snapshot);
+    const trustedConfig = generatedKnipConfig(snapshot, profile, importedConfig.config);
     const pluginConfig = Object.fromEntries(disabledKnipPlugins.map((name) => [name, false]));
     await writeFile(
       path.join(sourceRoot, configName),
       JSON.stringify({
-        entry: entries,
-        project: ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
+        ...trustedConfig,
         include: ['files', 'dependencies', 'unlisted', 'exports', 'types'],
         ...pluginConfig,
       }),
@@ -471,7 +553,11 @@ async function scanDeadCode(
     const normalized = normalizeKnip(JSON.parse(result.stdout) as unknown, snapshot);
     const dependencyCandidates = new Set([
       ...normalized.unusedDependencies,
-      ...unusedRuntimeDependencies(snapshot, profile),
+      ...unusedRuntimeDependencies(
+        snapshot,
+        profile,
+        ignoredDependencyPatterns(importedConfig.config),
+      ),
     ]);
     const analysis: DeadCodeAnalysis = {
       ...normalized,
@@ -479,7 +565,14 @@ async function scanDeadCode(
       truncated: normalized.truncated || dependencyCandidates.size > maximumDeadCodeItems,
     };
     const compatibility = scannerCompatibility('knip', version);
-    const partial = analysis.truncated || compatibility.status !== 'tested';
+    const partial =
+      analysis.truncated || compatibility.status !== 'tested' || importedConfig.issues.length > 0;
+    const configurationDetail = importedConfig.sources.length
+      ? ` Applied declarative settings from ${importedConfig.sources.join(', ')}.`
+      : '';
+    const configurationIssues = importedConfig.issues.length
+      ? ` ${importedConfig.issues.join(' ')}`
+      : '';
     return {
       analysis,
       run: {
@@ -488,7 +581,7 @@ async function scanDeadCode(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and configuration loaders were disabled. ${compatibility.detail}`,
+        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and executable configuration loaders were disabled.${configurationDetail}${configurationIssues} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

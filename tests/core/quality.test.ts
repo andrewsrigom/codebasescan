@@ -128,3 +128,28 @@ test('dead-code scan disables target configuration loaders', async () => {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
 });
+
+test('dead-code scan applies safe declarative Knip exclusions', async () => {
+  const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-config-'));
+  const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({ dependencies: { ignored: '1.0.0' } }),
+    'knip.json': JSON.stringify({
+      entry: ['src/app/page.tsx'],
+      project: ['src/**/*.{ts,tsx}'],
+      ignoreFiles: ['src/intentionally-unused.ts'],
+      ignoreDependencies: ['ignored'],
+    }),
+    'src/app/page.tsx': `export default function Page() { return <main>ok</main>; }`,
+    'src/intentionally-unused.ts': `export const fixture = true;`,
+  });
+  try {
+    const result = await scanCodeQuality(snapshot, undefined, temporaryDirectory);
+    const knip = result.runs.find((run) => run.id === 'knip');
+    assert.notEqual(knip?.status, 'failed', knip?.detail);
+    assert.ok(knip?.detail.includes('knip.json'));
+    assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/intentionally-unused.ts'));
+    assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('ignored'));
+  } finally {
+    await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+});
