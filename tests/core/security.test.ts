@@ -186,14 +186,20 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'node_modules'));
   await mkdir(path.join(root, '.next-dev'));
+  await mkdir(path.join(root, '.pnpm-store'));
   await mkdir(path.join(root, 'out'));
   await mkdir(path.join(root, 'output'));
+  await mkdir(path.join(root, 'storybook-static'));
+  await mkdir(path.join(root, 'test-results'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
   await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, '.pnpm-store', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'out', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, 'storybook-static', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, 'test-results', 'generated.js'), 'eval(input)');
   if (process.platform !== 'win32') await symlink('/etc/passwd', path.join(root, 'outside.ts'));
   const snapshot = await captureSnapshot(root);
   assert.deepEqual(
@@ -219,6 +225,28 @@ test('snapshot records source scope without excluding secret-bearing test code',
     'tests/app.test.ts': 'test',
   });
   assert.deepEqual(estimate.scopeFiles, { runtime: 1, test: 1, example: 1 });
+});
+test('project gitignore rules exclude local artifacts while preserving exceptions', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-gitignore-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'ignored'));
+  await writeFile(
+    path.join(root, '.gitignore'),
+    'ignored/\n*.generated.ts\n!important.generated.ts\n',
+  );
+  await writeFile(path.join(root, 'source.ts'), 'export const source = true;');
+  await writeFile(path.join(root, 'discard.generated.ts'), 'eval(input)');
+  await writeFile(path.join(root, 'important.generated.ts'), 'export const retained = true;');
+  await writeFile(path.join(root, 'ignored', 'artifact.ts'), 'eval(input)');
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.deepEqual(
+    snapshot.files.map((file) => file.path),
+    ['important.generated.ts', 'source.ts'],
+  );
+  assert.equal(snapshot.skipped['gitignored-path'], 2);
+  assert.equal(estimate.supportedFiles, 2);
+  assert.equal(estimate.predictedTruncated, false);
 });
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-'));

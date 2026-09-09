@@ -1,7 +1,8 @@
 import path from 'node:path';
 import os from 'node:os';
 import { constants } from 'node:fs';
-import { lstat, open, realpath, readdir } from 'node:fs/promises';
+import { lstat, open, readFile, realpath, readdir } from 'node:fs/promises';
+import ignore from 'ignore';
 import { digest } from '../domain/findings.ts';
 import type { ProjectScopeEstimate, Snapshot, SourceFile, SourceScope } from '../domain/types.ts';
 import { redact } from './redact.ts';
@@ -10,11 +11,14 @@ const ignoredDirectories = new Set([
   'node_modules',
   '.next',
   '.next-dev',
+  '.pnpm-store',
   'dist',
   'build',
   'out',
   'output',
   'coverage',
+  'storybook-static',
+  'test-results',
   '.traceward',
   '.turbo',
   '.venv',
@@ -63,6 +67,24 @@ export const snapshotLimits = {
   lockfileBytes: 4 * 1024 * 1024,
   totalBytes: 8 * 1024 * 1024,
 };
+async function projectIgnore(root: string) {
+  const matcher = ignore();
+  try {
+    matcher.add(await readFile(path.join(root, '.gitignore'), 'utf8'));
+  } catch {
+    /* Missing or unreadable ignore rules safely result in scanning more files. */
+  }
+  return matcher;
+}
+function ignoredByProject(
+  matcher: ReturnType<typeof ignore>,
+  root: string,
+  absolute: string,
+  directory: boolean,
+): boolean {
+  const relative = path.relative(root, absolute).split(path.sep).join('/');
+  return Boolean(relative) && matcher.ignores(directory ? `${relative}/` : relative);
+}
 const dependencyLockfiles = new Set([
   'package-lock.json',
   'npm-shrinkwrap.json',
@@ -141,6 +163,7 @@ export async function validateProjectRoot(input: string, dataDirectory: string):
 }
 export async function estimateProjectScope(root: string): Promise<ProjectScopeEstimate> {
   const canonicalRoot = await realpath(root);
+  const ignoreRules = await projectIgnore(canonicalRoot);
   const reasons = new Set<string>();
   let supportedFiles = 0;
   let supportedBytes = 0;
@@ -175,7 +198,11 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
       if (entry.isSymbolicLink()) continue;
       const absolute = path.join(directory, entry.name);
       if (entry.isDirectory()) {
-        if (ignoredDirectories.has(entry.name)) continue;
+        if (
+          ignoredDirectories.has(entry.name) ||
+          ignoredByProject(ignoreRules, canonicalRoot, absolute, true)
+        )
+          continue;
         try {
           const resolved = await realpath(absolute);
           if (isWithin(canonicalRoot, resolved)) await walk(absolute, depth + 1);
@@ -184,7 +211,12 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
         }
         continue;
       }
-      if (!entry.isFile() || fileExclusion(entry.name)) continue;
+      if (
+        !entry.isFile() ||
+        fileExclusion(entry.name) ||
+        ignoredByProject(ignoreRules, canonicalRoot, absolute, false)
+      )
+        continue;
       try {
         const resolved = await realpath(absolute);
         const metadata = await lstat(absolute);
@@ -216,6 +248,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
   };
 }
 export async function captureSnapshot(root: string): Promise<Snapshot> {
+  const ignoreRules = await projectIgnore(root);
   const files: SourceFile[] = [];
   const skipped: Record<string, number> = {};
   let totalBytes = 0;
@@ -256,6 +289,10 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
           skip('excluded-directory');
           continue;
         }
+        if (ignoredByProject(ignoreRules, root, absolute, true)) {
+          skip('gitignored-path');
+          continue;
+        }
         const resolved = await realpath(absolute);
         if (!isWithin(root, resolved)) {
           skip('outside-project');
@@ -266,6 +303,10 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
       }
       if (!entry.isFile()) {
         skip('special-file');
+        continue;
+      }
+      if (ignoredByProject(ignoreRules, root, absolute, false)) {
+        skip('gitignored-path');
         continue;
       }
       const exclusion = fileExclusion(entry.name);

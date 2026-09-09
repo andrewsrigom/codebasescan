@@ -9,4 +9,5 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added persistent local audits, human review, comparison, CI gates, and JSON, Markdown, HTML, SARIF exports.
 - Added Semgrep, Gitleaks, OSV, and approved single-URL HTTP integrations.
 - Added decision-first report summaries, explicit coverage gaps, and real-project source evaluation.
-- Ignored common generated `.next-dev`, `out`, and `output` trees, raised the bounded source-file limit to 512 KiB, and allowed Semgrep more time per large source file for real monorepos.
+- Ignored common generated Next.js, pnpm, Storybook, and test-output trees, raised the bounded source-file limit to 512 KiB, and allowed Semgrep more time per large source file for real monorepos.
+- Applied root `.gitignore` rules during bounded scope estimation and snapshot capture so local caches and reports do not crowd out source code.
