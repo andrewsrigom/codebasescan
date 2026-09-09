@@ -1,9 +1,4 @@
-import type {
-  Finding,
-  ProjectProfile,
-  Snapshot,
-  SourceFile,
-} from '../domain/types.ts';
+import type { Finding, ProjectProfile, Snapshot, SourceFile } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
 
 export type ContextKind = 'evidence' | 'entrypoint' | 'symbol' | 'fact' | 'call';
@@ -74,10 +69,12 @@ function relatedProfileIds(finding: Finding, profile?: ProjectProfile): Set<stri
 
   const ids = new Set<string>();
   for (const entrypoint of relevantEntrypoints) ids.add(entrypoint.id);
-  for (const symbol of profile.symbols)
-    if (relevantSymbols.has(symbol.id)) ids.add(symbol.id);
+  for (const symbol of profile.symbols) if (relevantSymbols.has(symbol.id)) ids.add(symbol.id);
   for (const fact of profile.facts)
-    if (evidenceFiles.has(fact.file) || (fact.ownerSymbolId && relevantSymbols.has(fact.ownerSymbolId)))
+    if (
+      evidenceFiles.has(fact.file) ||
+      (fact.ownerSymbolId && relevantSymbols.has(fact.ownerSymbolId))
+    )
       ids.add(fact.id);
   for (const call of profile.calls)
     if (
@@ -176,7 +173,11 @@ export function createContextBroker(
     .sort((left, right) => {
       const leftEvidence = left.kind === 'evidence' ? 0 : 1;
       const rightEvidence = right.kind === 'evidence' ? 0 : 1;
-      return leftEvidence - rightEvidence || left.file.localeCompare(right.file) || left.line - right.line;
+      return (
+        leftEvidence - rightEvidence ||
+        left.file.localeCompare(right.file) ||
+        left.line - right.line
+      );
     })
     .slice(0, maximumCatalogItems);
   const allowedIds = new Set(catalog.map((item) => item.id));

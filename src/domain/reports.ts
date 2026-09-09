@@ -108,6 +108,35 @@ export function toMarkdown(report: AuditReport): string {
       lines.push(
         `Analysis (${m(finding.analysis.kind)}): ${m(finding.analysis.explanation)}`,
         '',
+        ...(finding.analysis.impact ? [`Likely impact: ${m(finding.analysis.impact)}`, ''] : []),
+        ...(finding.analysis.controlsFound?.length
+          ? ['Controls found:', ...finding.analysis.controlsFound.map((item) => `- ${m(item)}`), '']
+          : []),
+        ...(finding.analysis.missingEvidence?.length
+          ? [
+              'Missing evidence:',
+              ...finding.analysis.missingEvidence.map((item) => `- ${m(item)}`),
+              '',
+            ]
+          : []),
+        ...(finding.analysis.preconditions?.length
+          ? ['Preconditions:', ...finding.analysis.preconditions.map((item) => `- ${m(item)}`), '']
+          : []),
+        ...(finding.analysis.remediationOptions?.length
+          ? [
+              'Remediation options:',
+              ...finding.analysis.remediationOptions.map((item) => `- ${m(item)}`),
+              '',
+            ]
+          : []),
+        ...(finding.analysis.verificationPlan?.length
+          ? [
+              'Safe verification plan:',
+              ...finding.analysis.verificationPlan.map((item) => `- ${m(item)}`),
+              '',
+            ]
+          : []),
+        'Analysis limitations:',
         ...finding.analysis.limitations.map((limitation) => `- ${m(limitation)}`),
         '',
       );
@@ -118,10 +147,14 @@ export function toMarkdown(report: AuditReport): string {
 }
 export function toHtml(report: AuditReport): string {
   const e = escapeHtml;
+  const list = (title: string, items?: string[]) =>
+    items?.length
+      ? `<h3>${e(title)}</h3><ul>${items.map((item) => `<li>${e(item)}</li>`).join('')}</ul>`
+      : '';
   const findings = report.findings
     .map(
       (finding) =>
-        `<article><div class="meta">${e(finding.severity.toUpperCase())} · ${e(finding.source)} · ${e(finding.disposition)}</div><h2>${e(finding.title)}</h2><p>${e(finding.description)}</p>${finding.evidence.map((evidence) => `<h3>${e(evidence.file)}:${evidence.startLine}</h3><pre>${e(evidence.excerpt)}</pre><p>${e(evidence.observation)}</p>`).join('')}<h3>Remediation</h3><p>${e(finding.remediation)}</p>${finding.analysis ? `<h3>Contextual assessment</h3><p>${e(finding.analysis.explanation)}</p>` : ''}${finding.review ? `<h3>Human review</h3><p>${e(finding.review.note)}</p>` : ''}</article>`,
+        `<article><div class="meta">${e(finding.severity.toUpperCase())} · ${e(finding.source)} · ${e(finding.disposition)}</div><h2>${e(finding.title)}</h2><p>${e(finding.description)}</p>${finding.evidence.map((evidence) => `<h3>${e(evidence.file)}:${evidence.startLine}</h3><pre>${e(evidence.excerpt)}</pre><p>${e(evidence.observation)}</p>`).join('')}<h3>Remediation</h3><p>${e(finding.remediation)}</p>${finding.analysis ? `<h3>Contextual assessment</h3><p>${e(finding.analysis.explanation)}</p>${finding.analysis.impact ? `<h3>Likely impact</h3><p>${e(finding.analysis.impact)}</p>` : ''}${list('Controls found', finding.analysis.controlsFound)}${list('Missing evidence', finding.analysis.missingEvidence)}${list('Preconditions', finding.analysis.preconditions)}${list('Remediation options', finding.analysis.remediationOptions)}${list('Safe verification plan', finding.analysis.verificationPlan)}${list('Analysis limitations', finding.analysis.limitations)}` : ''}${finding.review ? `<h3>Human review</h3><p>${e(finding.review.note)}</p>` : ''}</article>`,
     )
     .join('');
   const coverage = report.coverage

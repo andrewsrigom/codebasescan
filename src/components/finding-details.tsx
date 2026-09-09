@@ -145,6 +145,31 @@ export function FindingDetails({
                 {finding.analysis.cached ? 'cache hit' : 'fresh analysis'}
               </div>
             )}
+            {finding.analysis.impact && (
+              <div className="detail-row">
+                <span>Likely impact</span>
+                <span>{finding.analysis.impact}</span>
+              </div>
+            )}
+            {[
+              { label: 'Controls found', items: finding.analysis.controlsFound },
+              { label: 'Missing evidence', items: finding.analysis.missingEvidence },
+              { label: 'Preconditions', items: finding.analysis.preconditions },
+              { label: 'Remediation options', items: finding.analysis.remediationOptions },
+              { label: 'Safe verification plan', items: finding.analysis.verificationPlan },
+            ].map(({ label, items }) =>
+              items?.length ? (
+                <div key={label}>
+                  <h4>{label}</h4>
+                  <ul className="limitations">
+                    {items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null,
+            )}
+            <h4>Analysis limitations</h4>
             <ul className="limitations">
               {finding.analysis.limitations.map((limitation) => (
                 <li key={limitation}>{limitation}</li>

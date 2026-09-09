@@ -64,23 +64,33 @@ test('the context loop terminates after two rounds with an injected reviewer', a
   const finding = scanPatterns(source).find((candidate) => candidate.category === 'injection')!;
   const profile = profileProject(source).profile;
   let calls = 0;
-  const graph = buildReviewGraph(source, {
-    provider: 'ollama',
-    async assess(_finding, _context, availableContexts, contextIds) {
-      calls++;
-      return {
-        assessment: 'inconclusive',
-        confidence: 'low',
-        explanation: 'More runtime evidence is needed.',
-        evidenceIds: [],
-        limitations: ['Runtime is outside the snapshot.'],
-        requestedContextIds: availableContexts
-          .filter((item) => !contextIds.includes(item.id))
-          .slice(0, 1)
-          .map((item) => item.id),
-      };
+  const graph = buildReviewGraph(
+    source,
+    {
+      provider: 'ollama',
+      async assess(_finding, _context, availableContexts, contextIds) {
+        calls++;
+        return {
+          assessment: 'inconclusive',
+          confidence: 'low',
+          explanation: 'More runtime evidence is needed.',
+          evidenceIds: [],
+          controlsFound: [],
+          missingEvidence: ['Runtime authorization policy is outside the snapshot.'],
+          impact: 'Impact depends on whether untrusted input reaches the operation.',
+          preconditions: ['The route must be reachable.'],
+          remediationOptions: ['Add an explicit trust-boundary guard.'],
+          verificationPlan: ['Exercise the route with unauthorized fixture input.'],
+          limitations: ['Runtime is outside the snapshot.'],
+          requestedContextIds: availableContexts
+            .filter((item) => !contextIds.includes(item.id))
+            .slice(0, 1)
+            .map((item) => item.id),
+        };
+      },
     },
-  }, profile);
+    profile,
+  );
   const result = await graph.invoke({ finding });
   assert.ok(calls <= 2);
   assert.equal(result.rounds, 2);

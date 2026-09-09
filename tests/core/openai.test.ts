@@ -38,6 +38,12 @@ function success(evidenceId: string): Response {
       confidence: 'low',
       explanation: 'Runtime reachability is not available.',
       evidenceIds: [evidenceId],
+      controlsFound: [],
+      missingEvidence: ['Runtime reachability and caller control are unavailable.'],
+      impact: 'Dynamic execution could run code with the application process permissions.',
+      preconditions: ['An untrusted value must reach the sink.'],
+      remediationOptions: ['Replace dynamic execution with an explicit operation map.'],
+      verificationPlan: ['Trace the input source and add a test with an untrusted expression.'],
       limitations: ['Only the supplied snapshot context was inspected.'],
       requestedContextIds: [],
     }),
@@ -65,12 +71,7 @@ test('OpenAI request is opt-in, structured, non-stored, redacted, and provenance
     { id: 'ctx-env', kind: 'fact', label: 'env', file: '.env', line: 1 },
     { id: 'ctx-outside', kind: 'fact', label: 'outside', file: '../../outside', line: 1 },
   ];
-  const first = await reviewer.assess(
-    finding,
-    source,
-    available,
-    ['ctx-source'],
-  );
+  const first = await reviewer.assess(finding, source, available, ['ctx-source']);
   const parsedBody = JSON.parse(requestBody) as Record<string, unknown>;
   assert.equal(parsedBody.store, false);
   assert.equal((parsedBody.text as { format: { type: string } }).format.type, 'json_schema');
@@ -86,12 +87,7 @@ test('OpenAI request is opt-in, structured, non-stored, redacted, and provenance
   assert.ok((first.approximateCostUsd ?? 0) > 0);
   assert.equal(store.aiUsage(audit.id).calls, 1);
 
-  const second = await reviewer.assess(
-    finding,
-    source,
-    available.slice(0, 2),
-    ['ctx-source'],
-  );
+  const second = await reviewer.assess(finding, source, available.slice(0, 2), ['ctx-source']);
   assert.equal(second.cached, true);
   assert.equal(calls, 1);
   assert.equal(store.aiUsage(audit.id).cacheHits, 1);

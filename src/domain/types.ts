@@ -54,6 +54,12 @@ export interface Analysis {
   explanation: string;
   evidenceIds: string[];
   limitations: string[];
+  controlsFound?: string[];
+  missingEvidence?: string[];
+  impact?: string;
+  preconditions?: string[];
+  remediationOptions?: string[];
+  verificationPlan?: string[];
   inspectedFiles: string[];
   rounds: number;
   confidence?: 'low' | 'medium' | 'high';

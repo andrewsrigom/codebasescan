@@ -40,7 +40,11 @@ test('context broker rejects unknown, repeated, path-shaped, and excess requests
   ]);
   assert.ok(delivery.deliveredIds.length <= contextBrokerLimits.maximumRequestedItems);
   assert.ok(!delivery.deliveredIds.includes('../../outside'));
-  const repeated = broker.collect(delivery.deliveredIds, delivery.deliveredIds, delivery.characters);
+  const repeated = broker.collect(
+    delivery.deliveredIds,
+    delivery.deliveredIds,
+    delivery.characters,
+  );
   assert.deepEqual(repeated.deliveredIds, []);
 });
 
