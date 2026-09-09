@@ -15,6 +15,7 @@ LangGraph audit workflow <-------- separate SQLite checkpointer
         |
         +-- bounded read-only source snapshot
         +-- deterministic project profile + AST security rules
+        +-- dependency structure + duplicate-code reports
         +-- built-in source patterns
         +-- application posture scanner
         +-- optional Semgrep / Gitleaks processes
@@ -39,6 +40,8 @@ START -> snapshot
               +-> AST security +
               +-> Next security+
               +-> React security+
+              +-> dependencies -+
+              +-> duplication --+
               +-> posture -----+
               +-> semgrep -----+
               +-> gitleaks ----+-> normalize/reconcile
@@ -53,7 +56,7 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The ten scanner/profile branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The twelve scanner/profile branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
 The nested review graph remains:
 
@@ -68,6 +71,8 @@ Repository text is untrusted. It cannot select tools, endpoints, headers, reques
 ## Deterministic evidence
 
 `project-profile.ts` parses captured TypeScript/JavaScript as data and maps supported frameworks, entry points, symbols, imports, direct local call edges, and security facts under fixed limits. `ast-security.ts` uses those relationships for authentication, permission, and tenant/owner scope, then performs bounded same-function request-flow checks for raw SQL, SSRF, redirects, uploads, webhook ordering, cookie attributes, and client/server configuration. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target configuration, plugins, types, and dependencies are never loaded or executed.
+
+`mechanical.ts` stages runtime JavaScript/TypeScript only and invokes pinned dependency-cruiser and jscpd entry points with fixed arguments. It does not load target tool configuration. Reports retain bounded local module counts, cycles, orphan candidates, coupling hotspots, duplicate locations, and aggregate duplication metrics. Raw duplicate fragments are discarded. These observations never become security findings automatically.
 
 `builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, and environment use. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
 
@@ -105,7 +110,7 @@ The Traceward UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, s
 
 1. `src/domain/types.ts`, `checklist.ts`, `report-schema.ts`, `coverage.ts`, and `provenance.ts`
 2. `src/security/paths.ts`, `url-policy.ts`, and `redact.ts`
-3. `src/scanners/project-profile.ts`, `ast-security.ts`, `next-security.ts`, `react-security.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
+3. `src/scanners/project-profile.ts`, `ast-security.ts`, `next-security.ts`, `react-security.ts`, `mechanical.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
 4. `src/engine/context-broker.ts`, `review-graph.ts`, `openai.ts`, and `audit-graph.ts`
 5. `src/server/store.ts`, `src/worker/main.ts`, `src/cli/main.ts`, and `src/cli/doctor.ts`
 6. `src/components/audit-workspace.tsx` and `finding-details.tsx`

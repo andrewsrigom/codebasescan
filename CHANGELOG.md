@@ -25,3 +25,5 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Reduced React navigation noise found in real projects by separating browser-controlled inputs from ordinary component props and restricting navigation sinks to real browser/router APIs.
 - Stopped classifying arbitrary object and regular-expression `.exec()` calls as operating-system command execution.
 - Lowered only the review priority, not severity, for transitive advisories with unknown source reachability so direct and referenced packages surface first.
+- Added pinned offline dependency structure and duplicate-code analysis with bounded report data, route-level control visibility, and a dedicated Mechanical workspace.
+- Expanded trusted local Semgrep rules for JWT, TLS, Node VM, MongoDB, error response, sensitive logging, unserialization, and URL credential review.

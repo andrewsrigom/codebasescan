@@ -13,6 +13,7 @@ Traceward turns source code into review candidates with evidence, coverage gaps,
 Most small teams have code but little production telemetry. Traceward starts with what is available:
 
 - framework-aware source rules and project mapping;
+- bundled dependency-cycle, coupling, orphan-module, and duplicate-code reports;
 - security checklist with explicit unknowns and gaps;
 - optional Semgrep, Gitleaks, OSV, and one approved HTTP observation;
 - optional Ollama or OpenAI investigation with hard limits;
@@ -53,6 +54,8 @@ npm run cli -- export <audit-id> html
 ```
 
 Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
+
+Dependency structure and duplication analysis run offline by default with pinned Traceward-owned tools. Target `dependency-cruiser`, `jscpd`, TypeScript, Babel, ESLint, and framework configuration files are not loaded or executed. Mechanical results are maintainability evidence, not vulnerabilities.
 
 Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Reviewers can mark findings confirmed, fixed, false positive, accepted risk, or still needing review. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
 

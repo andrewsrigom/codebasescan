@@ -22,6 +22,9 @@
 - Findings now carry detector confidence, probable exposure, priority scores, merged evidence, expiring project exceptions, and a selectable project baseline.
 - Every dedicated Next.js and React rule now has declared vulnerable ground truth plus paired benign benchmark coverage.
 - The local environment doctor, fixed disposition, quality filters, and owner-authorized 1,000+ file scale pass are complete.
+- Pinned offline dependency-cruiser and jscpd adapters now add bounded cycles, coupling hotspots, orphan candidates, and duplicate locations without loading target configuration or retaining raw duplicate fragments.
+- The project map now shows observed authentication, authorization, validation, and sensitive-operation evidence for each mapped request boundary.
+- Local Semgrep coverage now includes JWT verification gaps, Node VM execution, disabled TLS verification, MongoDB `$where`, error-stack responses, sensitive logging, unsafe unserialization, and credentials in URL parameters.
 
 ## Next — independent real-project ground truth
 
