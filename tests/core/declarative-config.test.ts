@@ -14,6 +14,7 @@ test('declarative Knip JSONC is sanitized without running target code', () => {
       // Only bounded declarative fields are accepted.
       "entry": ["src/app/page.tsx", "../outside.ts"],
       "ignoreDependencies": ["@svgr/webpack", "../outside"],
+      "paths": { "@/*": ["src/*"], "bad": ["../outside/*"] },
       "compilers": { ".ts": "throw new Error('must not run')" },
       "workspaces": { "tools/*": { "project": ["src/**/*.ts"] }, "../bad": {} },
     }`,
@@ -23,6 +24,7 @@ test('declarative Knip JSONC is sanitized without running target code', () => {
   assert.deepEqual(result.sources, ['knip.jsonc']);
   assert.deepEqual(result.config.entry, ['src/app/page.tsx']);
   assert.deepEqual(result.config.ignoreDependencies, ['@svgr/webpack']);
+  assert.deepEqual(result.config.paths, { '@/*': ['src/*'] });
   assert.deepEqual(Object.keys(result.config.workspaces as object), ['tools/*']);
   assert.equal(result.config.compilers, undefined);
   assert.equal(result.issues.length, 1);

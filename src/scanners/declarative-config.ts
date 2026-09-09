@@ -15,6 +15,7 @@ const workspaceKeys = new Set([
   'ignoreBinaries',
   'ignoreUnresolved',
   'ignoreIssues',
+  'paths',
   'includeEntryExports',
   'ignoreExportsUsedInFile',
 ]);
@@ -84,6 +85,29 @@ function safeAliasPath(value: unknown): string | undefined {
   return normalized.startsWith('/') || /^[a-z]:/i.test(normalized) ? undefined : normalized;
 }
 
+function safeAliasPattern(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 300 &&
+    !value.includes('..') &&
+    value.split('*').length <= 2 &&
+    /^[A-Za-z0-9@#~_./*-]+$/.test(value)
+    ? value
+    : undefined;
+}
+
+function sanitizePaths(value: unknown): Record<string, string[]> | undefined {
+  const input = object(value);
+  if (!input) return undefined;
+  const output: Record<string, string[]> = {};
+  for (const [rawPattern, rawTargets] of Object.entries(input).slice(0, maximumPatterns)) {
+    const pattern = safeAliasPattern(rawPattern);
+    const targets = strings(rawTargets, safePathPattern);
+    if (pattern && targets) output[pattern] = targets;
+  }
+  return Object.keys(output).length ? output : undefined;
+}
+
 function rejectedList(value: unknown, sanitize: (item: unknown) => string | undefined): boolean {
   return (
     !Array.isArray(value) ||
@@ -112,6 +136,12 @@ function workspaceHasRejectedSettings(value: unknown): boolean {
         types.some((item) => typeof item !== 'string' || !allowedIssueTypes.has(item))
       )
         return true;
+  }
+  if (input.paths !== undefined) {
+    const paths = object(input.paths);
+    if (!paths || Object.keys(paths).length > maximumPatterns) return true;
+    for (const [pattern, targets] of Object.entries(paths))
+      if (!safeAliasPattern(pattern) || rejectedList(targets, safePathPattern)) return true;
   }
   return false;
 }
@@ -180,6 +210,8 @@ function sanitizeWorkspace(value: unknown): Record<string, unknown> {
   }
   const ignoreIssues = sanitizeIgnoreIssues(input.ignoreIssues);
   if (ignoreIssues) output.ignoreIssues = ignoreIssues;
+  const paths = sanitizePaths(input.paths);
+  if (paths) output.paths = paths;
   if (typeof input.includeEntryExports === 'boolean')
     output.includeEntryExports = input.includeEntryExports;
   if (typeof input.ignoreExportsUsedInFile === 'boolean')

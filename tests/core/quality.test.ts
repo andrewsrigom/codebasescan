@@ -137,13 +137,17 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
       workspaces: ['apps/*'],
     }),
     'apps/example/package.json': JSON.stringify({ name: 'example', private: true }),
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@/*': ['./src/*'] } },
+    }),
     'knip.json': JSON.stringify({
       entry: ['src/app/page.tsx'],
       project: ['src/**/*.{ts,tsx}'],
       ignoreFiles: ['src/intentionally-unused.ts'],
       ignoreDependencies: ['ignored'],
     }),
-    'src/app/page.tsx': `import value from 'used'; export default function Page() { return <main>{value}</main>; }`,
+    'src/app/page.tsx': `import value from 'used'; import { component } from '@/component'; export default function Page() { return <main>{value}{component}</main>; }`,
+    'src/component.ts': `export const component = 'component';`,
     'src/intentionally-unused.ts': `export const fixture = true;`,
   });
   try {
@@ -152,6 +156,7 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
     assert.notEqual(knip?.status, 'failed', knip?.detail);
     assert.ok(knip?.detail.includes('knip.json'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/intentionally-unused.ts'));
+    assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/component.ts'));
     assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('ignored'));
     assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('used'));
   } finally {

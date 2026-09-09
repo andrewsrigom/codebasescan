@@ -22,6 +22,8 @@ import {
   declarativeKnipConfiguration,
   declarativeWorkspacePatterns,
   sanitizedManifest,
+  typeScriptPathAliases,
+  type TypeScriptPathAlias,
 } from './declarative-config.ts';
 
 const sourceExtension = /\.[cm]?[jt]sx?$/i;
@@ -308,10 +310,36 @@ function stringArray(value: unknown): string[] {
     : [];
 }
 
+function configuredPathAliases(
+  snapshot: Snapshot,
+  aliases: TypeScriptPathAlias[],
+): Map<string, Record<string, string[]>> {
+  const directories = packageDirectories(snapshot);
+  const result = new Map<string, Record<string, string[]>>();
+  for (const alias of [...aliases].sort(
+    (left, right) => left.configFile.length - right.configFile.length,
+  )) {
+    const configDirectory = path.posix.dirname(alias.configFile);
+    const workspace =
+      directories.find(
+        (directory) => configDirectory === directory || configDirectory.startsWith(`${directory}/`),
+      ) ?? '.';
+    const workspaceDirectory = workspace === '.' ? '' : workspace;
+    const paths = result.get(workspace) ?? {};
+    paths[alias.pattern] = alias.targets.map((target) => {
+      const relative = path.posix.relative(workspaceDirectory, target);
+      return relative.startsWith('.') ? relative : `./${relative}`;
+    });
+    result.set(workspace, paths);
+  }
+  return result;
+}
+
 function generatedKnipConfig(
   snapshot: Snapshot,
   profile: ProjectProfile | undefined,
   imported: Record<string, unknown>,
+  aliases: TypeScriptPathAlias[],
 ): Record<string, unknown> {
   const entries = knipEntries(snapshot, profile);
   const directories = packageDirectories(snapshot);
@@ -325,6 +353,7 @@ function generatedKnipConfig(
       ? (imported.workspaces as Record<string, unknown>)
       : {};
   const workspaces: Record<string, unknown> = { ...configuredWorkspaces };
+  const pathAliases = configuredPathAliases(snapshot, aliases);
   for (const directory of directories) {
     const configured =
       workspaces[directory] &&
@@ -337,6 +366,14 @@ function generatedKnipConfig(
       .map((entry) => entry.slice(directory.length + 1));
     workspaces[directory] = {
       ...configured,
+      ...(pathAliases.has(directory)
+        ? {
+            paths: {
+              ...(configured.paths as Record<string, unknown> | undefined),
+              ...pathAliases.get(directory),
+            },
+          }
+        : {}),
       entry: [...new Set([...stringArray(configured.entry), ...generatedEntries])],
       project: stringArray(configured.project).length
         ? stringArray(configured.project)
@@ -354,6 +391,15 @@ function generatedKnipConfig(
     workspaces['.'] = {
       ...rootSettings,
       ...rootConfigured,
+      ...(pathAliases.has('.')
+        ? {
+            paths: {
+              ...(rootSettings.paths as Record<string, unknown> | undefined),
+              ...(rootConfigured.paths as Record<string, unknown> | undefined),
+              ...pathAliases.get('.'),
+            },
+          }
+        : {}),
       entry: [
         ...new Set([
           ...stringArray(rootSettings.entry),
@@ -371,6 +417,14 @@ function generatedKnipConfig(
   }
   return {
     ...imported,
+    ...(pathAliases.has('.')
+      ? {
+          paths: {
+            ...(imported.paths as Record<string, unknown> | undefined),
+            ...pathAliases.get('.'),
+          },
+        }
+      : {}),
     entry: [...new Set([...stringArray(imported.entry), ...rootEntries])],
     project: stringArray(imported.project).length
       ? stringArray(imported.project)
@@ -544,7 +598,13 @@ async function scanDeadCode(
     await writeSnapshotStage(snapshot, sourceRoot, supportedSource);
     await writeSanitizedManifests(snapshot, sourceRoot);
     const importedConfig = declarativeKnipConfiguration(snapshot);
-    const trustedConfig = generatedKnipConfig(snapshot, profile, importedConfig.config);
+    const aliasConfiguration = typeScriptPathAliases(snapshot);
+    const trustedConfig = generatedKnipConfig(
+      snapshot,
+      profile,
+      importedConfig.config,
+      aliasConfiguration.aliases,
+    );
     const pluginConfig = Object.fromEntries(disabledKnipPlugins.map((name) => [name, false]));
     await writeFile(
       path.join(sourceRoot, configName),
@@ -577,27 +637,27 @@ async function scanDeadCode(
         `Knip returned an error: ${redact(result.stderr).replaceAll(sourceRoot, '[stage]').slice(0, 500)}`,
       );
     const normalized = normalizeKnip(JSON.parse(result.stdout) as unknown, snapshot);
-    const dependencyCandidates = new Set([
-      ...normalized.unusedDependencies,
-      ...unusedRuntimeDependencies(
+    const dependencyCandidates = new Set(
+      unusedRuntimeDependencies(
         snapshot,
         profile,
         ignoredDependencyPatterns(importedConfig.config),
       ),
-    ]);
+    );
     const analysis: DeadCodeAnalysis = {
       ...normalized,
       unusedDependencies: [...dependencyCandidates].sort().slice(0, maximumDeadCodeItems),
       truncated: normalized.truncated || dependencyCandidates.size > maximumDeadCodeItems,
     };
     const compatibility = scannerCompatibility('knip', version);
+    const configurationIssues = [...importedConfig.issues, ...aliasConfiguration.issues];
     const partial =
-      analysis.truncated || compatibility.status !== 'tested' || importedConfig.issues.length > 0;
+      analysis.truncated || compatibility.status !== 'tested' || configurationIssues.length > 0;
     const configurationDetail = importedConfig.sources.length
       ? ` Applied declarative settings from ${importedConfig.sources.join(', ')}.`
       : '';
-    const configurationIssues = importedConfig.issues.length
-      ? ` ${importedConfig.issues.join(' ')}`
+    const configurationIssueDetail = configurationIssues.length
+      ? ` ${configurationIssues.join(' ')}`
       : '';
     return {
       analysis,
@@ -607,7 +667,7 @@ async function scanDeadCode(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and executable configuration loaders were disabled.${configurationDetail}${configurationIssues} ${compatibility.detail}`,
+        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and executable configuration loaders were disabled.${configurationDetail}${configurationIssueDetail} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };
