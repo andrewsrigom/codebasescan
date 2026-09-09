@@ -18,7 +18,7 @@ const batchSchema = z.object({
   results: z.array(
     z.object({
       vulns: z.array(z.object({ id: z.string().min(1).max(100) })).optional(),
-      next_page_token: z.string().optional(),
+      next_page_token: z.string().max(10000).optional(),
     }),
   ),
 });
@@ -476,7 +476,11 @@ export async function scanOsv(
   }
   let incomplete = inventory.errors.length > 0;
   const queriedAdvisories = new Set<string>();
+  const advisoryDetails = new Map<string, CompactRecord>();
   const maximumAdvisories = 300;
+  const maximumPaginationRequests = 20;
+  const maximumPagesPerDependency = 5;
+  let paginationRequests = 0;
   try {
     for (let offset = 0; offset < missing.length; offset += 100) {
       const batch = missing.slice(offset, offset + 100);
@@ -499,25 +503,70 @@ export async function scanOsv(
       );
       if (response.results.length !== batch.length)
         throw new Error('OSV batch result count mismatch.');
+      const resultPages = response.results.map((result) => [...(result.vulns ?? [])]);
+      let pending = response.results.flatMap((result, index) =>
+        result.next_page_token ? [{ index, token: result.next_page_token, pages: 1 }] : [],
+      );
+      while (
+        pending.length &&
+        paginationRequests < maximumPaginationRequests &&
+        new Set(resultPages.flat().map((item) => item.id)).size < maximumAdvisories
+      ) {
+        const page = pending.slice(0, 100);
+        pending = pending.slice(100);
+        const paginated = batchSchema.parse(
+          await osvFetch(
+            fetcher,
+            'https://api.osv.dev/v1/querybatch',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify({
+                queries: page.map((entry) => {
+                  const item = batch[entry.index]!;
+                  return {
+                    package: { name: item.name, ecosystem: 'npm' },
+                    version: item.resolvedVersion,
+                    page_token: entry.token,
+                  };
+                }),
+              }),
+            },
+            signal,
+          ),
+        );
+        paginationRequests++;
+        if (paginated.results.length !== page.length)
+          throw new Error('OSV paginated batch result count mismatch.');
+        paginated.results.forEach((result, pageIndex) => {
+          const entry = page[pageIndex]!;
+          resultPages[entry.index]!.push(...(result.vulns ?? []));
+          if (result.next_page_token) {
+            const pages = entry.pages + 1;
+            if (pages >= maximumPagesPerDependency) incomplete = true;
+            else
+              pending.push({
+                index: entry.index,
+                token: result.next_page_token,
+                pages,
+              });
+          }
+        });
+      }
+      if (pending.length) incomplete = true;
       const candidateIds = [
-        ...new Set(
-          response.results.flatMap((result) => {
-            if (result.next_page_token) incomplete = true;
-            return (result.vulns ?? []).map((item) => item.id);
-          }),
-        ),
+        ...new Set(resultPages.flatMap((result) => result.map((item) => item.id))),
       ].filter((id) => !queriedAdvisories.has(id));
       const remaining = Math.max(0, maximumAdvisories - queriedAdvisories.size);
       if (candidateIds.length > remaining) incomplete = true;
       const ids = candidateIds.slice(0, remaining);
-      const details = new Map<string, CompactRecord>();
       for (const id of ids) {
         if (!/^[A-Za-z0-9._:-]{1,100}$/.test(id)) {
           incomplete = true;
           continue;
         }
         queriedAdvisories.add(id);
-        details.set(
+        advisoryDetails.set(
           id,
           compact(
             await osvFetch(
@@ -529,12 +578,12 @@ export async function scanOsv(
           ),
         );
       }
-      response.results.forEach((result, index) => {
+      resultPages.forEach((result, index) => {
         const item = batch[index];
         if (!item) return;
         const vulnerabilities = consolidate(
-          (result.vulns ?? []).flatMap((entry) => {
-            const detail = details.get(entry.id);
+          result.flatMap((entry) => {
+            const detail = advisoryDetails.get(entry.id);
             return detail ? [detail] : [];
           }),
         );

@@ -157,3 +157,38 @@ test('OSV clean and malformed responses remain distinct', async (context) => {
   assert.equal(malformed.run.status, 'failed');
   assert.match(malformed.run.detail, /count mismatch/);
 });
+
+test('OSV follows bounded per-query pagination', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-pages-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const source = await captureSnapshot(path.resolve('fixtures/dependencies-vulnerable'));
+  const bodies: string[] = [];
+  const fetcher: typeof fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/querybatch')) {
+      const body = typeof init?.body === 'string' ? init.body : '';
+      bodies.push(body);
+      return bodies.length === 1
+        ? Response.json({
+            results: [{ vulns: [{ id: 'GHSA-page-one' }], next_page_token: 'page-two' }],
+          })
+        : Response.json({ results: [{ vulns: [{ id: 'GHSA-page-two' }] }] });
+    }
+    const id = url.endsWith('GHSA-page-one') ? 'GHSA-page-one' : 'GHSA-page-two';
+    return Response.json({
+      id,
+      summary: id,
+      affected: [{ package: { name: 'lodash' }, ranges: [{ events: [] }] }],
+    });
+  };
+  const result = await scanOsv(source, true, path.join(directory, 'cache.json'), 24, undefined, {
+    fetch: fetcher,
+  });
+  assert.equal(result.run.status, 'completed');
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['GHSA-page-one', 'GHSA-page-two'],
+  );
+  assert.equal(bodies.length, 2);
+  assert.match(bodies[1] ?? '', /"page_token":"page-two"/);
+});
