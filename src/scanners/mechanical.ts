@@ -19,7 +19,7 @@ import { runScannerProcess } from '../security/process.ts';
 import { scannerCompatibility } from './external.ts';
 import { writeSnapshotStage } from './staging.ts';
 
-const maximumReportBytes = 8 * 1024 * 1024;
+const maximumReportBytes = 16 * 1024 * 1024;
 const maximumCycles = 100;
 const maximumOrphans = 200;
 const maximumHotspots = 100;
@@ -270,7 +270,7 @@ export function normalizeDuplication(
 async function readBoundedReport(reportPath: string): Promise<unknown> {
   const metadata = await stat(reportPath);
   if (!metadata.isFile() || metadata.size > maximumReportBytes)
-    throw new Error('Mechanical scanner report exceeded the 8 MB limit.');
+    throw new Error('Mechanical scanner report exceeded the 16 MB limit.');
   return JSON.parse(await readFile(reportPath, 'utf8')) as unknown;
 }
 
