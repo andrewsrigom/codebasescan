@@ -22,6 +22,7 @@ import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/h
 import { scanOsv } from '../scanners/osv.ts';
 import { profileProject } from '../scanners/project-profile.ts';
 import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
+import { scanReactSecurity } from '../scanners/react-security.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -148,6 +149,13 @@ export function buildAuditGraph(options: {
         'ast_security',
         `${result.findings.length} framework-aware structural candidate(s).`,
       );
+      return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('react_security', async (state) => {
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to React security analysis.');
+      const result = scanReactSecurity(await checkedSnapshot(state), state.projectProfile);
+      event(state, 'react_security', `${result.findings.length} React security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('posture', async (state) => {
@@ -398,13 +406,23 @@ export function buildAuditGraph(options: {
     .addEdge('snapshot', 'patterns')
     .addEdge('snapshot', 'project_profile')
     .addEdge('project_profile', 'ast_security')
+    .addEdge('project_profile', 'react_security')
     .addEdge('snapshot', 'posture')
     .addEdge('snapshot', 'semgrep')
     .addEdge('snapshot', 'gitleaks')
     .addEdge('snapshot', 'http_probe')
     .addEdge('snapshot', 'inventory')
     .addEdge(
-      ['patterns', 'ast_security', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'],
+      [
+        'patterns',
+        'ast_security',
+        'react_security',
+        'posture',
+        'semgrep',
+        'gitleaks',
+        'http_probe',
+        'inventory',
+      ],
       'normalize',
     )
     .addConditionalEdges('normalize', (state) =>

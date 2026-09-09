@@ -15,6 +15,7 @@
 - Actual dead-worker `SIGKILL` recovery, checkpoint/config compatibility guards, and persisted AI request reservations.
 - Bounded OSV pagination, CVSS v3 scoring, package-specific severity, advisory modification display, and local npm/Yarn workspace-package exclusion.
 - Initial ten-project source-only evaluation: 1,010 files, complete profiles, lockfile/alias/entrypoint/upload hardening, and documented manual triage without a broad accuracy claim.
+- Dedicated React client-boundary rules cover dynamic HTML, navigation, Web Storage, postMessage, new-tab isolation, async Client Components, and sensitive server-to-client props.
 
 ## Next — independent real-project ground truth
 

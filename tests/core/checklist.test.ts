@@ -4,6 +4,7 @@ import path from 'node:path';
 import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
 import { scanAstSecurity } from '../../src/scanners/ast-security.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
+import { scanReactSecurity } from '../../src/scanners/react-security.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import type { ScannerRun, Snapshot } from '../../src/domain/types.ts';
 import { snapshotOf } from '../helpers.ts';
@@ -22,12 +23,14 @@ function skipped(id: string, name = id): ScannerRun {
 function checklistFor(snapshot: Snapshot) {
   const profileResult = profileProject(snapshot);
   const astResult = scanAstSecurity(snapshot, profileResult.profile);
+  const reactResult = scanReactSecurity(snapshot, profileResult.profile);
   return buildSecurityChecklist({
     projectProfile: profileResult.profile,
-    findings: astResult.findings,
+    findings: [...astResult.findings, ...reactResult.findings],
     scanners: [
       profileResult.run,
       astResult.run,
+      reactResult.run,
       { ...skipped('posture'), status: 'completed' },
       skipped('gitleaks'),
       skipped('osv'),
@@ -142,7 +145,30 @@ test('code-first flow findings become checklist gaps without claiming runtime pr
       'GAP_CANDIDATE',
       id,
     );
-  assert.equal(checklist.packVersion, '0.2.0');
+  assert.equal(checklist.packVersion, '0.3.0');
+});
+
+test('React findings become explicit checklist gaps', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        'use client';
+        export function Preview({ html, token }) {
+          localStorage.setItem('auth_token', token);
+          return <article dangerouslySetInnerHTML={{ __html: html }} />;
+        }
+      `,
+      'src/components/preview.tsx',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-REACT-001')?.status,
+    'GAP_CANDIDATE',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-REACT-002')?.status,
+    'GAP_CANDIDATE',
+  );
 });
 
 test('webhook signature calls do not hide unsafe body parsing order', () => {

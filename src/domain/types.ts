@@ -98,7 +98,7 @@ export interface Finding {
   id: string;
   fingerprint: string;
   ruleId: string;
-  source: 'builtin' | 'posture' | 'ast' | 'http-probe' | 'osv' | 'semgrep' | 'gitleaks';
+  source: 'builtin' | 'posture' | 'ast' | 'react' | 'http-probe' | 'osv' | 'semgrep' | 'gitleaks';
   title: string;
   category: Category;
   severity: Severity;

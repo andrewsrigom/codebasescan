@@ -55,7 +55,16 @@ const finding = z.looseObject({
   id: shortText,
   fingerprint: shortText,
   ruleId: shortText,
-  source: z.enum(['builtin', 'posture', 'ast', 'http-probe', 'osv', 'semgrep', 'gitleaks']),
+  source: z.enum([
+    'builtin',
+    'posture',
+    'ast',
+    'react',
+    'http-probe',
+    'osv',
+    'semgrep',
+    'gitleaks',
+  ]),
   title: shortText,
   category: z.enum([
     'authentication',

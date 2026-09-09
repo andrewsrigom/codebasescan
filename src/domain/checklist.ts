@@ -79,6 +79,7 @@ function contextEvidence(
 export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist {
   const { projectProfile: profile, findings, scanners, httpProbe, dependencies } = input;
   const astRun = scanner(scanners, 'ast-security');
+  const reactRun = scanner(scanners, 'react-security');
   const postureRun = scanner(scanners, 'posture');
   const gitleaksRun = scanner(scanners, 'gitleaks');
   const osvRun = scanner(scanners, 'osv');
@@ -724,6 +725,104 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const reactRenderingGaps = findingsByRule(findings, ['TW-REACT001']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-REACT-001',
+      domain: 'input-validation',
+      title: 'Dynamic HTML preserves React output encoding',
+      status: gapStatus(
+        reactRenderingGaps,
+        reactRun,
+        profilePartial,
+        reactRun?.status === 'completed',
+      ),
+      rationale: reactRenderingGaps.length
+        ? `${reactRenderingGaps.length} dynamic React HTML rendering candidate(s) require review.`
+        : 'No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the bounded React scan.',
+      applicability: 'Applies to captured runtime JSX and TSX modules.',
+      evidence: [
+        ...references(
+          'finding',
+          reactRenderingGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [reactRun?.id]),
+      ],
+      verification:
+        'Test script, event-handler, URL, SVG, malformed markup, and mutation-XSS payloads at every intentional HTML rendering boundary.',
+      limitations: [
+        'Sanitizer policy configuration and browser mutation behavior require runtime review.',
+      ],
+    }),
+  );
+
+  const reactBrowserGaps = findingsByRule(findings, [
+    'TW-REACT002',
+    'TW-REACT003',
+    'TW-REACT004',
+    'TW-REACT005',
+    'TW-REACT006',
+  ]);
+  controls.push(
+    control({
+      id: 'TW-CTRL-REACT-002',
+      domain: 'browser-security',
+      title: 'Client navigation, storage, and messaging use constrained browser boundaries',
+      status: gapStatus(
+        reactBrowserGaps,
+        reactRun,
+        profilePartial,
+        reactRun?.status === 'completed',
+      ),
+      rationale: reactBrowserGaps.length
+        ? `${reactBrowserGaps.length} client navigation, storage, messaging, or new-tab candidate(s) require review.`
+        : 'No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern was found.',
+      applicability: 'Applies to explicit Client Component modules.',
+      evidence: [
+        ...references(
+          'finding',
+          reactBrowserGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [reactRun?.id]),
+      ],
+      verification:
+        'Exercise untrusted URLs, message origins, storage access after script injection, and external new-tab navigation.',
+    }),
+  );
+
+  const reactBoundaryGaps = findingsByRule(findings, [
+    'TW-REACT007',
+    'TW-REACT008',
+    'TW-REACT009',
+    'TW-AST010',
+  ]);
+  controls.push(
+    control({
+      id: 'TW-CTRL-REACT-003',
+      domain: 'secrets',
+      title: 'Server and Client Component boundaries keep privileged data on the server',
+      status: gapStatus(
+        reactBoundaryGaps,
+        reactRun,
+        profilePartial,
+        reactRun?.status === 'completed',
+      ),
+      rationale: reactBoundaryGaps.length
+        ? `${reactBoundaryGaps.length} server/client boundary candidate(s) require review.`
+        : 'No supported server-only import, sensitive prop, async Client Component, or private environment boundary candidate was found.',
+      applicability: 'Applies to Next.js applications using React Server and Client Components.',
+      evidence: [
+        ...references(
+          'finding',
+          reactBoundaryGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [reactRun?.id, astRun?.id]),
+      ],
+      verification:
+        'Inspect serialized RSC payloads and production client bundles for credentials, privileged session objects, and server-only modules.',
+    }),
+  );
+
   const statuses: SecurityControlStatus[] = [
     'EVIDENCED',
     'GAP_CANDIDATE',
@@ -741,7 +840,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   return {
     schemaVersion: 1,
     packId: 'traceward-web-application',
-    packVersion: '0.2.0',
+    packVersion: '0.3.0',
     controls,
     summary,
   };

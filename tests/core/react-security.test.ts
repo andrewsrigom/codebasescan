@@ -1,0 +1,111 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { digest } from '../../src/domain/findings.ts';
+import { profileProject } from '../../src/scanners/project-profile.ts';
+import { scanReactSecurity } from '../../src/scanners/react-security.ts';
+import type { Snapshot } from '../../src/domain/types.ts';
+import { snapshotOf } from '../helpers.ts';
+
+function scan(content: string) {
+  const snapshot = snapshotOf(content, 'src/components/example.tsx');
+  return scanReactSecurity(snapshot, profileProject(snapshot).profile);
+}
+
+function multiFileSnapshot(files: Record<string, string>): Snapshot {
+  const sourceFiles = Object.entries(files).map(([path, content]) => ({
+    path,
+    scope: 'runtime' as const,
+    content,
+    digest: digest(content),
+    bytes: Buffer.byteLength(content),
+  }));
+  return {
+    digest: digest(sourceFiles.map((file) => `${file.path}:${file.digest}`).join('\n')),
+    files: sourceFiles,
+    totalBytes: sourceFiles.reduce((total, file) => total + file.bytes, 0),
+    skipped: {},
+    truncated: false,
+  };
+}
+
+test('React HTML rule distinguishes dynamic input from recognized sanitization', () => {
+  const vulnerable = scan(`
+    'use client';
+    export function Preview({ html }) {
+      return <article dangerouslySetInnerHTML={{ __html: html }} />;
+    }
+  `);
+  assert.ok(vulnerable.findings.some((finding) => finding.ruleId === 'TW-REACT001'));
+
+  const safe = scan(`
+    'use client';
+    export function Preview({ html }) {
+      return <article dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />;
+    }
+  `);
+  assert.ok(!safe.findings.some((finding) => finding.ruleId === 'TW-REACT001'));
+});
+
+test('React client rules cover URLs, browser storage, messaging, and new tabs', () => {
+  const result = scan(`
+    'use client';
+    export function AccountLink({ destination, token }) {
+      localStorage.setItem('access_token', token);
+      window.parent.postMessage({ token }, '*');
+      window.addEventListener('message', (event) => consume(event.data));
+      return <a href={destination} target="_blank">Continue</a>;
+    }
+  `);
+  const ids = new Set(result.findings.map((finding) => finding.ruleId));
+  assert.ok(ids.has('TW-REACT002'));
+  assert.ok(ids.has('TW-REACT003'));
+  assert.ok(ids.has('TW-REACT004'));
+  assert.ok(ids.has('TW-REACT005'));
+  assert.ok(ids.has('TW-REACT006'));
+});
+
+test('React client boundary rules catch server imports and async components', () => {
+  const result = scan(`
+    'use client';
+    import { cookies } from 'next/headers';
+    export async function Dashboard() {
+      return <div>{String(cookies)}</div>;
+    }
+  `);
+  const ids = new Set(result.findings.map((finding) => finding.ruleId));
+  assert.ok(ids.has('TW-REACT008'));
+  assert.ok(ids.has('TW-REACT009'));
+});
+
+test('Server Components do not pass sensitive-shaped props to Client Components', () => {
+  const snapshot = multiFileSnapshot({
+    'src/app/page.tsx': `
+      import { ClientPanel } from '../components/client-panel';
+      export default async function Page() {
+        const session = await getSession();
+        return <ClientPanel session={session} />;
+      }
+    `,
+    'src/components/client-panel.tsx': `
+      'use client';
+      export function ClientPanel({ session }) { return <div>{session.user.name}</div>; }
+    `,
+  });
+  const result = scanReactSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
+});
+
+test('safe React boundaries avoid client security candidates', () => {
+  const result = scan(`
+    'use client';
+    export function SafeLink({ label }) {
+      window.parent.postMessage({ ready: true }, 'https://app.example.test');
+      window.addEventListener('message', (event) => {
+        if (event.origin !== 'https://app.example.test') return;
+        consume(event.data);
+      });
+      return <a href="/account" rel="noopener noreferrer" target="_blank">{label}</a>;
+    }
+  `);
+  assert.deepEqual(result.findings, []);
+});
