@@ -239,7 +239,7 @@ export function buildAuditGraph(options: {
       const finding = state.normalizedFindings[state.cursor];
       if (!finding) return {};
       const source = redactedSnapshot(await checkedSnapshot(state));
-      const graph = buildReviewGraph(source, reviewer, signal);
+      const graph = buildReviewGraph(source, reviewer, state.projectProfile ?? undefined, signal);
       const result = await graph.invoke({ finding }, { signal, recursionLimit: 12 });
       const reviewed = { ...finding, ...(result.analysis ? { analysis: result.analysis } : {}) };
       store.event(
@@ -313,6 +313,9 @@ export function buildAuditGraph(options: {
                   : {}),
                 contextFilesSent: [
                   ...new Set(modelAnalyses.flatMap((analysis) => analysis.contextFilesSent ?? [])),
+                ],
+                contextIdsSent: [
+                  ...new Set(modelAnalyses.flatMap((analysis) => analysis.contextIdsSent ?? [])),
                 ],
                 redactionApplied: modelAnalyses.some(
                   (analysis) => analysis.redactionApplied === true,

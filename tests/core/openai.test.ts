@@ -5,6 +5,7 @@ import { AuditStore } from '../../src/server/store.ts';
 import { scanPatterns } from '../../src/scanners/builtin.ts';
 import { createOpenAiReviewer } from '../../src/engine/openai.ts';
 import { snapshotOf } from '../helpers.ts';
+import type { ContextDescriptor } from '../../src/engine/context-broker.ts';
 
 function setup() {
   const store = new AuditStore(':memory:');
@@ -38,7 +39,7 @@ function success(evidenceId: string): Response {
       explanation: 'Runtime reachability is not available.',
       evidenceIds: [evidenceId],
       limitations: ['Only the supplied snapshot context was inspected.'],
-      requestedFiles: [],
+      requestedContextIds: [],
     }),
     usage: {
       input_tokens: 120,
@@ -59,11 +60,16 @@ test('OpenAI request is opt-in, structured, non-stored, redacted, and provenance
     return success(finding.evidence[0]!.id);
   });
   const source = 'const apiKey = "sensitive-fixture-value"; // developer@example.test';
+  const available: ContextDescriptor[] = [
+    { id: 'ctx-source', kind: 'symbol', label: 'example', file: 'src/example.ts', line: 1 },
+    { id: 'ctx-env', kind: 'fact', label: 'env', file: '.env', line: 1 },
+    { id: 'ctx-outside', kind: 'fact', label: 'outside', file: '../../outside', line: 1 },
+  ];
   const first = await reviewer.assess(
     finding,
     source,
-    ['src/example.ts', '.env', '../../outside'],
-    ['src/example.ts'],
+    available,
+    ['ctx-source'],
   );
   const parsedBody = JSON.parse(requestBody) as Record<string, unknown>;
   assert.equal(parsedBody.store, false);
@@ -83,8 +89,8 @@ test('OpenAI request is opt-in, structured, non-stored, redacted, and provenance
   const second = await reviewer.assess(
     finding,
     source,
-    ['src/example.ts', '.env'],
-    ['src/example.ts'],
+    available.slice(0, 2),
+    ['ctx-source'],
   );
   assert.equal(second.cached, true);
   assert.equal(calls, 1);
@@ -99,7 +105,12 @@ test('OpenAI retries are bounded and count against the audit budget', async (con
     calls++;
     return calls === 1 ? new Response('', { status: 500 }) : success(finding.evidence[0]!.id);
   });
-  await reviewer.assess(finding, 'bounded context', ['src/example.ts'], ['src/example.ts']);
+  await reviewer.assess(
+    finding,
+    'bounded context',
+    [{ id: 'ctx-source', kind: 'symbol', label: 'example', file: 'src/example.ts', line: 1 }],
+    ['ctx-source'],
+  );
   assert.equal(calls, 2);
   assert.equal(store.aiUsage(audit.id).calls, 2);
 });
@@ -115,7 +126,13 @@ test('OpenAI malformed output and hard call budgets fail closed', async (context
       Response.json({ output_text: '{not-json', usage: { input_tokens: 5, output_tokens: 2 } }),
   );
   await assert.rejects(
-    () => malformed.assess(finding, 'context', ['src/example.ts'], ['src/example.ts']),
+    () =>
+      malformed.assess(
+        finding,
+        'context',
+        [{ id: 'ctx-source', kind: 'symbol', label: 'example', file: 'src/example.ts', line: 1 }],
+        ['ctx-source'],
+      ),
     /JSON/,
   );
 
@@ -127,7 +144,13 @@ test('OpenAI malformed output and hard call budgets fail closed', async (context
     async () => success(secondFinding.evidence[0]!.id),
   );
   await assert.rejects(
-    () => exhausted.assess(secondFinding, 'context', ['src/example.ts'], ['src/example.ts']),
+    () =>
+      exhausted.assess(
+        secondFinding,
+        'context',
+        [{ id: 'ctx-source', kind: 'symbol', label: 'example', file: 'src/example.ts', line: 1 }],
+        ['ctx-source'],
+      ),
     /budget exhausted/,
   );
 });
@@ -145,7 +168,13 @@ test('OpenAI timeout is bounded', async (context) => {
       }),
   );
   await assert.rejects(
-    () => reviewer.assess(finding, 'context', ['src/example.ts'], ['src/example.ts']),
+    () =>
+      reviewer.assess(
+        finding,
+        'context',
+        [{ id: 'ctx-source', kind: 'symbol', label: 'example', file: 'src/example.ts', line: 1 }],
+        ['ctx-source'],
+      ),
     /aborted/,
   );
 });

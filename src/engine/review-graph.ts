@@ -1,34 +1,38 @@
 import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
-import type { Analysis, Finding, Snapshot } from '../domain/types.ts';
+import type { Analysis, Finding, ProjectProfile, Snapshot } from '../domain/types.ts';
 import type { Reviewer } from './model.ts';
-import { createReadSourceTool } from './model.ts';
+import { createContextBroker } from './context-broker.ts';
 const ReviewState = Annotation.Root({
   finding: Annotation<Finding>(),
   inspectedFiles: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
-  requestedFiles: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
+  contextIds: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
+  requestedContextIds: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
   context: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
+  contextTruncated: Annotation<boolean>({ reducer: (_, value) => value, default: () => false }),
   rounds: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
   analysis: Annotation<Analysis | null>({ reducer: (_, value) => value, default: () => null }),
 });
 export function buildReviewGraph(
   snapshot: Snapshot,
   reviewer: Reviewer | null,
+  profile?: ProjectProfile,
   signal?: AbortSignal,
 ) {
-  const readSource = createReadSourceTool(snapshot);
   return new StateGraph(ReviewState)
     .addNode('collect_context', async (state) => {
-      const paths = state.requestedFiles.length
-        ? state.requestedFiles
-        : state.finding.evidence.map((entry) => entry.file);
-      const fresh = [...new Set(paths)]
-        .filter((file) => !state.inspectedFiles.includes(file))
-        .slice(0, 2);
-      const chunks: string[] = [];
-      for (const file of fresh) chunks.push(String(await readSource.invoke({ file })));
+      const broker = createContextBroker(snapshot, state.finding, profile);
+      const requested = state.rounds === 0 ? broker.initialIds : state.requestedContextIds;
+      const delivery = broker.collect(
+        requested,
+        state.contextIds,
+        state.context.length,
+        state.rounds === 0,
+      );
       return {
-        context: `${state.context}\n${chunks.join('\n')}`.slice(0, 30000),
-        inspectedFiles: [...state.inspectedFiles, ...fresh],
+        context: [state.context, delivery.context].filter(Boolean).join('\n'),
+        contextIds: [...state.contextIds, ...delivery.deliveredIds],
+        inspectedFiles: [...new Set([...state.inspectedFiles, ...delivery.files])],
+        contextTruncated: state.contextTruncated || delivery.truncated,
         rounds: state.rounds + 1,
       };
     })
@@ -47,28 +51,34 @@ export function buildReviewGraph(
             'Global authorization, RLS, runtime configuration and generated code may be outside the analyzed context.',
           ],
           inspectedFiles: state.inspectedFiles,
+          contextIdsSent: state.contextIds,
+          contextCharactersSent: state.context.length,
+          contextTruncated: state.contextTruncated,
           rounds: state.rounds,
         };
-        return { analysis, requestedFiles: [] };
+        return { analysis, requestedContextIds: [] };
       }
       try {
+        const broker = createContextBroker(snapshot, state.finding, profile);
         const assessment = await reviewer.assess(
           state.finding,
           state.context,
-          snapshot.files.map((file) => file.path).slice(0, 300),
-          state.inspectedFiles,
+          broker.catalog,
+          state.contextIds,
           signal,
         );
         const analysis: Analysis = {
           ...assessment,
           kind: reviewer.provider,
           inspectedFiles: state.inspectedFiles,
+          contextTruncated: state.contextTruncated,
           rounds: state.rounds,
         };
-        const fresh = assessment.requestedFiles.filter(
-          (file) => !state.inspectedFiles.includes(file),
+        const allowedIds = new Set(broker.catalog.map((item) => item.id));
+        const fresh = assessment.requestedContextIds.filter(
+          (id) => allowedIds.has(id) && !state.contextIds.includes(id),
         );
-        return { analysis, requestedFiles: fresh };
+        return { analysis, requestedContextIds: fresh };
       } catch {
         return {
           analysis: {
@@ -81,16 +91,19 @@ export function buildReviewGraph(
               'Model assessment failed. No severity reduction or suppression was applied.',
             ],
             inspectedFiles: state.inspectedFiles,
+            contextIdsSent: state.contextIds,
+            contextCharactersSent: state.context.length,
+            contextTruncated: state.contextTruncated,
             rounds: state.rounds,
           } satisfies Analysis,
-          requestedFiles: [],
+          requestedContextIds: [],
         };
       }
     })
     .addEdge(START, 'collect_context')
     .addEdge('collect_context', 'assess')
     .addConditionalEdges('assess', (state) =>
-      state.requestedFiles.length > 0 && state.rounds < 2 ? 'collect_context' : END,
+      state.requestedContextIds.length > 0 && state.rounds < 2 ? 'collect_context' : END,
     )
     .compile();
 }

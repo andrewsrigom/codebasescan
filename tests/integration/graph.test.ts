@@ -10,6 +10,7 @@ import { AuditStore } from '../../src/server/store.ts';
 import { configuration } from '../../src/server/config.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import { scanPatterns } from '../../src/scanners/builtin.ts';
+import { profileProject } from '../../src/scanners/project-profile.ts';
 import { executeAudit } from '../../src/engine/run.ts';
 import { disableRemoteTracing } from '../../src/security/privacy.ts';
 disableRemoteTracing();
@@ -61,10 +62,11 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
 test('the context loop terminates after two rounds with an injected reviewer', async () => {
   const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
   const finding = scanPatterns(source).find((candidate) => candidate.category === 'injection')!;
+  const profile = profileProject(source).profile;
   let calls = 0;
   const graph = buildReviewGraph(source, {
     provider: 'ollama',
-    async assess() {
+    async assess(_finding, _context, availableContexts, contextIds) {
       calls++;
       return {
         assessment: 'inconclusive',
@@ -72,13 +74,13 @@ test('the context loop terminates after two rounds with an injected reviewer', a
         explanation: 'More runtime evidence is needed.',
         evidenceIds: [],
         limitations: ['Runtime is outside the snapshot.'],
-        requestedFiles: source.files
-          .filter((file) => !finding.evidence.some((evidence) => evidence.file === file.path))
-          .slice(calls - 1, calls)
-          .map((file) => file.path),
+        requestedContextIds: availableContexts
+          .filter((item) => !contextIds.includes(item.id))
+          .slice(0, 1)
+          .map((item) => item.id),
       };
     },
-  });
+  }, profile);
   const result = await graph.invoke({ finding });
   assert.ok(calls <= 2);
   assert.equal(result.rounds, 2);

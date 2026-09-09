@@ -61,7 +61,9 @@ export interface Analysis {
   model?: string;
   promptVersion?: string;
   contextFilesSent?: string[];
+  contextIdsSent?: string[];
   contextCharactersSent?: number;
+  contextTruncated?: boolean;
   redactionApplied?: boolean;
   cached?: boolean;
   tokenUsage?: {
@@ -80,6 +82,7 @@ export interface AiUsage {
   outputTokens: number;
   approximateCostUsd?: number;
   contextFilesSent: string[];
+  contextIdsSent: string[];
   redactionApplied: boolean;
 }
 export interface Finding {
