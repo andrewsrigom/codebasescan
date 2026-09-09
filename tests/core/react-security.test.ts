@@ -90,3 +90,20 @@ test('safe React boundaries avoid client security candidates', () => {
   `);
   assert.deepEqual(result.findings, []);
 });
+
+test('ordinary component props, route builders, images, and array pushes are not navigation taint', () => {
+  const result = scan(`
+    'use client';
+    export function ContentCard({ href, imageSrc, item, searchParams }) {
+      const rows = [];
+      rows.push(item);
+      const accountPath = buildAccountPath(item.id);
+      const { localizedLoginPath } = resolveLocalizedAuthFlowPaths({ nextPath: searchParams.get('next') });
+      const preservedPath = preserveWidgetContext(accountPath, searchParams);
+      const query = new URLSearchParams(searchParams.toString()).toString();
+      router.replace(query ? \`/account?\${query}\` : '/account');
+      return <><Link href={href}>Open</Link><Image src={imageSrc} alt="" /><Link href={accountPath}>Account</Link><Link href={localizedLoginPath}>Login</Link><Link href={preservedPath}>Preserved</Link></>;
+    }
+  `);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT002'));
+});

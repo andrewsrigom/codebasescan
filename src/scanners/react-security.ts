@@ -16,6 +16,8 @@ const sensitiveName =
   /(?:api[_-]?key|authorization|cookie|jwt|password|private[_-]?key|refresh[_-]?token|secret|session|token)/i;
 const serverOnlyImport =
   /^(?:server-only|next\/headers|next\/server|node:fs(?:\/promises)?|@prisma\/client)$/;
+const explicitBrowserInputName =
+  /^(?:callbackUrl|continueUrl|destination|next|nextUrl|params|redirect|redirectTo|returnTo|returnUrl|searchParams|targetUrl)$/i;
 
 export interface ReactSecurityResult {
   findings: Finding[];
@@ -75,12 +77,26 @@ function containsIdentifier(node: ts.Node | undefined, names: Set<string>): bool
 }
 
 function functionTaint(node: ts.FunctionLikeDeclaration): Set<string> {
-  const tainted = new Set(node.parameters.flatMap((parameter) => bindingNames(parameter.name)));
+  const tainted = new Set(
+    node.parameters
+      .flatMap((parameter) => bindingNames(parameter.name))
+      .filter((name) => explicitBrowserInputName.test(name)),
+  );
+  const serverOwnedUrls = new Set<string>();
   for (let pass = 0; pass < 4; pass++) {
     let changed = false;
     const visit = (child: ts.Node): void => {
       if (child !== node && isExecutableFunction(child)) return;
       if (ts.isVariableDeclaration(child) && child.initializer) {
+        const names = bindingNames(child.name);
+        if (isServerOwnedUrl(child.initializer, serverOwnedUrls)) {
+          for (const name of names) {
+            serverOwnedUrls.add(name);
+            tainted.delete(name);
+          }
+          ts.forEachChild(child, visit);
+          return;
+        }
         const fromInput =
           containsIdentifier(child.initializer, tainted) ||
           /(?:useSearchParams|useParams|URLSearchParams)\s*\(/.test(
@@ -88,9 +104,18 @@ function functionTaint(node: ts.FunctionLikeDeclaration): Set<string> {
           ) ||
           /(?:window\.)?location\.(?:hash|href|search)/.test(
             child.initializer.getText(child.getSourceFile()),
+          ) ||
+          /\b(?:event|messageEvent)\.(?:currentTarget|target)\.value\b/.test(
+            child.initializer.getText(child.getSourceFile()),
+          ) ||
+          /\b(?:event|messageEvent)\.data\b/.test(
+            child.initializer.getText(child.getSourceFile()),
+          ) ||
+          /(?:localStorage|sessionStorage)\.getItem\s*\(/.test(
+            child.initializer.getText(child.getSourceFile()),
           );
         if (fromInput)
-          for (const name of bindingNames(child.name))
+          for (const name of names)
             if (!tainted.has(name)) {
               tainted.add(name);
               changed = true;
@@ -140,19 +165,55 @@ function dangerousHtmlExpression(attribute: ts.JsxAttribute): ts.Expression | un
   return property?.initializer;
 }
 
-function isServerOwnedUrl(expression: ts.Expression): boolean {
+function isServerOwnedUrl(expression: ts.Expression, trustedNames = new Set<string>()): boolean {
+  if (ts.isIdentifier(expression) && trustedNames.has(expression.text)) return true;
   if (ts.isStringLiteralLike(expression)) return true;
   if (ts.isNoSubstitutionTemplateLiteral(expression)) return true;
   if (ts.isTemplateExpression(expression))
     return (
-      /^(?:\/|#)/.test(expression.head.text) ||
+      /^(?:\/|#|\?)/.test(expression.head.text) ||
+      /^(?:mailto|tel):/i.test(expression.head.text) ||
       /^https?:\/\/[^/]+(?:\/|$)/i.test(expression.head.text)
     );
+  if (ts.isConditionalExpression(expression))
+    return (
+      isServerOwnedUrl(expression.whenTrue, trustedNames) &&
+      isServerOwnedUrl(expression.whenFalse, trustedNames)
+    );
+  if (ts.isCallExpression(expression)) {
+    const callee = callName(expression).split('.').at(-1) ?? '';
+    if (
+      /^(?:build|create|localize|resolve|sanitize|safe)[A-Za-z0-9]*(?:Href|Path|Paths|Url)$/i.test(
+        callee,
+      )
+    )
+      return true;
+    if (
+      /^(?:setPathQueryParam|preserve[A-Za-z0-9]*Context)$/i.test(callee) &&
+      expression.arguments[0] &&
+      isServerOwnedUrl(expression.arguments[0], trustedNames)
+    )
+      return true;
+  }
   if (ts.isNewExpression(expression) && expression.expression.getText() === 'URL') {
     const destination = expression.arguments?.[0];
-    return Boolean(destination && isServerOwnedUrl(destination));
+    return Boolean(destination && isServerOwnedUrl(destination, trustedNames));
   }
   return false;
+}
+
+function isSensitiveUrlAttribute(tag: string, attribute: 'href' | 'src'): boolean {
+  const component = tag.split('.').at(-1)?.toLowerCase();
+  if (attribute === 'href') return component === 'a' || component === 'link';
+  return component === 'iframe' || component === 'script';
+}
+
+function isNavigationCall(callee: string): boolean {
+  return (
+    /^(?:router|navigation|history)\.(?:push|replace)$/.test(callee) ||
+    /^(?:(?:window\.)?location)\.(?:assign|replace)$/.test(callee) ||
+    /^(?:window\.)?open$/.test(callee)
+  );
 }
 
 function inlineMessageHandler(call: ts.CallExpression): ts.FunctionLikeDeclaration | undefined {
@@ -295,7 +356,13 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
         [src, 'src'],
       ] as const) {
         const value = attributeExpression(attribute);
-        if (attribute && value && containsIdentifier(value, tainted) && !isServerOwnedUrl(value))
+        if (
+          attribute &&
+          value &&
+          isSensitiveUrlAttribute(tag, label) &&
+          containsIdentifier(value, tainted) &&
+          !isServerOwnedUrl(value)
+        )
           add(
             reactFinding({
               file,
@@ -342,7 +409,7 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
       const callee = callName(node);
       const first = node.arguments[0];
       if (
-        /(?:^|\.)(?:push|replace|assign|open)$/.test(callee) &&
+        isNavigationCall(callee) &&
         first &&
         containsIdentifier(first, tainted) &&
         !isServerOwnedUrl(first)
@@ -527,7 +594,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.1.0',
+        version: '0.2.0',
       },
     };
 
@@ -549,7 +616,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }

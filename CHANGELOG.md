@@ -22,3 +22,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - AI-disabled audits now skip the contextual investigation subgraph entirely; workflow v2 prevents incompatible checkpoint reuse.
 - Added priority, confidence, and exposure filters plus a reviewed `fixed` disposition that no longer blocks CI.
 - Added a read-only-oriented `doctor` command for runtime, storage, scanner, advisory database, and AI-mode diagnostics.
+- Reduced React navigation noise found in real projects by separating browser-controlled inputs from ordinary component props and restricting navigation sinks to real browser/router APIs.
