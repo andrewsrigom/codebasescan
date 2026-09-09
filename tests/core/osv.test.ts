@@ -102,11 +102,15 @@ test('OSV normalizes aliases, fixed versions, and provenance without exploitabil
       aliases: ['CVE-2099-0001'],
       summary: 'Fixture package vulnerability',
       modified: '2099-01-01T00:00:00Z',
-      severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }],
       affected: [
         {
           package: { name: 'lodash' },
-          ecosystem_specific: { severity: 'HIGH' },
+          severity: [
+            {
+              type: 'CVSS_V3',
+              score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H',
+            },
+          ],
           ranges: [{ events: [{ introduced: '0' }, { fixed: '4.17.21' }] }],
         },
       ],
@@ -117,7 +121,8 @@ test('OSV normalizes aliases, fixed versions, and provenance without exploitabil
     now: () => Date.parse('2099-01-02T00:00:00Z'),
   });
   assert.equal(result.run.status, 'completed');
-  assert.equal(result.findings[0]?.severity, 'high');
+  assert.equal(result.findings[0]?.severity, 'critical');
+  assert.equal(result.findings[0]?.vulnerability?.severity[0]?.type, 'CVSS_V3');
   assert.deepEqual(result.findings[0]?.vulnerability?.aliases, ['CVE-2099-0001']);
   assert.deepEqual(result.findings[0]?.vulnerability?.fixedVersions, ['4.17.21']);
   assert.match(result.findings[0]?.description ?? '', /not assessed/);

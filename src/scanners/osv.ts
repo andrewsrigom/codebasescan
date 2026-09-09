@@ -73,6 +73,7 @@ interface CompactRecord {
   packages: {
     name: string;
     fixedVersions: string[];
+    severity: { type: string; score: string }[];
     ecosystemSeverity?: string;
   }[];
   databaseSeverity?: string;
@@ -100,6 +101,10 @@ const compactRecordSchema = z.object({
       z.object({
         name: z.string().max(214),
         fixedVersions: z.array(z.string().max(200)).max(30),
+        severity: z
+          .array(z.object({ type: z.string().max(50), score: z.string().max(500) }))
+          .max(20)
+          .default([]),
         ecosystemSeverity: z.string().max(50).optional(),
       }),
     )
@@ -148,6 +153,7 @@ function compact(value: unknown): CompactRecord {
           ),
         ),
       ].slice(0, 30),
+      severity: affected.severity ?? [],
       ...(typeof affected.ecosystem_specific?.severity === 'string'
         ? { ecosystemSeverity: affected.ecosystem_specific.severity.slice(0, 50) }
         : typeof affected.database_specific?.severity === 'string'
@@ -178,6 +184,14 @@ function consolidate(records: CompactRecord[]): CompactRecord[] {
       packageRecords.set(item.name, {
         name: item.name,
         fixedVersions: [...new Set([...(previous?.fixedVersions ?? []), ...item.fixedVersions])],
+        severity: [
+          ...new Map(
+            [...(previous?.severity ?? []), ...item.severity].map((severity) => [
+              `${severity.type}:${severity.score}`,
+              severity,
+            ]),
+          ).values(),
+        ],
         ...(previous?.ecosystemSeverity || item.ecosystemSeverity
           ? { ecosystemSeverity: previous?.ecosystemSeverity ?? item.ecosystemSeverity }
           : {}),
@@ -342,16 +356,16 @@ export function cvssV3Severity(vector: string): Severity | null {
 }
 
 function severity(record: CompactRecord, packageName: string): Severity {
-  const packageSeverity = record.packages.find(
-    (item) => item.name === packageName,
-  )?.ecosystemSeverity;
+  const affected = record.packages.find((item) => item.name === packageName);
+  const packageSeverity = affected?.ecosystemSeverity;
   const label = (packageSeverity ?? record.databaseSeverity ?? '').toUpperCase();
   if (label.includes('CRITICAL')) return 'critical';
   if (label.includes('HIGH')) return 'high';
   if (label.includes('MODERATE') || label.includes('MEDIUM')) return 'medium';
   if (label.includes('LOW')) return 'low';
   if (label.includes('NONE')) return 'info';
-  const scores = record.severity
+  const quantitative = affected?.severity.length ? affected.severity : record.severity;
+  const scores = quantitative
     .map((item) => {
       const numeric = Number(item.score);
       return Number.isFinite(numeric) && numeric >= 0 && numeric <= 10
@@ -390,7 +404,9 @@ function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRe
   const originalSeverity =
     affected?.ecosystemSeverity ??
     record.databaseSeverity ??
-    record.severity.map((item) => `${item.type}:${item.score}`).join(', ');
+    (affected?.severity.length ? affected.severity : record.severity)
+      .map((item) => `${item.type}:${item.score}`)
+      .join(', ');
   const finding = makeFinding({
     source: 'osv',
     ruleId: record.id,
@@ -411,7 +427,7 @@ function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRe
     package: dependency.name,
     version: dependency.resolvedVersion ?? '',
     fixedVersions,
-    severity: record.severity,
+    severity: affected?.severity.length ? affected.severity : record.severity,
     relationship: dependency.relationship ?? 'unknown',
     lockfile: dependency.lockfile ?? dependency.manifest,
     ...(record.modified ? { advisoryModified: record.modified } : {}),
