@@ -249,26 +249,181 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const rawSqlContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'raw-sql'),
+  );
+  const rawSqlGaps = findingsByRule(findings, ['TW-AST004', 'TW-001']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-INJECTION-001',
+      domain: 'input-validation',
+      title: 'Raw SQL keeps request data out of query structure',
+      status: rawSqlGaps.length
+        ? 'GAP_CANDIDATE'
+        : rawSqlContexts.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: rawSqlGaps.length
+        ? `${rawSqlGaps.length} raw SQL input-flow candidate(s) require review.`
+        : rawSqlContexts.length
+          ? `${rawSqlContexts.length} raw SQL boundary(s) were mapped, but source-only analysis did not establish effective parameterization.`
+          : 'No supported raw SQL boundary was mapped.',
+      applicability: 'Applies when mapped request/action code reaches raw SQL execution.',
+      evidence: [
+        ...references(
+          'finding',
+          rawSqlGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(rawSqlContexts, ['raw-sql']),
+        ...astRefs,
+      ],
+      verification:
+        'Trace each query fragment, replace structural interpolation with parameters, and test metacharacter payloads without modifying production data.',
+      limitations: [
+        'Indirect builders, ORM-specific safe tagged templates, and database-side controls may require manual review.',
+      ],
+    }),
+  );
+
+  const outboundContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'outbound-request'),
+  );
+  const outboundGaps = findingsByRule(findings, ['TW-AST005']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-OUTBOUND-001',
+      domain: 'integrations',
+      title: 'Outbound destinations are server-owned or safely constrained',
+      status: outboundGaps.length
+        ? 'GAP_CANDIDATE'
+        : outboundContexts.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: outboundGaps.length
+        ? `${outboundGaps.length} request-derived outbound destination candidate(s) require review.`
+        : outboundContexts.length
+          ? `${outboundContexts.length} outbound request boundary(s) were mapped without enough evidence to establish the effective network policy.`
+          : 'No supported outbound request boundary was mapped.',
+      applicability: 'Applies when mapped entry points can initiate server-side network requests.',
+      evidence: [
+        ...references(
+          'finding',
+          outboundGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(outboundContexts, ['outbound-request']),
+        ...astRefs,
+      ],
+      verification:
+        'Test untrusted public, private, loopback, metadata, DNS-rebinding, and redirect destinations against the effective egress policy.',
+      limitations: ['Network egress controls and DNS behavior are outside source-only evidence.'],
+    }),
+  );
+
+  const redirectContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'redirect'),
+  );
+  const redirectGaps = findingsByRule(findings, ['TW-AST006']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-REDIRECT-001',
+      domain: 'integrations',
+      title: 'Redirect destinations are constrained',
+      status: redirectGaps.length
+        ? 'GAP_CANDIDATE'
+        : redirectContexts.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: redirectGaps.length
+        ? `${redirectGaps.length} request-derived redirect candidate(s) require review.`
+        : redirectContexts.length
+          ? `${redirectContexts.length} redirect boundary(s) were mapped without enough evidence to establish the effective destination policy.`
+          : 'No supported redirect boundary was mapped.',
+      applicability: 'Applies when mapped entry points construct a redirect response.',
+      evidence: [
+        ...references(
+          'finding',
+          redirectGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(redirectContexts, ['redirect']),
+        ...astRefs,
+      ],
+      verification:
+        'Test external, scheme-relative, encoded, mixed-case, and userinfo-form destinations against the effective redirect policy.',
+    }),
+  );
+
+  const uploadGaps = findingsByRule(findings, ['TW-AST007']);
+  const httpEntrypoints = contexts.filter((context) =>
+    ['next-route', 'next-pages-api', 'express-route'].includes(context.entrypoint.kind),
+  );
+  controls.push(
+    control({
+      id: 'TW-CTRL-UPLOAD-001',
+      domain: 'input-validation',
+      title: 'File uploads enforce size, content, and storage-path constraints',
+      status: uploadGaps.length
+        ? 'GAP_CANDIDATE'
+        : httpEntrypoints.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: uploadGaps.length
+        ? `${uploadGaps.length} upload constraint candidate(s) require review.`
+        : httpEntrypoints.length
+          ? 'No decisive upload gap was mapped, but the profiler cannot prove that uploads are absent or fully constrained.'
+          : 'No supported HTTP entry point was mapped.',
+      applicability: 'Applies when an HTTP boundary accepts files or multipart form data.',
+      evidence: [
+        ...references(
+          'finding',
+          uploadGaps.map((item) => item.id),
+        ),
+        ...astRefs,
+      ],
+      verification:
+        'Test byte limits, file count, MIME/content mismatch, polyglots, generated names, traversal, overwrite, and storage execution policy.',
+      limitations: ['Streaming parsers and framework upload middleware may not be recognized.'],
+    }),
+  );
+
   const webhookVerified = webhooks.filter((context) =>
     context.facts.some((fact) => fact.kind === 'webhook-verification'),
   );
+  const webhookGaps = findingsByRule(findings, ['TW-AST008']);
   controls.push(
     control({
       id: 'TW-CTRL-WEBHOOK-001',
       domain: 'integrations',
       title: 'Webhook authenticity is verified before processing',
-      status: webhooks.length
-        ? profilePartial
-          ? 'PARTIAL'
-          : webhookVerified.length === webhooks.length
-            ? 'EVIDENCED'
-            : 'GAP_CANDIDATE'
-        : noMappedApplicability,
-      rationale: webhooks.length
-        ? `${webhookVerified.length} of ${webhooks.length} mapped webhook/callback boundary(s) contain a recognized signature or HMAC verification call.`
-        : 'No supported webhook/callback boundary reaching a sensitive operation was mapped.',
+      status: webhookGaps.length
+        ? 'GAP_CANDIDATE'
+        : webhooks.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : webhookVerified.length === webhooks.length
+              ? 'EVIDENCED'
+              : 'GAP_CANDIDATE'
+          : noMappedApplicability,
+      rationale: webhookGaps.length
+        ? `${webhookGaps.length} webhook verification-order candidate(s) require review.`
+        : webhooks.length
+          ? `${webhookVerified.length} of ${webhooks.length} mapped webhook/callback boundary(s) contain a recognized signature or HMAC verification call.`
+          : 'No supported webhook/callback boundary reaching a sensitive operation was mapped.',
       applicability: 'Applies to webhook/callback routes that reach sensitive operations.',
-      evidence: contextEvidence(webhookVerified, ['webhook-verification']),
+      evidence: [
+        ...references(
+          'finding',
+          webhookGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(webhookVerified, ['webhook-verification']),
+      ],
       verification:
         'Send missing, invalid, replayed, and stale signatures and confirm rejection before parsing or persistence.',
       limitations: [
@@ -328,7 +483,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
-  const cookieGaps = findingsByRule(findings, ['TW-P003', 'TW-H004']);
+  const cookieGaps = findingsByRule(findings, ['TW-AST009', 'TW-P003', 'TW-H004']);
   const cookieFacts = contexts.flatMap((context) =>
     context.facts.filter((fact) => fact.kind === 'cookie'),
   );
@@ -586,7 +741,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   return {
     schemaVersion: 1,
     packId: 'traceward-web-application',
-    packVersion: '0.1.0',
+    packVersion: '0.2.0',
     controls,
     summary,
   };

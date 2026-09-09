@@ -110,3 +110,55 @@ test('dependency and runtime controls reflect completed, failed, and opted-out s
     'FAILED',
   );
 });
+
+test('code-first flow findings become checklist gaps without claiming runtime proof', () => {
+  const snapshot = snapshotOf(
+    `
+      export async function POST(request: Request) {
+        requireUser();
+        const body = await request.json();
+        await db.$queryRawUnsafe(\`SELECT * FROM tasks WHERE name = '${'${body.name}'}'\`);
+        const target = body.target;
+        await fetch(target);
+        const form = await request.formData();
+        const file = form.get('file');
+        await storage.upload(file.name, file);
+        cookies().set('session', body.token);
+        return redirect(body.next);
+      }
+    `,
+    'src/app/api/tasks/route.ts',
+  );
+  const checklist = checklistFor(snapshot);
+  for (const id of [
+    'TW-CTRL-INJECTION-001',
+    'TW-CTRL-OUTBOUND-001',
+    'TW-CTRL-REDIRECT-001',
+    'TW-CTRL-UPLOAD-001',
+    'TW-CTRL-SESSION-001',
+  ])
+    assert.equal(
+      checklist.controls.find((control) => control.id === id)?.status,
+      'GAP_CANDIDATE',
+      id,
+    );
+  assert.equal(checklist.packVersion, '0.2.0');
+});
+
+test('webhook signature calls do not hide unsafe body parsing order', () => {
+  const snapshot = snapshotOf(
+    `
+      export async function POST(request: Request) {
+        const body = await request.json();
+        verifySignature(body);
+        return db.event.create({ data: body });
+      }
+    `,
+    'src/app/api/webhooks/provider/route.ts',
+  );
+  const checklist = checklistFor(snapshot);
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-WEBHOOK-001')?.status,
+    'GAP_CANDIDATE',
+  );
+});
