@@ -24,6 +24,8 @@ Consulted during starter preparation on 2026-09-08. Package APIs and security gu
 - Knip production mode and strict analysis: https://knip.dev/features/production-mode
 - Knip JSON reporter: https://knip.dev/features/reporters
 - Knip plugin/config loading behavior: https://knip.dev/explanations/plugins
+- Knip declarative configuration: https://knip.dev/reference/configuration
+- Knip monorepos and root workspace semantics: https://knip.dev/features/monorepos-and-workspaces
 - npm package-lock format: https://docs.npmjs.com/cli/configuring-npm/package-lock-json
 - Node SQLite: https://nodejs.org/api/sqlite.html
 - Node TypeScript support: https://nodejs.org/api/typescript.html

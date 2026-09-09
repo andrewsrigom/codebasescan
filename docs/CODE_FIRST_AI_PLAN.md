@@ -58,8 +58,8 @@ Build a deterministic profile before running AI.
 ### Limits
 
 - Maximum 2,000 source files, 200,000 AST nodes per file, 20,000 symbols, and 50,000 edges.
-- Parse only captured text with TypeScript's parser. No typecheck against the target, module resolution, plugins, transformers, or `tsconfig` execution.
-- Cross-file analysis follows captured relative, `@/`, `~/`, and root-alias imports plus exported identifiers for at most five hops. It does not execute or fully interpret target `tsconfig` path logic.
+- Parse only captured text with TypeScript's parser. No typecheck against the target, executable configuration, plugins, transformers, or `tsconfig` execution.
+- Cross-file analysis follows captured relative, `@/`, `~/`, root-alias, and bounded declarative `tsconfig` path imports plus exported identifiers for at most five hops. Unsupported compiler logic stays explicit.
 
 ### Exit gate
 

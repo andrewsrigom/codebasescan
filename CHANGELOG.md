@@ -31,3 +31,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added isolated pinned Knip analysis, TypeScript quality hotspots, and bounded import of existing coverage summaries.
 - Added selected five-hop taint propagation and source rules for command injection, path traversal, NoSQL, unsafe deserialization, dynamic regex, prototype pollution, weak digests, and mass assignment.
 - Added tRPC procedure mapping and detection for Drizzle, Auth.js, GraphQL, Zod, Joi, and Valibot.
+- Added safe declarative Knip settings, workspace manifests, package-script entry hints, and TypeScript path aliases to reduce monorepo dead-code noise without executing target configuration.

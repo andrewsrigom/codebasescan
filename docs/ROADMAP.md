@@ -29,12 +29,13 @@
 - Pinned Knip analysis runs against a script-free sanitized manifest with every target plugin disabled; reports retain bounded unused-file, dependency, export, and type candidates.
 - TypeScript quality metrics now retain function complexity, size, and parameter hotspots and import only bounded existing coverage aggregates.
 - Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
+- Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
 
 ## Next — independent real-project ground truth
 
 Repeat evaluation on owner-authorized applications with production context and independent human review. Record durable dispositions, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and later AI cost per accepted finding. Do not publish generic accuracy claims from fixtures or the initial public source pass.
 
-Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, custom `tsconfig` aliases, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
+Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
 Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 
