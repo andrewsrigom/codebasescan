@@ -69,5 +69,35 @@ test(
         ?.cwe,
       ['CWE-295'],
     );
+
+    const safeResult = await scanExternal(
+      'semgrep',
+      snapshotOf(
+        `
+        import jwt from 'jsonwebtoken';
+        import https from 'node:https';
+
+        export function safe(token, key, users, response, logger, value) {
+          jwt.verify(token, key, { algorithms: ['RS256'] });
+          const agent = new https.Agent({ rejectUnauthorized: true });
+          users.find({ tenantId: value });
+          response.json({ message: 'failed' });
+          logger.info({ userId: value });
+          const callback = new URL('https://example.test/callback');
+          callback.searchParams.set('state', value);
+          return { agent, parsed: JSON.parse(value) };
+        }
+      `,
+        'src/safe.ts',
+      ),
+      true,
+      temporary,
+      path.resolve('configs'),
+    );
+    assert.equal(safeResult.run.status, 'completed');
+    assert.deepEqual(
+      safeResult.findings.filter((finding) => finding.ruleId.startsWith('traceward.')),
+      [],
+    );
   },
 );
