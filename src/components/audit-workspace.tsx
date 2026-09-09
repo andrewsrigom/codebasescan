@@ -683,7 +683,9 @@ export function AuditWorkspace({
               </thead>
               <tbody>
                 {report?.dependencies.map((dependency) => (
-                  <tr key={`${dependency.manifest}:${dependency.scope}:${dependency.name}`}>
+                  <tr
+                    key={`${dependency.manifest}:${dependency.scope}:${dependency.name}:${dependency.resolvedVersion ?? dependency.requestedVersion}`}
+                  >
                     <td className="strong mono">{dependency.name}</td>
                     <td className="mono">{dependency.requestedVersion}</td>
                     <td className="mono">{dependency.resolvedVersion ?? 'Not resolved'}</td>
