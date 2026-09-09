@@ -6,6 +6,7 @@ import type {
   Finding,
   HttpProbeOptions,
   HttpProbeReport,
+  ProjectProfile,
   ScannerRun,
   Snapshot,
 } from '../domain/types.ts';
@@ -18,6 +19,7 @@ import path from 'node:path';
 import { scanExternal } from '../scanners/external.ts';
 import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
+import { profileProject } from '../scanners/project-profile.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -43,6 +45,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   dependencies: Annotation<Dependency[]>({ reducer: (_, value) => value, default: () => [] }),
+  projectProfile: Annotation<ProjectProfile | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
   analyzed: Annotation<Finding[]>({ reducer: mergeFindings, default: () => [] }),
   cursor: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
   reviewNote: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
@@ -124,6 +130,11 @@ export function buildAuditGraph(options: {
           } satisfies ScannerRun,
         ],
       };
+    })
+    .addNode('project_profile', async (state) => {
+      const result = profileProject(await checkedSnapshot(state));
+      event(state, 'project_profile', `Project structure profile: ${result.profile.status}.`);
+      return { projectProfile: result.profile, scanners: [result.run] };
     })
     .addNode('posture', async (state) => {
       const started = Date.now();
@@ -250,6 +261,7 @@ export function buildAuditGraph(options: {
         findings,
         scanners: state.scanners,
         dependencies: state.dependencies,
+        ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         coverage: buildCoverage(state.scanners, findings, config.aiMode),
         ...(config.aiMode !== 'disabled'
@@ -349,12 +361,16 @@ export function buildAuditGraph(options: {
     })
     .addEdge(START, 'snapshot')
     .addEdge('snapshot', 'patterns')
+    .addEdge('snapshot', 'project_profile')
     .addEdge('snapshot', 'posture')
     .addEdge('snapshot', 'semgrep')
     .addEdge('snapshot', 'gitleaks')
     .addEdge('snapshot', 'http_probe')
     .addEdge('snapshot', 'inventory')
-    .addEdge(['patterns', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'], 'normalize')
+    .addEdge(
+      ['patterns', 'project_profile', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'],
+      'normalize',
+    )
     .addConditionalEdges('normalize', (state) =>
       state.normalizedFindings.length ? 'investigate' : 'prepare_report',
     )

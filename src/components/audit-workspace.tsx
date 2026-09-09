@@ -565,6 +565,44 @@ export function AuditWorkspace({
               </div>
             </section>
           )}
+          {report?.projectProfile && (
+            <section className="panel">
+              <div className="panel-header">
+                <h2>Project structure</h2>
+                <Badge tone={report.projectProfile.status === 'complete' ? 'success' : 'medium'}>
+                  {report.projectProfile.status}
+                </Badge>
+              </div>
+              <div className="panel-body">
+                <div className="detail-row">
+                  <span>Frameworks</span>
+                  <strong>
+                    {report.projectProfile.frameworks.map((item) => item.name).join(', ') ||
+                      'None detected'}
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Entry points</span>
+                  <strong>{report.projectProfile.entrypoints.length}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Symbols / call edges</span>
+                  <strong>
+                    {report.projectProfile.symbols.length} / {report.projectProfile.calls.length}
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Security facts</span>
+                  <strong>{report.projectProfile.facts.length}</strong>
+                </div>
+                {report.projectProfile.issues.length > 0 && (
+                  <p className="small muted">
+                    {report.projectProfile.issues.length} issue(s) keep structural coverage partial.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
           <section className="panel">
             <div className="panel-header">
               <h2>Boundaries &amp; exclusions</h2>
@@ -611,17 +649,23 @@ export function AuditWorkspace({
             </div>
             <div className="graph-connector">↓</div>
             <div className="graph-parallel">
-              {['patterns', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'].map(
-                (stage) => (
-                  <div
-                    key={stage}
-                    className={`graph-node ${events.some((event) => event.stage === stage) ? 'done' : ''}`}
-                  >
-                    <Icon name="scan" />
-                    {stage}
-                  </div>
-                ),
-              )}
+              {[
+                'project_profile',
+                'patterns',
+                'posture',
+                'semgrep',
+                'gitleaks',
+                'http_probe',
+                'inventory',
+              ].map((stage) => (
+                <div
+                  key={stage}
+                  className={`graph-node ${events.some((event) => event.stage === stage) ? 'done' : ''}`}
+                >
+                  <Icon name="scan" />
+                  {stage}
+                </div>
+              ))}
             </div>
             <div className="graph-connector">↓</div>
             <div className="graph-node">Normalize &amp; prioritize candidates</div>

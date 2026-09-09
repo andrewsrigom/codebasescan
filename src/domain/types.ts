@@ -171,6 +171,90 @@ export interface HttpProbeReport {
     sameSite: 'strict' | 'lax' | 'none' | 'unspecified';
   }[];
 }
+export type ProjectProfileStatus = 'complete' | 'partial' | 'unsupported';
+export type ProjectEntrypointKind =
+  'next-route' | 'next-pages-api' | 'server-action' | 'middleware' | 'express-route';
+export type ProjectFactKind =
+  | 'authentication'
+  | 'authorization'
+  | 'validation'
+  | 'database'
+  | 'raw-sql'
+  | 'outbound-request'
+  | 'command-execution'
+  | 'file-access'
+  | 'redirect'
+  | 'cookie'
+  | 'response'
+  | 'secret-access';
+export interface ProjectFramework {
+  id: 'nextjs-app-router' | 'nextjs-pages-router' | 'express' | 'prisma' | 'supabase';
+  name: string;
+  file: string;
+  line: number;
+}
+export interface ProjectEntrypoint {
+  id: string;
+  kind: ProjectEntrypointKind;
+  file: string;
+  line: number;
+  name: string;
+  route?: string;
+  methods: string[];
+  dynamicParameters: string[];
+  symbolIds: string[];
+}
+export interface ProjectSymbol {
+  id: string;
+  file: string;
+  line: number;
+  name: string;
+  kind: 'function' | 'arrow-function' | 'method';
+  exported: boolean;
+}
+export interface ProjectImportBinding {
+  imported: string;
+  local: string;
+}
+export interface ProjectImport {
+  id: string;
+  file: string;
+  line: number;
+  specifier: string;
+  bindings: ProjectImportBinding[];
+  resolvedFile?: string;
+}
+export interface ProjectCallEdge {
+  id: string;
+  file: string;
+  line: number;
+  callee: string;
+  callerSymbolId?: string;
+  targetSymbolId?: string;
+}
+export interface ProjectFact {
+  id: string;
+  kind: ProjectFactKind;
+  file: string;
+  line: number;
+  signal: string;
+  ownerSymbolId?: string;
+}
+export interface ProjectProfile {
+  schemaVersion: 1;
+  status: ProjectProfileStatus;
+  languages: ('typescript' | 'javascript')[];
+  frameworks: ProjectFramework[];
+  entrypoints: ProjectEntrypoint[];
+  symbols: ProjectSymbol[];
+  imports: ProjectImport[];
+  calls: ProjectCallEdge[];
+  facts: ProjectFact[];
+  filesAnalyzed: number;
+  nodesAnalyzed: number;
+  issues: string[];
+  truncated: boolean;
+}
 export interface Project {
   id: string;
   name: string;
@@ -197,6 +281,7 @@ export interface AuditReport {
   findings: Finding[];
   scanners: ScannerRun[];
   dependencies: Dependency[];
+  projectProfile?: ProjectProfile;
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];
   aiUsage?: AiUsage;

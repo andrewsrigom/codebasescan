@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import { scanPosture } from '../src/scanners/posture.ts';
+import { profileProject } from '../src/scanners/project-profile.ts';
 import { mergeFindings } from '../src/domain/findings.ts';
 import { inventory } from '../src/scanners/inventory.ts';
 import { toHtml, toMarkdown, toSarif } from '../src/domain/reports.ts';
@@ -12,7 +13,9 @@ import type { AuditReport, ScannerRun } from '../src/domain/types.ts';
 
 const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
 const rawFindings = mergeFindings(scanPatterns(source), scanPosture(source));
+const profileResult = profileProject(source);
 const scanners: ScannerRun[] = [
+  profileResult.run,
   {
     id: 'builtin',
     name: 'Built-in patterns',
@@ -71,6 +74,7 @@ const report: AuditReport = {
   findings,
   scanners,
   dependencies: inventory(source),
+  projectProfile: profileResult.profile,
   coverage: buildCoverage(scanners, findings, 'disabled'),
   limitations: [
     'This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.',

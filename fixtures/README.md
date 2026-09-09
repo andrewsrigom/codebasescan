@@ -10,5 +10,7 @@ These directories are source snippets, not runnable applications. Do not install
 - `posture-safe`: benign counterparts for every application-posture rule.
 - `dependencies-vulnerable`: resolved lodash 4.17.20 used for mocked and live OSV validation.
 - `dependencies-safe`: resolved lodash 4.17.21 used for the clean OSV path.
+- `profile-nextjs`: structural Next.js, Express, Prisma, and Supabase signals parsed as inert data.
+- `profile-malformed`: syntax-error coverage for the project profiler.
 
 No real credentials, company source, customer data, or copied vulnerable application is included.

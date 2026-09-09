@@ -61,6 +61,7 @@ export function buildCoverage(
   aiMode: AuditReport['aiMode'],
 ): CoverageCapability[] {
   return [
+    scannerCapability(runs, 'project-profile', 'Project structure profile', 'NOT RUN'),
     scannerCapability(runs, 'builtin', 'Built-in static patterns', 'NOT RUN'),
     scannerCapability(runs, 'semgrep', 'Static code analysis', 'DISABLED'),
     scannerCapability(runs, 'gitleaks', 'Secret scanning', 'DISABLED'),

@@ -1,0 +1,10 @@
+{
+  "name": "profile-nextjs",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "6.0.0",
+    "@supabase/ssr": "0.7.0",
+    "express": "5.0.0",
+    "next": "16.3.4"
+  }
+}

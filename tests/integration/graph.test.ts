@@ -43,7 +43,8 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   const paused = await graph.getState(invocation);
   assert.ok(paused.next.includes('human_review'));
   assert.equal(store.audit(audit.id).report?.findings.length, 7);
-  assert.equal(store.audit(audit.id).report?.scanners.length, 6);
+  assert.equal(store.audit(audit.id).report?.scanners.length, 7);
+  assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
   await graph.invoke(
     new Command({ resume: { note: 'Reviewed the fixture; findings remain unconfirmed.' } }),
     invocation,

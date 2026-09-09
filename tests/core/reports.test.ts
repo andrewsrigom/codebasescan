@@ -9,6 +9,8 @@ import {
 } from '../../src/domain/reports.ts';
 import { sampleReport } from '../helpers.ts';
 import { buildCoverage } from '../../src/domain/coverage.ts';
+import { profileProject } from '../../src/scanners/project-profile.ts';
+import { snapshotOf } from '../helpers.ts';
 test('HTML export escapes source and titles rather than executing them', () => {
   const report = sampleReport();
   report.projectName = '<script>alert(1)</script>';
@@ -35,11 +37,15 @@ test('SARIF export retains unresolved status and valid local locations', () => {
 });
 test('Markdown includes scope and limitations', () => {
   const report = sampleReport();
+  report.projectProfile = profileProject(
+    snapshotOf('export function handler() { return Response.json({ ok: true }); }'),
+  ).profile;
   report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
+  assert.ok(output.includes('## Project structure'));
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });
