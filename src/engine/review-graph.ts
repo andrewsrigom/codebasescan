@@ -14,7 +14,7 @@ const ReviewState = Annotation.Root({
 });
 export function buildReviewGraph(
   snapshot: Snapshot,
-  reviewer: Reviewer | null,
+  reviewer: Reviewer,
   profile?: ProjectProfile,
   signal?: AbortSignal,
 ) {
@@ -37,14 +37,12 @@ export function buildReviewGraph(
       };
     })
     .addNode('assess', async (state) => {
-      if (!reviewer || state.finding.category === 'secrets') {
+      if (state.finding.category === 'secrets') {
         const analysis: Analysis = {
           kind: 'deterministic',
           assessment: 'needs_review',
           explanation:
-            state.finding.category === 'secrets'
-              ? 'Secret findings bypass model inference. Validate and rotate real credentials through a trusted manual process.'
-              : 'The scanner produced a review candidate. No LLM-based verification was performed.',
+            'Secret findings bypass model inference. Validate and rotate real credentials through a trusted manual process.',
           evidenceIds: state.finding.evidence.map((entry) => entry.id),
           limitations: [
             'Static patterns do not establish reachability or exploitability.',

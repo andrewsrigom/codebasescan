@@ -69,7 +69,7 @@ export class AuditStore {
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
         error TEXT, report_json TEXT, resume_note TEXT, attempts INTEGER NOT NULL DEFAULT 0,
         options_json TEXT NOT NULL DEFAULT '{}',
-        workflow_version TEXT NOT NULL DEFAULT 'traceward-audit-v1'
+        workflow_version TEXT NOT NULL DEFAULT '${auditWorkflowVersion}'
       );
       CREATE UNIQUE INDEX IF NOT EXISTS one_active_audit ON audits(project_id)
         WHERE status IN ('queued', 'running', 'awaiting_review');

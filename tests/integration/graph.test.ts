@@ -97,6 +97,10 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
       .audit(audit.id)
       .report?.findings.every((finding) => finding.disposition === 'needs_review'),
   );
+  assert.ok(
+    store.audit(audit.id).report?.findings.every((finding) => finding.analysis === undefined),
+  );
+  assert.equal(store.events(audit.id).filter((item) => item.stage === 'investigate').length, 0);
 });
 test('the context loop terminates after two rounds with an injected reviewer', async () => {
   const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));

@@ -61,6 +61,15 @@ export const AuditState = Annotation.Root({
 });
 type State = typeof AuditState.State;
 const maximumAnalyzedFindings = 12;
+
+function nextReviewableFinding(state: State): { finding: Finding; index: number } | null {
+  for (let index = state.cursor; index < state.normalizedFindings.length; index++) {
+    const finding = state.normalizedFindings[index];
+    if (finding && finding.category !== 'secrets') return { finding, index };
+  }
+  return null;
+}
+
 export function buildAuditGraph(options: {
   root: string;
   projectName: string;
@@ -262,8 +271,10 @@ export function buildAuditGraph(options: {
       return { normalizedFindings };
     })
     .addNode('investigate', async (state) => {
-      const finding = state.normalizedFindings[state.cursor];
-      if (!finding) return {};
+      if (!reviewer) return { cursor: state.normalizedFindings.length };
+      const reviewable = nextReviewableFinding(state);
+      if (!reviewable) return { cursor: state.normalizedFindings.length };
+      const { finding, index } = reviewable;
       const source = redactedSnapshot(await checkedSnapshot(state));
       const graph = buildReviewGraph(source, reviewer, state.projectProfile ?? undefined, signal);
       const result = await graph.invoke({ finding }, { signal, recursionLimit: 12 });
@@ -274,7 +285,7 @@ export function buildAuditGraph(options: {
         'investigate',
         `Reviewed ${finding.ruleId}; source disposition remains ${finding.disposition}.`,
       );
-      return { analyzed: [reviewed], cursor: state.cursor + 1 };
+      return { analyzed: [reviewed], cursor: index + 1 };
     })
     .addNode('prepare_report', (state) => {
       const createdAt = new Date().toISOString();
@@ -368,7 +379,9 @@ export function buildAuditGraph(options: {
           'Dependency resolution is limited to captured npm, pnpm, and Yarn lockfiles. OSV presence does not establish runtime reachability or exploitability.',
           'Secret files, Git history, symlinks, binary files, generated output and unsupported formats are excluded.',
           'Regex patterns can match comments and miss indirect flows; middleware, RLS and runtime policy need human review.',
-          ...(state.normalizedFindings.length > maximumAnalyzedFindings
+          ...(reviewer &&
+          state.normalizedFindings.filter((finding) => finding.category !== 'secrets').length >
+            maximumAnalyzedFindings
             ? [
                 `Contextual analysis was limited to ${maximumAnalyzedFindings} candidates. Remaining candidates are preserved without contextual assessment.`,
               ]
@@ -447,10 +460,10 @@ export function buildAuditGraph(options: {
       'normalize',
     )
     .addConditionalEdges('normalize', (state) =>
-      state.normalizedFindings.length ? 'investigate' : 'prepare_report',
+      reviewer && nextReviewableFinding(state) ? 'investigate' : 'prepare_report',
     )
     .addConditionalEdges('investigate', (state) =>
-      state.cursor < Math.min(state.normalizedFindings.length, maximumAnalyzedFindings)
+      state.analyzed.length < maximumAnalyzedFindings && nextReviewableFinding(state)
         ? 'investigate'
         : 'prepare_report',
     )
