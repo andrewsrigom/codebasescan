@@ -548,7 +548,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
 }
 
 export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): AstSecurityResult {
-  const started = Date.now();
+  const started = performance.now();
   if (profile.status === 'unsupported')
     return {
       findings: [],
@@ -556,7 +556,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         id: 'ast-security',
         name: 'Framework-aware AST security',
         status: 'skipped',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
@@ -635,7 +635,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       id: 'ast-security',
       name: 'Framework-aware AST security',
       status: partial ? 'partial' : 'completed',
-      durationMs: Date.now() - started,
+      durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), direct request-data flows, webhook ordering, upload guards, cookie options, and client/server configuration boundaries. Cross-file authorization follows explicit call relationships up to two hops. Missing runtime, middleware, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
       version: '0.2.0',

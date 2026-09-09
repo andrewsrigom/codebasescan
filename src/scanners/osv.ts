@@ -354,7 +354,7 @@ export async function scanOsv(
   signal?: AbortSignal,
   runtime: OsvRuntime = {},
 ): Promise<OsvScanResult> {
-  const started = Date.now();
+  const started = performance.now();
   const inventory = resolvedInventory(snapshot);
   const resolved = inventory.dependencies
     .filter((item) => item.resolvedVersion && item.lockfile)
@@ -367,7 +367,7 @@ export async function scanOsv(
         id: 'osv',
         name: 'Dependency vulnerabilities',
         status: 'skipped',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `OSV network lookup is disabled. ${resolved.length} resolved lockfile package(s) were inventoried locally.`,
         version: 'API v1',
@@ -381,7 +381,7 @@ export async function scanOsv(
         id: 'osv',
         name: 'Dependency vulnerabilities',
         status: inventory.errors.length ? 'failed' : 'skipped',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: inventory.errors.length
           ? 'A supported lockfile was malformed; no clean dependency result is implied.'
@@ -481,7 +481,7 @@ export async function scanOsv(
         id: 'osv',
         name: 'Dependency vulnerabilities',
         status: 'failed',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `OSV lookup failed: ${redact(error instanceof Error ? error.message : 'unknown failure')}. No clean result is implied.`,
         version: 'API v1',
@@ -504,7 +504,7 @@ export async function scanOsv(
       id: 'osv',
       name: 'Dependency vulnerabilities',
       status: incomplete ? 'partial' : 'completed',
-      durationMs: Date.now() - started,
+      durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: findings.length,
       detail: `Queried OSV for ${resolved.length} resolved npm ecosystem package(s). Only package names and versions left the machine; reachability was not assessed.${inventory.errors.length ? ' Some lockfiles were malformed.' : ''}`,
       version: 'API v1',

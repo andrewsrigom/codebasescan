@@ -281,7 +281,7 @@ export async function probeHttp(
   signal?: AbortSignal,
   runtime: ProbeRuntime = {},
 ): Promise<HttpProbeResult> {
-  const started = Date.now();
+  const started = performance.now();
   const timeoutMs = Math.min(Math.max(runtime.requestTimeoutMs ?? 5000, 50), 15000);
   const responseLimitBytes = Math.min(
     Math.max(runtime.responseLimitBytes ?? 64 * 1024, 1024),
@@ -317,7 +317,7 @@ export async function probeHttp(
       statusCode: response.statusCode,
       redirects,
       observedAt,
-      durationMs: Date.now() - started,
+      durationMs: Math.max(0, Math.round(performance.now() - started)),
       headers: headerRecord(response.headers),
       cookies: cookieMetadata(response.headers),
     };
@@ -342,7 +342,7 @@ export async function probeHttp(
         id: 'http-probe',
         name: 'HTTP runtime posture',
         status: 'failed',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `Probe did not complete: ${redact(error instanceof Error ? error.message : 'unknown failure')}`,
         version: '0.2.0',

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { MemorySaver, Command } from '@langchain/langgraph';
+import { MemorySaver, Command, INTERRUPT } from '@langchain/langgraph';
 import { buildAuditGraph } from '../../src/engine/audit-graph.ts';
 import { buildReviewGraph } from '../../src/engine/review-graph.ts';
 import { AuditStore } from '../../src/server/store.ts';
@@ -39,19 +39,39 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     checkpointer: new MemorySaver(),
     reviewer: null,
   });
-  const invocation = { configurable: { thread_id: audit.id }, recursionLimit: 100 };
-  await graph.invoke({ auditId: audit.id }, invocation);
-  const paused = await graph.getState(invocation);
-  assert.ok(paused.next.includes('human_review'));
+  const invocation = {
+    configurable: { thread_id: audit.id },
+    recursionLimit: 100,
+    durability: 'sync' as const,
+  };
+  const result = await graph.invoke({ auditId: audit.id }, invocation);
+  assert.ok(graph.isInterrupted(result));
+  const interruptId = result[INTERRUPT][0]?.id;
+  assert.ok(interruptId);
+  let interruptedCheckpointId: string | undefined;
+  for await (const snapshot of graph.getStateHistory(invocation, { limit: 100 })) {
+    if (snapshot.tasks.some((task) => task.interrupts.some((item) => item.id === interruptId))) {
+      interruptedCheckpointId = snapshot.config.configurable?.checkpoint_id as string | undefined;
+      break;
+    }
+  }
+  assert.ok(interruptedCheckpointId);
   assert.equal(store.audit(audit.id).report?.findings.length, 7);
   assert.equal(store.audit(audit.id).report?.scanners.length, 8);
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
   assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');
-  await graph.invoke(
-    new Command({ resume: { note: 'Reviewed the fixture; findings remain unconfirmed.' } }),
-    invocation,
+  const resumed = await graph.invoke(
+    new Command({
+      resume: {
+        [interruptId]: { note: 'Reviewed the fixture; findings remain unconfirmed.' },
+      },
+    }),
+    {
+      ...invocation,
+      configurable: { ...invocation.configurable, checkpoint_id: interruptedCheckpointId },
+    },
   );
-  assert.equal((await graph.getState(invocation)).next.length, 0);
+  assert.equal(graph.isInterrupted(resumed), false);
   assert.equal(store.audit(audit.id).report?.publication, 'reviewed');
   assert.ok(
     store

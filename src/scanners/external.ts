@@ -122,7 +122,7 @@ export async function scanExternal(
   rulesDirectory: string,
   signal?: AbortSignal,
 ): Promise<ScanResult> {
-  const started = Date.now();
+  const started = performance.now();
   if (!enabled)
     return {
       findings: [],
@@ -217,7 +217,7 @@ export async function scanExternal(
         id: name,
         name,
         status: partial ? 'partial' : 'completed',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: findings.length,
         detail: `${name} analyzed the bounded staging snapshot with trusted local configuration.${errors ? ' Some files could not be analyzed.' : ''}`,
         ...(version ? { version } : {}),
@@ -232,7 +232,7 @@ export async function scanExternal(
         id: name,
         name,
         status: 'failed',
-        durationMs: Date.now() - started,
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail,
       },

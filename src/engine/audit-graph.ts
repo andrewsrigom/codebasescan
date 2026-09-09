@@ -109,7 +109,7 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('patterns', async (state) => {
-      const started = Date.now();
+      const started = performance.now();
       const source = await checkedSnapshot(state);
       const findings = scanPatterns(source);
       event(
@@ -124,7 +124,7 @@ export function buildAuditGraph(options: {
             id: 'builtin',
             name: 'Built-in patterns',
             status: findings.length >= 300 || source.truncated ? 'partial' : 'completed',
-            durationMs: Date.now() - started,
+            durationMs: Math.max(0, Math.round(performance.now() - started)),
             findings: findings.length,
             detail:
               'Seven bounded regex heuristics. Not a complete SAST engine or interprocedural analysis.',
@@ -150,7 +150,7 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('posture', async (state) => {
-      const started = Date.now();
+      const started = performance.now();
       const source = await checkedSnapshot(state);
       const findings = scanPosture(source, { includeStructuralCandidates: false });
       event(
@@ -165,7 +165,7 @@ export function buildAuditGraph(options: {
             id: 'posture',
             name: 'Application security posture',
             status: findings.length >= 300 || source.truncated ? 'partial' : 'completed',
-            durationMs: Date.now() - started,
+            durationMs: Math.max(0, Math.round(performance.now() - started)),
             findings: findings.length,
             detail:
               'Conservative checks for security headers, session cookies, CORS, route and server-action authorization, and environment configuration in TypeScript/Node.js/Next.js projects.',

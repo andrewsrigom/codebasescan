@@ -405,7 +405,7 @@ function resolveCallTargets(
 }
 
 export function profileProject(snapshot: Snapshot): ProjectProfileResult {
-  const started = Date.now();
+  const started = performance.now();
   const candidates = snapshot.files.filter(
     (file) => sourcePattern.test(file.path) && !declarationPattern.test(file.path),
   );
@@ -609,7 +609,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       id: 'project-profile',
       name: 'Project structure profile',
       status: status === 'complete' ? 'completed' : status === 'partial' ? 'partial' : 'skipped',
-      durationMs: Date.now() - started,
+      durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), and ${facts.length} security-relevant fact(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
