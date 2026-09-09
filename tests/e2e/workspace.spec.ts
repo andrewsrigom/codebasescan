@@ -48,6 +48,23 @@ test('shows a bounded source estimate before an audit can be queued', async ({ p
   await expect(page.getByRole('button', { name: /Queue audit/ })).toBeEnabled();
 });
 
+test('records a human checklist assessment without hiding deterministic status', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Checklist', exact: true }).click();
+  const control = page.locator('.coverage-row').first();
+  const deterministicStatus = await control.locator('.pill').first().innerText();
+  await control.getByText('Record human control assessment', { exact: true }).click();
+  await control.getByLabel('Decision').selectOption('verified_external');
+  await control
+    .getByLabel('Evidence and rationale')
+    .fill('Gateway policy was inspected in the authorized environment.');
+  await control.getByRole('button', { name: 'Save control assessment' }).click();
+  await expect(control.getByText(/Human assessment: verified external/)).toBeVisible();
+  await expect(control.locator('.pill').first()).toHaveText(deterministicStatus);
+});
+
 test('supports keyboard tabs and keeps collapsed mobile navigation named', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');

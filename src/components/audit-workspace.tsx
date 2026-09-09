@@ -2,7 +2,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import Link from 'next/link';
-import type { Audit, AuditComparison, AuditEvent, Finding, Project } from '../domain/types.ts';
+import type {
+  Audit,
+  AuditComparison,
+  AuditEvent,
+  Finding,
+  Project,
+  SecurityControlReviewDecision,
+} from '../domain/types.ts';
 import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
@@ -43,6 +50,11 @@ export function AuditWorkspace({
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [pending, setPending] = useState(false);
+  const [controlPending, setControlPending] = useState<string | null>(null);
+  const [controlNotes, setControlNotes] = useState<Record<string, string>>({});
+  const [controlDecisions, setControlDecisions] = useState<
+    Record<string, SecurityControlReviewDecision>
+  >({});
   const report = audit.report;
   const findings = report?.findings ?? [];
   const active = ['queued', 'running'].includes(audit.status);
@@ -76,6 +88,23 @@ export function AuditWorkspace({
       setError(cause instanceof Error ? cause.message : 'Action failed.');
     } finally {
       setPending(false);
+    }
+  }
+  async function reviewControl(controlId: string) {
+    setControlPending(controlId);
+    setError('');
+    try {
+      await mutate(`/api/audits/${audit.id}`, {
+        action: 'review-control',
+        controlId,
+        decision: controlDecisions[controlId] ?? 'needs_follow_up',
+        note: controlNotes[controlId] ?? '',
+      });
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Control review failed.');
+    } finally {
+      setControlPending(null);
     }
   }
   const visible = findings.filter(
@@ -700,6 +729,65 @@ export function AuditWorkspace({
                   <p className="small muted">
                     <strong>Verify:</strong> {control.verification}
                   </p>
+                  {control.review && (
+                    <div className="notice">
+                      <Icon name="check" />
+                      <span>
+                        Human assessment: {control.review.decision.replaceAll('_', ' ')} —{' '}
+                        {control.review.note}
+                      </span>
+                    </div>
+                  )}
+                  {reviewable && (
+                    <details>
+                      <summary className="small strong">Record human control assessment</summary>
+                      <div className="panel-body">
+                        <label htmlFor={`control-decision-${control.id}`}>Decision</label>
+                        <select
+                          id={`control-decision-${control.id}`}
+                          value={
+                            controlDecisions[control.id] ??
+                            control.review?.decision ??
+                            'needs_follow_up'
+                          }
+                          onChange={(event) =>
+                            setControlDecisions((current) => ({
+                              ...current,
+                              [control.id]: event.target.value as SecurityControlReviewDecision,
+                            }))
+                          }
+                        >
+                          <option value="verified_external">Verified external evidence</option>
+                          <option value="accepted_gap">Accepted gap</option>
+                          <option value="not_applicable">Not applicable</option>
+                          <option value="needs_follow_up">Needs follow-up</option>
+                        </select>
+                        <label htmlFor={`control-note-${control.id}`}>Evidence and rationale</label>
+                        <textarea
+                          id={`control-note-${control.id}`}
+                          rows={3}
+                          value={controlNotes[control.id] ?? control.review?.note ?? ''}
+                          onChange={(event) =>
+                            setControlNotes((current) => ({
+                              ...current,
+                              [control.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          className="button"
+                          disabled={
+                            controlPending === control.id ||
+                            (controlNotes[control.id] ?? control.review?.note ?? '').trim().length <
+                              12
+                          }
+                          onClick={() => void reviewControl(control.id)}
+                        >
+                          {controlPending === control.id ? 'Saving…' : 'Save control assessment'}
+                        </button>
+                      </div>
+                    </details>
+                  )}
                 </div>
               ))}
             </>
