@@ -66,6 +66,28 @@ test('human review preserves findings instead of deleting them', (context) => {
   });
   assert.equal(store.audit(audit.id).report?.findings.length, 1);
   assert.equal(store.audit(audit.id).report?.findings[0]?.disposition, 'false_positive');
+  const revisions = store.reportRevisions(audit.id);
+  assert.equal(revisions.length, 2);
+  assert.equal(revisions[0]?.source, 'workflow');
+  assert.equal(revisions[0]?.report.findings[0]?.disposition, 'needs_review');
+  assert.equal(revisions[1]?.source, 'human-review');
+  assert.equal(revisions[1]?.report.findings[0]?.disposition, 'false_positive');
+});
+test('invalid reports fail validation on write and read', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id);
+  store.claim();
+  assert.throws(() => store.saveProgress(audit.id, { schemaVersion: 3 } as never), /Invalid input/);
+  store.saveProgress(audit.id, sampleReport());
+  store.db.prepare('UPDATE audits SET report_json = ? WHERE id = ?').run('{}', audit.id);
+  assert.throws(() => store.audit(audit.id), /Invalid input/);
+});
+test('database schema migration records the current version', (context) => {
+  const { store } = setup();
+  context.after(() => store.close());
+  const version = store.db.prepare('PRAGMA user_version').get() as { user_version: number };
+  assert.equal(version.user_version, 3);
 });
 test('a second worker in a live local process is rejected', (context) => {
   const { store } = setup();

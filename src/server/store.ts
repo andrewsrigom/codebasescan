@@ -12,8 +12,16 @@ import type {
   ReviewDecision,
 } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
+import { parseAuditReport, parseStoredAuditOptions } from '../domain/report-schema.ts';
 type Row = Record<string, unknown>;
 const now = () => new Date().toISOString();
+function storedJson(value: string, label: string): unknown {
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    throw new Error(`Stored ${label} is malformed JSON.`);
+  }
+}
 function readAudit(row: Row): Audit {
   return {
     id: String(row.id),
@@ -24,11 +32,15 @@ function readAudit(row: Row): Audit {
     updatedAt: String(row.updated_at),
     error: typeof row.error === 'string' ? row.error : null,
     report:
-      typeof row.report_json === 'string' ? (JSON.parse(row.report_json) as AuditReport) : null,
+      typeof row.report_json === 'string'
+        ? parseAuditReport(storedJson(row.report_json, 'audit report'))
+        : null,
     resumeNote: typeof row.resume_note === 'string' ? row.resume_note : null,
     attempts: Number(row.attempts),
     options:
-      typeof row.options_json === 'string' ? (JSON.parse(row.options_json) as AuditOptions) : {},
+      typeof row.options_json === 'string'
+        ? parseStoredAuditOptions(storedJson(row.options_json, 'audit options'))
+        : {},
   };
 }
 export class AuditStore {
@@ -70,11 +82,20 @@ export class AuditStore {
       CREATE TABLE IF NOT EXISTS ai_cache (
         cache_key TEXT PRIMARY KEY, response_json TEXT NOT NULL, created_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS report_revisions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        audit_id TEXT NOT NULL REFERENCES audits(id),
+        source TEXT NOT NULL,
+        report_json TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS report_revisions_audit
+        ON report_revisions(audit_id, id);
     `);
     const auditColumns = this.db.prepare('PRAGMA table_info(audits)').all() as Row[];
     if (!auditColumns.some((column) => column.name === 'options_json'))
       this.db.exec("ALTER TABLE audits ADD COLUMN options_json TEXT NOT NULL DEFAULT '{}'");
-    this.db.exec('PRAGMA user_version = 2;');
+    this.db.exec('PRAGMA user_version = 3;');
   }
   close(): void {
     this.db.close();
@@ -158,11 +179,26 @@ export class AuditStore {
     }
   }
   saveProgress(id: string, report: AuditReport): void {
-    this.db
-      .prepare(
-        "UPDATE audits SET report_json = ?, updated_at = ? WHERE id = ? AND status = 'running'",
-      )
-      .run(JSON.stringify(report), now(), id);
+    const serialized = JSON.stringify(parseAuditReport(report));
+    const timestamp = now();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = this.db
+        .prepare(
+          "UPDATE audits SET report_json = ?, updated_at = ? WHERE id = ? AND status = 'running'",
+        )
+        .run(serialized, timestamp, id);
+      if (result.changes)
+        this.db
+          .prepare(
+            'INSERT INTO report_revisions(audit_id, source, report_json, created_at) VALUES (?, ?, ?, ?)',
+          )
+          .run(id, 'workflow', serialized, timestamp);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
   }
   transition(id: string, status: AuditStatus, error: string | null = null): void {
     this.db
@@ -195,9 +231,16 @@ export class AuditStore {
       if (!finding) throw new Error('Finding not found.');
       finding.disposition = decision.disposition;
       finding.review = { decision: decision.disposition, note: redact(decision.note), at: now() };
+      const serialized = JSON.stringify(parseAuditReport(audit.report));
+      const timestamp = now();
       this.db
         .prepare('UPDATE audits SET report_json = ?, updated_at = ? WHERE id = ?')
-        .run(JSON.stringify(audit.report), now(), id);
+        .run(serialized, timestamp, id);
+      this.db
+        .prepare(
+          'INSERT INTO report_revisions(audit_id, source, report_json, created_at) VALUES (?, ?, ?, ?)',
+        )
+        .run(id, 'human-review', serialized, timestamp);
       this.db.exec('COMMIT');
     } catch (error) {
       this.db.exec('ROLLBACK');
@@ -242,6 +285,25 @@ export class AuditStore {
       stage: String(row.stage),
       message: String(row.message),
       at: String(row.at),
+    }));
+  }
+  reportRevisions(auditId: string): {
+    id: number;
+    source: string;
+    createdAt: string;
+    report: AuditReport;
+  }[] {
+    return (
+      this.db
+        .prepare(
+          'SELECT id, source, report_json, created_at FROM report_revisions WHERE audit_id = ? ORDER BY id',
+        )
+        .all(auditId) as Row[]
+    ).map((row) => ({
+      id: Number(row.id),
+      source: String(row.source),
+      createdAt: String(row.created_at),
+      report: parseAuditReport(storedJson(String(row.report_json), 'report revision')),
     }));
   }
   acquireWorker(): string {
