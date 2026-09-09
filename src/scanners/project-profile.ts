@@ -166,7 +166,7 @@ function factKind(callee: string): ProjectFactKind | null {
     /(?:^|\.)(?:findunique|findfirst|findmany|create|update|upsert|delete|executeraw|queryraw|transaction)$/.test(
       value,
     ) &&
-    /(?:prisma|database|db|repository|model|client)/.test(value)
+    /(?:prisma|database|db|repository|model|client|supabase|drizzle)/.test(value)
   )
     return 'database';
   if (/^(?:fetch|axios|got)(?:\.|$)|\.(?:fetch|request)$/.test(value)) return 'outbound-request';
@@ -228,9 +228,19 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
   const nextManifest = dependencies.get('next');
   const expressManifest = dependencies.get('express');
   const prismaManifest = dependencies.get('@prisma/client') ?? dependencies.get('prisma');
+  const drizzleManifest = dependencies.get('drizzle-orm');
   const supabaseManifest = [...dependencies.entries()].find(([name]) =>
     name.startsWith('@supabase/'),
   )?.[1];
+  const authManifest = dependencies.get('next-auth') ?? dependencies.get('@auth/core');
+  const trpcManifest = dependencies.get('@trpc/server');
+  const graphqlManifest =
+    dependencies.get('graphql') ??
+    dependencies.get('@apollo/server') ??
+    dependencies.get('graphql-yoga');
+  const zodManifest = dependencies.get('zod');
+  const joiManifest = dependencies.get('joi');
+  const valibotManifest = dependencies.get('valibot');
   const appRoute = parsed.find((item) =>
     /(?:^|\/)app\/(?:.+\/)?route\.[cm]?[jt]sx?$/.test(item.source.path),
   );
@@ -242,7 +252,14 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
   if (pagesRoute) add('nextjs-pages-router', 'Next.js Pages Router', pagesRoute.source.path);
   if (expressManifest) add('express', 'Express', expressManifest.path);
   if (prismaManifest) add('prisma', 'Prisma', prismaManifest.path);
+  if (drizzleManifest) add('drizzle', 'Drizzle ORM', drizzleManifest.path);
   if (supabaseManifest) add('supabase', 'Supabase', supabaseManifest.path);
+  if (authManifest) add('authjs', 'Auth.js', authManifest.path);
+  if (trpcManifest) add('trpc', 'tRPC', trpcManifest.path);
+  if (graphqlManifest) add('graphql', 'GraphQL', graphqlManifest.path);
+  if (zodManifest) add('zod', 'Zod', zodManifest.path);
+  if (joiManifest) add('joi', 'Joi', joiManifest.path);
+  if (valibotManifest) add('valibot', 'Valibot', valibotManifest.path);
   for (const item of parsed) {
     const text = item.source.content;
     if (
@@ -252,8 +269,25 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
       add('express', 'Express', item.source.path);
     if (!frameworks.has('prisma') && /from\s+['"]@prisma\/client['"]/.test(text))
       add('prisma', 'Prisma', item.source.path);
+    if (!frameworks.has('drizzle') && /from\s+['"]drizzle-orm(?:\/[^'"]+)?['"]/.test(text))
+      add('drizzle', 'Drizzle ORM', item.source.path);
     if (!frameworks.has('supabase') && /from\s+['"]@supabase\//.test(text))
       add('supabase', 'Supabase', item.source.path);
+    if (!frameworks.has('authjs') && /from\s+['"](?:next-auth|@auth\/core)/.test(text))
+      add('authjs', 'Auth.js', item.source.path);
+    if (!frameworks.has('trpc') && /from\s+['"]@trpc\/server['"]/.test(text))
+      add('trpc', 'tRPC', item.source.path);
+    if (
+      !frameworks.has('graphql') &&
+      /from\s+['"](?:graphql|@apollo\/server|graphql-yoga)['"]/.test(text)
+    )
+      add('graphql', 'GraphQL', item.source.path);
+    if (!frameworks.has('zod') && /from\s+['"]zod['"]/.test(text))
+      add('zod', 'Zod', item.source.path);
+    if (!frameworks.has('joi') && /from\s+['"]joi['"]/.test(text))
+      add('joi', 'Joi', item.source.path);
+    if (!frameworks.has('valibot') && /from\s+['"]valibot['"]/.test(text))
+      add('valibot', 'Valibot', item.source.path);
   }
   return [...frameworks.values()];
 }
@@ -728,6 +762,46 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             symbolIds: handlerSymbol ? [handlerSymbol.id] : ownerSymbolId ? [ownerSymbolId] : [],
           });
         }
+        const trpcProcedure = /(?:^|\.)(query|mutation|subscription)$/i.exec(callee);
+        if (
+          trpcProcedure &&
+          /procedure/i.test(callee) &&
+          callbackSymbol &&
+          !cap(entrypoints.length, maximumEntrypoints, 'Entrypoint')
+        ) {
+          const operation = trpcProcedure[1]!.toLowerCase();
+          entrypoints.push({
+            id: stableId('entrypoint', 'trpc-procedure', item.source.path, line, callee),
+            kind: 'trpc-procedure',
+            file: item.source.path,
+            line,
+            name: callee,
+            methods: [operation === 'mutation' ? 'POST' : 'GET'],
+            dynamicParameters: ['input'],
+            symbolIds: [callbackSymbol.id],
+          });
+          if (
+            /(?:protected|authed|authenticated|private|secured)Procedure/i.test(callee) &&
+            !cap(facts.length, maximumFacts, 'Security fact')
+          )
+            facts.push({
+              id: stableId('fact', 'authentication', item.source.path, line, callbackSymbol.id),
+              kind: 'authentication',
+              file: item.source.path,
+              line,
+              signal: callee.slice(0, 180),
+              ownerSymbolId: callbackSymbol.id,
+            });
+          if (/\.input\s*\(/i.test(callee) && !cap(facts.length, maximumFacts, 'Security fact'))
+            facts.push({
+              id: stableId('fact', 'validation', item.source.path, line, callbackSymbol.id),
+              kind: 'validation',
+              file: item.source.path,
+              line,
+              signal: `${callee.slice(0, 160)} input schema`,
+              ownerSymbolId: callbackSymbol.id,
+            });
+        }
       }
       if (
         ts.isPropertyAccessExpression(node) &&
@@ -806,7 +880,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), and ${facts.length} security-relevant fact(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }

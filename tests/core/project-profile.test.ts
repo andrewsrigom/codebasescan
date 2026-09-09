@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
-import { snapshotOf } from '../helpers.ts';
+import { effectiveEntrypointFacts } from '../../src/domain/project-graph.ts';
+import { snapshotFromFiles, snapshotOf } from '../helpers.ts';
 
 test('project profile maps frameworks, entry points, symbols, calls, and security facts', async () => {
   const snapshot = await captureSnapshot(path.resolve('fixtures/profile-nextjs'));
@@ -126,6 +127,41 @@ test('nested functions with use server directives become server-action entrypoin
   );
   assert.equal(action?.file, 'src/app/posts/[id]/page.tsx');
   assert.equal(action?.symbolIds.length, 1);
+});
+
+test('profile recognizes focused Node frameworks and tRPC procedure boundaries', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({
+      dependencies: {
+        'drizzle-orm': '1.0.0',
+        'next-auth': '5.0.0',
+        '@trpc/server': '11.0.0',
+        graphql: '16.0.0',
+        zod: '4.0.0',
+        joi: '18.0.0',
+        valibot: '1.0.0',
+      },
+    }),
+    'src/router.ts': `
+      export const removeUser = protectedProcedure
+        .input(UserInput)
+        .mutation(async ({ input, ctx }) => {
+          return db.delete(users).where(eq(users.id, input.id));
+        });
+    `,
+  });
+  const profile = profileProject(snapshot).profile;
+  assert.deepEqual(
+    new Set(profile.frameworks.map((framework) => framework.id)),
+    new Set(['drizzle', 'authjs', 'trpc', 'graphql', 'zod', 'joi', 'valibot']),
+  );
+  const procedure = profile.entrypoints.find((entrypoint) => entrypoint.kind === 'trpc-procedure');
+  assert.ok(procedure);
+  assert.deepEqual(procedure.methods, ['POST']);
+  const facts = effectiveEntrypointFacts(profile, procedure);
+  assert.ok(facts.some((fact) => fact.kind === 'authentication'));
+  assert.ok(facts.some((fact) => fact.kind === 'validation'));
+  assert.ok(facts.some((fact) => fact.kind === 'database'));
 });
 
 test('catch clauses are recorded as error-handling facts', () => {

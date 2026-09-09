@@ -238,7 +238,12 @@ export interface HttpProbeReport {
 }
 export type ProjectProfileStatus = 'complete' | 'partial' | 'unsupported';
 export type ProjectEntrypointKind =
-  'next-route' | 'next-pages-api' | 'server-action' | 'middleware' | 'express-route';
+  | 'next-route'
+  | 'next-pages-api'
+  | 'server-action'
+  | 'middleware'
+  | 'express-route'
+  | 'trpc-procedure';
 export type ProjectFactKind =
   | 'authentication'
   | 'authorization'
@@ -257,7 +262,19 @@ export type ProjectFactKind =
   | 'error-handling'
   | 'webhook-verification';
 export interface ProjectFramework {
-  id: 'nextjs-app-router' | 'nextjs-pages-router' | 'express' | 'prisma' | 'supabase';
+  id:
+    | 'nextjs-app-router'
+    | 'nextjs-pages-router'
+    | 'express'
+    | 'prisma'
+    | 'drizzle'
+    | 'supabase'
+    | 'authjs'
+    | 'trpc'
+    | 'graphql'
+    | 'zod'
+    | 'joi'
+    | 'valibot';
   name: string;
   file: string;
   line: number;

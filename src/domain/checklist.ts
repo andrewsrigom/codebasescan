@@ -263,7 +263,14 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const validated = sensitiveContexts.filter((context) =>
     context.facts.some((fact) => fact.kind === 'validation'),
   );
-  const validationGaps = findingsByRule(findings, ['TW-NEXT006']);
+  const validationGaps = findingsByRule(findings, [
+    'TW-NEXT006',
+    'TW-AST013',
+    'TW-AST014',
+    'TW-AST016',
+    'TW-AST017',
+    'TW-AST018',
+  ]);
   controls.push(
     control({
       id: 'TW-CTRL-INPUT-001',
@@ -331,6 +338,76 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
       limitations: [
         'Indirect builders, ORM-specific safe tagged templates, and database-side controls may require manual review.',
       ],
+    }),
+  );
+
+  const commandContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'command-execution'),
+  );
+  const commandGaps = findingsByRule(findings, ['TW-AST011']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-COMMAND-001',
+      domain: 'input-validation',
+      title: 'Process execution keeps request data out of commands and executable selection',
+      status: commandGaps.length
+        ? 'GAP_CANDIDATE'
+        : commandContexts.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: commandGaps.length
+        ? `${commandGaps.length} request-to-process candidate(s) require review.`
+        : commandContexts.length
+          ? `${commandContexts.length} process execution boundary(s) were mapped without a decisive tainted flow.`
+          : 'No supported process execution boundary was mapped.',
+      applicability: 'Applies when mapped request/action code can start a local process.',
+      evidence: [
+        ...references(
+          'finding',
+          commandGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(commandContexts, ['command-execution']),
+        ...astRefs,
+      ],
+      verification:
+        'Use fixed executables and argument arrays without a shell, then test separators, option injection, encoding, and unexpected executable names.',
+    }),
+  );
+
+  const fileContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'file-access'),
+  );
+  const pathGaps = findingsByRule(findings, ['TW-AST012']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-PATH-001',
+      domain: 'input-validation',
+      title: 'Filesystem paths remain inside server-owned roots',
+      status: pathGaps.length
+        ? 'GAP_CANDIDATE'
+        : fileContexts.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: pathGaps.length
+        ? `${pathGaps.length} request-derived filesystem path candidate(s) require review.`
+        : fileContexts.length
+          ? `${fileContexts.length} filesystem boundary(s) were mapped without enough evidence to prove containment.`
+          : 'No supported filesystem boundary was mapped.',
+      applicability: 'Applies when mapped entry points read, write, rename, or delete local files.',
+      evidence: [
+        ...references(
+          'finding',
+          pathGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(fileContexts, ['file-access']),
+        ...astRefs,
+      ],
+      verification:
+        'Test decoded parent traversal, absolute paths, separators, symlinks, and race conditions against the canonical storage root.',
     }),
   );
 
@@ -585,7 +662,9 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     'TW-H007',
   ]);
   const apiApplicable = contexts.some((context) =>
-    ['next-route', 'next-pages-api', 'express-route'].includes(context.entrypoint.kind),
+    ['next-route', 'next-pages-api', 'express-route', 'trpc-procedure'].includes(
+      context.entrypoint.kind,
+    ),
   );
   const observedCors = Boolean(httpProbe?.headers['access-control-allow-origin']);
   controls.push(

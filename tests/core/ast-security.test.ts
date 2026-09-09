@@ -518,6 +518,158 @@ test('direct AST rules do not treat test code as deployed runtime code', () => {
   assert.deepEqual(scanAstSecurity(snapshot, profile).findings, []);
 });
 
+test('AST traces request data into command, path, regex, and deserialization sinks', () => {
+  const ids = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      exec(body.command);
+      await fs.readFile(body.path);
+      const matcher = new RegExp(body.pattern);
+      const value = serializer.unserialize(body.payload);
+      return Response.json({ matcher, value });
+    }
+  `);
+  assert.ok(ids.includes('TW-AST011'));
+  assert.ok(ids.includes('TW-AST012'));
+  assert.ok(ids.includes('TW-AST013'));
+  assert.ok(ids.includes('TW-AST014'));
+});
+
+test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
+  const ids = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      assertSafeCommand(body.ref);
+      execFile('/usr/bin/git', ['show', body.ref], { shell: false });
+      const name = basename(body.path);
+      await fs.readFile(name);
+      return new RegExp('^[a-z]+$').test(body.value);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST011'));
+  assert.ok(!ids.includes('TW-AST012'));
+  assert.ok(!ids.includes('TW-AST013'));
+});
+
+test('AST identifies weak digests, dynamic property writes, and whole-object mutations', () => {
+  const ids = astRuleIds(`
+    export async function PATCH(request: Request) {
+      const body = await request.json();
+      const digest = crypto.createHash('sha1').update(body.token).digest('hex');
+      const result = {};
+      result[body.key] = body.value;
+      await prisma.user.update({ where: { id: body.id }, data: body });
+      return Response.json({ digest });
+    }
+  `);
+  assert.ok(ids.includes('TW-AST015'));
+  assert.ok(ids.includes('TW-AST016'));
+  assert.ok(ids.includes('TW-AST018'));
+});
+
+test('strong digests, fixed keys, selected fields, and schema parsing avoid new candidates', () => {
+  const ids = astRuleIds(`
+    export async function PATCH(request: Request) {
+      const body = await request.json();
+      const parsed = UserPatch.safeParse(body);
+      if (!parsed.success) return Response.json({ error: 'invalid' }, { status: 400 });
+      const digest = crypto.createHash('sha256').update(parsed.data.token).digest('hex');
+      const result = { name: parsed.data.name };
+      await prisma.user.update({
+        where: { id: parsed.data.id },
+        data: { name: parsed.data.name },
+      });
+      return Response.json({ digest, result });
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST015'));
+  assert.ok(!ids.includes('TW-AST016'));
+  assert.ok(!ids.includes('TW-AST018'));
+});
+
+test('AST distinguishes whole-object NoSQL queries from allowlisted filters', () => {
+  const vulnerable = astRuleIds(`
+    export async function POST(request: Request) {
+      const filter = await request.json();
+      return mongo.collection.find(filter);
+    }
+  `);
+  assert.ok(vulnerable.includes('TW-AST017'));
+
+  const safe = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const parsed = SearchInput.parse(body);
+      return mongo.collection.find({ email: parsed.email });
+    }
+  `);
+  assert.ok(!safe.includes('TW-AST017'));
+});
+
+test('AST propagates request data through bounded cross-file function calls', () => {
+  const snapshot = snapshotFromFiles({
+    'src/app/api/run/route.ts': `
+      import { runTask } from '@/lib/tasks';
+      export async function POST(request: Request) {
+        const body = await request.json();
+        return runTask(body.command, body.path);
+      }
+    `,
+    'src/lib/tasks.ts': `
+      export function runTask(command: string, file: string) {
+        exec(command);
+        return fs.readFile(file);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  const command = findings.find((finding) => finding.ruleId === 'TW-AST011');
+  const traversal = findings.find((finding) => finding.ruleId === 'TW-AST012');
+  assert.equal(command?.evidence[0]?.file, 'src/lib/tasks.ts');
+  assert.equal(traversal?.evidence[0]?.file, 'src/lib/tasks.ts');
+  assert.ok(command?.evidence.some((item) => item.file === 'src/app/api/run/route.ts'));
+});
+
+test('tRPC mutations participate in authentication and object-scope review', () => {
+  const publicSnapshot = snapshotOf(
+    `export const remove = publicProcedure.input(Input).mutation(async ({ input }) => {
+      return db.user.delete({ where: { id: input.id } });
+    });`,
+    'src/server/router.ts',
+  );
+  const publicIds = scanAstSecurity(
+    publicSnapshot,
+    profileProject(publicSnapshot).profile,
+  ).findings.map((finding) => finding.ruleId);
+  assert.ok(publicIds.includes('TW-AST001'));
+
+  const protectedSnapshot = snapshotOf(
+    `export const remove = protectedProcedure.input(Input).mutation(async ({ input, ctx }) => {
+      return db.user.delete({ where: { id: input.id } });
+    });`,
+    'src/server/router.ts',
+  );
+  const protectedIds = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings.map((finding) => finding.ruleId);
+  assert.ok(!protectedIds.includes('TW-AST001'));
+  assert.ok(protectedIds.includes('TW-AST003'));
+
+  const scopedSnapshot = snapshotOf(
+    `export const remove = protectedProcedure.input(Input).mutation(async ({ input, ctx }) => {
+      return db.user.delete({ where: { id: input.id, userId: ctx.user.id } });
+    });`,
+    'src/server/router.ts',
+  );
+  const scopedIds = scanAstSecurity(
+    scopedSnapshot,
+    profileProject(scopedSnapshot).profile,
+  ).findings.map((finding) => finding.ruleId);
+  assert.ok(!scopedIds.includes('TW-AST001'));
+  assert.ok(!scopedIds.includes('TW-AST003'));
+});
+
 test('a decisive AST flow replaces the same-location broad raw SQL pattern', () => {
   const snapshot = snapshotOf(
     `export async function POST(request: Request) {

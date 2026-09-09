@@ -205,7 +205,20 @@ const projectProfile = z.looseObject({
   frameworks: z
     .array(
       z.looseObject({
-        id: z.enum(['nextjs-app-router', 'nextjs-pages-router', 'express', 'prisma', 'supabase']),
+        id: z.enum([
+          'nextjs-app-router',
+          'nextjs-pages-router',
+          'express',
+          'prisma',
+          'drizzle',
+          'supabase',
+          'authjs',
+          'trpc',
+          'graphql',
+          'zod',
+          'joi',
+          'valibot',
+        ]),
         name: shortText,
         file: shortText,
         line: z.number().int().positive(),
