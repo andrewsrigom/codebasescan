@@ -4,11 +4,11 @@
 
 - Phases 1-4 are implemented: deterministic profiler, bounded relationships, framework-aware AST rules, versioned checklist, and opaque evidence-ID context broker.
 - Phase 5 workflow A is implemented for Ollama/OpenAI contracts; structured results include controls, missing evidence, impact, preconditions, remediation choices, and safe tests. Disabled mode remains complete. Checklist-gap calls and AI report synthesis are intentionally deferred until real-project evidence justifies their cost.
-- Phase 6 tooling is implemented through the anonymized `evaluate` command, but the real-project dataset requires user-supplied authorized repositories and human dispositions.
-- Phase 7 now includes runtime report validation, append-only report revisions, dead-worker recovery, and narrow startup cleanup of abandoned scanner staging. Actual SIGKILL/power-loss and checkpoint compatibility tests remain.
+- Phase 6 tooling is implemented through the anonymized `evaluate` command. A self-audit exposed fixture/test noise and drove explicit runtime/test/example scope handling; the diverse real-project dataset still requires user-supplied authorized repositories and human dispositions.
+- Phase 7 includes validated append-only reports, actual worker `SIGKILL` recovery, AI budget reservation persistence, checkpoint/config compatibility guards, scanner-version warnings, baseline-aware CI artifacts, and explicit pre-audit truncation approval.
 - Phase 8 includes Project Map, Checklist, Findings, Coverage, Investigations, Workflow, and a bounded Codex bundle export.
 
-The next product gate is not more fixture code. It is evaluation on authorized real projects, followed by targeted rule corrections and optional live-model validation.
+The next product gate is evaluation on additional authorized real projects, followed by targeted rule corrections and optional live-model validation.
 
 ## Goal
 
@@ -222,11 +222,13 @@ Fixtures prevent regressions but do not prove usefulness.
 ## Phase 7 — operational hardening
 
 - Schema-validate persisted reports, profiles, checklist results, AI cache, and migrations.
-- Add crash/power-loss tests for checkpoints and AI budget reservations. Dead-worker claim recovery and safe startup cleanup of recognized scanner staging are implemented.
+- Add crash/power-loss tests for checkpoints and AI budget reservations.
 - Add append-only report revisions and comparison by stable structural fingerprint.
 - Add scanner compatibility fixtures and version warnings.
 - Add SARIF/JSON artifacts and baseline-diff gates for GitHub Actions without requiring cloud AI.
 - Add repository-size estimates and explicit truncation before an audit starts.
+
+These items are implemented. Wider OS/platform fault matrices remain release validation work rather than missing workflow code.
 
 ## Phase 8 — product UX
 

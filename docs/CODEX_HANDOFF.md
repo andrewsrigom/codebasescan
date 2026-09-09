@@ -9,6 +9,9 @@ Traceward now has a complete local-first audit slice:
 - real Semgrep 1.176.1 and Gitleaks 8.30.1 worker integration;
 - opt-in SSRF-hardened single-URL HTTP response observation;
 - npm/pnpm/Yarn resolved inventory and opt-in cached OSV matching;
+- runtime/test/example scope separation with all-scope secret detection;
+- pre-audit scope estimates, explicit truncation approval, and baseline-aware CI artifacts;
+- bounded OSV pagination, CVSS v3/package severity handling, and local-workspace exclusion;
 - explicit capability coverage and finding provenance;
 - disabled, Ollama, and opt-in OpenAI Responses API providers;
 - OpenAI structured output, `store: false`, redaction, cache, timeout/retry, persisted budgets, token/cost metadata, and no fallback;
@@ -22,6 +25,7 @@ Traceward now has a complete local-first audit slice:
 - local audit comparison;
 - non-interactive CI with JSON/SARIF/Markdown/HTML/bounded-Codex-bundle output and severity exit gates;
 - runtime-validated reports/options, append-only workflow/human-review revisions, and anonymized evaluation aggregation;
+- actual worker `SIGKILL` recovery, AI budget reservation persistence, scanner compatibility warnings, and checkpoint/config compatibility rejection;
 - Next.js UI, worker, SQLite queue, LangGraph checkpoints, review interrupt/resume, and exports.
 
 Code and UI remain English. Scanner evidence, runtime evidence, advisory presence, model assessment, and human disposition are separate.
@@ -39,11 +43,10 @@ The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md
 1. Run Traceward on 10 authorized real TypeScript/Next.js repositories, review every candidate, use `npm run cli -- evaluate ...`, and record anonymized metrics. This requires repository paths and owner authorization.
 2. Fix only rule/profile/checklist failures demonstrated by that evaluation: aliases, wrappers, middleware, ORM shapes, uploads, cookies, or framework guards.
 3. Validate one economical and one stronger OpenAI model only with an explicit key/spend approval; validate Ollama only if local-model disk/RAM cost is accepted. Measure whether either improves human triage.
-4. Add actual SIGKILL/power-loss fault injection for budget reservation and checkpoint upgrade behavior. Dead-worker requeue and narrow stale-staging cleanup are covered.
-5. Expand lockfile workspaces, OSV pagination, severity parsing, and advisory freshness presentation. Do not infer dependency reachability.
-6. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
-7. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
-8. Capture real runtime screenshots, verify name/trademark availability, publish a private vulnerability-reporting route, and review dependency/API licenses before a public release.
+4. Expand the fault matrix beyond tested worker `SIGKILL`, AI reservation persistence, and checkpoint/config mismatch behavior.
+5. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
+6. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
+7. Capture real runtime screenshots, verify name/trademark availability, publish a private vulnerability-reporting route, and review dependency/API licenses before a public release.
 
 ## Guardrails
 

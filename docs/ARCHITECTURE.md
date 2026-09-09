@@ -69,9 +69,11 @@ Repository text is untrusted. It cannot select tools, endpoints, headers, reques
 
 `builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, and environment use. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
 
+Snapshot files are classified as runtime, test, or example. Project profiling, AST, posture, dependency inventory, and Semgrep use runtime scope; Gitleaks retains all captured scopes because credentials in test/fixture code can still be exposed. Runtime files are prioritized during traversal, and the preflight UI reports the split before queuing.
+
 The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S), strips queries from stored display URLs, rejects credential-shaped query keys, blocks metadata/link-local/reserved destinations, requires explicit approval for non-loopback private networks, validates every DNS answer and redirect, and pins the selected address for the connection. It uses HEAD and only falls back to bounded GET for 405/501. Static and runtime findings are reconciled by attaching observed evidence; static evidence is not silently removed.
 
-Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code. OSV is separately opt-in and uses a fixed API host. Only package name/version pairs leave the machine. Full advisory responses are compacted, aliases are consolidated, withdrawn records are ignored, and cache/report data never claim reachability.
+Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code and excludes recognized local npm/Yarn workspace packages from advisory queries. OSV is separately opt-in and uses a fixed API host. Only package name/version pairs leave the machine. Pagination and advisory fetches have fixed request/result limits. Full responses are compacted, aliases are consolidated, withdrawn records are ignored, package-level severity is retained, CVSS v3 vectors are scored when labels are absent, and cache/report data never claim reachability.
 
 ## AI boundary
 
@@ -91,7 +93,7 @@ Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISA
 
 The in-process snapshot is bounded and raw content is not stored wholesale in the application report. Findings contain small redacted excerpts and digests, which are still sensitive. A resumed graph recaptures source and rejects a changed digest instead of mixing snapshots.
 
-Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. OpenAI budgets are persisted before requests. Workflow and human-review report states are appended to immutable revision rows while the audit points to the latest validated report. Publication merges current human dispositions. Abrupt termination and parser processes still require OS-level containment for hostile repositories.
+Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. AI budgets are persisted before requests. Checkpoints carry workflow/config compatibility data and incompatible resumes fail closed. Workflow and human-review report states are appended to immutable revision rows while the audit points to the latest validated report. Publication merges current human dispositions. Actual worker `SIGKILL` recovery is tested; parser processes still require OS-level containment for hostile repositories.
 
 ## Local HTTP service
 

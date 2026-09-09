@@ -17,8 +17,8 @@ Traceward does not replace a penetration test, prove exploitability, or certify 
 | Project profiling  | TypeScript-owned AST parser maps supported frameworks, routes, actions, symbols, explicit local calls, and security facts without executing target code      |
 | Code-first rules   | Framework-aware auth/authz plus direct request flows into raw SQL, outbound requests, redirects, uploads, webhooks, cookies, and client configuration        |
 | Security checklist | Versioned controls keep evidenced facts, gap candidates, unknowns, partial coverage, failures, and non-applicability distinct                                |
-| Static and secrets | Built-in/posture rules plus opt-in Semgrep and Gitleaks using a bounded private staging snapshot                                                             |
-| Dependencies       | npm, pnpm, Yarn Classic, and Yarn Berry lockfile resolution; opt-in cached OSV matching                                                                      |
+| Static and secrets | Runtime code is separated from test/example code; Gitleaks still checks every captured scope while code rules avoid fixture noise                            |
+| Dependencies       | Workspace-aware npm/pnpm/Yarn inventory; bounded paginated OSV matching, package-specific severity, CVSS v3 scoring, cache, aliases, and fixes               |
 | Runtime posture    | One explicitly approved HTTP URL; SSRF/metadata controls, DNS pinning, redirect/timeout/body limits, HEAD with bounded GET fallback                          |
 | Investigation      | LangGraph fan-out/fan-in, evidence-ID context broker, SQLite checkpoints, append-only report revisions, and human publication interrupt/resume               |
 | AI                 | Disabled by default; local Ollama or opt-in OpenAI with structured findings, opaque context IDs, hard budgets, cache, redaction, usage, cost, and provenance |
@@ -59,6 +59,7 @@ npm run cli -- export <audit-id> html
 ```
 
 Traceward reads a bounded snapshot. It never runs the target's package installation, lifecycle scripts, application, arbitrary shell commands, or exploits.
+Before queuing, it estimates supported files/bytes and separates runtime analysis from test/example secret-only scope. Predicted truncation requires explicit `--allow-partial-snapshot` approval.
 
 ### Optional HTTP observation
 
@@ -138,6 +139,13 @@ npm run cli -- audit . --ci --fail-on high --format sarif --output traceward.sar
 ```
 
 Exit code `0` means the configured gate passed, `1` means unresolved findings met the threshold, and `2` means the audit failed operationally. A passing gate is not a security certification.
+
+Gate only newly introduced findings against a previous Traceward JSON report:
+
+```bash
+npm run cli -- audit . --baseline traceward-base.json --fail-on high \
+  --format sarif --output traceward.sarif
+```
 
 Compare two stored audits:
 

@@ -11,6 +11,9 @@
 - Deterministic TypeScript/JavaScript project profiling, framework-aware AST auth/authz, bounded direct request flows, and paired benign fixtures.
 - Versioned security checklist, evidence-ID context broker, structured AI investigation, Project Map/Investigations UI, and bounded Codex bundle.
 - Runtime-validated report persistence, append-only revisions, and anonymized human-outcome/AI-cost aggregation.
+- Runtime/test/example source separation, pre-audit scope estimates, explicit partial-snapshot approval, baseline-aware CI artifacts, and scanner compatibility warnings.
+- Actual dead-worker `SIGKILL` recovery, checkpoint/config compatibility guards, and persisted AI request reservations.
+- Bounded OSV pagination, CVSS v3 scoring, package-specific severity, advisory modification display, and local npm/Yarn workspace-package exclusion.
 
 ## Next — real-project detection quality
 
@@ -18,11 +21,11 @@ Evaluate at least 10 authorized TypeScript/Next.js projects with human review. R
 
 Extend structural analysis only from observed real-project failures: path aliases, wrapper composition, middleware/proxy matchers, more ORM/query-builder shapes, streaming uploads, cookie overloads, and framework-specific safe destination guards. Keep unsupported relationships explicit.
 
-Extend lockfile workspace fidelity, OSV pagination, withdrawn/advisory freshness tests, and severity-vector presentation. Reachability remains separate work and must not be inferred from presence.
+Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Reachability remains separate work and must not be inferred from presence.
 
 ## Next — operational hardening
 
-Add actual crash/fault injection, checkpoint/config version compatibility, deeper AI-cache validation, and scanner-version compatibility fixtures. Dead-worker requeue and narrow stale scanner staging cleanup are implemented. Add OS resource containment guidance for hostile repositories.
+Expand fault injection beyond the tested worker `SIGKILL`, budget reservation, and checkpoint/config mismatch paths. Add deeper AI-cache migration validation and OS resource containment guidance for hostile repositories.
 
 ## Next — model validation
 
