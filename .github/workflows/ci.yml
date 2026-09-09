@@ -30,6 +30,16 @@ jobs:
       - run: npm test
       - run: npm run benchmark
       - run: npm run test:graph
+      - name: Generate local audit artifacts and exercise baseline gate
+        run: |
+          npm run cli -- audit fixtures/hardened-saas --format json --output traceward-ci-base.json
+          npm run cli -- audit fixtures/hardened-saas --baseline traceward-ci-base.json --fail-on high --format sarif --output traceward-ci.sarif
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traceward-audit
+          path: |
+            traceward-ci-base.json
+            traceward-ci.sarif
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e

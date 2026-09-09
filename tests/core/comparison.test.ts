@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compareReports } from '../../src/domain/comparison.ts';
 import { sampleReport } from '../helpers.ts';
-import { ciGate } from '../../src/domain/ci.ts';
+import { baselineCiGate, ciGate } from '../../src/domain/ci.ts';
 
 test('report comparison separates new, resolved, unchanged, and severity changes', () => {
   const base = sampleReport();
@@ -43,4 +43,21 @@ test('CI severity gates use meaningful exit codes', () => {
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 1, gatedFindings: 1 });
   report.findings[0]!.disposition = 'accepted_risk';
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
+});
+
+test('baseline CI gate counts only new findings at the selected severity', () => {
+  const base = sampleReport();
+  const current = sampleReport();
+  current.findings = [
+    ...base.findings,
+    {
+      ...base.findings[0]!,
+      id: 'new-medium-id',
+      fingerprint: 'new-medium-fingerprint',
+      severity: 'medium',
+    },
+  ];
+  const comparison = compareReports(base, current);
+  assert.deepEqual(baselineCiGate(comparison, 'high'), { exitCode: 0, gatedFindings: 0 });
+  assert.deepEqual(baselineCiGate(comparison, 'medium'), { exitCode: 1, gatedFindings: 1 });
 });

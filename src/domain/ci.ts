@@ -1,4 +1,4 @@
-import type { AuditReport, Severity } from './types.ts';
+import type { AuditComparison, AuditReport, Severity } from './types.ts';
 import { severityRank } from './findings.ts';
 
 export function ciGate(
@@ -14,6 +14,18 @@ export function ciGate(
     (finding) =>
       !['false_positive', 'accepted_risk'].includes(finding.disposition) &&
       severityRank(finding.severity) <= threshold,
+  ).length;
+  return { exitCode: gatedFindings ? 1 : 0, gatedFindings };
+}
+
+export function baselineCiGate(
+  comparison: AuditComparison,
+  failOn?: Severity,
+): { exitCode: 0 | 1; gatedFindings: number } {
+  if (!failOn) return { exitCode: 0, gatedFindings: 0 };
+  const threshold = severityRank(failOn);
+  const gatedFindings = comparison.newFindings.filter(
+    (finding) => severityRank(finding.severity) <= threshold,
   ).length;
   return { exitCode: gatedFindings ? 1 : 0, gatedFindings };
 }

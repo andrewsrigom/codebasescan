@@ -1,14 +1,15 @@
 import path from 'node:path';
 import os from 'node:os';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
 import { validateProjectRoot } from '../security/paths.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
 import { toHtml, toInvestigationBundle, toMarkdown, toSarif } from '../domain/reports.ts';
 import { compareReports } from '../domain/comparison.ts';
-import { ciGate } from '../domain/ci.ts';
+import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
+import { parseAuditReport } from '../domain/report-schema.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 
@@ -51,6 +52,19 @@ function render(report: AuditReport, format: string): string {
         );
 }
 
+async function loadBaseline(file: string): Promise<AuditReport> {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 16 * 1024 * 1024)
+    throw new Error('Baseline report must be a regular JSON file no larger than 16 MB.');
+  try {
+    return parseAuditReport(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Baseline report')) throw error;
+    throw new Error('Baseline report is not valid Traceward JSON.');
+  }
+}
+
 let store: AuditStore | null = null;
 try {
   if (command === 'audit' && target) {
@@ -72,6 +86,17 @@ try {
       const completed = ciStore.audit(audit.id);
       if (completed.status !== 'completed' || !completed.report)
         throw new Error('Non-interactive audit did not produce a complete draft report.');
+      const threshold = option('--fail-on');
+      if (threshold && !severities.includes(threshold as Severity))
+        throw new Error('Use critical, high, medium, low, or info for --fail-on.');
+      const baselinePath = option('--baseline');
+      const baseline = baselinePath ? await loadBaseline(baselinePath) : null;
+      if (baseline && baseline.projectName !== completed.report.projectName)
+        throw new Error('Baseline report belongs to a different project.');
+      const comparison = baseline ? compareReports(baseline, completed.report) : null;
+      const gate = comparison
+        ? baselineCiGate(comparison, threshold as Severity | undefined)
+        : ciGate(completed.report, threshold as Severity | undefined);
       const format = option('--format') ?? 'json';
       const output = render(completed.report, format);
       const destination = option('--output');
@@ -80,13 +105,13 @@ try {
         await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
         console.error(`Saved ${resolved}`);
       } else console.log(output);
-      const threshold = option('--fail-on');
-      if (threshold && !severities.includes(threshold as Severity))
-        throw new Error('Use critical, high, medium, low, or info for --fail-on.');
-      const gate = ciGate(completed.report, threshold as Severity | undefined);
+      if (comparison)
+        console.error(
+          `Baseline comparison: ${comparison.newFindings.length} new, ${comparison.resolvedFindings.length} resolved, ${comparison.unchangedFindings.length} unchanged.`,
+        );
       if (threshold)
         console.error(
-          `Severity gate ${threshold}: ${gate.gatedFindings} unresolved finding(s) at or above threshold.`,
+          `Severity gate ${threshold}: ${gate.gatedFindings} ${comparison ? 'new' : 'unresolved'} finding(s) at or above threshold.`,
         );
       process.exitCode = gate.exitCode;
     } finally {
@@ -143,7 +168,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project --ci [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
+        'Traceward\n\n  npm run cli -- audit /path/to/project [--baseline previous.json] [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
       );
     }
   }
