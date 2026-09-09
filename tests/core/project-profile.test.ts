@@ -175,14 +175,20 @@ test('Next route wrappers, aliases, and destructured handlers are mapped', () =>
        export { handler as GET, handler as POST };`,
       'app/route.ts',
     ),
-  ).profile.entrypoints[0];
-  assert.deepEqual(alias?.methods, ['GET', 'POST']);
-  assert.equal(alias?.symbolIds.length, 1);
+  ).profile.entrypoints;
+  assert.deepEqual(
+    alias.flatMap((entrypoint) => entrypoint.methods),
+    ['GET', 'POST'],
+  );
+  assert.ok(alias.every((entrypoint) => entrypoint.symbolIds.length === 1));
 
   const destructured = profileProject(
     snapshotOf(`export const { GET, POST } = handlers;`, 'app/auth/route.ts'),
-  ).profile.entrypoints[0];
-  assert.deepEqual(destructured?.methods, ['GET', 'POST']);
+  ).profile.entrypoints;
+  assert.deepEqual(
+    destructured.flatMap((entrypoint) => entrypoint.methods),
+    ['GET', 'POST'],
+  );
 });
 
 test('Pages API method switches are mapped without executing handlers', () => {

@@ -5,7 +5,7 @@ import { preferStructuralFindings, scanAstSecurity } from '../../src/scanners/as
 import { scanPatterns } from '../../src/scanners/builtin.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
-import { snapshotOf } from '../helpers.ts';
+import { snapshotFromFiles, snapshotOf } from '../helpers.ts';
 
 test('AST authorization rules connect mutating entry points to sensitive operations', async () => {
   const snapshot = await captureSnapshot(path.resolve('fixtures/ast-auth-vulnerable'));
@@ -57,6 +57,62 @@ test('recognized two-hop auth, permission, and owner scope avoid AST gap candida
   const result = scanAstSecurity(snapshot, profile);
   assert.equal(result.run.status, 'completed');
   assert.deepEqual(result.findings, []);
+});
+
+test('authorization analysis follows and evidences five explicit call hops', () => {
+  const snapshot = snapshotOf(
+    `
+      export async function POST(request: Request) { return first(request); }
+      function first(request) { return second(request); }
+      function second(request) { return third(request); }
+      function third(request) { return fourth(request); }
+      function fourth(request) { return database.account.delete({ where: { id: request.id } }); }
+    `,
+    'src/app/api/accounts/route.ts',
+  );
+  const finding = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings.find(
+    (candidate) => candidate.ruleId === 'TW-AST001',
+  );
+  assert.ok(finding);
+  assert.ok(
+    finding.evidence.filter((item) => item.observation.startsWith('Call path')).length >= 4,
+  );
+});
+
+test('matching authenticated middleware protects a Next route but unrelated middleware does not', () => {
+  const protectedSnapshot = snapshotFromFiles({
+    'src/middleware.ts': `
+      export function middleware(request) { requireUser(request); return NextResponse.next(); }
+      export const config = { matcher: ['/api/:path*'] };
+    `,
+    'src/app/api/accounts/route.ts': `
+      export async function DELETE(request) {
+        return database.account.delete({ where: { id: request.id } });
+      }
+    `,
+  });
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const unrelatedSnapshot = snapshotFromFiles({
+    'src/middleware.ts': `
+      export function middleware(request) { requireUser(request); return NextResponse.next(); }
+      export const config = { matcher: ['/dashboard/:path*'] };
+    `,
+    'src/app/api/accounts/route.ts': `
+      export async function DELETE(request) {
+        return database.account.delete({ where: { id: request.id } });
+      }
+    `,
+  });
+  const unrelatedFindings = scanAstSecurity(
+    unrelatedSnapshot,
+    profileProject(unrelatedSnapshot).profile,
+  ).findings;
+  assert.ok(unrelatedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
 test('authentication wrappers protect mapped Next route callbacks', () => {

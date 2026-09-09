@@ -12,3 +12,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Ignored common generated Next.js, pnpm, Storybook, and test-output trees, raised the bounded source-file limit to 512 KiB, and allowed Semgrep more time per large source file for real monorepos.
 - Applied root `.gitignore` rules during bounded scope estimation and snapshot capture so local caches and reports do not crowd out source code.
 - Added a dedicated React security graph node for dynamic HTML, client-controlled URLs, browser token storage, cross-origin messaging, new-tab links, async Client Components, and server/client data boundaries.
+- Split App Router methods into distinct entry points, mapped applicable middleware authentication, followed calls through five explicit hops, and attached the call path as evidence.

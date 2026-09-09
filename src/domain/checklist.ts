@@ -13,7 +13,7 @@ import {
   isAdministrativeEntrypoint,
   isMutatingEntrypoint,
   isWebhookEntrypoint,
-  reachableFacts,
+  effectiveEntrypointFacts,
   sensitiveFacts,
 } from './project-graph.ts';
 
@@ -93,7 +93,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
         : 'NOT_APPLICABLE';
   const contexts: EntrypointContext[] = (profile?.entrypoints ?? [])
     .filter((entrypoint) => entrypoint.kind !== 'middleware')
-    .map((entrypoint) => ({ entrypoint, facts: reachableFacts(profile!, entrypoint) }));
+    .map((entrypoint) => ({ entrypoint, facts: effectiveEntrypointFacts(profile!, entrypoint) }));
   const sensitiveContexts = contexts.filter((context) => sensitiveFacts(context.facts).length);
   const mutations = sensitiveContexts.filter(
     (context) =>
@@ -130,7 +130,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
           )
         : noMappedApplicability,
       rationale: mutations.length
-        ? `${authenticated.length} of ${mutations.length} mapped sensitive mutation boundary(s) contain a recognized authentication or authorization fact within two explicit call hops.`
+        ? `${authenticated.length} of ${mutations.length} mapped sensitive mutation boundary(s) contain a recognized authentication or authorization fact in applicable middleware or within five explicit call hops.`
         : 'No supported sensitive mutation boundary was mapped.',
       applicability:
         'Applies to mapped mutating routes and server actions that reach database, raw SQL, command, or file operations. Webhooks are evaluated separately.',
@@ -240,7 +240,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
             : 'GAP_CANDIDATE'
         : noMappedApplicability,
       rationale: sensitiveContexts.length
-        ? `${validated.length} of ${sensitiveContexts.length} sensitive entry point(s) contain a recognized validation call within two explicit call hops.`
+        ? `${validated.length} of ${sensitiveContexts.length} sensitive entry point(s) contain a recognized validation call within five explicit call hops.`
         : 'No supported sensitive entry point was mapped.',
       applicability: 'Applies to mapped routes/actions that reach sensitive operations.',
       evidence: contextEvidence(validated, ['validation']),
@@ -713,7 +713,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
             : 'UNVERIFIED'
         : noMappedApplicability,
       rationale: sensitiveContexts.length
-        ? `${handled.length} of ${sensitiveContexts.length} mapped sensitive boundary(s) contain an explicit catch clause within two call hops.`
+        ? `${handled.length} of ${sensitiveContexts.length} mapped sensitive boundary(s) contain an explicit catch clause within five call hops.`
         : 'No supported sensitive operation boundary was mapped.',
       applicability: 'Applies to mapped sensitive request/action boundaries.',
       evidence: contextEvidence(handled, ['error-handling']),

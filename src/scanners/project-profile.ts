@@ -371,6 +371,32 @@ function httpMethodsInFile(source: ts.SourceFile): string[] {
   return [...methods];
 }
 
+function middlewareMatchers(source: ts.SourceFile): string[] {
+  const matchers = new Set<string>();
+  const collect = (expression: ts.Expression): void => {
+    if (ts.isStringLiteralLike(expression)) matchers.add(expression.text.slice(0, 300));
+    else if (ts.isArrayLiteralExpression(expression))
+      for (const element of expression.elements)
+        if (ts.isStringLiteralLike(element)) matchers.add(element.text.slice(0, 300));
+  };
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement) || !isExported(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        !ts.isIdentifier(declaration.name) ||
+        !['config', 'proxyConfig'].includes(declaration.name.text) ||
+        !declaration.initializer ||
+        !ts.isObjectLiteralExpression(declaration.initializer)
+      )
+        continue;
+      for (const property of declaration.initializer.properties)
+        if (ts.isPropertyAssignment(property) && propertyName(property.name) === 'matcher')
+          collect(property.initializer);
+    }
+  }
+  return [...matchers].slice(0, 20);
+}
+
 function addFileEntrypoints(
   item: ParsedFile,
   symbols: ProjectSymbol[],
@@ -395,6 +421,13 @@ function addFileEntrypoints(
                 )
               : undefined;
           const callbackSymbol = callback ? functionSymbol(file, item.ast, callback) : null;
+          const callbackIdentifier =
+            declaration.initializer && ts.isCallExpression(declaration.initializer)
+              ? declaration.initializer.arguments.find(ts.isIdentifier)
+              : undefined;
+          const callbackIdentifierSymbol = callbackIdentifier
+            ? allFileSymbols.find((symbol) => symbol.name === callbackIdentifier.text)
+            : undefined;
           const directSymbol = allFileSymbols.find(
             (symbol) => symbol.name === declaration.name.getText(item.ast),
           );
@@ -402,7 +435,8 @@ function addFileEntrypoints(
             declaration.initializer && ts.isIdentifier(declaration.initializer)
               ? allFileSymbols.find((symbol) => symbol.name === declaration.initializer!.getText())
               : undefined;
-          const target = callbackSymbol ?? directSymbol ?? aliasedSymbol;
+          const target =
+            callbackSymbol ?? callbackIdentifierSymbol ?? directSymbol ?? aliasedSymbol;
           routeBindings.set(declaration.name.text, {
             line: lineOf(item.ast, declaration),
             symbolIds: target ? [target.id] : [],
@@ -433,20 +467,19 @@ function addFileEntrypoints(
         });
       }
   }
-  if (/(?:^|\/)app\/(?:.+\/)?route\.[cm]?[jt]sx?$/.test(file) && routeBindings.size) {
-    const bindings = [...routeBindings.entries()];
-    entrypoints.push({
-      id: stableId('entrypoint', 'next-route', file),
-      kind: 'next-route',
-      file,
-      line: Math.min(...bindings.map(([, binding]) => binding.line)),
-      name: bindings.map(([method]) => method).join(', '),
-      route: routeFromFile(file, 'app'),
-      methods: bindings.map(([method]) => method),
-      dynamicParameters: dynamicParameters(file),
-      symbolIds: [...new Set(bindings.flatMap(([, binding]) => binding.symbolIds))],
-    });
-  }
+  if (/(?:^|\/)app\/(?:.+\/)?route\.[cm]?[jt]sx?$/.test(file))
+    for (const [method, binding] of routeBindings)
+      entrypoints.push({
+        id: stableId('entrypoint', 'next-route', file, method),
+        kind: 'next-route',
+        file,
+        line: binding.line,
+        name: method,
+        route: routeFromFile(file, 'app'),
+        methods: [method],
+        dynamicParameters: dynamicParameters(file),
+        symbolIds: [...new Set(binding.symbolIds)],
+      });
   if (/(?:^|\/)pages\/api\/.+\.[cm]?[jt]sx?$/.test(file)) {
     entrypoints.push({
       id: stableId('entrypoint', 'next-pages-api', file),
@@ -504,6 +537,7 @@ function addFileEntrypoints(
       file,
       line: 1,
       name: base.startsWith('proxy.') ? 'proxy' : 'middleware',
+      matchers: middlewareMatchers(item.ast),
       methods: [],
       dynamicParameters: [],
       symbolIds: fileSymbols.map((symbol) => symbol.id).slice(0, 20),
@@ -628,7 +662,14 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
         );
         const callbackSymbol = callback
           ? functionSymbol(item.source.path, item.ast, callback)
-          : null;
+          : (node.arguments
+              .filter(ts.isIdentifier)
+              .map((argument) =>
+                symbols.find(
+                  (symbol) => symbol.file === item.source.path && symbol.name === argument.text,
+                ),
+              )
+              .find(Boolean) ?? null);
         const factOwnerSymbolId =
           ownerSymbolId ??
           (kind === 'authentication' || kind === 'authorization' ? callbackSymbol?.id : undefined);

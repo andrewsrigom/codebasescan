@@ -18,6 +18,22 @@ export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
     truncated: false,
   };
 }
+export function snapshotFromFiles(files: Record<string, string>): Snapshot {
+  const sourceFiles = Object.entries(files).map(([path, content]) => ({
+    path,
+    scope: 'runtime' as const,
+    content,
+    digest: digest(content),
+    bytes: Buffer.byteLength(content),
+  }));
+  return {
+    digest: digest(sourceFiles.map((file) => `${file.path}:${file.digest}`).join('\n')),
+    files: sourceFiles,
+    totalBytes: sourceFiles.reduce((total, file) => total + file.bytes, 0),
+    skipped: {},
+    truncated: false,
+  };
+}
 export function sampleReport(): AuditReport {
   const source = snapshotOf('export const result = eval(input);');
   return {

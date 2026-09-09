@@ -238,6 +238,7 @@ export interface ProjectEntrypoint {
   line: number;
   name: string;
   route?: string;
+  matchers?: string[];
   methods: string[];
   dynamicParameters: string[];
   symbolIds: string[];

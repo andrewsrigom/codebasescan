@@ -12,10 +12,11 @@ import { makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { isRuntimeSource } from '../security/paths.ts';
 import {
   entrypointRoots,
+  callPathToFact,
+  effectiveEntrypointFacts,
   isAdministrativeEntrypoint,
   isMutatingEntrypoint,
   isWebhookEntrypoint,
-  reachableFacts,
   sensitiveProjectFactKinds,
 } from '../domain/project-graph.ts';
 
@@ -43,6 +44,7 @@ export function preferStructuralFindings(findings: Finding[]): Finding[] {
 
 function evidence(
   snapshot: Snapshot,
+  profile: ProjectProfile,
   fact: ProjectFact,
   entrypoint: ProjectEntrypoint,
   observation: string,
@@ -60,11 +62,19 @@ function evidence(
     `Mapped ${entrypoint.kind} boundary${entrypoint.route ? ` ${entrypoint.route}` : ''}.`,
   );
   boundary.kind = 'source';
-  return [primary, boundary];
+  const callPath = callPathToFact(profile, entrypoint, fact).flatMap((edge) => {
+    const edgeFile = snapshot.files.find((item) => item.path === edge.file);
+    if (!edgeFile) return [];
+    const step = sourceEvidence(edgeFile, edge.line, `Call path continues through ${edge.callee}.`);
+    step.kind = 'inferred';
+    return [step];
+  });
+  return [primary, boundary, ...callPath];
 }
 
 function authorizationFinding(input: {
   snapshot: Snapshot;
+  profile: ProjectProfile;
   entrypoint: ProjectEntrypoint;
   fact: ProjectFact;
   ruleId: string;
@@ -75,7 +85,13 @@ function authorizationFinding(input: {
   severity: 'high' | 'medium';
 }): Finding | null {
   const observation = `${input.entrypoint.kind} ${input.entrypoint.route ?? input.entrypoint.name} reaches ${input.fact.signal} within the bounded structural call map.`;
-  const mappedEvidence = evidence(input.snapshot, input.fact, input.entrypoint, observation);
+  const mappedEvidence = evidence(
+    input.snapshot,
+    input.profile,
+    input.fact,
+    input.entrypoint,
+    observation,
+  );
   if (!mappedEvidence.length) return null;
   return makeFinding({
     source: 'ast',
@@ -689,7 +705,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     if (isWebhookEntrypoint(entrypoint)) continue;
     const roots = entrypointRoots(profile, entrypoint);
     if (!roots.length) continue;
-    const mappedFacts = reachableFacts(profile, entrypoint);
+    const mappedFacts = effectiveEntrypointFacts(profile, entrypoint);
     const sensitive = mappedFacts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
     if (!sensitive) continue;
     const authenticated = mappedFacts.some((fact) =>
@@ -698,13 +714,14 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     if (!authenticated && !isPublicAuthenticationFlow(entrypoint)) {
       const candidate = authorizationFinding({
         snapshot,
+        profile,
         entrypoint,
         fact: sensitive,
         ruleId: 'TW-AST001',
         title: 'Sensitive operation has no mapped authentication guard',
         severity: sensitiveOperationSeverity(sensitive),
         description:
-          'The structural profile connects a mutating entry point to a sensitive operation but found no recognized authentication or authorization fact in the entry point or two explicit call hops. Middleware, an API gateway, database policy, or an unrecognized wrapper may still protect it.',
+          'The structural profile connects a mutating entry point to a sensitive operation but found no recognized authentication or authorization fact in the entry point, applicable middleware, or five explicit call hops. An API gateway, database policy, or an unrecognized wrapper may still protect it.',
         remediation:
           'Require an authenticated principal at a trusted server boundary, enforce authorization close to the operation, and add an unauthenticated regression test. Confirm any external control before dispositioning this candidate.',
         cwe: ['CWE-306', 'CWE-862'],
@@ -716,6 +733,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     if (administrative && !authorized) {
       const candidate = authorizationFinding({
         snapshot,
+        profile,
         entrypoint,
         fact: sensitive,
         ruleId: 'TW-AST002',
@@ -734,6 +752,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     if (entrypoint.dynamicParameters.length && resourceOperation && !scoped && !authorized) {
       const candidate = authorizationFinding({
         snapshot,
+        profile,
         entrypoint,
         fact: resourceOperation,
         ruleId: 'TW-AST003',
@@ -759,7 +778,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       status: partial ? 'partial' : 'completed',
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
-      detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), direct request-data flows, webhook ordering, upload guards, cookie options, and client/server configuration boundaries. Cross-file authorization follows explicit call relationships up to two hops. Missing runtime, middleware, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
+      detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), direct request-data flows, webhook ordering, upload guards, cookie options, and client/server configuration boundaries. Cross-file authorization follows explicit call relationships up to five hops and includes applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
       version: '0.2.0',
     },
   };

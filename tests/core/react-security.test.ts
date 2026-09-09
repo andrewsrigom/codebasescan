@@ -1,31 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { digest } from '../../src/domain/findings.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { scanReactSecurity } from '../../src/scanners/react-security.ts';
-import type { Snapshot } from '../../src/domain/types.ts';
-import { snapshotOf } from '../helpers.ts';
+import { snapshotFromFiles, snapshotOf } from '../helpers.ts';
 
 function scan(content: string) {
   const snapshot = snapshotOf(content, 'src/components/example.tsx');
   return scanReactSecurity(snapshot, profileProject(snapshot).profile);
-}
-
-function multiFileSnapshot(files: Record<string, string>): Snapshot {
-  const sourceFiles = Object.entries(files).map(([path, content]) => ({
-    path,
-    scope: 'runtime' as const,
-    content,
-    digest: digest(content),
-    bytes: Buffer.byteLength(content),
-  }));
-  return {
-    digest: digest(sourceFiles.map((file) => `${file.path}:${file.digest}`).join('\n')),
-    files: sourceFiles,
-    totalBytes: sourceFiles.reduce((total, file) => total + file.bytes, 0),
-    skipped: {},
-    truncated: false,
-  };
 }
 
 test('React HTML rule distinguishes dynamic input from recognized sanitization', () => {
@@ -78,7 +59,7 @@ test('React client boundary rules catch server imports and async components', ()
 });
 
 test('Server Components do not pass sensitive-shaped props to Client Components', () => {
-  const snapshot = multiFileSnapshot({
+  const snapshot = snapshotFromFiles({
     'src/app/page.tsx': `
       import { ClientPanel } from '../components/client-panel';
       export default async function Page() {
