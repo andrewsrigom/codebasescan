@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import Link from 'next/link';
 import type { Audit, AuditComparison, AuditEvent, Finding, Project } from '../domain/types.ts';
@@ -7,8 +7,18 @@ import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
 import { FindingDetails } from './finding-details.tsx';
-const tabs = ['Overview', 'Findings', 'Checklist', 'Dependencies', 'Coverage', 'Workflow'] as const;
+const tabs = [
+  'Overview',
+  'Findings',
+  'Project map',
+  'Checklist',
+  'Investigations',
+  'Dependencies',
+  'Coverage',
+  'Workflow',
+] as const;
 type Tab = (typeof tabs)[number];
+const tabId = (label: Tab) => label.toLowerCase().replaceAll(' ', '-');
 export function AuditWorkspace({
   initialAudit,
   initialEvents,
@@ -28,6 +38,7 @@ export function AuditWorkspace({
   const [tab, setTab] = useState<Tab>('Overview');
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('all');
+  const [mapQuery, setMapQuery] = useState('');
   const [selected, setSelected] = useState<Finding | null>(null);
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
@@ -83,6 +94,27 @@ export function AuditWorkspace({
   const highFindings = openFindings.filter((finding) =>
     ['critical', 'high'].includes(finding.severity),
   ).length;
+  const investigations = findings.filter((finding) => finding.analysis?.provider);
+  const projectMapRows = useMemo(() => {
+    const profile = report?.projectProfile;
+    if (!profile) return [];
+    const normalized = mapQuery.trim().toLowerCase();
+    return profile.entrypoints
+      .filter((entrypoint) =>
+        normalized
+          ? `${entrypoint.route ?? ''} ${entrypoint.name} ${entrypoint.file} ${entrypoint.methods.join(' ')}`
+              .toLowerCase()
+              .includes(normalized)
+          : true,
+      )
+      .slice(0, 200);
+  }, [mapQuery, report?.projectProfile]);
+  const projectFactCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const fact of report?.projectProfile?.facts ?? [])
+      counts.set(fact.kind, (counts.get(fact.kind) ?? 0) + 1);
+    return [...counts.entries()].sort((left, right) => right[1] - left[1]);
+  }, [report?.projectProfile]);
   const osvRun = report?.scanners.find((scanner) => scanner.id === 'osv');
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex: number | null = null;
@@ -228,10 +260,10 @@ export function AuditWorkspace({
         {tabs.map((label, index) => (
           <button
             key={label}
-            id={`audit-tab-${label.toLowerCase()}`}
+            id={`audit-tab-${tabId(label)}`}
             role="tab"
             aria-selected={tab === label}
-            aria-controls={`audit-panel-${label.toLowerCase()}`}
+            aria-controls={`audit-panel-${tabId(label)}`}
             tabIndex={tab === label ? 0 : -1}
             className={tab === label ? 'tab active' : 'tab'}
             onClick={() => setTab(label)}
@@ -239,6 +271,9 @@ export function AuditWorkspace({
           >
             {label}
             {label === 'Findings' && <span className="tab-count">{findings.length}</span>}
+            {label === 'Investigations' && investigations.length > 0 && (
+              <span className="tab-count">{investigations.length}</span>
+            )}
           </button>
         ))}
         <div className="tabs-spacer" />
@@ -454,6 +489,112 @@ export function AuditWorkspace({
           )}
         </section>
       )}
+      {tab === 'Project map' && (
+        <section
+          className="panel"
+          id="audit-panel-project-map"
+          role="tabpanel"
+          aria-labelledby="audit-tab-project-map"
+        >
+          <div className="panel-header">
+            <div>
+              <h2>Project map</h2>
+              <p>Frameworks, request boundaries, and security-relevant source facts.</p>
+            </div>
+            <Badge tone={report?.projectProfile?.status === 'complete' ? 'success' : 'medium'}>
+              {report?.projectProfile?.status ?? 'not generated'}
+            </Badge>
+          </div>
+          {report?.projectProfile ? (
+            <>
+              <div className="panel-body">
+                <div className="detail-row">
+                  <span>Languages</span>
+                  <strong>{report.projectProfile.languages.join(', ') || 'Unsupported'}</strong>
+                </div>
+                <div className="detail-row">
+                  <span>Frameworks</span>
+                  <strong>
+                    {report.projectProfile.frameworks.map((item) => item.name).join(', ') ||
+                      'No recognized framework'}
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Structural coverage</span>
+                  <strong>
+                    {report.projectProfile.filesAnalyzed} files ·{' '}
+                    {report.projectProfile.nodesAnalyzed} AST nodes
+                  </strong>
+                </div>
+                <div className="checklist-summary">
+                  {projectFactCounts.slice(0, 12).map(([kind, count]) => (
+                    <Badge key={kind}>
+                      {kind.replaceAll('-', ' ')} {count}
+                    </Badge>
+                  ))}
+                </div>
+                {report.projectProfile.issues.length > 0 && (
+                  <ul className="limitations">
+                    {report.projectProfile.issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="filter-bar">
+                <div className="search-field">
+                  <Icon name="search" size={17} />
+                  <input
+                    aria-label="Search project entry points"
+                    placeholder="Search routes, methods, or source files…"
+                    value={mapQuery}
+                    onChange={(event) => setMapQuery(event.target.value)}
+                  />
+                </div>
+                <Badge>
+                  {projectMapRows.length}
+                  {report.projectProfile.entrypoints.length > 200 ? ' shown' : ' entry points'}
+                </Badge>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Boundary</th>
+                      <th>Method</th>
+                      <th>Route / action</th>
+                      <th>Source</th>
+                      <th>Parameters</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projectMapRows.map((entrypoint) => (
+                      <tr key={entrypoint.id}>
+                        <td>{entrypoint.kind.replaceAll('-', ' ')}</td>
+                        <td className="mono">{entrypoint.methods.join(', ') || 'ACTION'}</td>
+                        <td className="strong mono">{entrypoint.route ?? entrypoint.name}</td>
+                        <td className="mono small">
+                          {entrypoint.file}:{entrypoint.line}
+                        </td>
+                        <td>{entrypoint.dynamicParameters.join(', ') || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {projectMapRows.length === 0 && (
+                <EmptyState title="No matching entry points">
+                  <p>Try another search or inspect the structural coverage issues above.</p>
+                </EmptyState>
+              )}
+            </>
+          ) : (
+            <EmptyState title="Project map not generated">
+              <p>Run a new audit with the current release.</p>
+            </EmptyState>
+          )}
+        </section>
+      )}
       {tab === 'Dependencies' && (
         <section
           className="panel"
@@ -565,6 +706,70 @@ export function AuditWorkspace({
           ) : (
             <EmptyState title="Checklist not generated">
               <p>Run a new audit with the current release.</p>
+            </EmptyState>
+          )}
+        </section>
+      )}
+      {tab === 'Investigations' && (
+        <section
+          className="panel"
+          id="audit-panel-investigations"
+          role="tabpanel"
+          aria-labelledby="audit-tab-investigations"
+        >
+          <div className="panel-header">
+            <div>
+              <h2>Bounded AI investigations</h2>
+              <p>Model context supports review; deterministic findings remain unchanged.</p>
+            </div>
+            <Badge>{report?.aiMode ?? 'disabled'}</Badge>
+          </div>
+          {report?.aiUsage && (
+            <div className="panel-body checklist-summary">
+              <Badge>{report.aiUsage.calls} calls</Badge>
+              <Badge>{report.aiUsage.inputTokens} input tokens</Badge>
+              <Badge>{report.aiUsage.outputTokens} output tokens</Badge>
+              <Badge>{report.aiUsage.cacheHits} cache hits</Badge>
+              <Badge>{report.aiUsage.contextIdsSent?.length ?? 0} context IDs</Badge>
+              {report.aiUsage.approximateCostUsd !== undefined && (
+                <Badge>${report.aiUsage.approximateCostUsd.toFixed(4)} estimated</Badge>
+              )}
+            </div>
+          )}
+          {investigations.length ? (
+            <div className="finding-list">
+              {investigations.map((finding) => (
+                <button
+                  className="finding-row"
+                  key={finding.id}
+                  onClick={() => setSelected(finding)}
+                >
+                  <span className="finding-indicator medium">
+                    <Icon name="branch" />
+                  </span>
+                  <span className="finding-content">
+                    <span className="finding-row-title">{finding.title}</span>
+                    <span className="finding-location">
+                      {finding.analysis?.assessment.replaceAll('_', ' ')} · confidence{' '}
+                      {finding.analysis?.confidence ?? 'unknown'}
+                    </span>
+                  </span>
+                  <span className="finding-row-end">
+                    <Badge>{finding.analysis?.provider}</Badge>
+                    <span className="finding-state">
+                      {finding.analysis?.cached ? 'cache hit' : 'fresh'}
+                    </span>
+                  </span>
+                  <Icon name="arrow" size={16} />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <EmptyState title="No model investigation was performed">
+              <p>
+                Disabled mode is fully functional. Enable local Ollama or explicitly configure
+                OpenAI only when contextual analysis is worth the cost.
+              </p>
             </EmptyState>
           )}
         </section>

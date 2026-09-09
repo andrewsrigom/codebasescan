@@ -88,7 +88,7 @@ export interface AiUsage {
   outputTokens: number;
   approximateCostUsd?: number;
   contextFilesSent: string[];
-  contextIdsSent: string[];
+  contextIdsSent?: string[];
   redactionApplied: boolean;
 }
 export interface Finding {

@@ -12,11 +12,16 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
     page.getByText('No LLM-based verification was performed.', { exact: false }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Close finding' }).click();
+  await page.getByRole('tab', { name: 'Project map', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Project map' })).toBeVisible();
+  await expect(page.getByLabel('Search project entry points')).toBeVisible();
   await page.getByRole('tab', { name: 'Dependencies', exact: true }).click();
   await expect(page.getByText(/OSV (?:skipped|not run|completed)/i)).toBeVisible();
   await page.getByRole('tab', { name: 'Checklist', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Security control checklist' })).toBeVisible();
   await expect(page.getByText('GAP CANDIDATE', { exact: false }).first()).toBeVisible();
+  await page.getByRole('tab', { name: 'Investigations', exact: true }).click();
+  await expect(page.getByText('No model investigation was performed')).toBeVisible();
   await page.getByRole('tab', { name: 'Workflow', exact: true }).click();
   await expect(page.getByText('interrupt() → Command(resume)')).toBeVisible();
 });
