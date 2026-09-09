@@ -148,7 +148,7 @@ function callName(expression: ts.Expression): string {
 function factKind(callee: string): ProjectFactKind | null {
   const value = callee.toLowerCase();
   if (
-    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|getserver(?:session|user)|currentuser|verifytoken|validatesession|withauth|throwifnoteamaccess)$/.test(
+    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|get(?:server|current)?(?:session|user)(?:withteam)?|currentuser|verifytoken|validatesession|withauth|throwifnoteamaccess)$/.test(
       value,
     )
   )
@@ -332,6 +332,7 @@ function routeFromFile(file: string, marker: 'app' | 'pages/api'): string {
   let route = normalized
     .slice(start + marker.length)
     .replace(/\/(?:route|index)\.[cm]?[jt]sx?$/, '');
+  if (marker === 'pages/api') route = route.replace(/\.[cm]?[jt]sx?$/, '');
   route = route
     .split('/')
     .filter((segment) => segment && !/^\(.+\)$/.test(segment) && !segment.startsWith('@'))
@@ -640,7 +641,11 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             signal: callee,
             ...(factOwnerSymbolId ? { ownerSymbolId: factOwnerSymbolId } : {}),
           });
-        const scope = kind === 'database' ? resourceScopeSignal(node) : null;
+        const scope =
+          kind === 'database' ||
+          /(?:^|\.)(?:find|get|create|update|upsert|delete|remove)[A-Za-z0-9_]*$/i.test(callee)
+            ? resourceScopeSignal(node)
+            : null;
         if (scope && !cap(facts.length, maximumFacts, 'Security fact'))
           facts.push({
             id: stableId('fact', 'resource-scope', item.source.path, line, scope, ownerSymbolId),

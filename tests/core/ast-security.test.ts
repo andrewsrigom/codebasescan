@@ -127,6 +127,46 @@ test('root-alias calls participate in bounded authorization analysis', () => {
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('public authentication flows are not required to have an existing session', () => {
+  const snapshot = snapshotOf(
+    `export default async function handler(req, res) {
+       if (req.method === 'POST') return database.passwordReset.create({ data: req.body });
+     }`,
+    'pages/api/auth/forgot-password.ts',
+  );
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
+test('explicit authorization or an ownership helper avoids dynamic-scope noise', () => {
+  const authorized = snapshotOf(
+    `export async function DELETE(request) {
+       await throwIfNotAllowed(request.user, 'team', 'delete');
+       return database.team.delete({ where: { id: request.id } });
+     }`,
+    'src/app/api/teams/[id]/route.ts',
+  );
+  assert.ok(
+    !scanAstSecurity(authorized, profileProject(authorized).profile).findings.some(
+      (finding) => finding.ruleId === 'TW-AST003',
+    ),
+  );
+
+  const scoped = snapshotOf(
+    `export async function DELETE(request) {
+       const session = await getSession(request);
+       await findOwnedRecord({ where: { id: request.id, userId: session.user.id } });
+       return database.record.delete({ where: { id: request.id } });
+     }`,
+    'src/app/api/records/[id]/route.ts',
+  );
+  assert.ok(
+    !scanAstSecurity(scoped, profileProject(scoped).profile).findings.some(
+      (finding) => finding.ruleId === 'TW-AST003',
+    ),
+  );
+});
+
 test('read-only routes and webhook boundaries are not treated as missing login mutations', () => {
   const getSnapshot = snapshotOf(
     'export async function GET() { return prisma.project.findMany(); }',

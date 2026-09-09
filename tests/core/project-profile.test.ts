@@ -198,4 +198,20 @@ test('Pages API method switches are mapped without executing handlers', () => {
     ),
   ).profile;
   assert.deepEqual(profile.entrypoints[0]?.methods, ['GET', 'DELETE']);
+  assert.equal(profile.entrypoints[0]?.route, '/teams/[id]');
+});
+
+test('common session guards and scoped helper calls become structural facts', () => {
+  const profile = profileProject(
+    snapshotOf(
+      `export async function DELETE(request) {
+        const session = await getSession(request);
+        await findOwnedRecord({ where: { id: request.id, userId: session.user.id } });
+        return database.record.delete({ where: { id: request.id } });
+      }`,
+      'src/app/api/records/[id]/route.ts',
+    ),
+  ).profile;
+  assert.ok(profile.facts.some((fact) => fact.kind === 'authentication'));
+  assert.ok(profile.facts.some((fact) => fact.kind === 'resource-scope'));
 });

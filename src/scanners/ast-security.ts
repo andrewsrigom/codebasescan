@@ -108,6 +108,12 @@ function sensitiveOperationSeverity(fact: ProjectFact): 'high' | 'medium' {
   return 'high';
 }
 
+function isPublicAuthenticationFlow(entrypoint: ProjectEntrypoint): boolean {
+  return /\/auth\/(?:forgot-password|reset-password|join|unlock-account|register|signup|sign-up|login|signin|sign-in|verify|callback)(?:\/|$)/i.test(
+    entrypoint.route ?? '',
+  );
+}
+
 function lineOf(source: ts.SourceFile, node: ts.Node): number {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
 }
@@ -664,7 +670,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     const authenticated = mappedFacts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
     );
-    if (!authenticated) {
+    if (!authenticated && !isPublicAuthenticationFlow(entrypoint)) {
       const candidate = authorizationFinding({
         snapshot,
         entrypoint,
@@ -700,7 +706,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     }
     const resourceOperation = mappedFacts.find((fact) => fact.kind === 'database');
     const scoped = mappedFacts.some((fact) => fact.kind === 'resource-scope');
-    if (entrypoint.dynamicParameters.length && resourceOperation && !scoped) {
+    if (entrypoint.dynamicParameters.length && resourceOperation && !scoped && !authorized) {
       const candidate = authorizationFinding({
         snapshot,
         entrypoint,
