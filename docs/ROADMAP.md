@@ -19,6 +19,7 @@
 - Dedicated Next.js rules cover sensitive reads, tenant/owner scope, mutation validation, user-specific caching, public secret-shaped configuration, shared authenticated caching, and sensitive response fields.
 - The approved passive HTTP probe now covers effective headers, CSP, CORS reflection and variation, sensitive cookie metadata, shared caching, and redirect downgrades without crawling or mutation.
 - Secret scanning distinguishes probable runtime matches from test/example fixture candidates and supports an explicit, redacted Git-history mode.
+- Findings now carry detector confidence, probable exposure, priority scores, merged evidence, expiring project exceptions, and a selectable project baseline.
 
 ## Next — independent real-project ground truth
 

@@ -43,6 +43,12 @@ test('CI severity gates use meaningful exit codes', () => {
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 1, gatedFindings: 1 });
   report.findings[0]!.disposition = 'accepted_risk';
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
+  report.findings[0]!.disposition = 'needs_review';
+  report.findings[0]!.suppression = {
+    reason: 'Project exception with reviewed rationale.',
+    createdAt: '2026-09-09T00:00:00.000Z',
+  };
+  assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
 });
 
 test('baseline CI gate counts only new findings at the selected severity', () => {
@@ -60,4 +66,12 @@ test('baseline CI gate counts only new findings at the selected severity', () =>
   const comparison = compareReports(base, current);
   assert.deepEqual(baselineCiGate(comparison, 'high'), { exitCode: 0, gatedFindings: 0 });
   assert.deepEqual(baselineCiGate(comparison, 'medium'), { exitCode: 1, gatedFindings: 1 });
+  current.findings.at(-1)!.suppression = {
+    reason: 'Project exception with reviewed rationale.',
+    createdAt: '2026-09-09T00:00:00.000Z',
+  };
+  assert.deepEqual(baselineCiGate(compareReports(base, current), 'medium'), {
+    exitCode: 0,
+    gatedFindings: 0,
+  });
 });

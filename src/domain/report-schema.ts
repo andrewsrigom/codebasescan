@@ -32,6 +32,15 @@ const analysis = z.looseObject({
   inspectedFiles: z.array(shortText).max(1_000),
   rounds: z.number().int().nonnegative().max(10),
   confidence: z.enum(['low', 'medium', 'high']).optional(),
+  exposure: z.enum(['potentially_public', 'authenticated', 'local', 'unknown']).optional(),
+  priority: z.number().int().min(0).max(100).optional(),
+  suppression: z
+    .looseObject({
+      reason: shortText,
+      createdAt: shortText,
+      expiresAt: shortText.optional(),
+    })
+    .optional(),
   provider: z.enum(['ollama', 'openai']).optional(),
   model: shortText.optional(),
   promptVersion: shortText.optional(),

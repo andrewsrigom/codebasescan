@@ -13,6 +13,7 @@ export function ciGate(
   const gatedFindings = report.findings.filter(
     (finding) =>
       !['false_positive', 'accepted_risk'].includes(finding.disposition) &&
+      !finding.suppression &&
       severityRank(finding.severity) <= threshold,
   ).length;
   return { exitCode: gatedFindings ? 1 : 0, gatedFindings };
@@ -25,7 +26,7 @@ export function baselineCiGate(
   if (!failOn) return { exitCode: 0, gatedFindings: 0 };
   const threshold = severityRank(failOn);
   const gatedFindings = comparison.newFindings.filter(
-    (finding) => severityRank(finding.severity) <= threshold,
+    (finding) => !finding.suppressed && severityRank(finding.severity) <= threshold,
   ).length;
   return { exitCode: gatedFindings ? 1 : 0, gatedFindings };
 }

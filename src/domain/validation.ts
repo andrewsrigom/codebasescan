@@ -1,4 +1,9 @@
-import type { AuditOptions, ControlReviewDecision, ReviewDecision } from './types.ts';
+import type {
+  AuditOptions,
+  ControlReviewDecision,
+  ReviewDecision,
+  SuppressionDecision,
+} from './types.ts';
 import { redact } from '../security/redact.ts';
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -50,6 +55,19 @@ export function controlReviewDecision(value: unknown): ControlReviewDecision {
       'Explain the control decision and supporting evidence in at least 12 characters.',
     );
   return { controlId, decision, note };
+}
+
+export function suppressionDecision(value: unknown): SuppressionDecision {
+  const input = record(value);
+  const findingId = text(input.findingId, 'finding', 30);
+  const reason = redact(text(input.reason, 'suppression reason'));
+  if (reason.length < 12) throw new Error('Explain the exception in at least 12 characters.');
+  if (input.expiresAt === undefined) return { findingId, reason };
+  const expiresAt = text(input.expiresAt, 'suppression expiry', 100);
+  const timestamp = Date.parse(expiresAt);
+  if (!Number.isFinite(timestamp) || timestamp <= Date.now())
+    throw new Error('Suppression expiry must be a future ISO date.');
+  return { findingId, reason, expiresAt: new Date(timestamp).toISOString() };
 }
 
 export function auditOptions(value: unknown): AuditOptions {

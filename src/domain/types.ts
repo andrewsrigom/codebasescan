@@ -118,6 +118,13 @@ export interface Finding {
   evidence: Evidence[];
   disposition: Disposition;
   confidence?: 'low' | 'medium' | 'high';
+  exposure?: 'potentially_public' | 'authenticated' | 'local' | 'unknown';
+  priority?: number;
+  suppression?: {
+    reason: string;
+    createdAt: string;
+    expiresAt?: string;
+  };
   analysis?: Analysis;
   runtimeVerification?: {
     status: 'corroborated' | 'observed_safe' | 'different';
@@ -362,6 +369,7 @@ export interface Project {
   name: string;
   root: string;
   createdAt: string;
+  baselineAuditId?: string;
 }
 export interface AuditEvent {
   id: number;
@@ -412,6 +420,11 @@ export interface ReviewDecision {
   disposition: Disposition;
   note: string;
 }
+export interface SuppressionDecision {
+  findingId: string;
+  reason: string;
+  expiresAt?: string;
+}
 export interface ControlReviewDecision {
   controlId: string;
   decision: SecurityControlReviewDecision;
@@ -423,6 +436,7 @@ export interface FindingReference {
   ruleId: string;
   title: string;
   severity: Severity;
+  suppressed?: boolean;
 }
 export interface AuditComparison {
   baseAuditId: string;

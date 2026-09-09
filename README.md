@@ -53,6 +53,8 @@ npm run cli -- export <audit-id> html
 
 Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
 
+Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
+
 ## Optional depth
 
 External scanners stay opt-in:

@@ -14,6 +14,7 @@ import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
 import { attachProvenance } from '../domain/provenance.ts';
 import { buildSecurityChecklist } from '../domain/checklist.ts';
+import { enrichFindingQuality } from '../domain/finding-quality.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
 import { scanExternal } from '../scanners/external.ts';
@@ -246,8 +247,12 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('normalize', (state) => {
-      const normalizedFindings = preferStructuralFindings(
-        reconcileHttpPosture(state.findings, state.httpProbe ?? undefined),
+      const normalizedFindings = enrichFindingQuality(
+        preferStructuralFindings(
+          reconcileHttpPosture(state.findings, state.httpProbe ?? undefined),
+        ),
+        state.projectProfile ?? undefined,
+        state.httpProbe ?? undefined,
       );
       event(
         state,
@@ -273,11 +278,15 @@ export function buildAuditGraph(options: {
     })
     .addNode('prepare_report', (state) => {
       const createdAt = new Date().toISOString();
-      const scopePreflight = store.audit(state.auditId).options.scopePreflight;
-      const findings = attachProvenance(
-        mergeFindings(state.normalizedFindings, state.analyzed),
-        state.scanners,
-        createdAt,
+      const audit = store.audit(state.auditId);
+      const scopePreflight = audit.options.scopePreflight;
+      const findings = store.applySuppressions(
+        audit.projectId,
+        attachProvenance(
+          mergeFindings(state.normalizedFindings, state.analyzed),
+          state.scanners,
+          createdAt,
+        ),
       );
       const modelAnalyses = findings.flatMap((finding) =>
         finding.analysis?.provider ? [finding.analysis] : [],

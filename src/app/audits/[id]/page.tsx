@@ -20,15 +20,21 @@ export default async function AuditPage({
   } catch {
     notFound();
   }
-  const previous = database
-    .audits()
-    .find(
-      (candidate) =>
-        candidate.projectId === audit.projectId &&
-        candidate.id !== audit.id &&
-        candidate.createdAt < audit.createdAt &&
-        candidate.report,
-    );
+  const configuredBaseline = database.projectBaseline(audit.projectId);
+  const previous =
+    configuredBaseline &&
+    configuredBaseline.id !== audit.id &&
+    configuredBaseline.createdAt < audit.createdAt
+      ? configuredBaseline
+      : database
+          .audits()
+          .find(
+            (candidate) =>
+              candidate.projectId === audit.projectId &&
+              candidate.id !== audit.id &&
+              candidate.createdAt < audit.createdAt &&
+              candidate.report,
+          );
   const comparison =
     audit.report && previous?.report ? compareReports(previous.report, audit.report) : undefined;
   return (
@@ -39,6 +45,7 @@ export default async function AuditPage({
       initialWorkerOnline={database.workerOnline()}
       projects={database.projects().map(({ id, name }) => ({ id, name }))}
       comparison={comparison}
+      baselineAuditId={configuredBaseline?.id}
     />
   );
 }

@@ -17,6 +17,7 @@ import {
   auditOptions,
   controlReviewDecision,
   reviewDecision,
+  suppressionDecision,
   uuid,
 } from '../../src/domain/validation.ts';
 import { createContextBroker } from '../../src/engine/context-broker.ts';
@@ -177,6 +178,29 @@ test('Git history secret scanning requires an explicit boolean option', () => {
   assert.throws(() => auditOptions({ gitHistorySecrets: 'yes' }), /must be a boolean/);
   assert.equal(auditOptions({ gitHistorySecrets: true }).gitHistorySecrets, true);
   assert.equal(auditOptions({}).gitHistorySecrets, undefined);
+});
+test('project exceptions require rationale and a future expiry', () => {
+  assert.throws(
+    () => suppressionDecision({ findingId: 'finding', reason: 'too short' }),
+    /at least 12/,
+  );
+  assert.throws(
+    () =>
+      suppressionDecision({
+        findingId: 'finding',
+        reason: 'Reviewed exception reason.',
+        expiresAt: '2000-01-01T00:00:00.000Z',
+      }),
+    /future ISO date/,
+  );
+  assert.equal(
+    suppressionDecision({
+      findingId: 'finding',
+      reason: 'Reviewed exception reason.',
+      expiresAt: '2099-01-01',
+    }).expiresAt,
+    '2099-01-01T00:00:00.000Z',
+  );
 });
 test('repository prompt injection cannot read outside the captured snapshot', () => {
   const snapshot = snapshotOf(

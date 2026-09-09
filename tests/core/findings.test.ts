@@ -27,6 +27,25 @@ test('retains stable IDs within an identical snapshot', () => {
   assert.equal(first[0]?.id, second[0]?.id);
   assert.equal(mergeFindings(first, second).length, 1);
 });
+
+test('deduplication preserves distinct evidence attached to one fingerprint', () => {
+  const [finding] = scanPatterns(snapshotOf('export const result = eval(input);'));
+  assert.ok(finding);
+  const extra = {
+    ...finding,
+    evidence: [
+      {
+        ...finding.evidence[0]!,
+        id: 'runtime-corroboration',
+        kind: 'observed' as const,
+        observation: 'Observed separately.',
+      },
+    ],
+  };
+  const merged = mergeFindings([finding], [extra]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0]?.evidence.length, 2);
+});
 test('does not flag a paired tenant-scoped alternative', () => {
   assert.equal(
     scanPatterns(

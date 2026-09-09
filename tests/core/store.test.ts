@@ -26,6 +26,7 @@ test('audit options are persisted with the queued run', (context) => {
   context.after(() => store.close());
   const audit = store.enqueue(project.id, {
     httpProbe: { url: 'http://127.0.0.1:3000/', allowPrivateNetwork: false },
+    gitHistorySecrets: true,
     scopePreflight: {
       schemaVersion: 1,
       estimatedAt: '2026-09-09T00:00:00.000Z',
@@ -40,6 +41,7 @@ test('audit options are persisted with the queued run', (context) => {
     },
   });
   assert.equal(store.audit(audit.id).options.httpProbe?.url, 'http://127.0.0.1:3000/');
+  assert.equal(store.audit(audit.id).options.gitHistorySecrets, true);
   assert.equal(store.audit(audit.id).options.scopePreflight?.supportedFiles, 12);
 });
 test('cancellation cannot be overwritten by a late worker completion', (context) => {
@@ -85,6 +87,45 @@ test('human review preserves findings instead of deleting them', (context) => {
   assert.equal(revisions[0]?.report.findings[0]?.disposition, 'needs_review');
   assert.equal(revisions[1]?.source, 'human-review');
   assert.equal(revisions[1]?.report.findings[0]?.disposition, 'false_positive');
+});
+test('project exceptions retain findings and propagate only while active', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id);
+  store.claim();
+  const report = sampleReport();
+  store.saveProgress(audit.id, report);
+  store.transition(audit.id, 'awaiting_review');
+  const finding = report.findings[0]!;
+  store.suppressFinding(audit.id, {
+    findingId: finding.id,
+    reason: 'Accepted test fixture for this project only.',
+    expiresAt: '2099-01-01T00:00:00.000Z',
+  });
+  assert.equal(
+    store.audit(audit.id).report?.findings[0]?.suppression?.expiresAt,
+    '2099-01-01T00:00:00.000Z',
+  );
+  assert.equal(
+    store.applySuppressions(project.id, [finding])[0]?.suppression?.reason,
+    'Accepted test fixture for this project only.',
+  );
+  store.db
+    .prepare('UPDATE project_suppressions SET expires_at = ? WHERE project_id = ?')
+    .run('2000-01-01T00:00:00.000Z', project.id);
+  assert.equal(store.applySuppressions(project.id, [finding])[0]?.suppression, undefined);
+});
+
+test('a completed audit can become the explicit project baseline', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id);
+  store.claim();
+  store.saveProgress(audit.id, sampleReport());
+  store.transition(audit.id, 'completed');
+  store.setProjectBaseline(project.id, audit.id);
+  assert.equal(store.project(project.id).baselineAuditId, audit.id);
+  assert.equal(store.projectBaseline(project.id)?.id, audit.id);
 });
 test('human control review is appended without changing deterministic checklist state', (context) => {
   const { store, project } = setup();
@@ -144,7 +185,7 @@ test('database schema migration records the current version', (context) => {
   const { store } = setup();
   context.after(() => store.close());
   const version = store.db.prepare('PRAGMA user_version').get() as { user_version: number };
-  assert.equal(version.user_version, 4);
+  assert.equal(version.user_version, 5);
 });
 test('a second worker in a live local process is rejected', (context) => {
   const { store } = setup();

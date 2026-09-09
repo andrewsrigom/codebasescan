@@ -30,6 +30,12 @@ export default function ProjectsPage() {
               <span>Access</span>
               <strong>Read-only snapshot</strong>
             </div>
+            <div className="detail-row">
+              <span>Baseline</span>
+              <strong className="mono">
+                {project.baselineAuditId?.slice(0, 8) ?? 'Automatic previous audit'}
+              </strong>
+            </div>
           </section>
         ))}
       </div>

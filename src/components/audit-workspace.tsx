@@ -32,12 +32,14 @@ export function AuditWorkspace({
   initialWorkerOnline,
   projects,
   comparison,
+  baselineAuditId,
 }: {
   initialAudit: Audit;
   initialEvents: AuditEvent[];
   initialWorkerOnline: boolean;
   projects: Pick<Project, 'id' | 'name'>[];
   comparison?: AuditComparison;
+  baselineAuditId?: string;
 }) {
   const [audit, setAudit] = useState(initialAudit);
   const [events, setEvents] = useState(initialEvents);
@@ -79,7 +81,7 @@ export function AuditWorkspace({
     }, 2000);
     return () => clearInterval(interval);
   }, [active, refresh]);
-  async function action(kind: 'publish' | 'cancel') {
+  async function action(kind: 'publish' | 'cancel' | 'set-baseline') {
     setPending(true);
     setError('');
     try {
@@ -196,7 +198,9 @@ export function AuditWorkspace({
           </span>
           <span className="finding-row-end">
             <SeverityBadge severity={finding.severity} />
-            <span className="finding-state">{finding.disposition.replaceAll('_', ' ')}</span>
+            <span className="finding-state">
+              {finding.suppression ? 'exception active' : finding.disposition.replaceAll('_', ' ')}
+            </span>
           </span>
           <Icon name="arrow" size={16} />
         </button>
@@ -1186,6 +1190,16 @@ export function AuditWorkspace({
               <a href={`/api/audits/${audit.id}/export?format=bundle`}>Codex bundle</a>
             </>
           )}
+          {audit.status === 'completed' && report && baselineAuditId !== audit.id && (
+            <button
+              className="text-button"
+              onClick={() => action('set-baseline')}
+              disabled={pending}
+            >
+              Set as project baseline
+            </button>
+          )}
+          {baselineAuditId === audit.id && <Badge tone="success">PROJECT BASELINE</Badge>}
           {['queued', 'running', 'awaiting_review'].includes(audit.status) && (
             <button
               className="text-button danger-text"

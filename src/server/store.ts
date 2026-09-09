@@ -9,8 +9,10 @@ import type {
   AuditReport,
   AuditStatus,
   ControlReviewDecision,
+  Finding,
   Project,
   ReviewDecision,
+  SuppressionDecision,
 } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
 import { parseAuditReport, parseStoredAuditOptions } from '../domain/report-schema.ts';
@@ -58,7 +60,8 @@ export class AuditStore {
       PRAGMA foreign_keys = ON;
       PRAGMA busy_timeout = 5000;
       CREATE TABLE IF NOT EXISTS projects (
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, root TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL
+        id TEXT PRIMARY KEY, name TEXT NOT NULL, root TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL,
+        baseline_audit_id TEXT
       );
       CREATE TABLE IF NOT EXISTS audits (
         id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id),
@@ -95,6 +98,17 @@ export class AuditStore {
       );
       CREATE INDEX IF NOT EXISTS report_revisions_audit
         ON report_revisions(audit_id, id);
+      CREATE TABLE IF NOT EXISTS project_suppressions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id),
+        fingerprint TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT,
+        UNIQUE(project_id, fingerprint)
+      );
+      CREATE INDEX IF NOT EXISTS project_suppressions_project
+        ON project_suppressions(project_id, expires_at);
     `);
     const auditColumns = this.db.prepare('PRAGMA table_info(audits)').all() as Row[];
     if (!auditColumns.some((column) => column.name === 'options_json'))
@@ -103,7 +117,10 @@ export class AuditStore {
       this.db.exec(
         "ALTER TABLE audits ADD COLUMN workflow_version TEXT NOT NULL DEFAULT 'traceward-audit-v1'",
       );
-    this.db.exec('PRAGMA user_version = 4;');
+    const projectColumns = this.db.prepare('PRAGMA table_info(projects)').all() as Row[];
+    if (!projectColumns.some((column) => column.name === 'baseline_audit_id'))
+      this.db.exec('ALTER TABLE projects ADD COLUMN baseline_audit_id TEXT');
+    this.db.exec('PRAGMA user_version = 5;');
   }
   close(): void {
     this.db.close();
@@ -114,7 +131,7 @@ export class AuditStore {
     if (existing) return this.project(String(existing.id));
     const project = { id: randomUUID(), name: redact(name).slice(0, 100), root, createdAt: now() };
     this.db
-      .prepare('INSERT INTO projects VALUES (?, ?, ?, ?)')
+      .prepare('INSERT INTO projects(id, name, root, created_at) VALUES (?, ?, ?, ?)')
       .run(project.id, project.name, root, project.createdAt);
     return project;
   }
@@ -126,12 +143,33 @@ export class AuditStore {
       name: String(row.name),
       root: String(row.root),
       createdAt: String(row.created_at),
+      ...(typeof row.baseline_audit_id === 'string'
+        ? { baselineAuditId: row.baseline_audit_id }
+        : {}),
     };
   }
   projects(): Project[] {
     return (this.db.prepare('SELECT id FROM projects ORDER BY created_at DESC').all() as Row[]).map(
       (row) => this.project(String(row.id)),
     );
+  }
+  setProjectBaseline(projectId: string, auditId: string): void {
+    const audit = this.audit(auditId);
+    if (audit.projectId !== projectId || audit.status !== 'completed' || !audit.report)
+      throw new Error('A baseline must be a completed report from the same project.');
+    this.db
+      .prepare('UPDATE projects SET baseline_audit_id = ? WHERE id = ?')
+      .run(auditId, projectId);
+  }
+  projectBaseline(projectId: string): Audit | null {
+    const baseline = this.project(projectId).baselineAuditId;
+    if (!baseline) return null;
+    try {
+      const audit = this.audit(baseline);
+      return audit.projectId === projectId && audit.report ? audit : null;
+    } catch {
+      return null;
+    }
   }
   enqueue(projectId: string, options: AuditOptions = {}): Audit {
     const project = this.project(projectId);
@@ -269,6 +307,101 @@ export class AuditStore {
       'human_review',
       `An analyst changed finding ${decision.findingId} to ${decision.disposition}.`,
     );
+  }
+  applySuppressions(projectId: string, findings: Finding[]): Finding[] {
+    const timestamp = now();
+    const rows = this.db
+      .prepare(
+        'SELECT fingerprint, reason, created_at, expires_at FROM project_suppressions WHERE project_id = ? AND (expires_at IS NULL OR expires_at > ?)',
+      )
+      .all(projectId, timestamp) as Row[];
+    const suppressions = new Map(rows.map((row) => [String(row.fingerprint), row]));
+    return findings.map((finding) => {
+      const suppression = suppressions.get(finding.fingerprint);
+      if (!suppression) return finding;
+      return {
+        ...finding,
+        suppression: {
+          reason: String(suppression.reason),
+          createdAt: String(suppression.created_at),
+          ...(typeof suppression.expires_at === 'string'
+            ? { expiresAt: suppression.expires_at }
+            : {}),
+        },
+      };
+    });
+  }
+  suppressFinding(id: string, decision: SuppressionDecision): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const audit = this.audit(id);
+      if (!['awaiting_review', 'completed'].includes(audit.status) || !audit.report)
+        throw new Error('Exceptions can be created only after analysis has paused or finished.');
+      const finding = audit.report.findings.find((item) => item.id === decision.findingId);
+      if (!finding) throw new Error('Finding not found.');
+      const createdAt = now();
+      this.db
+        .prepare(
+          `INSERT INTO project_suppressions(id, project_id, fingerprint, reason, created_at, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(project_id, fingerprint) DO UPDATE SET
+             reason = excluded.reason, created_at = excluded.created_at, expires_at = excluded.expires_at`,
+        )
+        .run(
+          randomUUID(),
+          audit.projectId,
+          finding.fingerprint,
+          redact(decision.reason),
+          createdAt,
+          decision.expiresAt ?? null,
+        );
+      finding.suppression = {
+        reason: redact(decision.reason),
+        createdAt,
+        ...(decision.expiresAt ? { expiresAt: decision.expiresAt } : {}),
+      };
+      this.saveHumanReport(id, audit.report, 'suppression');
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+    this.event(
+      id,
+      `suppression:${decision.findingId}:${randomUUID()}`,
+      'human_review',
+      `An analyst created a project exception for finding ${decision.findingId}.`,
+    );
+  }
+  removeSuppression(id: string, findingId: string): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const audit = this.audit(id);
+      if (!audit.report) throw new Error('No report is available.');
+      const finding = audit.report.findings.find((item) => item.id === findingId);
+      if (!finding) throw new Error('Finding not found.');
+      this.db
+        .prepare('DELETE FROM project_suppressions WHERE project_id = ? AND fingerprint = ?')
+        .run(audit.projectId, finding.fingerprint);
+      delete finding.suppression;
+      this.saveHumanReport(id, audit.report, 'suppression-removed');
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+  private saveHumanReport(id: string, report: AuditReport, source: string): void {
+    const serialized = JSON.stringify(parseAuditReport(report));
+    const timestamp = now();
+    this.db
+      .prepare('UPDATE audits SET report_json = ?, updated_at = ? WHERE id = ?')
+      .run(serialized, timestamp, id);
+    this.db
+      .prepare(
+        'INSERT INTO report_revisions(audit_id, source, report_json, created_at) VALUES (?, ?, ?, ?)',
+      )
+      .run(id, source, serialized, timestamp);
   }
   reviewControl(id: string, decision: ControlReviewDecision): void {
     this.db.exec('BEGIN IMMEDIATE');

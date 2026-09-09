@@ -132,6 +132,8 @@ export function toInvestigationBundle(report: AuditReport): object {
       severity: finding.severity,
       disposition: finding.disposition,
       confidence: finding.confidence,
+      exposure: finding.exposure,
+      priority: finding.priority,
       description: finding.description,
       remediation: finding.remediation,
       cwe: finding.cwe,
@@ -147,6 +149,7 @@ export function toInvestigationBundle(report: AuditReport): object {
       analysis: finding.analysis,
       provenance: finding.provenance,
       secret: finding.secret,
+      suppression: finding.suppression,
       review: finding.review,
     })),
     reportLimitations: report.limitations,
@@ -252,11 +255,17 @@ export function toMarkdown(report: AuditReport): string {
     lines.push(
       `### ${m(finding.severity.toUpperCase())}: ${m(finding.title)}`,
       '',
-      `Rule: ${finding.ruleId} | Source: ${finding.source} | Disposition: ${finding.disposition}${finding.confidence ? ` | Confidence: ${finding.confidence}` : ''}`,
+      `Rule: ${finding.ruleId} | Source: ${finding.source} | Disposition: ${finding.disposition}${finding.confidence ? ` | Confidence: ${finding.confidence}` : ''}${finding.exposure ? ` | Exposure: ${finding.exposure}` : ''}${finding.priority !== undefined ? ` | Priority: ${finding.priority}/100` : ''}`,
       '',
       ...(finding.secret
         ? [
             `Secret classification: ${m(finding.secret.classification.replaceAll('_', ' '))}${finding.secret.commit ? ` | Commit: ${finding.secret.commit.slice(0, 12)}` : ''}`,
+            '',
+          ]
+        : []),
+      ...(finding.suppression
+        ? [
+            `Project exception: ${m(finding.suppression.reason)}${finding.suppression.expiresAt ? ` | Expires: ${finding.suppression.expiresAt}` : ' | No expiry'}`,
             '',
           ]
         : []),
@@ -391,6 +400,15 @@ export function toHtml(report: AuditReport): string {
           e(finding.review.note) +
           '</p></section>'
         : '';
+      const suppression = finding.suppression
+        ? '<section class="finding-section review"><h3>Project exception</h3><p>' +
+          e(finding.suppression.reason) +
+          '</p><p>' +
+          (finding.suppression.expiresAt
+            ? 'Expires ' + e(finding.suppression.expiresAt)
+            : 'No expiry') +
+          '</p></section>'
+        : '';
       return (
         '<article class="finding" id="finding-' +
         (index + 1) +
@@ -412,6 +430,7 @@ export function toHtml(report: AuditReport): string {
         e(finding.remediation) +
         '</p></section>' +
         analysis +
+        suppression +
         review +
         '</article>'
       );

@@ -17,3 +17,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added offline exact-version advisory matching, manual OSV database refresh, dependency source-reference hints, and CycloneDX 1.6 SBOM export.
 - Expanded the passive HTTP probe with reflected-origin CORS, cache isolation, script CSP, HTTPS downgrade, retained redirect-chain, and no-cookie-value checks.
 - Added explicit Git-history secret scanning, safe historical metadata, and separate probable versus test/example fixture classifications.
+- Added detector confidence, probable exposure, explainable priority scores, evidence-preserving deduplication, expiring project exceptions, and explicit project baselines.

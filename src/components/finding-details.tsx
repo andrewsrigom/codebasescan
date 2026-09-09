@@ -20,6 +20,10 @@ export function FindingDetails({
   const dialog = useRef<HTMLDialogElement>(null);
   const [disposition, setDisposition] = useState<Disposition>(finding.disposition);
   const [note, setNote] = useState(finding.review?.note ?? '');
+  const [suppressionReason, setSuppressionReason] = useState(finding.suppression?.reason ?? '');
+  const [suppressionExpiry, setSuppressionExpiry] = useState(
+    finding.suppression?.expiresAt?.slice(0, 10) ?? '',
+  );
   const [error, setError] = useState('');
   const [pending, setPending] = useState(false);
   useEffect(() => {
@@ -43,6 +47,28 @@ export function FindingDetails({
       setPending(false);
     }
   }
+  async function updateSuppression(remove = false) {
+    setPending(true);
+    setError('');
+    try {
+      await mutate(`/api/audits/${auditId}`, {
+        action: remove ? 'remove-suppression' : 'suppress',
+        findingId: finding.id,
+        ...(!remove
+          ? {
+              reason: suppressionReason,
+              ...(suppressionExpiry ? { expiresAt: `${suppressionExpiry}T23:59:59.999Z` } : {}),
+            }
+          : {}),
+      });
+      await refresh();
+      close();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not update the exception.');
+    } finally {
+      setPending(false);
+    }
+  }
   return (
     <dialog ref={dialog} className="finding-dialog" onClose={close} aria-labelledby="finding-title">
       <div className="drawer-header">
@@ -56,6 +82,8 @@ export function FindingDetails({
           <SeverityBadge severity={finding.severity} />
           <Badge>{finding.source}</Badge>
           {finding.confidence && <Badge>confidence {finding.confidence}</Badge>}
+          {finding.exposure && <Badge>{finding.exposure.replaceAll('_', ' ')}</Badge>}
+          {finding.priority !== undefined && <Badge>priority {finding.priority}</Badge>}
           <Badge tone="neutral">{finding.disposition.replaceAll('_', ' ')}</Badge>
         </div>
         {finding.secret && (
@@ -239,6 +267,60 @@ export function FindingDetails({
               <Badge key={cwe}>{cwe}</Badge>
             ))}
           </div>
+        </section>
+        <section className="review-section">
+          <h3 className="section-label">Project exception</h3>
+          {finding.suppression ? (
+            <>
+              <p>{finding.suppression.reason}</p>
+              <p className="small muted">
+                Active since {finding.suppression.createdAt}
+                {finding.suppression.expiresAt
+                  ? ` · expires ${finding.suppression.expiresAt}`
+                  : ' · no expiry'}
+                . The finding remains in reports.
+              </p>
+              <button
+                className="button"
+                disabled={!reviewable || pending}
+                onClick={() => void updateSuppression(true)}
+              >
+                Remove exception
+              </button>
+            </>
+          ) : (
+            <>
+              <label htmlFor="suppression-reason">Reason</label>
+              <textarea
+                id="suppression-reason"
+                rows={3}
+                value={suppressionReason}
+                maxLength={2000}
+                onChange={(event) => setSuppressionReason(event.target.value)}
+                placeholder="Explain why this exact fingerprint may be ignored in future audits."
+                disabled={!reviewable}
+              />
+              <label htmlFor="suppression-expiry">Expiry (optional)</label>
+              <input
+                id="suppression-expiry"
+                type="date"
+                value={suppressionExpiry}
+                onChange={(event) => setSuppressionExpiry(event.target.value)}
+                disabled={!reviewable}
+              />
+              <p className="small muted">
+                Applies only to this project and exact fingerprint. Expired exceptions stop
+                affecting CI automatically.
+              </p>
+              <button
+                className="button"
+                disabled={!reviewable || pending || suppressionReason.trim().length < 12}
+                onClick={() => void updateSuppression(false)}
+              >
+                Add project exception
+              </button>
+            </>
+          )}
         </section>
         <section className="review-section">
           <h3 className="section-label">Human review</h3>

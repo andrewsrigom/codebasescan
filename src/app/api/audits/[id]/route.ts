@@ -4,6 +4,7 @@ import {
   controlReviewDecision,
   record,
   reviewDecision,
+  suppressionDecision,
   text,
   uuid,
 } from '../../../../domain/validation.ts';
@@ -47,7 +48,14 @@ export async function POST(request: Request, context: Context) {
     else if (input.action === 'review') database.reviewFinding(id, reviewDecision(input));
     else if (input.action === 'review-control')
       database.reviewControl(id, controlReviewDecision(input));
-    else throw new Error('Unsupported audit action.');
+    else if (input.action === 'suppress') database.suppressFinding(id, suppressionDecision(input));
+    else if (input.action === 'remove-suppression') {
+      const findingId = text(input.findingId, 'finding', 30);
+      database.removeSuppression(id, findingId);
+    } else if (input.action === 'set-baseline') {
+      const audit = database.audit(id);
+      database.setProjectBaseline(audit.projectId, id);
+    } else throw new Error('Unsupported audit action.');
     return Response.json({ ok: true });
   } catch (cause) {
     return Response.json(

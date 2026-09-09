@@ -13,9 +13,28 @@ export function makeFinding(input: Omit<Finding, 'id' | 'fingerprint' | 'disposi
 }
 export function mergeFindings(left: Finding[], right: Finding[]): Finding[] {
   const records = new Map(left.map((finding) => [finding.fingerprint, finding]));
-  for (const finding of right) records.set(finding.fingerprint, finding);
+  for (const finding of right) {
+    const existing = records.get(finding.fingerprint);
+    records.set(
+      finding.fingerprint,
+      existing
+        ? {
+            ...existing,
+            ...finding,
+            evidence: [
+              ...new Map(
+                [...existing.evidence, ...finding.evidence].map((item) => [item.id, item]),
+              ).values(),
+            ],
+          }
+        : finding,
+    );
+  }
   return [...records.values()].sort(
-    (a, b) => severityRank(a.severity) - severityRank(b.severity) || a.id.localeCompare(b.id),
+    (a, b) =>
+      (b.priority ?? -1) - (a.priority ?? -1) ||
+      severityRank(a.severity) - severityRank(b.severity) ||
+      a.id.localeCompare(b.id),
   );
 }
 export function severityRank(severity: Severity): number {

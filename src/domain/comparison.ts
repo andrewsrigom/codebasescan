@@ -7,6 +7,7 @@ function reference(finding: Finding): FindingReference {
     ruleId: finding.ruleId,
     title: finding.title,
     severity: finding.severity,
+    ...(finding.suppression ? { suppressed: true } : {}),
   };
 }
 
