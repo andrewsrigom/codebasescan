@@ -59,6 +59,7 @@ const finding = z.looseObject({
     'builtin',
     'posture',
     'ast',
+    'next',
     'react',
     'http-probe',
     'osv',

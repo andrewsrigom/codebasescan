@@ -28,7 +28,7 @@ export interface AstSecurityResult {
 export function preferStructuralFindings(findings: Finding[]): Finding[] {
   const structuralLocations = new Set(
     findings.flatMap((finding) =>
-      ['TW-AST004', 'TW-AST009', 'TW-REACT001'].includes(finding.ruleId)
+      ['TW-AST004', 'TW-AST009', 'TW-NEXT004', 'TW-REACT001'].includes(finding.ruleId)
         ? finding.evidence.map((item) => `${item.file}:${item.startLine}`)
         : [],
     ),
@@ -36,7 +36,7 @@ export function preferStructuralFindings(findings: Finding[]): Finding[] {
   return findings.filter(
     (finding) =>
       !(
-        ['TW-001', 'TW-P003'].includes(finding.ruleId) &&
+        ['TW-001', 'TW-005', 'TW-P003'].includes(finding.ruleId) &&
         finding.evidence.some((item) => structuralLocations.has(`${item.file}:${item.startLine}`))
       ),
   );

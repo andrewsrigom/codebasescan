@@ -56,10 +56,13 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     }
   }
   assert.ok(interruptedCheckpointId);
-  assert.equal(store.audit(audit.id).report?.findings.length, 7);
-  assert.equal(store.audit(audit.id).report?.scanners.length, 9);
+  assert.equal(store.audit(audit.id).report?.findings.length, 9);
+  assert.equal(store.audit(audit.id).report?.scanners.length, 10);
   assert.ok(
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'react-security'),
+  );
+  assert.ok(
+    store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'next-security'),
   );
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
   assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');

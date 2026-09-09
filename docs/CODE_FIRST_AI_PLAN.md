@@ -2,7 +2,7 @@
 
 ## Implementation status — 2026-09-09
 
-- Phases 1-4 are implemented: deterministic profiler, bounded relationships, framework-aware AST rules, versioned checklist, and opaque evidence-ID context broker.
+- Phases 1-4 are implemented: deterministic profiler, five-hop bounded relationships, dedicated Next.js and React rules, versioned checklist, and opaque evidence-ID context broker.
 - Phase 5 workflow A is implemented for Ollama/OpenAI contracts; structured results include controls, missing evidence, impact, preconditions, remediation choices, and safe tests. Disabled mode remains complete. Checklist-gap calls and AI report synthesis are intentionally deferred until real-project evidence justifies their cost.
 - Phase 6 tooling is implemented through the anonymized `evaluate` command. A ten-project public source-only pass covered 1,010 files and drove lockfile, entrypoint, alias, Pages Router, upload, taint, and false-positive corrections. Owner-confirmed private-project ground truth remains future validation.
 - Phase 7 includes validated append-only reports, actual worker `SIGKILL` recovery, AI budget reservation persistence, checkpoint/config compatibility guards, scanner-version warnings, baseline-aware CI artifacts, and explicit pre-audit truncation approval.

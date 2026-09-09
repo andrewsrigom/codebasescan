@@ -5,6 +5,7 @@ import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
 import { scanAstSecurity } from '../../src/scanners/ast-security.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { scanReactSecurity } from '../../src/scanners/react-security.ts';
+import { scanNextSecurity } from '../../src/scanners/next-security.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import type { ScannerRun, Snapshot } from '../../src/domain/types.ts';
 import { snapshotOf } from '../helpers.ts';
@@ -23,13 +24,15 @@ function skipped(id: string, name = id): ScannerRun {
 function checklistFor(snapshot: Snapshot) {
   const profileResult = profileProject(snapshot);
   const astResult = scanAstSecurity(snapshot, profileResult.profile);
+  const nextResult = scanNextSecurity(snapshot, profileResult.profile);
   const reactResult = scanReactSecurity(snapshot, profileResult.profile);
   return buildSecurityChecklist({
     projectProfile: profileResult.profile,
-    findings: [...astResult.findings, ...reactResult.findings],
+    findings: [...astResult.findings, ...nextResult.findings, ...reactResult.findings],
     scanners: [
       profileResult.run,
       astResult.run,
+      nextResult.run,
       reactResult.run,
       { ...skipped('posture'), status: 'completed' },
       skipped('gitleaks'),
@@ -145,7 +148,7 @@ test('code-first flow findings become checklist gaps without claiming runtime pr
       'GAP_CANDIDATE',
       id,
     );
-  assert.equal(checklist.packVersion, '0.3.0');
+  assert.equal(checklist.packVersion, '0.4.0');
 });
 
 test('React findings become explicit checklist gaps', () => {
@@ -167,6 +170,31 @@ test('React findings become explicit checklist gaps', () => {
   );
   assert.equal(
     checklist.controls.find((control) => control.id === 'TW-CTRL-REACT-002')?.status,
+    'GAP_CANDIDATE',
+  );
+});
+
+test('Next.js findings become explicit checklist gaps', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        export async function POST(request: Request) {
+          await requireUser();
+          const body = await request.json();
+          return Response.json({
+            accessToken: await db.session.create({ data: body }),
+          });
+        }
+      `,
+      'src/app/api/session/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-INPUT-001')?.status,
+    'GAP_CANDIDATE',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-NEXT-002')?.status,
     'GAP_CANDIDATE',
   );
 });

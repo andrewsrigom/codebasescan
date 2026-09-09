@@ -79,6 +79,7 @@ function contextEvidence(
 export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist {
   const { projectProfile: profile, findings, scanners, httpProbe, dependencies } = input;
   const astRun = scanner(scanners, 'ast-security');
+  const nextRun = scanner(scanners, 'next-security');
   const reactRun = scanner(scanners, 'react-security');
   const postureRun = scanner(scanners, 'posture');
   const gitleaksRun = scanner(scanners, 'gitleaks');
@@ -99,10 +100,13 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     (context) =>
       isMutatingEntrypoint(context.entrypoint) && !isWebhookEntrypoint(context.entrypoint),
   );
+  const reads = sensitiveContexts.filter((context) =>
+    context.entrypoint.methods.some((method) => ['GET', 'HEAD'].includes(method)),
+  );
   const administrative = mutations.filter((context) =>
     isAdministrativeEntrypoint(context.entrypoint),
   );
-  const resourceContexts = mutations.filter(
+  const resourceContexts = sensitiveContexts.filter(
     (context) =>
       context.entrypoint.dynamicParameters.length &&
       context.facts.some((fact) => fact.kind === 'database'),
@@ -150,6 +154,37 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const readAuthGaps = findingsByRule(findings, ['TW-NEXT001']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-AUTHN-002',
+      domain: 'authentication',
+      title: 'Sensitive read routes receive an authentication review',
+      status: reads.length
+        ? gapStatus(readAuthGaps, nextRun, profilePartial, nextRun?.status === 'completed')
+        : noMappedApplicability,
+      rationale: readAuthGaps.length
+        ? `${readAuthGaps.length} sensitive Next.js read route(s) have no mapped authentication guard.`
+        : reads.length
+          ? `No missing-authentication candidate was found across ${reads.length} mapped sensitive read route(s).`
+          : 'No supported sensitive read route was mapped.',
+      applicability:
+        'Applies to mapped Next.js GET and HEAD routes that reach database, raw SQL, command, or file operations.',
+      evidence: [
+        ...references(
+          'finding',
+          readAuthGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [nextRun?.id]),
+      ],
+      verification:
+        'Test anonymous and wrong-tenant reads. Confirm intentionally public routes expose only approved fields.',
+      limitations: [
+        'Gateway controls and public-route intent outside the captured source remain unverified.',
+      ],
+    }),
+  );
+
   const adminGaps = findingsByRule(findings, ['TW-AST002']);
   const authorizedAdmin = administrative.filter((context) =>
     context.facts.some((fact) => fact.kind === 'authorization'),
@@ -185,7 +220,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
-  const scopeGaps = findingsByRule(findings, ['TW-AST003']);
+  const scopeGaps = findingsByRule(findings, ['TW-AST003', 'TW-NEXT002']);
   const scopedResources = resourceContexts.filter((context) =>
     context.facts.some((fact) => fact.kind === 'resource-scope'),
   );
@@ -205,7 +240,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
         : noMappedApplicability,
       rationale: resourceContexts.length
         ? `${scopedResources.length} of ${resourceContexts.length} dynamic database boundary(s) contain a recognized tenant, owner, account, organization, or user scope in the captured call arguments.`
-        : 'No supported dynamic resource mutation was mapped.',
+        : 'No supported dynamic resource access was mapped.',
       applicability:
         'Applies when a caller-selectable path parameter reaches a mapped database operation.',
       evidence: [
@@ -214,7 +249,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
           scopeGaps.map((item) => item.id),
         ),
         ...contextEvidence(scopedResources, ['resource-scope']),
-        ...astRefs,
+        ...references('scanner', [astRun?.id, nextRun?.id]),
       ],
       verification:
         'Run cross-tenant and wrong-owner identifier tests and inspect effective RLS/database policy.',
@@ -227,23 +262,33 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const validated = sensitiveContexts.filter((context) =>
     context.facts.some((fact) => fact.kind === 'validation'),
   );
+  const validationGaps = findingsByRule(findings, ['TW-NEXT006']);
   controls.push(
     control({
       id: 'TW-CTRL-INPUT-001',
       domain: 'input-validation',
       title: 'Sensitive entry points validate caller-controlled input',
       status: sensitiveContexts.length
-        ? profilePartial
-          ? 'PARTIAL'
-          : validated.length === sensitiveContexts.length
-            ? 'EVIDENCED'
-            : 'GAP_CANDIDATE'
+        ? validationGaps.length
+          ? 'GAP_CANDIDATE'
+          : profilePartial
+            ? 'PARTIAL'
+            : validated.length === sensitiveContexts.length
+              ? 'EVIDENCED'
+              : 'GAP_CANDIDATE'
         : noMappedApplicability,
       rationale: sensitiveContexts.length
         ? `${validated.length} of ${sensitiveContexts.length} sensitive entry point(s) contain a recognized validation call within five explicit call hops.`
         : 'No supported sensitive entry point was mapped.',
       applicability: 'Applies to mapped routes/actions that reach sensitive operations.',
-      evidence: contextEvidence(validated, ['validation']),
+      evidence: [
+        ...references(
+          'finding',
+          validationGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(validated, ['validation']),
+        ...references('scanner', [nextRun?.id]),
+      ],
       verification:
         'Test malformed, oversized, unexpected-type, and boundary input before the sensitive operation.',
       limitations: ['Inline/manual validation and framework coercion may not be recognized.'],
@@ -725,6 +770,61 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const nextCacheGaps = findingsByRule(findings, ['TW-NEXT003', 'TW-NEXT005']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-NEXT-001',
+      domain: 'authorization',
+      title: 'Next.js caching keeps user and tenant data isolated',
+      status: nextApplicable
+        ? gapStatus(nextCacheGaps, nextRun, profilePartial, nextRun?.status === 'completed')
+        : noMappedApplicability,
+      rationale: nextCacheGaps.length
+        ? `${nextCacheGaps.length} user-specific function or response caching candidate(s) require review.`
+        : 'No supported user-specific cache isolation candidate was found in the bounded Next.js scan.',
+      applicability:
+        'Applies to captured Next.js cache functions and authenticated route responses.',
+      evidence: [
+        ...references(
+          'finding',
+          nextCacheGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [nextRun?.id]),
+      ],
+      verification:
+        'Test two users or tenants against warm cache entries and inspect Cache-Control behavior at the deployed edge.',
+      limitations: [
+        'Runtime cache keys, CDN configuration, and reverse-proxy behavior remain outside source-only proof.',
+      ],
+    }),
+  );
+
+  const nextBoundaryGaps = findingsByRule(findings, ['TW-NEXT004', 'TW-NEXT007']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-NEXT-002',
+      domain: 'secrets',
+      title: 'Next.js client boundaries exclude privileged configuration and response data',
+      status: nextApplicable
+        ? gapStatus(nextBoundaryGaps, nextRun, profilePartial, nextRun?.status === 'completed')
+        : noMappedApplicability,
+      rationale: nextBoundaryGaps.length
+        ? `${nextBoundaryGaps.length} public environment or sensitive response field candidate(s) require review.`
+        : 'No supported privileged public environment or sensitive server response field candidate was found.',
+      applicability:
+        'Applies to NEXT_PUBLIC variables and captured Next.js server response objects.',
+      evidence: [
+        ...references(
+          'finding',
+          nextBoundaryGaps.map((item) => item.id),
+        ),
+        ...references('scanner', [nextRun?.id]),
+      ],
+      verification:
+        'Inspect production client bundles, RSC payloads, and API responses for privileged values.',
+    }),
+  );
+
   const reactRenderingGaps = findingsByRule(findings, ['TW-REACT001']);
   controls.push(
     control({
@@ -840,7 +940,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   return {
     schemaVersion: 1,
     packId: 'traceward-web-application',
-    packVersion: '0.3.0',
+    packVersion: '0.4.0',
     controls,
     summary,
   };
