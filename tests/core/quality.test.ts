@@ -133,7 +133,13 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
   const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-config-'));
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({
-      dependencies: { ignored: '1.0.0', used: '1.0.0' },
+      dependencies: {
+        ignored: '1.0.0',
+        used: '1.0.0',
+        tsx: '1.0.0',
+        '@tailwindcss/postcss': '1.0.0',
+      },
+      scripts: { task: 'tsx scripts/task.ts' },
       workspaces: ['apps/*'],
     }),
     'apps/example/package.json': JSON.stringify({ name: 'example', private: true }),
@@ -149,6 +155,8 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
     'src/app/page.tsx': `import value from 'used'; import { component } from '@/component'; export default function Page() { return <main>{value}{component}</main>; }`,
     'src/component.ts': `export const component = 'component';`,
     'src/intentionally-unused.ts': `export const fixture = true;`,
+    'scripts/task.ts': `export const task = true;`,
+    'postcss.config.mjs': `export default { plugins: { '@tailwindcss/postcss': {} } };`,
   });
   try {
     const result = await scanCodeQuality(snapshot, undefined, temporaryDirectory);
@@ -157,8 +165,12 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
     assert.ok(knip?.detail.includes('knip.json'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/intentionally-unused.ts'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/component.ts'));
+    assert.ok(!result.analysis.deadCode?.unusedFiles.includes('scripts/task.ts'));
+    assert.ok(!result.analysis.deadCode?.unusedFiles.includes('postcss.config.mjs'));
     assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('ignored'));
     assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('used'));
+    assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('tsx'));
+    assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('@tailwindcss/postcss'));
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }

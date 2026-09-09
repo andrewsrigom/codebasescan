@@ -285,15 +285,65 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
 
 function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
   const entries = new Set(profile?.entrypoints.map((entrypoint) => entrypoint.file) ?? []);
+  const manifestEntries = declarativeManifestHints(snapshot).entries;
+  for (const entry of manifestEntries) entries.add(entry);
   for (const file of snapshot.files.filter(supportedSource))
     if (
       /(?:^|\/)(?:page|layout|route|middleware|proxy|instrumentation|index|main|server)\.[cm]?[jt]sx?$/.test(
         file.path,
       ) ||
+      /(?:^|\/)(?:[^/]+\.)?config\.[cm]?[jt]s$/.test(file.path) ||
+      /(?:^|\/)instrumentation-client\.[cm]?[jt]s$/.test(file.path) ||
       /(?:^|\/)pages\/.+\.[cm]?[jt]sx?$/.test(file.path)
     )
       entries.add(file.path);
   return [...entries].sort();
+}
+
+function nestedStrings(value: unknown, output: string[], depth = 0): void {
+  if (output.length >= 500 || depth > 5) return;
+  if (typeof value === 'string') {
+    output.push(value.slice(0, 2000));
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) nestedStrings(item, output, depth + 1);
+    return;
+  }
+  if (value && typeof value === 'object')
+    for (const item of Object.values(value)) nestedStrings(item, output, depth + 1);
+}
+
+function declarativeManifestHints(snapshot: Snapshot): { entries: string[]; commands: string[] } {
+  const entries = new Set<string>();
+  const commands: string[] = [];
+  const sourcePaths = new Set(snapshot.files.filter(supportedSource).map((file) => file.path));
+  for (const file of snapshot.files) {
+    if (!isRuntimeSource(file) || file.path.split('/').at(-1) !== 'package.json') continue;
+    try {
+      const manifest = record(JSON.parse(file.content));
+      const directory = path.posix.dirname(file.path) === '.' ? '' : path.posix.dirname(file.path);
+      const scripts = record(manifest.scripts);
+      const manifestCommands: string[] = [];
+      for (const command of Object.values(scripts).slice(0, 500))
+        if (typeof command === 'string') manifestCommands.push(command.slice(0, 2000));
+      commands.push(...manifestCommands);
+      const references: string[] = [...manifestCommands];
+      for (const key of ['main', 'module', 'browser', 'bin', 'exports'])
+        nestedStrings(manifest[key], references);
+      for (const reference of references) {
+        for (const candidate of sourcePaths) {
+          if (directory && !candidate.startsWith(`${directory}/`)) continue;
+          const relative = directory ? candidate.slice(directory.length + 1) : candidate;
+          if (reference.includes(relative) || reference.includes(`./${relative}`))
+            entries.add(candidate);
+        }
+      }
+    } catch {
+      // The inventory scanner reports malformed manifests separately.
+    }
+  }
+  return { entries: [...entries].sort(), commands: commands.slice(0, 1000) };
 }
 
 function packageDirectories(snapshot: Snapshot): string[] {
@@ -467,7 +517,11 @@ function externalPackageName(specifier: string): string | undefined {
   return specifier.split('/')[0] || undefined;
 }
 
-function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<string> {
+function sourceReferencedPackages(
+  snapshot: Snapshot,
+  profile: ProjectProfile | undefined,
+  dependencyNames: Set<string>,
+): Set<string> {
   const packages = new Set<string>();
   const add = (specifier: string) => {
     const name = externalPackageName(specifier);
@@ -475,6 +529,7 @@ function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<str
   };
   for (const item of profile?.imports ?? []) add(item.specifier);
   for (const file of snapshot.files.filter(supportedSource)) {
+    const isConfiguration = /(?:^|\/)(?:[^/]+\.)?config\.[cm]?[jt]s$/.test(file.path);
     const source = ts.createSourceFile(
       file.path,
       file.content,
@@ -483,6 +538,14 @@ function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<str
       scriptKind(file.path),
     );
     const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteralLike(node)) {
+        for (const name of dependencyNames)
+          if (
+            node.text.includes(`node_modules/${name}/`) ||
+            (isConfiguration && (node.text === name || node.text.startsWith(`${name}/`)))
+          )
+            packages.add(name);
+      }
       if (
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
         node.moduleSpecifier &&
@@ -509,6 +572,11 @@ function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<str
     };
     visit(source);
   }
+  for (const command of declarativeManifestHints(snapshot).commands)
+    for (const name of dependencyNames) {
+      const escaped = name.replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&');
+      if (new RegExp(`(?:^|[\\s;&|])${escaped}(?=$|[\\s;&|])`).test(command)) packages.add(name);
+    }
   return packages;
 }
 
@@ -535,7 +603,17 @@ function unusedRuntimeDependencies(
   profile: ProjectProfile | undefined,
   ignoredPatterns: string[],
 ): string[] {
-  const imported = importedPackages(snapshot, profile);
+  const dependencyNames = new Set<string>();
+  for (const file of snapshot.files) {
+    if (!isRuntimeSource(file) || file.path.split('/').at(-1) !== 'package.json') continue;
+    try {
+      for (const name of Object.keys(record(record(JSON.parse(file.content)).dependencies)))
+        dependencyNames.add(name);
+    } catch {
+      // The inventory scanner reports malformed manifests separately.
+    }
+  }
+  const referenced = sourceReferencedPackages(snapshot, profile, dependencyNames);
   const implicit = new Set<string>();
   if (profile?.frameworks.some((framework) => framework.id.startsWith('nextjs-')))
     for (const name of ['next', 'react', 'react-dom', 'sharp']) implicit.add(name);
@@ -549,7 +627,7 @@ function unusedRuntimeDependencies(
       for (const name of Object.keys(dependencies))
         if (
           !name.startsWith('@types/') &&
-          !imported.has(name) &&
+          !referenced.has(name) &&
           !implicit.has(name) &&
           !ignoredPatterns.some((pattern) => dependencyPatternMatches(name, pattern))
         )
@@ -610,7 +688,7 @@ async function scanDeadCode(
       path.join(sourceRoot, configName),
       JSON.stringify({
         ...trustedConfig,
-        include: ['files', 'dependencies', 'unlisted', 'exports', 'types'],
+        include: ['files', 'unlisted', 'exports', 'types'],
         ...pluginConfig,
       }),
       { mode: 0o600, flag: 'wx' },
