@@ -52,8 +52,10 @@ function priority(finding: Finding): number {
     finding.vulnerability?.reachability === 'referenced'
       ? 7
       : finding.vulnerability?.relationship === 'direct'
-        ? 3
-        : 0;
+        ? -2
+        : finding.vulnerability
+          ? -18
+          : 0;
   const nonRuntime = finding.evidence.every(
     (evidence) => evidence.scope === 'test' || evidence.scope === 'example',
   )

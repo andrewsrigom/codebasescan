@@ -4,7 +4,7 @@ import { enrichFindingQuality } from '../../src/domain/finding-quality.ts';
 import { scanPatterns } from '../../src/scanners/builtin.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { scanNextSecurity } from '../../src/scanners/next-security.ts';
-import { snapshotOf } from '../helpers.ts';
+import { sampleReport, snapshotOf } from '../helpers.ts';
 
 test('finding quality prioritizes a potentially public high-severity route candidate', () => {
   const snapshot = snapshotOf(
@@ -39,4 +39,33 @@ test('finding quality keeps heuristic confidence and local runtime exposure expl
   assert.equal(enriched?.confidence, 'low');
   assert.equal(enriched?.exposure, 'unknown');
   assert.ok((enriched?.priority ?? 100) < 70);
+});
+
+test('dependency priority favors referenced packages over unknown transitive packages', () => {
+  const direct = sampleReport().findings[0]!;
+  direct.source = 'osv';
+  direct.severity = 'high';
+  direct.vulnerability = {
+    id: 'GHSA-fixture',
+    aliases: [],
+    package: 'fixture',
+    version: '1.0.0',
+    fixedVersions: ['1.0.1'],
+    severity: [],
+    relationship: 'direct',
+    reachability: 'referenced',
+    lockfile: 'package-lock.json',
+  };
+  const transitive = structuredClone(direct);
+  transitive.vulnerability!.relationship = 'transitive';
+  transitive.vulnerability!.reachability = 'unknown';
+  const results = enrichFindingQuality([direct, transitive]);
+  const referencedResult = results.find(
+    (finding) => finding.vulnerability?.reachability === 'referenced',
+  );
+  const transitiveResult = results.find(
+    (finding) => finding.vulnerability?.reachability === 'unknown',
+  );
+  assert.ok((referencedResult?.priority ?? 0) > (transitiveResult?.priority ?? 0));
+  assert.ok((transitiveResult?.priority ?? 100) < 70);
 });
