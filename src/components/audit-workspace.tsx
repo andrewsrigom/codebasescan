@@ -14,10 +14,12 @@ import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
 import { FindingDetails } from './finding-details.tsx';
+import { MechanicalReportPanel } from './mechanical-report.tsx';
 const tabs = [
   'Overview',
   'Findings',
   'Project map',
+  'Mechanical',
   'Checklist',
   'Investigations',
   'Dependencies',
@@ -333,6 +335,12 @@ export function AuditWorkspace({
             {label === 'Findings' && <span className="tab-count">{findings.length}</span>}
             {label === 'Investigations' && investigations.length > 0 && (
               <span className="tab-count">{investigations.length}</span>
+            )}
+            {label === 'Mechanical' && report?.mechanicalAnalysis && (
+              <span className="tab-count">
+                {(report.mechanicalAnalysis.architecture?.cycles.length ?? 0) +
+                  (report.mechanicalAnalysis.duplication?.blocks.length ?? 0)}
+              </span>
             )}
           </button>
         ))}
@@ -748,6 +756,7 @@ export function AuditWorkspace({
           </div>
         </section>
       )}
+      {tab === 'Mechanical' && <MechanicalReportPanel analysis={report?.mechanicalAnalysis} />}
       {tab === 'Checklist' && (
         <section
           className="panel"
@@ -1151,6 +1160,10 @@ export function AuditWorkspace({
               {[
                 'project_profile',
                 'ast_security',
+                'next_security',
+                'react_security',
+                'architecture',
+                'duplication',
                 'patterns',
                 'posture',
                 'semgrep',
