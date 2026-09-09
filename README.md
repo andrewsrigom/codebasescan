@@ -28,6 +28,7 @@ WSL2/Linux is the primary tested environment.
 ```bash
 npm ci
 cp .env.example .env.local
+npm run cli -- doctor
 npm run demo
 npm run dev
 ```
@@ -53,7 +54,7 @@ npm run cli -- export <audit-id> html
 
 Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
 
-Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
+Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Reviewers can mark findings confirmed, fixed, false positive, accepted risk, or still needing review. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
 
 ## Optional depth
 
@@ -113,7 +114,6 @@ Use --baseline report.json to gate only newly introduced findings. A passing gat
 ## What is intentionally out of scope
 
 - whole-program taint or dependency reachability proof;
-- Git-history secret scanning;
 - broad crawling, exploitation, or pentesting;
 - cloud IAM, infrastructure-as-code, compliance certification, or hosted multi-user operation.
 

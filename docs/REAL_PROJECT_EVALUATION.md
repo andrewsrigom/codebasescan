@@ -33,7 +33,7 @@ The first passes exposed real failure modes and directly produced regression tes
 - standard npm/pnpm lockfiles larger than the generic source-file cap caused three partial snapshots; lockfiles now have a separate bounded 4 MiB allowance;
 - inline `"use server"` functions were missing from the entrypoint map;
 - wrapped, aliased, destructured, and Pages Router handlers were incompletely mapped;
-- common captured `@/`, `~/`, and root aliases did not participate in the two-hop call map;
+- common captured `@/`, `~/`, and root aliases did not participate in the bounded call map;
 - direct request-body uploads were not recognized;
 - response serialization in webhook-management APIs was mistaken for request-body parsing;
 - `process.env.NODE_ENV`, same-origin URL bases, configured origin replacement, trusted client responses, strict host-label allowlisting, and file-validation schemas created avoidable AST noise;
@@ -52,4 +52,20 @@ The code-first workflow handles small and medium real repositories without execu
 - Measure review time, time to first useful result, and within-project duplicate rate with evaluation instrumentation.
 - Validate dependency findings separately with OSV enabled; advisory presence still does not establish reachability.
 - Validate live Ollama/OpenAI investigation only after explicit resource or spend approval, and measure whether it improves reviewer decisions.
-- Expand beyond current syntax-only, two-hop TypeScript/JavaScript coverage only from observed failures.
+- Expand beyond current syntax-only, five-explicit-hop TypeScript/JavaScript coverage only from observed failures.
+
+## 2026-09-09 owner-authorized scale pass
+
+Two owner-authorized private Next.js repositories were scanned locally after the fixture pass. They are intentionally anonymous and no source or raw report is committed. AI and OSV network access were disabled; the installed Semgrep and Gitleaks adapters and the saved exact-version advisory database remained enabled.
+
+| Measure                      | Repository A | Repository B |
+| ---------------------------- | -----------: | -----------: |
+| Supported files              |        1,196 |        1,039 |
+| Supported source size        |     5.82 MiB |     5.25 MiB |
+| Snapshot truncated           |           no |           no |
+| Complete audit wall time     |       9.82 s |       6.62 s |
+| Peak process resident memory |      574 MiB |      448 MiB |
+
+The pass found two actionable detector-quality problems. Broad React prop taint produced 74 and 34 candidates; browser-source tracking and real navigation sinks reduced those sets to 2 and 9 without losing benchmark recall. Generic `.exec()` handling treated a regular-expression parser as command execution and produced 14 derived Next.js candidates; it now produces 0 for that path. Both regressions have benign tests. These are tuning results, not project security conclusions or generic accuracy claims.
+
+Current snapshot limits are 1,500 supported files, 8 MiB total source, 512 KiB per source file, 4 MiB per dependency lockfile, depth 24, and 12,000 visited entries. Preflight reports predicted truncation and requires explicit approval before a partial audit.

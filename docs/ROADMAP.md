@@ -21,6 +21,7 @@
 - Secret scanning distinguishes probable runtime matches from test/example fixture candidates and supports an explicit, redacted Git-history mode.
 - Findings now carry detector confidence, probable exposure, priority scores, merged evidence, expiring project exceptions, and a selectable project baseline.
 - Every dedicated Next.js and React rule now has declared vulnerable ground truth plus paired benign benchmark coverage.
+- The local environment doctor, fixed disposition, quality filters, and owner-authorized 1,000+ file scale pass are complete.
 
 ## Next — independent real-project ground truth
 

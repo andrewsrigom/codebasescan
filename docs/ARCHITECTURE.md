@@ -37,12 +37,14 @@ START -> snapshot
               +-> patterns ----+
               +-> project map -+
               +-> AST security +
+              +-> Next security+
+              +-> React security+
               +-> posture -----+
               +-> semgrep -----+
               +-> gitleaks ----+-> normalize/reconcile
               +-> OSV inventory+          |
-              +-> HTTP probe --+     investigate (bounded)
-                                            |
+              +-> HTTP probe --+     investigate (bounded, AI enabled)
+                                            |         offline skips
                                       prepare_report
                                             |
                          interactive: human_review [interrupt]
@@ -51,7 +53,7 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The eight branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The ten scanner/profile branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
 The nested review graph remains:
 
@@ -65,7 +67,7 @@ Repository text is untrusted. It cannot select tools, endpoints, headers, reques
 
 ## Deterministic evidence
 
-`project-profile.ts` parses captured TypeScript/JavaScript as data and maps supported frameworks, entry points, symbols, imports, direct local call edges, and security facts under fixed limits. `ast-security.ts` uses those relationships for authentication, permission, and tenant/owner scope, then performs bounded same-function request-flow checks for raw SQL, SSRF, redirects, uploads, webhook ordering, cookie attributes, and client/server configuration. It never loads target configuration, plugins, types, or dependencies.
+`project-profile.ts` parses captured TypeScript/JavaScript as data and maps supported frameworks, entry points, symbols, imports, direct local call edges, and security facts under fixed limits. `ast-security.ts` uses those relationships for authentication, permission, and tenant/owner scope, then performs bounded same-function request-flow checks for raw SQL, SSRF, redirects, uploads, webhook ordering, cookie attributes, and client/server configuration. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target configuration, plugins, types, and dependencies are never loaded or executed.
 
 `builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, and environment use. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
 
@@ -73,7 +75,7 @@ Snapshot files are classified as runtime, test, or example. Project profiling, A
 
 The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S), strips queries from stored display URLs, rejects credential-shaped query keys, blocks metadata/link-local/reserved destinations, requires explicit approval for non-loopback private networks, validates every DNS answer and redirect, and pins the selected address for the connection. It uses HEAD and only falls back to bounded GET for 405/501. Static and runtime findings are reconciled by attaching observed evidence; static evidence is not silently removed.
 
-Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code and excludes recognized local npm/Yarn workspace packages from advisory queries. OSV is separately opt-in and uses a fixed API host. Only package name/version pairs leave the machine. Pagination and advisory fetches have fixed request/result limits. Full responses are compacted, aliases are consolidated, withdrawn records are ignored, package-level severity is retained, CVSS v3 vectors are scored when labels are absent, and cache/report data never claim reachability.
+Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code and excludes recognized local npm/Yarn workspace packages from advisory queries. Exact-version records in the compact local advisory database are used without network access. Manual refresh is separately opt-in, uses the fixed OSV API host, and sends only package name/version pairs. Pagination and advisory fetches have fixed request/result limits. Full responses are compacted, aliases are consolidated, withdrawn records are ignored, package-level severity is retained, CVSS v3 vectors are scored when labels are absent, and cache/report data distinguish source-reference hints from runtime reachability or exploitability.
 
 ## AI boundary
 
@@ -85,7 +87,7 @@ Calls are protected by persisted per-audit call/input/output budgets, a per-find
 
 ## Evidence, assessment, disposition, and coverage
 
-A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. Checklist controls separately retain their deterministic status and an optional human assessment for verified external evidence, accepted gaps, non-applicability, or follow-up. These states are not collapsed into “verified.”
+A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, confidence, probable exposure, review priority, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. Human dispositions include confirmed, fixed, false positive, accepted risk, and needs review. Expiring project exceptions keep the original finding and exact fingerprint visible. Checklist controls separately retain their deterministic status and an optional human assessment for verified external evidence, accepted gaps, non-applicability, or follow-up. These states are not collapsed into “verified.”
 
 Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. Traceward does not compute a global security score.
 
@@ -103,7 +105,7 @@ The Traceward UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, s
 
 1. `src/domain/types.ts`, `checklist.ts`, `report-schema.ts`, `coverage.ts`, and `provenance.ts`
 2. `src/security/paths.ts`, `url-policy.ts`, and `redact.ts`
-3. `src/scanners/project-profile.ts`, `ast-security.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
+3. `src/scanners/project-profile.ts`, `ast-security.ts`, `next-security.ts`, `react-security.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
 4. `src/engine/context-broker.ts`, `review-graph.ts`, `openai.ts`, and `audit-graph.ts`
-5. `src/server/store.ts`, `src/worker/main.ts`, and `src/cli/main.ts`
+5. `src/server/store.ts`, `src/worker/main.ts`, `src/cli/main.ts`, and `src/cli/doctor.ts`
 6. `src/components/audit-workspace.tsx` and `finding-details.tsx`

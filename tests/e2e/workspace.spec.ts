@@ -6,12 +6,13 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
   ).toBeVisible();
   await page.getByRole('tab', { name: /Findings/ }).click();
   await expect(page.getByLabel('Filter review status')).toBeVisible();
+  await expect(page.getByLabel('Filter confidence')).toBeVisible();
+  await expect(page.getByLabel('Filter exposure')).toBeVisible();
+  await expect(page.getByLabel('Filter priority')).toBeVisible();
   await page.getByLabel('Search findings').fill('Raw SQL');
   await page.getByRole('button', { name: /Raw SQL execution/ }).click();
   await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
-  await expect(
-    page.getByText('No LLM-based verification was performed.', { exact: false }),
-  ).toBeVisible();
+  await expect(page.getByText('Contextual assessment', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Close finding' }).click();
   await page.getByRole('tab', { name: 'Project map', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Project map' })).toBeVisible();
@@ -25,6 +26,19 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
   await expect(page.getByText('No model investigation was performed')).toBeVisible();
   await page.getByRole('tab', { name: 'Workflow', exact: true }).click();
   await expect(page.getByText('interrupt() → Command(resume)')).toBeVisible();
+});
+
+test('records a verified fix and removes it from the unresolved CI state', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: /Findings/ }).click();
+  await page.getByLabel('Search findings').fill('Raw SQL');
+  await page.getByRole('button', { name: /Raw SQL execution/ }).click();
+  await page
+    .getByLabel('Evidence and rationale')
+    .fill('Regression coverage verifies the corrected query boundary.');
+  await page.getByRole('button', { name: 'Mark fixed' }).click();
+  await page.getByLabel('Filter review status').selectOption('fixed');
+  await expect(page.getByRole('button', { name: /Raw SQL execution/ })).toBeVisible();
 });
 test('exports a report without inline executable code', async ({ page }) => {
   await page.goto('/');
