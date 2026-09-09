@@ -178,6 +178,7 @@ export interface ProjectScopeEstimate {
   limits: {
     files: number;
     bytesPerFile: number;
+    lockfileBytes?: number;
     totalBytes: number;
   };
 }

@@ -164,6 +164,7 @@ const scopePreflight = z.looseObject({
   limits: z.looseObject({
     files: z.number().int().positive(),
     bytesPerFile: z.number().int().positive(),
+    lockfileBytes: z.number().int().positive().optional(),
     totalBytes: z.number().int().positive(),
   }),
   truncationApproved: z.boolean(),

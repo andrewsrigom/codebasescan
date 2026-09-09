@@ -138,6 +138,12 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
                     {estimate.limits.files} files /{' '}
                     {(estimate.limits.totalBytes / (1024 * 1024)).toFixed(0)} MiB.
                   </p>
+                  {estimate.limits.lockfileBytes && (
+                    <p>
+                      Per file: {(estimate.limits.bytesPerFile / 1024).toFixed(0)} KiB source /{' '}
+                      {(estimate.limits.lockfileBytes / (1024 * 1024)).toFixed(0)} MiB lockfile.
+                    </p>
+                  )}
                   {estimate.scopeFiles && (
                     <p>
                       Runtime analysis: {estimate.scopeFiles.runtime}. Secret-only test/example

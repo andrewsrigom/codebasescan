@@ -57,8 +57,18 @@ const exampleSegments = new Set(['example', 'examples', 'storybook', '.storybook
 export const snapshotLimits = {
   files: 1500,
   bytesPerFile: 256 * 1024,
+  lockfileBytes: 4 * 1024 * 1024,
   totalBytes: 8 * 1024 * 1024,
 };
+const dependencyLockfiles = new Set([
+  'package-lock.json',
+  'npm-shrinkwrap.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+]);
+function fileByteLimit(name: string): number {
+  return dependencyLockfiles.has(name) ? snapshotLimits.lockfileBytes : snapshotLimits.bytesPerFile;
+}
 function fileExclusion(name: string): 'sensitive-file' | 'unsupported-file' | null {
   if (name.startsWith('.env') || /\.(pem|key|p12|pfx)$/i.test(name)) return 'sensitive-file';
   if (
@@ -179,7 +189,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
         supportedFiles++;
         supportedBytes += metadata.size;
         scopeFiles[classifySourceScope(path.relative(canonicalRoot, absolute))]++;
-        if (metadata.size > snapshotLimits.bytesPerFile) oversizedFiles++;
+        if (metadata.size > fileByteLimit(entry.name)) oversizedFiles++;
       } catch {
         reasons.add('unreadable-entry');
       }
@@ -269,18 +279,19 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
         try {
           const stat = await handle.stat();
+          const byteLimit = fileByteLimit(entry.name);
           if (
             !stat.isFile() ||
-            stat.size > snapshotLimits.bytesPerFile ||
+            stat.size > byteLimit ||
             totalBytes + stat.size > snapshotLimits.totalBytes
           ) {
             skip('file-size-limit');
             truncated = true;
             continue;
           }
-          const buffer = Buffer.alloc(Math.min(stat.size + 1, snapshotLimits.bytesPerFile + 1));
+          const buffer = Buffer.alloc(Math.min(stat.size + 1, byteLimit + 1));
           const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-          if (bytesRead !== stat.size || bytesRead > snapshotLimits.bytesPerFile) {
+          if (bytesRead !== stat.size || bytesRead > byteLimit) {
             skip('changed-during-read');
             truncated = true;
             continue;

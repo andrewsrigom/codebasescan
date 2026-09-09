@@ -227,6 +227,23 @@ test('large files are excluded and coverage is marked truncated', async (context
   assert.equal(estimate.predictedTruncated, true);
   assert.deepEqual(estimate.reasons, ['per-file-byte-limit']);
 });
+test('realistic lockfiles use a separate bounded size allowance', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-lockfile-size-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const content = JSON.stringify({
+    lockfileVersion: 3,
+    packages: {
+      'node_modules/example': { version: '1.0.0', padding: 'a'.repeat(300_000) },
+    },
+  });
+  await writeFile(path.join(root, 'package-lock.json'), content);
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.equal(snapshot.files[0]?.path, 'package-lock.json');
+  assert.equal(snapshot.truncated, false);
+  assert.equal(estimate.oversizedFiles, 0);
+  assert.equal(estimate.limits.lockfileBytes, 4 * 1024 * 1024);
+});
 test('registration rejects home and overlapping audit storage', async (context) => {
   await assert.rejects(() => validateProjectRoot(os.homedir(), path.join(os.tmpdir(), 'tw-state')));
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-root-'));
