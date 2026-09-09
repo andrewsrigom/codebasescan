@@ -204,6 +204,26 @@ test('strict host-label allowlisting avoids an open-redirect candidate', () => {
   assert.ok(unsafeIds.includes('TW-AST006'));
 });
 
+test('replacing the request origin with a server-owned backend avoids SSRF noise', () => {
+  const safeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const backend = process.env.INTERNAL_BACKEND ?? 'https://backend.example.test';
+      const destination = request.nextUrl.href.replace(request.nextUrl.origin, backend);
+      return fetch(destination);
+    }
+  `);
+  assert.ok(!safeIds.includes('TW-AST005'));
+
+  const unsafeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const backend = new URL(request.url).searchParams.get('backend');
+      const destination = request.nextUrl.href.replace(request.nextUrl.origin, backend);
+      return fetch(destination);
+    }
+  `);
+  assert.ok(unsafeIds.includes('TW-AST005'));
+});
+
 test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
   assert.ok(
     astRuleIds(

@@ -186,6 +186,17 @@ function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
   if (ts.isPropertyAccessExpression(value.expression)) {
     const method = value.expression.name.text;
     const [pattern, replacement] = value.arguments;
+    const receiver = value.expression.expression;
+    if (
+      method === 'replace' &&
+      pattern &&
+      replacement &&
+      receiver.getText().endsWith('.href') &&
+      pattern.getText() === receiver.getText().replace(/\.href$/, '.origin') &&
+      isTainted(receiver, tainted) &&
+      !isTainted(replacement, tainted)
+    )
+      return false;
     if (
       method === 'replace' &&
       pattern &&
