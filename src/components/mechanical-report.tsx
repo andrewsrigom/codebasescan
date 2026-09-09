@@ -25,6 +25,20 @@ export function MechanicalReportPanel({
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
+  const cycleCount = architecture?.cycleCount ?? architecture?.cycles.length;
+  const orphanCount = architecture?.orphanCount ?? architecture?.orphanCandidates.length;
+  const architectureHotspotCount = architecture?.hotspotCount ?? architecture?.hotspots.length;
+  const qualityHotspotCount = quality?.hotspotCount ?? quality?.hotspots.length;
+  const unusedFileCount = quality?.deadCode
+    ? (quality.deadCode.unusedFileCount ?? quality.deadCode.unusedFiles.length)
+    : undefined;
+  const unusedDependencyCount = quality?.deadCode
+    ? (quality.deadCode.unusedDependencyCount ?? quality.deadCode.unusedDependencies.length)
+    : undefined;
+  const unusedSymbolCount = quality?.deadCode
+    ? (quality.deadCode.unusedExportCount ?? quality.deadCode.unusedExports.length) +
+      (quality.deadCode.unusedTypeCount ?? quality.deadCode.unusedTypes.length)
+    : undefined;
   const complete = Boolean(
     architecture &&
     !architecture.truncated &&
@@ -68,10 +82,8 @@ export function MechanicalReportPanel({
               </div>
               <div className="stat-card">
                 <div className="stat-label">Dependency cycles</div>
-                <div className="stat-number">{architecture?.cycles.length ?? '—'}</div>
-                <div className="stat-foot">
-                  {architecture?.orphanCandidates.length ?? '—'} orphan candidates
-                </div>
+                <div className="stat-number">{cycleCount ?? '—'}</div>
+                <div className="stat-foot">{orphanCount ?? '—'} orphan candidates</div>
               </div>
               <div className="stat-card">
                 <div className="stat-label">Duplicate blocks</div>
@@ -148,7 +160,7 @@ export function MechanicalReportPanel({
                   <h2>Code quality</h2>
                   <p>Bounded TypeScript/JavaScript metrics and isolated dead-code analysis.</p>
                 </div>
-                <Badge>{quality.hotspots.length} hotspots</Badge>
+                <Badge>{qualityHotspotCount} hotspots</Badge>
               </div>
               <div className="panel-body">
                 <div className="stat-grid">
@@ -159,19 +171,14 @@ export function MechanicalReportPanel({
                   </div>
                   <div className="stat-card">
                     <div className="stat-label">Unused files</div>
-                    <div className="stat-number">{quality.deadCode?.unusedFiles.length ?? '—'}</div>
+                    <div className="stat-number">{unusedFileCount ?? '—'}</div>
                     <div className="stat-foot">
-                      {quality.deadCode?.unusedDependencies.length ?? '—'} unused dependencies
+                      {unusedDependencyCount ?? '—'} unused dependencies
                     </div>
                   </div>
                   <div className="stat-card">
                     <div className="stat-label">Unused symbols</div>
-                    <div className="stat-number">
-                      {quality.deadCode
-                        ? quality.deadCode.unusedExports.length +
-                          quality.deadCode.unusedTypes.length
-                        : '—'}
-                    </div>
+                    <div className="stat-number">{unusedSymbolCount ?? '—'}</div>
                     <div className="stat-foot">Knip candidates</div>
                   </div>
                   <div className="stat-card">
@@ -275,7 +282,9 @@ export function MechanicalReportPanel({
                   <h2>Coupling hotspots</h2>
                   <p>Files with the most incoming and outgoing local dependencies.</p>
                 </div>
-                <Badge>{architecture.hotspots.length} shown</Badge>
+                <Badge>
+                  {architecture.hotspots.length} of {architectureHotspotCount} shown
+                </Badge>
               </div>
               <div className="table-scroll">
                 <table>
@@ -333,7 +342,9 @@ export function MechanicalReportPanel({
                   <h2>Duplicate blocks</h2>
                   <p>Locations only. Raw duplicated source fragments are discarded.</p>
                 </div>
-                <Badge>{duplication.blocks.length} retained</Badge>
+                <Badge>
+                  {duplication.blocks.length} of {duplication.clones} retained
+                </Badge>
               </div>
               {duplication.blocks.length ? (
                 <div className="table-scroll">
@@ -374,8 +385,8 @@ export function MechanicalReportPanel({
             supplyChain?.truncated ||
             quality?.truncated) && (
             <div className="panel-footer">
-              This source analysis was truncated or filtered. Review Coverage before relying on the
-              totals.
+              Totals are exact where shown; detailed rows are bounded. Review Coverage for the
+              specific scanner limitation.
             </div>
           )}
         </>

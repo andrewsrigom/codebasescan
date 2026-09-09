@@ -230,7 +230,7 @@ export function toMarkdown(report: AuditReport): string {
           '',
           ...(report.mechanicalAnalysis.architecture
             ? [
-                `Dependency structure: ${report.mechanicalAnalysis.architecture.modules} modules, ${report.mechanicalAnalysis.architecture.localDependencies} local dependencies, ${report.mechanicalAnalysis.architecture.cycles.length} cycles, and ${report.mechanicalAnalysis.architecture.orphanCandidates.length} orphan candidates.`,
+                `Dependency structure: ${report.mechanicalAnalysis.architecture.modules} modules, ${report.mechanicalAnalysis.architecture.localDependencies} local dependencies, ${report.mechanicalAnalysis.architecture.cycleCount ?? report.mechanicalAnalysis.architecture.cycles.length} cycles (${report.mechanicalAnalysis.architecture.cycles.length} retained), ${report.mechanicalAnalysis.architecture.orphanCount ?? report.mechanicalAnalysis.architecture.orphanCandidates.length} orphan candidates (${report.mechanicalAnalysis.architecture.orphanCandidates.length} retained), and ${report.mechanicalAnalysis.architecture.hotspotCount ?? report.mechanicalAnalysis.architecture.hotspots.length} coupling hotspots (${report.mechanicalAnalysis.architecture.hotspots.length} retained).`,
                 ...report.mechanicalAnalysis.architecture.cycles.map(
                   (cycle) => `- Cycle: ${cycle.files.map(m).join(' -> ')}`,
                 ),
@@ -266,10 +266,10 @@ export function toMarkdown(report: AuditReport): string {
           '',
           '## Code quality',
           '',
-          `${report.codeQualityAnalysis.functionsAnalyzed} functions across ${report.codeQualityAnalysis.filesAnalyzed} files were measured; ${report.codeQualityAnalysis.hotspots.length} complexity, size, or parameter hotspots were retained.`,
+          `${report.codeQualityAnalysis.functionsAnalyzed} functions across ${report.codeQualityAnalysis.filesAnalyzed} files were measured; ${report.codeQualityAnalysis.hotspotCount ?? report.codeQualityAnalysis.hotspots.length} complexity, size, or parameter hotspots were found (${report.codeQualityAnalysis.hotspots.length} retained).`,
           ...(report.codeQualityAnalysis.deadCode
             ? [
-                `Knip candidates: ${report.codeQualityAnalysis.deadCode.unusedFiles.length} unused files, ${report.codeQualityAnalysis.deadCode.unusedDependencies.length} unused dependencies, ${report.codeQualityAnalysis.deadCode.unusedExports.length + report.codeQualityAnalysis.deadCode.unusedTypes.length} unused exports/types.`,
+                `Knip candidates: ${report.codeQualityAnalysis.deadCode.unusedFileCount ?? report.codeQualityAnalysis.deadCode.unusedFiles.length} unused files (${report.codeQualityAnalysis.deadCode.unusedFiles.length} retained), ${report.codeQualityAnalysis.deadCode.unusedDependencyCount ?? report.codeQualityAnalysis.deadCode.unusedDependencies.length} unused dependencies (${report.codeQualityAnalysis.deadCode.unusedDependencies.length} retained), and ${(report.codeQualityAnalysis.deadCode.unusedExportCount ?? report.codeQualityAnalysis.deadCode.unusedExports.length) + (report.codeQualityAnalysis.deadCode.unusedTypeCount ?? report.codeQualityAnalysis.deadCode.unusedTypes.length)} unused exports/types (${report.codeQualityAnalysis.deadCode.unusedExports.length + report.codeQualityAnalysis.deadCode.unusedTypes.length} retained).`,
               ]
             : ['Dead-code analysis was unavailable.']),
           ...report.codeQualityAnalysis.hotspots.map(
@@ -571,14 +571,17 @@ export function toHtml(report: AuditReport): string {
           ? '<div class="facts"><span><strong>' +
             report.codeQualityAnalysis.functionsAnalyzed +
             '</strong> functions measured</span><span><strong>' +
-            report.codeQualityAnalysis.hotspots.length +
+            (report.codeQualityAnalysis.hotspotCount ??
+              report.codeQualityAnalysis.hotspots.length) +
             '</strong> quality hotspots</span><span><strong>' +
-            (report.codeQualityAnalysis.deadCode?.unusedFiles.length ?? 0) +
+            (report.codeQualityAnalysis.deadCode?.unusedFileCount ??
+              report.codeQualityAnalysis.deadCode?.unusedFiles.length ??
+              0) +
             '</strong> unused file candidates</span><span><strong>' +
             report.codeQualityAnalysis.coverageArtifacts.length +
             '</strong> coverage artifacts</span></div>' +
             list(
-              'Quality hotspots',
+              `Quality hotspots (${report.codeQualityAnalysis.hotspots.length} of ${report.codeQualityAnalysis.hotspotCount ?? report.codeQualityAnalysis.hotspots.length} retained)`,
               report.codeQualityAnalysis.hotspots.map(
                 (hotspot) =>
                   `${hotspot.file}:${hotspot.line} ${hotspot.name}: complexity ${hotspot.complexity}, ${hotspot.lines} lines, ${hotspot.parameters} parameters`,
@@ -596,12 +599,14 @@ export function toHtml(report: AuditReport): string {
             '</strong> modules</span><span><strong>' +
             report.mechanicalAnalysis.architecture.localDependencies +
             '</strong> local dependencies</span><span><strong>' +
-            report.mechanicalAnalysis.architecture.cycles.length +
+            (report.mechanicalAnalysis.architecture.cycleCount ??
+              report.mechanicalAnalysis.architecture.cycles.length) +
             '</strong> cycles</span><span><strong>' +
-            report.mechanicalAnalysis.architecture.orphanCandidates.length +
+            (report.mechanicalAnalysis.architecture.orphanCount ??
+              report.mechanicalAnalysis.architecture.orphanCandidates.length) +
             '</strong> orphan candidates</span></div>' +
             list(
-              'Dependency cycles',
+              `Dependency cycles (${report.mechanicalAnalysis.architecture.cycles.length} of ${report.mechanicalAnalysis.architecture.cycleCount ?? report.mechanicalAnalysis.architecture.cycles.length} retained)`,
               report.mechanicalAnalysis.architecture.cycles.map((cycle) => cycle.files.join(' → ')),
             )
           : '<p>Dependency structure analysis was unavailable.</p>') +

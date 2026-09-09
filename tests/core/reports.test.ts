@@ -99,8 +99,11 @@ test('Markdown includes scope and limitations', () => {
       schemaVersion: 1,
       modules: 2,
       localDependencies: 2,
+      cycleCount: 3,
       cycles: [{ id: 'cycle-1', files: ['src/a.ts', 'src/b.ts'] }],
+      orphanCount: 2,
       orphanCandidates: [],
+      hotspotCount: 9,
       hotspots: [{ file: 'src/a.ts', incoming: 1, outgoing: 1, instability: 0.5 }],
       truncated: false,
     },
@@ -147,15 +150,21 @@ test('Markdown includes scope and limitations', () => {
     schemaVersion: 1,
     filesAnalyzed: 2,
     functionsAnalyzed: 3,
+    hotspotCount: 7,
     hotspots: [
       { file: 'src/a.ts', line: 4, name: 'complex', lines: 90, parameters: 2, complexity: 16 },
     ],
     deadCode: {
       schemaVersion: 1,
+      unusedFileCount: 4,
       unusedFiles: ['src/unused.ts'],
+      unusedDependencyCount: 3,
       unusedDependencies: ['unused-package'],
+      unlistedDependencyCount: 0,
       unlistedDependencies: [],
+      unusedExportCount: 2,
       unusedExports: [],
+      unusedTypeCount: 1,
       unusedTypes: [],
       truncated: false,
     },
@@ -170,6 +179,9 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(output.includes('## Mechanical analysis'));
   assert.ok(output.includes('## Supply-chain integrity'));
   assert.ok(output.includes('## Code quality'));
+  assert.ok(output.includes('3 cycles (1 retained)'));
+  assert.ok(output.includes('7 complexity, size, or parameter hotspots were found (1 retained)'));
+  assert.ok(output.includes('4 unused files (1 retained)'));
   assert.ok(output.includes('src/a.ts:1-12'));
   assert.ok(output.includes('## Security checklist'));
   assert.ok(output.includes('Human assessment: verified external'));
