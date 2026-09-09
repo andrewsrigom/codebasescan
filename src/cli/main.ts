@@ -19,6 +19,7 @@ import { parseAuditReport } from '../domain/report-schema.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
+import { renderDoctor, runDoctor } from './doctor.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -93,7 +94,11 @@ async function preflight(root: string, requireApproval: boolean) {
 
 let store: AuditStore | null = null;
 try {
-  if (command === 'advisories' && target === 'update' && arguments_[2]) {
+  if (command === 'doctor') {
+    const checks = await runDoctor(config);
+    console.log(renderDoctor(checks));
+    if (checks.some((check) => check.status === 'fail')) process.exitCode = 1;
+  } else if (command === 'advisories' && target === 'update' && arguments_[2]) {
     const root = await validateProjectRoot(arguments_[2], config.dataDirectory);
     await preflight(root, true);
     const snapshot = await captureSnapshot(root);
@@ -212,7 +217,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
+        'Traceward\n\n  npm run cli -- doctor\n  npm run cli -- audit /path/to/project [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
       );
     }
   }

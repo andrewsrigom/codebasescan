@@ -92,6 +92,9 @@ export default function SettingsPage() {
               Refresh exact package versions manually with{' '}
               <code>npm run cli -- advisories update /path/to/project</code>.
             </p>
+            <p className="small muted">
+              Verify the complete local setup with <code>npm run cli -- doctor</code>.
+            </p>
           </div>
         </section>
       </div>
