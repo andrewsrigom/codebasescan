@@ -98,6 +98,20 @@ test('a second worker in a live local process is rejected', (context) => {
   const next = store.acquireWorker();
   store.releaseWorker(next);
 });
+test('a new worker recovers an audit abandoned by a dead process', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id);
+  store.claim();
+  store.db
+    .prepare('INSERT INTO worker_lock VALUES (?, ?, ?, ?)')
+    .run('local', 'dead-worker', 2147483646, new Date().toISOString());
+
+  const token = store.acquireWorker();
+  assert.equal(store.audit(audit.id).status, 'queued');
+  assert.match(store.audit(audit.id).error ?? '', /Previous worker stopped/);
+  store.releaseWorker(token);
+});
 test('workflow events are idempotent by event key', (context) => {
   const { store, project } = setup();
   context.after(() => store.close());

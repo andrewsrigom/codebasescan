@@ -1,5 +1,15 @@
 import path from 'node:path';
-import { mkdtemp, mkdir, writeFile, rm, stat, readFile } from 'node:fs/promises';
+import {
+  lstat,
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { record } from '../domain/validation.ts';
@@ -9,6 +19,23 @@ import { runScannerProcess } from '../security/process.ts';
 export interface ScanResult {
   findings: Finding[];
   run: ScannerRun;
+}
+const stagingName = /^(?:semgrep|gitleaks)-[A-Za-z0-9._-]+$/;
+export async function cleanupStaleScannerStaging(temporaryDirectory: string): Promise<number> {
+  await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
+  const root = path.resolve(temporaryDirectory);
+  let removed = 0;
+  for (const entry of await readdir(root, { withFileTypes: true })) {
+    if (!stagingName.test(entry.name)) continue;
+    const candidate = path.resolve(root, entry.name);
+    if (path.dirname(candidate) !== root) continue;
+    const metadata = await lstat(candidate);
+    if (metadata.isSymbolicLink()) await unlink(candidate);
+    else if (metadata.isDirectory()) await rm(candidate, { recursive: true, force: true });
+    else continue;
+    removed++;
+  }
+  return removed;
 }
 function safeString(input: unknown, fallback: string): string {
   return typeof input === 'string' ? redact(input).slice(0, 2000) : fallback;

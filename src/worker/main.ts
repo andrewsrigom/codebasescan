@@ -1,6 +1,7 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
+import { cleanupStaleScannerStaging } from '../scanners/external.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
 disableRemoteTracing();
 process.umask(0o077);
@@ -21,6 +22,9 @@ const heartbeat = setInterval(() => {
 }, 2000);
 console.log(`Traceward worker ready. Read-only scans, AI ${config.aiMode}, one audit at a time.`);
 try {
+  const removedStagingDirectories = await cleanupStaleScannerStaging(config.temporaryDirectory);
+  if (removedStagingDirectories)
+    console.log(`Removed ${removedStagingDirectories} stale scanner staging directories.`);
   const { executeAudit } = await import('../engine/run.ts');
   while (!stopping) {
     const audit = store.claim();
