@@ -141,10 +141,27 @@ function isTainted(node: ts.Node | undefined, tainted: Set<string>): boolean {
   return found;
 }
 
+function hasServerOwnedUrlPrefix(node: ts.Expression, tainted: Set<string>): boolean {
+  const isOwnedPrefix = (value: string): boolean =>
+    /^\/(?!\/)/.test(value) || /^https?:\/\/[^/]+(?:\/|$)/i.test(value);
+  if (ts.isStringLiteralLike(node)) return isOwnedPrefix(node.text);
+  if (!ts.isTemplateExpression(node)) return !isTainted(node, tainted);
+  if (isOwnedPrefix(node.head.text)) return true;
+  for (const span of node.templateSpans) {
+    if (isTainted(span.expression, tainted)) return false;
+    if (isOwnedPrefix(span.literal.text)) return true;
+  }
+  return false;
+}
+
 function isServerOwnedUrl(node: ts.Expression | undefined, tainted: Set<string>): boolean {
   if (!node || !ts.isNewExpression(node) || node.expression.getText() !== 'URL') return false;
   const [destination, base] = node.arguments ?? [];
-  return Boolean(destination && base && !isTainted(destination, tainted));
+  return Boolean(destination && base && hasServerOwnedUrlPrefix(destination, tainted));
+}
+
+function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
+  return isTainted(node, tainted) && !isServerOwnedUrl(node, tainted);
 }
 
 function functionTaint(node: ts.FunctionLikeDeclarationBase): Set<string> {
@@ -157,7 +174,7 @@ function functionTaint(node: ts.FunctionLikeDeclarationBase): Set<string> {
       if (
         ts.isVariableDeclaration(child) &&
         child.initializer &&
-        isTainted(child.initializer, tainted)
+        isTaintedValue(child.initializer, tainted)
       )
         for (const name of bindingNames(child.name))
           if (!tainted.has(name)) {
@@ -168,7 +185,7 @@ function functionTaint(node: ts.FunctionLikeDeclarationBase): Set<string> {
         ts.isBinaryExpression(child) &&
         child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
         ts.isIdentifier(child.left) &&
-        isTainted(child.right, tainted) &&
+        isTaintedValue(child.right, tainted) &&
         !tainted.has(child.left.text)
       ) {
         tainted.add(child.left.text);

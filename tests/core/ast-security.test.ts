@@ -107,8 +107,11 @@ test('recognized destination guards and constant sinks avoid direct flow candida
 test('server-owned URLs may use the request URL only as their same-origin base', () => {
   const ids = astRuleIds(`
     export async function GET(request: Request) {
-      await fetch(new URL('/api/auth/session', request.url));
-      return redirect(new URL('/login', request.url));
+      const session = new URL('/api/auth/session', request.url);
+      await fetch(session);
+      const currentPath = encodeURIComponent(new URL(request.url).pathname);
+      const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+      return redirect(new URL(\`${'${base}'}/login?from=${'${currentPath}'}\`, request.url));
     }
   `);
   assert.ok(!ids.includes('TW-AST005'));
