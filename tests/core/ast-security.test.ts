@@ -19,6 +19,26 @@ test('AST authorization rules connect mutating entry points to sensitive operati
   assert.ok(result.findings.every((finding) => finding.disposition === 'needs_review'));
 });
 
+test('AST authorization covers nested inline server actions', () => {
+  const snapshot = snapshotOf(
+    `
+      export default function Page() {
+        async function deletePost() {
+          'use server';
+          await prisma.post.delete({ where: { id: 1 } });
+        }
+        return deletePost;
+      }
+    `,
+    'src/app/posts/[id]/page.tsx',
+  );
+  const profile = profileProject(snapshot).profile;
+  const finding = scanAstSecurity(snapshot, profile).findings.find(
+    (candidate) => candidate.ruleId === 'TW-AST001',
+  );
+  assert.equal(finding?.evidence[0]?.file, 'src/app/posts/[id]/page.tsx');
+});
+
 test('recognized two-hop auth, permission, and owner scope avoid AST gap candidates', async () => {
   const snapshot = await captureSnapshot(path.resolve('fixtures/profile-nextjs'));
   const profile = profileProject(snapshot).profile;

@@ -291,13 +291,27 @@ function resolveImport(file: string, specifier: string, paths: Set<string>): str
   return [...candidates].find((candidate) => paths.has(candidate));
 }
 
-function isServerActionFile(source: ts.SourceFile): boolean {
-  for (const statement of source.statements) {
+function hasUseServerDirective(statements: ts.NodeArray<ts.Statement>): boolean {
+  for (const statement of statements) {
     if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression))
       return false;
     if (statement.expression.text === 'use server') return true;
   }
   return false;
+}
+
+function isServerActionFile(source: ts.SourceFile): boolean {
+  return hasUseServerDirective(source.statements);
+}
+
+function isInlineServerAction(node: ts.Node): boolean {
+  return (
+    (ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isArrowFunction(node) ||
+      ts.isMethodDeclaration(node)) &&
+    Boolean(node.body && ts.isBlock(node.body) && hasUseServerDirective(node.body.statements))
+  );
 }
 
 function routeFromFile(file: string, marker: 'app' | 'pages/api'): string {
@@ -324,7 +338,8 @@ function addFileEntrypoints(
   entrypoints: ProjectEntrypoint[],
 ): void {
   const file = item.source.path;
-  const fileSymbols = symbols.filter((symbol) => symbol.file === file && symbol.exported);
+  const allFileSymbols = symbols.filter((symbol) => symbol.file === file);
+  const fileSymbols = allFileSymbols.filter((symbol) => symbol.exported);
   const routeMethods = fileSymbols.filter((symbol) =>
     /^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(symbol.name),
   );
@@ -366,6 +381,30 @@ function addFileEntrypoints(
         dynamicParameters: [],
         symbolIds: [symbol.id],
       });
+  const inlineActionIds = new Set<string>();
+  const visitInlineActions = (node: ts.Node): void => {
+    if (isInlineServerAction(node)) {
+      const candidate = functionSymbol(file, item.ast, node);
+      const symbol = candidate
+        ? allFileSymbols.find((itemSymbol) => itemSymbol.id === candidate.id)
+        : undefined;
+      if (symbol && !inlineActionIds.has(symbol.id)) {
+        inlineActionIds.add(symbol.id);
+        entrypoints.push({
+          id: stableId('entrypoint', 'server-action', file, symbol.name, symbol.line),
+          kind: 'server-action',
+          file,
+          line: symbol.line,
+          name: symbol.name,
+          methods: [],
+          dynamicParameters: [],
+          symbolIds: [symbol.id],
+        });
+      }
+    }
+    ts.forEachChild(node, visitInlineActions);
+  };
+  visitInlineActions(item.ast);
   const base = path.posix.basename(file);
   if (/^(?:middleware|proxy)\.[cm]?[jt]sx?$/.test(base))
     entrypoints.push({

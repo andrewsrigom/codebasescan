@@ -82,3 +82,25 @@ test('profiling parses target code as data without executing it', () => {
   assert.equal(result.profile.status, 'complete');
   assert.ok(result.profile.symbols.some((symbol) => symbol.name === 'safe'));
 });
+
+test('nested functions with use server directives become server-action entrypoints', () => {
+  const result = profileProject(
+    snapshotOf(
+      `
+      export default function Page() {
+        async function deletePost() {
+          'use server';
+          await prisma.post.delete({ where: { id: 1 } });
+        }
+        return deletePost;
+      }
+    `,
+      'src/app/posts/[id]/page.tsx',
+    ),
+  );
+  const action = result.profile.entrypoints.find(
+    (entrypoint) => entrypoint.kind === 'server-action' && entrypoint.name === 'deletePost',
+  );
+  assert.equal(action?.file, 'src/app/posts/[id]/page.tsx');
+  assert.equal(action?.symbolIds.length, 1);
+});
