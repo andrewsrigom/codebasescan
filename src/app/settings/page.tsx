@@ -95,7 +95,7 @@ export default function SettingsPage() {
         <p>
           Set values in <code>.env.local</code> and restart the worker. Use a single worker on a
           local filesystem. Data is stored under <code>{config.dataDirectory}</code>. Do not use a
-          shared network filesystem or expose this preview as a public SaaS.
+          shared network filesystem or expose this local instance as a public SaaS.
         </p>
         <p>
           To delete local reports, stop both processes and remove only the configured data

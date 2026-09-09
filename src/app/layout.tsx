@@ -36,20 +36,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
           <Navigation />
           <div className="sidebar-bottom">
-            <div className="local-box">
-              <Icon name="lock" size={17} />
-              <div>
-                <strong>Local by design</strong>
-                <p>
-                  Cloud is optional.
-                  <br />
-                  No remote tracing.
-                </p>
-              </div>
-            </div>
-            <div className="sidebar-version">
-              v0.2.0 <span>PORTFOLIO PREVIEW</span>
-            </div>
+            <div className="sidebar-version">v0.2.0</div>
           </div>
         </aside>
         <div className="app-shell">
