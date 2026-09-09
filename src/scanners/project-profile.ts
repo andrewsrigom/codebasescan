@@ -594,21 +594,21 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           signal: `process.env.${node.name.text}`.slice(0, 180),
           ...(ownerSymbolId ? { ownerSymbolId } : {}),
         });
-        if (
-          ts.isCatchClause(node) &&
-          ownerSymbolId &&
-          !cap(facts.length, maximumFacts, 'Security fact')
-        ) {
-          const line = lineOf(item.ast, node);
-          facts.push({
-            id: stableId('fact', 'error-handling', item.source.path, line, ownerSymbolId),
-            kind: 'error-handling',
-            file: item.source.path,
-            line,
-            signal: 'catch clause',
-            ownerSymbolId,
-          });
-        }
+      }
+      if (
+        ts.isCatchClause(node) &&
+        ownerSymbolId &&
+        !cap(facts.length, maximumFacts, 'Security fact')
+      ) {
+        const line = lineOf(item.ast, node);
+        facts.push({
+          id: stableId('fact', 'error-handling', item.source.path, line, ownerSymbolId),
+          kind: 'error-handling',
+          file: item.source.path,
+          line,
+          signal: 'catch clause',
+          ownerSymbolId,
+        });
       }
       ts.forEachChild(node, (child) => visit(child, nextOwner));
     };

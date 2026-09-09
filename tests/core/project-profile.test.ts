@@ -104,3 +104,18 @@ test('nested functions with use server directives become server-action entrypoin
   assert.equal(action?.file, 'src/app/posts/[id]/page.tsx');
   assert.equal(action?.symbolIds.length, 1);
 });
+
+test('catch clauses are recorded as error-handling facts', () => {
+  const result = profileProject(
+    snapshotOf(
+      `export async function POST() {
+        try { return await database.project.findMany(); }
+        catch { return Response.json({ error: 'failed' }); }
+      }`,
+      'src/app/api/projects/route.ts',
+    ),
+  );
+  const handler = result.profile.symbols.find((symbol) => symbol.name === 'POST');
+  const handling = result.profile.facts.find((fact) => fact.kind === 'error-handling');
+  assert.equal(handling?.ownerSymbolId, handler?.id);
+});
