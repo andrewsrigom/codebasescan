@@ -107,6 +107,26 @@ test('Pages API method switches participate in bounded authorization analysis', 
   );
 });
 
+test('root-alias calls participate in bounded authorization analysis', () => {
+  const snapshot = snapshotOf(
+    `import { removeUser } from '@/lib/users';
+     export async function DELETE() { return removeUser(); }`,
+    'src/app/api/user/route.ts',
+  );
+  const users = snapshotOf(
+    `export async function removeUser() {
+       await requireUser();
+       return database.user.delete({ where: { id: 'self' } });
+     }`,
+    'src/lib/users.ts',
+  ).files[0]!;
+  snapshot.files.push(users);
+  snapshot.totalBytes += users.bytes;
+
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('read-only routes and webhook boundaries are not treated as missing login mutations', () => {
   const getSnapshot = snapshotOf(
     'export async function GET() { return prisma.project.findMany(); }',

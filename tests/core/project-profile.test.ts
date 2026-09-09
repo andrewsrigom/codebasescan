@@ -75,6 +75,29 @@ test('unsupported source is explicit and imports cannot resolve outside the snap
   assert.equal(escaped.profile.imports[0]?.resolvedFile, undefined);
 });
 
+test('common root aliases resolve only to files already captured in the snapshot', () => {
+  const snapshot = snapshotOf(
+    `import { requireUser } from '@/lib/auth';
+     import { removeTeam } from 'models/team';
+     export async function POST() { await requireUser(); return removeTeam(); }`,
+    'src/app/api/team/route.ts',
+  );
+  const auth = snapshotOf(`export async function requireUser() {}`, 'src/lib/auth.ts').files[0]!;
+  const team = snapshotOf(`export async function removeTeam() {}`, 'models/team.ts').files[0]!;
+  snapshot.files.push(auth, team);
+  snapshot.totalBytes += auth.bytes + team.bytes;
+
+  const imports = profileProject(snapshot).profile.imports;
+  assert.equal(
+    imports.find((item) => item.specifier === '@/lib/auth')?.resolvedFile,
+    'src/lib/auth.ts',
+  );
+  assert.equal(
+    imports.find((item) => item.specifier === 'models/team')?.resolvedFile,
+    'models/team.ts',
+  );
+});
+
 test('profiling parses target code as data without executing it', () => {
   const result = profileProject(
     snapshotOf("throw new Error('must not run'); export function safe() { return 1; }"),

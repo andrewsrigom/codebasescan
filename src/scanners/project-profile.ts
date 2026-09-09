@@ -273,19 +273,30 @@ function importBindings(node: ts.ImportDeclaration): ProjectImportBinding[] {
 }
 
 function resolveImport(file: string, specifier: string, paths: Set<string>): string | undefined {
-  if (!specifier.startsWith('.')) return undefined;
-  const directory = path.posix.dirname(file);
-  const base = path.posix.normalize(path.posix.join(directory, specifier));
-  const candidates = new Set<string>([base]);
-  const extension = path.posix.extname(base);
-  if (extension) {
-    const stem = base.slice(0, -extension.length);
-    if (['.js', '.jsx', '.mjs', '.cjs'].includes(extension))
-      for (const candidate of extensions) candidates.add(`${stem}${candidate}`);
-  } else {
-    for (const candidate of extensions) {
-      candidates.add(`${base}${candidate}`);
-      candidates.add(`${base}/index${candidate}`);
+  const bases: string[] = [];
+  if (specifier.startsWith('.'))
+    bases.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)));
+  else if (specifier.startsWith('@/') || specifier.startsWith('~/')) {
+    const root = path.posix.normalize(specifier.slice(2));
+    bases.push(root, `src/${root}`);
+  } else if (/^[A-Za-z0-9_.-]+\/.+/.test(specifier)) {
+    const root = path.posix.normalize(specifier);
+    bases.push(root, `src/${root}`);
+  } else return undefined;
+
+  const candidates = new Set<string>();
+  for (const base of bases) {
+    candidates.add(base);
+    const extension = path.posix.extname(base);
+    if (extension) {
+      const stem = base.slice(0, -extension.length);
+      if (['.js', '.jsx', '.mjs', '.cjs'].includes(extension))
+        for (const candidate of extensions) candidates.add(`${stem}${candidate}`);
+    } else {
+      for (const candidate of extensions) {
+        candidates.add(`${base}${candidate}`);
+        candidates.add(`${base}/index${candidate}`);
+      }
     }
   }
   return [...candidates].find((candidate) => paths.has(candidate));
