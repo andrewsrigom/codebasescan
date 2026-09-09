@@ -70,6 +70,7 @@ const finding = z.looseObject({
     'ast',
     'next',
     'react',
+    'supply-chain',
     'http-probe',
     'osv',
     'semgrep',
@@ -286,6 +287,24 @@ const mechanicalAnalysis = z.looseObject({
     .optional(),
 });
 
+const supplyChainAnalysis = z.looseObject({
+  schemaVersion: z.literal(1),
+  manifests: z.number().int().nonnegative(),
+  lockfiles: z.number().int().nonnegative(),
+  lifecycleScripts: z.number().int().nonnegative(),
+  dependencySpecs: z.number().int().nonnegative(),
+  lockEntries: z.number().int().nonnegative(),
+  issueCounts: z.looseObject({
+    dangerousLifecycleScripts: z.number().int().nonnegative(),
+    unsafeDependencySpecs: z.number().int().nonnegative(),
+    weakLockfileIntegrity: z.number().int().nonnegative(),
+    insecureLockfileUrls: z.number().int().nonnegative(),
+    unexpectedLockfileHosts: z.number().int().nonnegative(),
+    manifestLockMismatches: z.number().int().nonnegative(),
+  }),
+  truncated: z.boolean(),
+});
+
 const controlStatus = z.enum([
   'EVIDENCED',
   'GAP_CANDIDATE',
@@ -329,7 +348,7 @@ const checklist = z.looseObject({
 });
 
 export const auditReportSchema = z.looseObject({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
   auditId: shortText,
   projectName: shortText,
   createdAt: shortText,
@@ -344,6 +363,7 @@ export const auditReportSchema = z.looseObject({
   scopePreflight: scopePreflight.optional(),
   projectProfile: projectProfile.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
+  supplyChainAnalysis: supplyChainAnalysis.optional(),
   checklist: checklist.optional(),
   httpProbe: z.looseObject({ requestedUrl: shortText, finalUrl: shortText }).optional(),
   coverage: z

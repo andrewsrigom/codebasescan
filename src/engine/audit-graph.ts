@@ -11,6 +11,7 @@ import type {
   ProjectProfile,
   ScannerRun,
   Snapshot,
+  SupplyChainAnalysis,
 } from '../domain/types.ts';
 import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
@@ -27,6 +28,7 @@ import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-secur
 import { scanReactSecurity } from '../scanners/react-security.ts';
 import { scanNextSecurity } from '../scanners/next-security.ts';
 import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
+import { scanSupplyChain } from '../scanners/supply-chain.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -62,6 +64,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   duplicationAnalysis: Annotation<DuplicationAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  supplyChainAnalysis: Annotation<SupplyChainAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -213,6 +219,15 @@ export function buildAuditGraph(options: {
         scanners: [result.run],
       };
     })
+    .addNode('supply_chain', async (state) => {
+      const result = scanSupplyChain(await checkedSnapshot(state));
+      event(state, 'supply_chain', `Node.js supply-chain integrity: ${result.run.status}.`);
+      return {
+        findings: result.findings,
+        supplyChainAnalysis: result.analysis,
+        scanners: [result.run],
+      };
+    })
     .addNode('posture', async (state) => {
       const started = performance.now();
       const source = await checkedSnapshot(state);
@@ -355,7 +370,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 4,
+        schemaVersion: 5,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -370,6 +385,7 @@ export function buildAuditGraph(options: {
         ...(scopePreflight ? { scopePreflight } : {}),
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
+        ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         coverage: buildCoverage(state.scanners, findings, config.aiMode),
@@ -488,6 +504,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'react_security')
     .addEdge('project_profile', 'architecture')
     .addEdge('snapshot', 'duplication')
+    .addEdge('snapshot', 'supply_chain')
     .addEdge('snapshot', 'posture')
     .addEdge('snapshot', 'semgrep')
     .addEdge('snapshot', 'gitleaks')
@@ -501,6 +518,7 @@ export function buildAuditGraph(options: {
         'react_security',
         'architecture',
         'duplication',
+        'supply_chain',
         'posture',
         'semgrep',
         'gitleaks',

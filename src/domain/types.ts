@@ -105,6 +105,7 @@ export interface Finding {
     | 'ast'
     | 'next'
     | 'react'
+    | 'supply-chain'
     | 'http-probe'
     | 'osv'
     | 'semgrep'
@@ -373,6 +374,23 @@ export interface MechanicalAnalysis {
   architecture?: ArchitectureAnalysis;
   duplication?: DuplicationAnalysis;
 }
+export interface SupplyChainAnalysis {
+  schemaVersion: 1;
+  manifests: number;
+  lockfiles: number;
+  lifecycleScripts: number;
+  dependencySpecs: number;
+  lockEntries: number;
+  issueCounts: {
+    dangerousLifecycleScripts: number;
+    unsafeDependencySpecs: number;
+    weakLockfileIntegrity: number;
+    insecureLockfileUrls: number;
+    unexpectedLockfileHosts: number;
+    manifestLockMismatches: number;
+  };
+  truncated: boolean;
+}
 export type SecurityControlStatus =
   'EVIDENCED' | 'GAP_CANDIDATE' | 'UNVERIFIED' | 'NOT_APPLICABLE' | 'PARTIAL' | 'FAILED';
 export type SecurityControlDomain =
@@ -429,7 +447,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4;
+  schemaVersion: 1 | 2 | 3 | 4 | 5;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -444,6 +462,7 @@ export interface AuditReport {
   scopePreflight?: AuditScopePreflight;
   projectProfile?: ProjectProfile;
   mechanicalAnalysis?: MechanicalAnalysis;
+  supplyChainAnalysis?: SupplyChainAnalysis;
   checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];

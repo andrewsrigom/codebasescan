@@ -65,6 +65,7 @@ export function buildCoverage(
     scannerCapability(runs, 'ast-security', 'Framework-aware authorization', 'NOT RUN'),
     scannerCapability(runs, 'next-security', 'Next.js application security', 'NOT RUN'),
     scannerCapability(runs, 'react-security', 'React client security', 'NOT RUN'),
+    scannerCapability(runs, 'supply-chain', 'Node.js supply-chain integrity', 'NOT RUN'),
     scannerCapability(
       runs,
       'dependency-cruiser',
