@@ -9,6 +9,7 @@ import { inventory } from '../src/scanners/inventory.ts';
 import { toHtml, toMarkdown, toSarif } from '../src/domain/reports.ts';
 import { buildCoverage } from '../src/domain/coverage.ts';
 import { attachProvenance } from '../src/domain/provenance.ts';
+import { buildSecurityChecklist } from '../src/domain/checklist.ts';
 import type { AuditReport, ScannerRun } from '../src/domain/types.ts';
 
 const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
@@ -61,8 +62,9 @@ const scanners: ScannerRun[] = [
   },
 ];
 const findings = attachProvenance(rawFindings, scanners, '2026-09-08T12:00:00.000Z');
+const dependencies = inventory(source);
 const report: AuditReport = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   auditId: '00000000-0000-4000-8000-000000000001',
   projectName: 'Review-worthy SaaS — fixture export',
   createdAt: '2026-09-08T12:00:00.000Z',
@@ -73,8 +75,14 @@ const report: AuditReport = {
   aiMode: 'disabled',
   findings,
   scanners,
-  dependencies: inventory(source),
+  dependencies,
   projectProfile: profileResult.profile,
+  checklist: buildSecurityChecklist({
+    projectProfile: profileResult.profile,
+    findings,
+    scanners,
+    dependencies,
+  }),
   coverage: buildCoverage(scanners, findings, 'disabled'),
   limitations: [
     'This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.',

@@ -99,6 +99,11 @@
       <h2>Scanner coverage</h2>
       <ul>
         <li>
+          <strong>Project structure profile</strong>: completed — Parsed 7 captured
+          TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call
+          edge(s), and 6 security-relevant fact(s).
+        </li>
+        <li>
           <strong>Built-in patterns</strong>: completed — Seven bounded regex heuristics executed
           against inert fixtures. Duration not measured in this reproducible export.
         </li>
@@ -115,6 +120,15 @@
       </ul>
       <h2>Capability summary</h2>
       <ul>
+        <li>
+          <strong>Project structure profile</strong>: COMPLETE — Parsed 7 captured
+          TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call
+          edge(s), and 6 security-relevant fact(s).
+        </li>
+        <li>
+          <strong>Framework-aware authorization</strong>: NOT RUN — No scanner run was recorded for
+          this capability.
+        </li>
         <li>
           <strong>Built-in static patterns</strong>: COMPLETE — Seven bounded regex heuristics
           executed against inert fixtures. Duration not measured in this reproducible export.
@@ -152,6 +166,149 @@
           brute-force authentication, or crawl applications.
         </li>
       </ul>
+      <h2>Project structure</h2>
+      <p><strong>complete</strong> — 7 source files and 226 AST nodes parsed as data.</p>
+      <ul>
+        <li>Frameworks: Next.js App Router, Prisma</li>
+        <li>Entry points: 2</li>
+        <li>Symbols: 5</li>
+        <li>Call edges: 8</li>
+        <li>Security facts: 6</li>
+      </ul>
+      <h2>Security checklist</h2>
+      <p>
+        Pack traceward-web-application 0.1.0. EVIDENCED 0; GAP_CANDIDATE 1; UNVERIFIED 3; PARTIAL 0;
+        FAILED 0; NOT_APPLICABLE 9.
+      </p>
+      <article>
+        <div class="meta">NOT_APPLICABLE · authentication · TW-CTRL-AUTHN-001</div>
+        <h2>Sensitive mutations authenticate a principal</h2>
+        <p>No supported sensitive mutation boundary was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Test each boundary without a session/token and confirm rejection before the sensitive
+          operation.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · authorization · TW-CTRL-AUTHZ-001</div>
+        <h2>Administrative mutations enforce permission</h2>
+        <p>No supported admin/internal mutation boundary was mapped.</p>
+        <h3>Verification</h3>
+        <p>Test an authenticated non-admin principal against every privileged action.</p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · authorization · TW-CTRL-AUTHZ-002</div>
+        <h2>Dynamic resource access is tenant or owner scoped</h2>
+        <p>No supported dynamic resource mutation was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Run cross-tenant and wrong-owner identifier tests and inspect effective RLS/database
+          policy.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · input-validation · TW-CTRL-INPUT-001</div>
+        <h2>Sensitive entry points validate caller-controlled input</h2>
+        <p>No supported sensitive entry point was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Test malformed, oversized, unexpected-type, and boundary input before the sensitive
+          operation.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · integrations · TW-CTRL-WEBHOOK-001</div>
+        <h2>Webhook authenticity is verified before processing</h2>
+        <p>No supported webhook/callback boundary reaching a sensitive operation was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Send missing, invalid, replayed, and stale signatures and confirm rejection before parsing
+          or persistence.
+        </p>
+      </article>
+      <article>
+        <div class="meta">UNVERIFIED · browser-security · TW-CTRL-HEADERS-001</div>
+        <h2>Browser security policies are declared and observed</h2>
+        <p>No effective runtime response was available to confirm browser policies.</p>
+        <h3>Verification</h3>
+        <p>
+          Observe representative production responses and verify CSP, frame, MIME, referrer,
+          permissions, and transport policies.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · authentication · TW-CTRL-SESSION-001</div>
+        <h2>Sensitive cookies use explicit protection attributes</h2>
+        <p>No cookie-based session signal was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Inspect effective Set-Cookie attributes and test production HTTPS, expiry, logout,
+          fixation, and CSRF behavior.
+        </p>
+      </article>
+      <article>
+        <div class="meta">UNVERIFIED · browser-security · TW-CTRL-CORS-001</div>
+        <h2>Cross-origin access is intentionally constrained</h2>
+        <p>
+          No effective cross-origin policy was observed; same-origin-only operation is possible but
+          unverified.
+        </p>
+        <h3>Verification</h3>
+        <p>
+          Test trusted and untrusted Origin values, credential mode, preflight behavior, and
+          server-side authorization independently.
+        </p>
+      </article>
+      <article>
+        <div class="meta">GAP_CANDIDATE · secrets · TW-CTRL-SECRETS-001</div>
+        <h2>Captured current source has no detected secret exposure candidate</h2>
+        <p>1 secret or client/server configuration candidate(s) require review.</p>
+        <h3>Verification</h3>
+        <p>
+          Review Git history, CI variables, deployment secrets, rotation, and provider-side secret
+          scanning separately.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · dependencies · TW-CTRL-DEPS-001</div>
+        <h2>Resolved dependencies are checked against OSV</h2>
+        <p>No supported resolved npm/pnpm/Yarn lockfile dependency was available.</p>
+        <h3>Verification</h3>
+        <p>
+          Review advisory freshness, runtime reachability, exploit preconditions, and supported
+          upgrade paths.
+        </p>
+      </article>
+      <article>
+        <div class="meta">UNVERIFIED · runtime · TW-CTRL-RUNTIME-001</div>
+        <h2>Approved HTTP response posture is observed</h2>
+        <p>No target URL was explicitly approved for runtime observation.</p>
+        <h3>Verification</h3>
+        <p>
+          Probe representative production routes and deployment layers under explicit authorization.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · logging · TW-CTRL-LOGGING-001</div>
+        <h2>Sensitive operations emit security-relevant audit events</h2>
+        <p>No supported sensitive operation boundary was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Confirm event content, actor, target, outcome, correlation ID, retention, access controls,
+          and alerting in the real logging system.
+        </p>
+      </article>
+      <article>
+        <div class="meta">NOT_APPLICABLE · logging · TW-CTRL-ERRORS-001</div>
+        <h2>Sensitive boundaries define explicit failure handling</h2>
+        <p>No supported sensitive operation boundary was mapped.</p>
+        <h3>Verification</h3>
+        <p>
+          Exercise dependency, validation, authorization, and storage failures; confirm safe
+          responses and useful internal diagnostics.
+        </p>
+      </article>
       <article>
         <div class="meta">HIGH · builtin · needs_review</div>
         <h2>Object lookup needs tenant authorization review</h2>

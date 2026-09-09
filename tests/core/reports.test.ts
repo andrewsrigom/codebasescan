@@ -10,6 +10,7 @@ import {
 import { sampleReport } from '../helpers.ts';
 import { buildCoverage } from '../../src/domain/coverage.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
+import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
 import { snapshotOf } from '../helpers.ts';
 test('HTML export escapes source and titles rather than executing them', () => {
   const report = sampleReport();
@@ -40,12 +41,19 @@ test('Markdown includes scope and limitations', () => {
   report.projectProfile = profileProject(
     snapshotOf('export function handler() { return Response.json({ ok: true }); }'),
   ).profile;
+  report.checklist = buildSecurityChecklist({
+    projectProfile: report.projectProfile,
+    findings: report.findings,
+    scanners: report.scanners,
+    dependencies: report.dependencies,
+  });
   report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
+  assert.ok(output.includes('## Security checklist'));
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });

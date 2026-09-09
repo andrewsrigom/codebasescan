@@ -13,6 +13,7 @@ import type {
 import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
 import { attachProvenance } from '../domain/provenance.ts';
+import { buildSecurityChecklist } from '../domain/checklist.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
 import path from 'node:path';
@@ -260,8 +261,15 @@ export function buildAuditGraph(options: {
         finding.analysis?.provider ? [finding.analysis] : [],
       );
       const storedUsage = store.aiUsage(state.auditId);
+      const checklist = buildSecurityChecklist({
+        ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
+        findings,
+        scanners: state.scanners,
+        ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
+        dependencies: state.dependencies,
+      });
       const report: AuditReport = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -274,6 +282,7 @@ export function buildAuditGraph(options: {
         scanners: state.scanners,
         dependencies: state.dependencies,
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
+        checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         coverage: buildCoverage(state.scanners, findings, config.aiMode),
         ...(config.aiMode !== 'disabled'

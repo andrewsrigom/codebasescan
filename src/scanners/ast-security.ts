@@ -7,53 +7,18 @@ import type {
   Snapshot,
 } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
-
-const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const sensitiveKinds = new Set<ProjectFact['kind']>([
-  'database',
-  'raw-sql',
-  'command-execution',
-  'file-access',
-]);
+import {
+  entrypointRoots,
+  isAdministrativeEntrypoint,
+  isMutatingEntrypoint,
+  isWebhookEntrypoint,
+  reachableFacts,
+  sensitiveProjectFactKinds,
+} from '../domain/project-graph.ts';
 
 export interface AstSecurityResult {
   findings: Finding[];
   run: ScannerRun;
-}
-
-function rootsForEntrypoint(profile: ProjectProfile, entrypoint: ProjectEntrypoint): string[] {
-  if (entrypoint.kind !== 'next-route') return entrypoint.symbolIds;
-  return entrypoint.symbolIds.filter((id) => {
-    const symbol = profile.symbols.find((item) => item.id === id);
-    return symbol ? mutatingMethods.has(symbol.name) : false;
-  });
-}
-
-function isMutating(entrypoint: ProjectEntrypoint): boolean {
-  if (entrypoint.kind === 'server-action') return true;
-  return entrypoint.methods.some((method) => mutatingMethods.has(method));
-}
-
-function reachableSymbols(profile: ProjectProfile, roots: string[], maximumDepth = 2): Set<string> {
-  const visited = new Set(roots);
-  let frontier = [...roots];
-  for (let depth = 0; depth < maximumDepth && frontier.length; depth++) {
-    const next: string[] = [];
-    for (const edge of profile.calls) {
-      if (!edge.callerSymbolId || !edge.targetSymbolId || !frontier.includes(edge.callerSymbolId))
-        continue;
-      if (!visited.has(edge.targetSymbolId)) {
-        visited.add(edge.targetSymbolId);
-        next.push(edge.targetSymbolId);
-      }
-    }
-    frontier = next;
-  }
-  return visited;
-}
-
-function factsFor(profile: ProjectProfile, symbols: Set<string>): ProjectFact[] {
-  return profile.facts.filter((fact) => fact.ownerSymbolId && symbols.has(fact.ownerSymbolId));
 }
 
 function evidence(
@@ -124,12 +89,12 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
 
   const findings: Finding[] = [];
   for (const entrypoint of profile.entrypoints) {
-    if (!isMutating(entrypoint) || entrypoint.kind === 'middleware') continue;
-    if (/\/(?:webhooks?|callbacks?)(?:\/|$)/i.test(entrypoint.route ?? '')) continue;
-    const roots = rootsForEntrypoint(profile, entrypoint);
+    if (!isMutatingEntrypoint(entrypoint) || entrypoint.kind === 'middleware') continue;
+    if (isWebhookEntrypoint(entrypoint)) continue;
+    const roots = entrypointRoots(profile, entrypoint);
     if (!roots.length) continue;
-    const mappedFacts = factsFor(profile, reachableSymbols(profile, roots));
-    const sensitive = mappedFacts.find((fact) => sensitiveKinds.has(fact.kind));
+    const mappedFacts = reachableFacts(profile, entrypoint);
+    const sensitive = mappedFacts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
     if (!sensitive) continue;
     const authenticated = mappedFacts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
@@ -149,9 +114,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       });
       if (candidate) findings.push(candidate);
     }
-    const administrative = /(?:^|\/)(?:admin|internal)(?:\/|$)/i.test(
-      `${entrypoint.route ?? ''}/${entrypoint.file}`,
-    );
+    const administrative = isAdministrativeEntrypoint(entrypoint);
     const authorized = mappedFacts.some((fact) => fact.kind === 'authorization');
     if (administrative && !authorized) {
       const candidate = finding({

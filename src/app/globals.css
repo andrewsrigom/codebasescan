@@ -978,6 +978,11 @@ td {
   gap: 22px;
   margin-bottom: 22px;
 }
+.checklist-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .coverage-row {
   padding: 22px;
   border-bottom: 1px solid var(--line);

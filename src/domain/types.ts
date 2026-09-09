@@ -188,7 +188,10 @@ export type ProjectFactKind =
   | 'cookie'
   | 'response'
   | 'secret-access'
-  | 'resource-scope';
+  | 'resource-scope'
+  | 'logging'
+  | 'error-handling'
+  | 'webhook-verification';
 export interface ProjectFramework {
   id: 'nextjs-app-router' | 'nextjs-pages-router' | 'express' | 'prisma' | 'supabase';
   name: string;
@@ -257,6 +260,40 @@ export interface ProjectProfile {
   issues: string[];
   truncated: boolean;
 }
+export type SecurityControlStatus =
+  'EVIDENCED' | 'GAP_CANDIDATE' | 'UNVERIFIED' | 'NOT_APPLICABLE' | 'PARTIAL' | 'FAILED';
+export type SecurityControlDomain =
+  | 'authentication'
+  | 'authorization'
+  | 'input-validation'
+  | 'browser-security'
+  | 'secrets'
+  | 'dependencies'
+  | 'runtime'
+  | 'logging'
+  | 'integrations';
+export interface SecurityControlEvidenceRef {
+  kind: 'finding' | 'profile-fact' | 'scanner' | 'http-observation';
+  id: string;
+}
+export interface SecurityControlResult {
+  id: string;
+  domain: SecurityControlDomain;
+  title: string;
+  status: SecurityControlStatus;
+  rationale: string;
+  applicability: string;
+  evidence: SecurityControlEvidenceRef[];
+  verification: string;
+  limitations: string[];
+}
+export interface SecurityChecklist {
+  schemaVersion: 1;
+  packId: 'traceward-web-application';
+  packVersion: string;
+  controls: SecurityControlResult[];
+  summary: Record<SecurityControlStatus, number>;
+}
 export interface Project {
   id: string;
   name: string;
@@ -271,7 +308,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2;
+  schemaVersion: 1 | 2 | 3;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -284,6 +321,7 @@ export interface AuditReport {
   scanners: ScannerRun[];
   dependencies: Dependency[];
   projectProfile?: ProjectProfile;
+  checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];
   aiUsage?: AiUsage;

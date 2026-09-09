@@ -63,6 +63,25 @@ export function toMarkdown(report: AuditReport): string {
             : []),
         ]
       : []),
+    ...(report.checklist
+      ? [
+          '',
+          '## Security checklist',
+          '',
+          `Pack: ${m(report.checklist.packId)} ${m(report.checklist.packVersion)}. EVIDENCED ${report.checklist.summary.EVIDENCED}; GAP_CANDIDATE ${report.checklist.summary.GAP_CANDIDATE}; UNVERIFIED ${report.checklist.summary.UNVERIFIED}; PARTIAL ${report.checklist.summary.PARTIAL}; FAILED ${report.checklist.summary.FAILED}; NOT_APPLICABLE ${report.checklist.summary.NOT_APPLICABLE}.`,
+          '',
+          ...report.checklist.controls.flatMap((control) => [
+            `### ${m(control.status)}: ${m(control.title)}`,
+            '',
+            `Control: ${m(control.id)} | Domain: ${m(control.domain)}`,
+            '',
+            m(control.rationale),
+            '',
+            `Verification: ${m(control.verification)}`,
+            '',
+          ]),
+        ]
+      : []),
     '',
     '## Findings',
     '',
@@ -111,7 +130,10 @@ export function toHtml(report: AuditReport): string {
   const profile = report.projectProfile
     ? `<h2>Project structure</h2><p><strong>${e(report.projectProfile.status)}</strong> — ${report.projectProfile.filesAnalyzed} source files and ${report.projectProfile.nodesAnalyzed} AST nodes parsed as data.</p><ul><li>Frameworks: ${report.projectProfile.frameworks.map((item) => e(item.name)).join(', ') || 'none detected'}</li><li>Entry points: ${report.projectProfile.entrypoints.length}</li><li>Symbols: ${report.projectProfile.symbols.length}</li><li>Call edges: ${report.projectProfile.calls.length}</li><li>Security facts: ${report.projectProfile.facts.length}</li></ul>${report.projectProfile.issues.length ? `<h3>Profile issues</h3><ul>${report.projectProfile.issues.map((issue) => `<li>${e(issue)}</li>`).join('')}</ul>` : ''}`
     : '';
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Traceward · ${e(report.projectName)}</title><style>body{background:#f4f6f5;color:#182524;font:16px/1.65 system-ui,sans-serif;margin:0}main{max-width:980px;margin:auto;padding:64px 28px}header{border-bottom:1px solid #d7dfdc;padding-bottom:28px}h1{font-size:40px;letter-spacing:-1.8px;line-height:1.15}h2{font-size:21px;line-height:1.4}h3,.meta{font-size:12px;letter-spacing:.5px;text-transform:uppercase}.meta{color:#576d65}article{background:white;border:1px solid #dce4e0;padding:28px;border-radius:12px;margin:22px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#182524;color:#e6eeea;padding:20px;border-radius:8px;font-size:13px}aside{padding:16px;border-left:3px solid #aa813e;background:#fff8eb}code{overflow-wrap:anywhere;font-size:12px}footer{margin-top:36px;font-size:13px;color:#596c63}@media print{body{background:white}article{break-inside:avoid}}</style></head><body><main><header><div class="meta">TRACEWARD / LOCAL SECURITY REVIEW</div><h1>${e(report.projectName)}</h1><p>${report.findings.length} review candidates · ${report.filesAnalyzed} files · ${e(report.publication)}</p><code>Snapshot ${e(report.snapshotDigest)}</code></header><aside>Evidence-led review, not a security certification. Severity and human disposition are separate. Missing or failed coverage never counts as a clean result.</aside><h2>Scanner coverage</h2><ul>${report.scanners.map((scanner) => `<li><strong>${e(scanner.name)}</strong>: ${e(scanner.status)} — ${e(scanner.detail)}</li>`).join('')}</ul>${coverage}${profile}${findings}<footer><h2>Limitations</h2><ul>${report.limitations.map((limitation) => `<li>${e(limitation)}</li>`).join('')}</ul><p>Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in this report.</p></footer></main></body></html>`;
+  const checklist = report.checklist
+    ? `<h2>Security checklist</h2><p>Pack ${e(report.checklist.packId)} ${e(report.checklist.packVersion)}. EVIDENCED ${report.checklist.summary.EVIDENCED}; GAP_CANDIDATE ${report.checklist.summary.GAP_CANDIDATE}; UNVERIFIED ${report.checklist.summary.UNVERIFIED}; PARTIAL ${report.checklist.summary.PARTIAL}; FAILED ${report.checklist.summary.FAILED}; NOT_APPLICABLE ${report.checklist.summary.NOT_APPLICABLE}.</p>${report.checklist.controls.map((control) => `<article><div class="meta">${e(control.status)} · ${e(control.domain)} · ${e(control.id)}</div><h2>${e(control.title)}</h2><p>${e(control.rationale)}</p><h3>Verification</h3><p>${e(control.verification)}</p></article>`).join('')}`
+    : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Traceward · ${e(report.projectName)}</title><style>body{background:#f4f6f5;color:#182524;font:16px/1.65 system-ui,sans-serif;margin:0}main{max-width:980px;margin:auto;padding:64px 28px}header{border-bottom:1px solid #d7dfdc;padding-bottom:28px}h1{font-size:40px;letter-spacing:-1.8px;line-height:1.15}h2{font-size:21px;line-height:1.4}h3,.meta{font-size:12px;letter-spacing:.5px;text-transform:uppercase}.meta{color:#576d65}article{background:white;border:1px solid #dce4e0;padding:28px;border-radius:12px;margin:22px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#182524;color:#e6eeea;padding:20px;border-radius:8px;font-size:13px}aside{padding:16px;border-left:3px solid #aa813e;background:#fff8eb}code{overflow-wrap:anywhere;font-size:12px}footer{margin-top:36px;font-size:13px;color:#596c63}@media print{body{background:white}article{break-inside:avoid}}</style></head><body><main><header><div class="meta">TRACEWARD / LOCAL SECURITY REVIEW</div><h1>${e(report.projectName)}</h1><p>${report.findings.length} review candidates · ${report.filesAnalyzed} files · ${e(report.publication)}</p><code>Snapshot ${e(report.snapshotDigest)}</code></header><aside>Evidence-led review, not a security certification. Severity and human disposition are separate. Missing or failed coverage never counts as a clean result.</aside><h2>Scanner coverage</h2><ul>${report.scanners.map((scanner) => `<li><strong>${e(scanner.name)}</strong>: ${e(scanner.status)} — ${e(scanner.detail)}</li>`).join('')}</ul>${coverage}${profile}${checklist}${findings}<footer><h2>Limitations</h2><ul>${report.limitations.map((limitation) => `<li>${e(limitation)}</li>`).join('')}</ul><p>Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in this report.</p></footer></main></body></html>`;
 }
 export function toSarif(report: AuditReport): object {
   const rules = [

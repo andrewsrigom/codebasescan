@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "auditId": "00000000-0000-4000-8000-000000000001",
   "projectName": "Review-worthy SaaS — fixture export",
   "createdAt": "2026-09-08T12:00:00.000Z",
@@ -257,6 +257,15 @@
   ],
   "scanners": [
     {
+      "id": "project-profile",
+      "name": "Project structure profile",
+      "status": "completed",
+      "durationMs": 33,
+      "findings": 0,
+      "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
+      "version": "0.1.0"
+    },
+    {
       "id": "builtin",
       "name": "Built-in patterns",
       "status": "completed",
@@ -329,7 +338,493 @@
       "relationship": "direct"
     }
   ],
+  "projectProfile": {
+    "schemaVersion": 1,
+    "status": "complete",
+    "languages": ["typescript"],
+    "frameworks": [
+      {
+        "id": "nextjs-app-router",
+        "name": "Next.js App Router",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 1
+      },
+      {
+        "id": "prisma",
+        "name": "Prisma",
+        "file": "package.json",
+        "line": 1
+      }
+    ],
+    "entrypoints": [
+      {
+        "id": "cbb38c7ca7f8007f69f9",
+        "kind": "next-route",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 4,
+        "name": "GET",
+        "route": "/api/projects/[id]",
+        "methods": ["GET"],
+        "dynamicParameters": ["id"],
+        "symbolIds": ["813a42eb60c26ffa2cb0"]
+      },
+      {
+        "id": "aca25a25441ac0a8452c",
+        "kind": "next-route",
+        "file": "src/app/api/search/route.ts",
+        "line": 3,
+        "name": "GET",
+        "route": "/api/search",
+        "methods": ["GET"],
+        "dynamicParameters": [],
+        "symbolIds": ["97c2540180a3f3162833"]
+      }
+    ],
+    "symbols": [
+      {
+        "id": "813a42eb60c26ffa2cb0",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 4,
+        "name": "GET",
+        "kind": "function",
+        "exported": true
+      },
+      {
+        "id": "97c2540180a3f3162833",
+        "file": "src/app/api/search/route.ts",
+        "line": 3,
+        "name": "GET",
+        "kind": "function",
+        "exported": true
+      },
+      {
+        "id": "ddb105950432bb6f0ce7",
+        "file": "src/components/preview.tsx",
+        "line": 1,
+        "name": "Preview",
+        "kind": "function",
+        "exported": true
+      },
+      {
+        "id": "67fa8b451e7002ddbb6c",
+        "file": "src/lib/cors.ts",
+        "line": 1,
+        "name": "responseHeaders",
+        "kind": "function",
+        "exported": true
+      },
+      {
+        "id": "5c99826070177f1dbfbf",
+        "file": "src/lib/expression.ts",
+        "line": 1,
+        "name": "evaluateExpression",
+        "kind": "function",
+        "exported": true
+      }
+    ],
+    "imports": [
+      {
+        "id": "472a61abd85c71eb17f8",
+        "file": "src/agents/account.ts",
+        "line": 1,
+        "specifier": "langchain",
+        "bindings": [
+          {
+            "imported": "createAgent",
+            "local": "createAgent"
+          }
+        ]
+      },
+      {
+        "id": "6131404dd2f080a49f0d",
+        "file": "src/agents/account.ts",
+        "line": 2,
+        "specifier": "../tools/accounts",
+        "bindings": [
+          {
+            "imported": "readUser",
+            "local": "readUser"
+          },
+          {
+            "imported": "deleteUser",
+            "local": "deleteUser"
+          },
+          {
+            "imported": "issueRefund",
+            "local": "issueRefund"
+          }
+        ]
+      },
+      {
+        "id": "57730f5c163f545d3902",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 1,
+        "specifier": "../../../../lib/database",
+        "bindings": [
+          {
+            "imported": "database",
+            "local": "database"
+          }
+        ]
+      },
+      {
+        "id": "ac79ebd7605680f1d0d7",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 2,
+        "specifier": "../../../../lib/auth",
+        "bindings": [
+          {
+            "imported": "requireSession",
+            "local": "requireSession"
+          }
+        ]
+      },
+      {
+        "id": "831e170ec6780d104260",
+        "file": "src/app/api/search/route.ts",
+        "line": 1,
+        "specifier": "../../../lib/database",
+        "bindings": [
+          {
+            "imported": "database",
+            "local": "database"
+          }
+        ]
+      }
+    ],
+    "calls": [
+      {
+        "id": "1484c4a5910b5dd9d9ba",
+        "file": "src/agents/account.ts",
+        "line": 4,
+        "callee": "createAgent"
+      },
+      {
+        "id": "fef49d6c92022745e0a7",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 5,
+        "callee": "requireSession",
+        "callerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "054430343e48c8347f30",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 7,
+        "callee": "database.project.findUnique",
+        "callerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "0b65226ec8f9afe6c50a",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 8,
+        "callee": "Response.json",
+        "callerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "b90da8eef7468df632f6",
+        "file": "src/app/api/search/route.ts",
+        "line": 4,
+        "callee": "new URL(request.url).searchParams.get",
+        "callerSymbolId": "97c2540180a3f3162833"
+      },
+      {
+        "id": "e1592a146be10f7bf90d",
+        "file": "src/app/api/search/route.ts",
+        "line": 5,
+        "callee": "database.$queryRawUnsafe",
+        "callerSymbolId": "97c2540180a3f3162833"
+      },
+      {
+        "id": "b0fe400ee35c80ba83ec",
+        "file": "src/app/api/search/route.ts",
+        "line": 6,
+        "callee": "Response.json",
+        "callerSymbolId": "97c2540180a3f3162833"
+      },
+      {
+        "id": "d89b901ffc11ec986b67",
+        "file": "src/lib/expression.ts",
+        "line": 2,
+        "callee": "eval",
+        "callerSymbolId": "5c99826070177f1dbfbf"
+      }
+    ],
+    "facts": [
+      {
+        "id": "801da18d4bdb34f7617b",
+        "kind": "authentication",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 5,
+        "signal": "requireSession",
+        "ownerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "af4b642278efc83e2df8",
+        "kind": "database",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 7,
+        "signal": "database.project.findUnique",
+        "ownerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "c673916ddf1d660eb561",
+        "kind": "response",
+        "file": "src/app/api/projects/[id]/route.ts",
+        "line": 8,
+        "signal": "Response.json",
+        "ownerSymbolId": "813a42eb60c26ffa2cb0"
+      },
+      {
+        "id": "0ae9920f576ae4da5979",
+        "kind": "raw-sql",
+        "file": "src/app/api/search/route.ts",
+        "line": 5,
+        "signal": "database.$queryRawUnsafe",
+        "ownerSymbolId": "97c2540180a3f3162833"
+      },
+      {
+        "id": "1935bbef812e3a98ef79",
+        "kind": "response",
+        "file": "src/app/api/search/route.ts",
+        "line": 6,
+        "signal": "Response.json",
+        "ownerSymbolId": "97c2540180a3f3162833"
+      },
+      {
+        "id": "15709a8c27d938d0b428",
+        "kind": "secret-access",
+        "file": "src/lib/config.ts",
+        "line": 2,
+        "signal": "process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY"
+      }
+    ],
+    "filesAnalyzed": 7,
+    "nodesAnalyzed": 226,
+    "issues": [],
+    "truncated": false
+  },
+  "checklist": {
+    "schemaVersion": 1,
+    "packId": "traceward-web-application",
+    "packVersion": "0.1.0",
+    "controls": [
+      {
+        "id": "TW-CTRL-AUTHN-001",
+        "domain": "authentication",
+        "title": "Sensitive mutations authenticate a principal",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported sensitive mutation boundary was mapped.",
+        "applicability": "Applies to mapped mutating routes and server actions that reach database, raw SQL, command, or file operations. Webhooks are evaluated separately.",
+        "evidence": [],
+        "verification": "Test each boundary without a session/token and confirm rejection before the sensitive operation.",
+        "limitations": [
+          "Gateway, middleware, identity-provider, and database policy outside the bounded map may change the result."
+        ]
+      },
+      {
+        "id": "TW-CTRL-AUTHZ-001",
+        "domain": "authorization",
+        "title": "Administrative mutations enforce permission",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported admin/internal mutation boundary was mapped.",
+        "applicability": "Applies to mapped admin/internal routes and actions that reach sensitive operations.",
+        "evidence": [],
+        "verification": "Test an authenticated non-admin principal against every privileged action.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-AUTHZ-002",
+        "domain": "authorization",
+        "title": "Dynamic resource access is tenant or owner scoped",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported dynamic resource mutation was mapped.",
+        "applicability": "Applies when a caller-selectable path parameter reaches a mapped database operation.",
+        "evidence": [],
+        "verification": "Run cross-tenant and wrong-owner identifier tests and inspect effective RLS/database policy.",
+        "limitations": [
+          "Scope passed through an unrecognized object or enforced by RLS may remain unverified."
+        ]
+      },
+      {
+        "id": "TW-CTRL-INPUT-001",
+        "domain": "input-validation",
+        "title": "Sensitive entry points validate caller-controlled input",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported sensitive entry point was mapped.",
+        "applicability": "Applies to mapped routes/actions that reach sensitive operations.",
+        "evidence": [],
+        "verification": "Test malformed, oversized, unexpected-type, and boundary input before the sensitive operation.",
+        "limitations": ["Inline/manual validation and framework coercion may not be recognized."]
+      },
+      {
+        "id": "TW-CTRL-WEBHOOK-001",
+        "domain": "integrations",
+        "title": "Webhook authenticity is verified before processing",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported webhook/callback boundary reaching a sensitive operation was mapped.",
+        "applicability": "Applies to webhook/callback routes that reach sensitive operations.",
+        "evidence": [],
+        "verification": "Send missing, invalid, replayed, and stale signatures and confirm rejection before parsing or persistence.",
+        "limitations": [
+          "Provider SDK verification with an unrecognized function name may remain unverified."
+        ]
+      },
+      {
+        "id": "TW-CTRL-HEADERS-001",
+        "domain": "browser-security",
+        "title": "Browser security policies are declared and observed",
+        "status": "UNVERIFIED",
+        "rationale": "No effective runtime response was available to confirm browser policies.",
+        "applicability": "Applies to mapped Next.js applications with browser-facing responses.",
+        "evidence": [
+          {
+            "kind": "scanner",
+            "id": "posture"
+          }
+        ],
+        "verification": "Observe representative production responses and verify CSP, frame, MIME, referrer, permissions, and transport policies.",
+        "limitations": [
+          "One URL does not establish policy coverage for every route or deployment layer."
+        ]
+      },
+      {
+        "id": "TW-CTRL-SESSION-001",
+        "domain": "authentication",
+        "title": "Sensitive cookies use explicit protection attributes",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No cookie-based session signal was mapped.",
+        "applicability": "Applies when captured source uses cookie-based authentication/session state.",
+        "evidence": [
+          {
+            "kind": "scanner",
+            "id": "posture"
+          }
+        ],
+        "verification": "Inspect effective Set-Cookie attributes and test production HTTPS, expiry, logout, fixation, and CSRF behavior.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-CORS-001",
+        "domain": "browser-security",
+        "title": "Cross-origin access is intentionally constrained",
+        "status": "UNVERIFIED",
+        "rationale": "No effective cross-origin policy was observed; same-origin-only operation is possible but unverified.",
+        "applicability": "Applies to mapped HTTP API entry points.",
+        "evidence": [
+          {
+            "kind": "scanner",
+            "id": "posture"
+          }
+        ],
+        "verification": "Test trusted and untrusted Origin values, credential mode, preflight behavior, and server-side authorization independently.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-SECRETS-001",
+        "domain": "secrets",
+        "title": "Captured current source has no detected secret exposure candidate",
+        "status": "GAP_CANDIDATE",
+        "rationale": "1 secret or client/server configuration candidate(s) require review.",
+        "applicability": "Applies to every captured repository.",
+        "evidence": [
+          {
+            "kind": "finding",
+            "id": "5d64fe05ea9fd9490138"
+          },
+          {
+            "kind": "scanner",
+            "id": "gitleaks"
+          },
+          {
+            "kind": "scanner",
+            "id": "posture"
+          }
+        ],
+        "verification": "Review Git history, CI variables, deployment secrets, rotation, and provider-side secret scanning separately.",
+        "limitations": [
+          "Excluded credential files and Git history are not scanned. No finding does not prove that no secret exists."
+        ]
+      },
+      {
+        "id": "TW-CTRL-DEPS-001",
+        "domain": "dependencies",
+        "title": "Resolved dependencies are checked against OSV",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported resolved npm/pnpm/Yarn lockfile dependency was available.",
+        "applicability": "Applies when supported lockfiles provide resolved npm ecosystem versions.",
+        "evidence": [
+          {
+            "kind": "scanner",
+            "id": "osv"
+          }
+        ],
+        "verification": "Review advisory freshness, runtime reachability, exploit preconditions, and supported upgrade paths.",
+        "limitations": ["Advisory presence does not establish reachability or exploitability."]
+      },
+      {
+        "id": "TW-CTRL-RUNTIME-001",
+        "domain": "runtime",
+        "title": "Approved HTTP response posture is observed",
+        "status": "UNVERIFIED",
+        "rationale": "No target URL was explicitly approved for runtime observation.",
+        "applicability": "Optional for any authorized running HTTP application.",
+        "evidence": [],
+        "verification": "Probe representative production routes and deployment layers under explicit authorization.",
+        "limitations": [
+          "One bounded HEAD/GET observation is not DAST or whole-application runtime coverage."
+        ]
+      },
+      {
+        "id": "TW-CTRL-LOGGING-001",
+        "domain": "logging",
+        "title": "Sensitive operations emit security-relevant audit events",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported sensitive operation boundary was mapped.",
+        "applicability": "Applies to authentication, authorization, administrative, data-changing, and integration-sensitive operations.",
+        "evidence": [],
+        "verification": "Confirm event content, actor, target, outcome, correlation ID, retention, access controls, and alerting in the real logging system.",
+        "limitations": [
+          "Platform telemetry and logging wrappers with unrecognized names are outside source-only evidence."
+        ]
+      },
+      {
+        "id": "TW-CTRL-ERRORS-001",
+        "domain": "logging",
+        "title": "Sensitive boundaries define explicit failure handling",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported sensitive operation boundary was mapped.",
+        "applicability": "Applies to mapped sensitive request/action boundaries.",
+        "evidence": [],
+        "verification": "Exercise dependency, validation, authorization, and storage failures; confirm safe responses and useful internal diagnostics.",
+        "limitations": [
+          "Framework-level error boundaries and centralized handlers may remain unverified."
+        ]
+      }
+    ],
+    "summary": {
+      "EVIDENCED": 0,
+      "GAP_CANDIDATE": 1,
+      "UNVERIFIED": 3,
+      "NOT_APPLICABLE": 9,
+      "PARTIAL": 0,
+      "FAILED": 0
+    }
+  },
   "coverage": [
+    {
+      "id": "project-profile",
+      "label": "Project structure profile",
+      "status": "COMPLETE",
+      "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
+      "findings": 0,
+      "version": "0.1.0"
+    },
+    {
+      "id": "ast-security",
+      "label": "Framework-aware authorization",
+      "status": "NOT RUN",
+      "detail": "No scanner run was recorded for this capability."
+    },
     {
       "id": "builtin",
       "label": "Built-in static patterns",

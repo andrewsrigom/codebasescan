@@ -180,6 +180,18 @@ function factKind(callee: string): ProjectFactKind | null {
   if (/(?:cookies(?:\(\))?|\.cookies)\.(?:get|set|delete)$|(?:^|\.)cookie$/.test(value))
     return 'cookie';
   if (/(?:^|\.)(?:json|send|nextresponse\.json|response\.json)$/.test(value)) return 'response';
+  if (
+    /(?:^|\.)(?:verifywebhook|verifysignature|constructevent|verifyhmac|checksignature)$/.test(
+      value,
+    )
+  )
+    return 'webhook-verification';
+  if (
+    /(?:^|\.)(?:auditlog|recordaudit|logsecurityevent)$|(?:audit|securitylogger)\.(?:log|record|write)$/.test(
+      value,
+    )
+  )
+    return 'logging';
   return null;
 }
 
@@ -539,6 +551,21 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           signal: `process.env.${node.name.text}`.slice(0, 180),
           ...(ownerSymbolId ? { ownerSymbolId } : {}),
         });
+        if (
+          ts.isCatchClause(node) &&
+          ownerSymbolId &&
+          !cap(facts.length, maximumFacts, 'Security fact')
+        ) {
+          const line = lineOf(item.ast, node);
+          facts.push({
+            id: stableId('fact', 'error-handling', item.source.path, line, ownerSymbolId),
+            kind: 'error-handling',
+            file: item.source.path,
+            line,
+            signal: 'catch clause',
+            ownerSymbolId,
+          });
+        }
       }
       ts.forEachChild(node, (child) => visit(child, nextOwner));
     };

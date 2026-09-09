@@ -45,6 +45,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   assert.equal(store.audit(audit.id).report?.findings.length, 7);
   assert.equal(store.audit(audit.id).report?.scanners.length, 8);
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
+  assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');
   await graph.invoke(
     new Command({ resume: { note: 'Reviewed the fixture; findings remain unconfirmed.' } }),
     invocation,

@@ -7,7 +7,7 @@ import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
 import { FindingDetails } from './finding-details.tsx';
-const tabs = ['Overview', 'Findings', 'Dependencies', 'Coverage', 'Workflow'] as const;
+const tabs = ['Overview', 'Findings', 'Checklist', 'Dependencies', 'Coverage', 'Workflow'] as const;
 type Tab = (typeof tabs)[number];
 export function AuditWorkspace({
   initialAudit,
@@ -500,6 +500,73 @@ export function AuditWorkspace({
             A known vulnerable version does not prove that vulnerable code is reachable or
             exploitable. Check OSV status and advisory freshness in Coverage.
           </div>
+        </section>
+      )}
+      {tab === 'Checklist' && (
+        <section
+          className="panel"
+          id="audit-panel-checklist"
+          role="tabpanel"
+          aria-labelledby="audit-tab-checklist"
+        >
+          <div className="panel-header">
+            <div>
+              <h2>Security control checklist</h2>
+              <p>
+                Evidence, gaps, and unknowns remain separate. Evidenced does not mean globally safe.
+              </p>
+            </div>
+            <Badge>{report?.checklist?.packVersion ?? 'not generated'}</Badge>
+          </div>
+          {report?.checklist ? (
+            <>
+              <div className="panel-body checklist-summary">
+                {Object.entries(report.checklist.summary).map(([status, count]) => (
+                  <Badge
+                    key={status}
+                    tone={
+                      status === 'EVIDENCED'
+                        ? 'success'
+                        : status === 'GAP_CANDIDATE' || status === 'FAILED'
+                          ? 'medium'
+                          : 'neutral'
+                    }
+                  >
+                    {status.replaceAll('_', ' ')} {count}
+                  </Badge>
+                ))}
+              </div>
+              {report.checklist.controls.map((control) => (
+                <div className="coverage-row" key={control.id}>
+                  <div className="row spread">
+                    <div>
+                      <span className="small muted mono">{control.id}</span>
+                      <h3>{control.title}</h3>
+                    </div>
+                    <Badge
+                      tone={
+                        control.status === 'EVIDENCED'
+                          ? 'success'
+                          : control.status === 'GAP_CANDIDATE' || control.status === 'FAILED'
+                            ? 'medium'
+                            : 'neutral'
+                      }
+                    >
+                      {control.status.replaceAll('_', ' ')}
+                    </Badge>
+                  </div>
+                  <p>{control.rationale}</p>
+                  <p className="small muted">
+                    <strong>Verify:</strong> {control.verification}
+                  </p>
+                </div>
+              ))}
+            </>
+          ) : (
+            <EmptyState title="Checklist not generated">
+              <p>Run a new audit with the current release.</p>
+            </EmptyState>
+          )}
         </section>
       )}
       {tab === 'Coverage' && (
