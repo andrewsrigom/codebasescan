@@ -13,6 +13,8 @@ Traceward turns source code into review candidates with evidence, coverage gaps,
 Most small teams have code but little production telemetry. Traceward starts with what is available:
 
 - framework-aware source rules and project mapping;
+- package lifecycle, dependency-source, registry, integrity, and manifest/lock consistency checks;
+- bounded complexity, dead-code, unused dependency/export, and existing coverage-artifact reports;
 - bundled dependency-cycle, coupling, orphan-module, and duplicate-code reports;
 - security checklist with explicit unknowns and gaps;
 - optional Semgrep, Gitleaks, OSV, and one approved HTTP observation;
@@ -55,7 +57,7 @@ npm run cli -- export <audit-id> html
 
 Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
 
-Dependency structure and duplication analysis run offline by default with pinned Traceward-owned tools. Target `dependency-cruiser`, `jscpd`, TypeScript, Babel, ESLint, and framework configuration files are not loaded or executed. Mechanical results are maintainability evidence, not vulnerabilities.
+Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned Traceward-owned tools. Knip receives a sanitized manifest and generated configuration with every target plugin disabled. Target `knip`, `dependency-cruiser`, `jscpd`, TypeScript, Babel, ESLint, and framework configuration files are not loaded or executed. Mechanical results are review evidence, not vulnerabilities.
 
 Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Reviewers can mark findings confirmed, fixed, false positive, accepted risk, or still needing review. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
 
@@ -116,7 +118,7 @@ Use --baseline report.json to gate only newly introduced findings. A passing gat
 
 ## What is intentionally out of scope
 
-- whole-program taint or dependency reachability proof;
+- whole-program path-sensitive taint or dependency reachability proof;
 - broad crawling, exploitation, or pentesting;
 - cloud IAM, infrastructure-as-code, compliance certification, or hosted multi-user operation.
 

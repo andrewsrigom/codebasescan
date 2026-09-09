@@ -25,6 +25,10 @@
 - Pinned offline dependency-cruiser and jscpd adapters now add bounded cycles, coupling hotspots, orphan candidates, and duplicate locations without loading target configuration or retaining raw duplicate fragments.
 - The project map now shows observed authentication, authorization, validation, and sensitive-operation evidence for each mapped request boundary.
 - Local Semgrep coverage now includes JWT verification gaps, Node VM execution, disabled TLS verification, MongoDB `$where`, error-stack responses, sensitive logging, unsafe unserialization, and credentials in URL parameters.
+- Node.js supply-chain review now covers high-risk lifecycle scripts, unsafe/unpinned sources, lockfile URLs and integrity, registry hosts, and npm manifest/lock drift without installing packages.
+- Pinned Knip analysis runs against a script-free sanitized manifest with every target plugin disabled; reports retain bounded unused-file, dependency, export, and type candidates.
+- TypeScript quality metrics now retain function complexity, size, and parameter hotspots and import only bounded existing coverage aggregates.
+- Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
 
 ## Next — independent real-project ground truth
 

@@ -21,6 +21,10 @@ Consulted during starter preparation on 2026-09-08. Package APIs and security gu
 - Gitleaks official CLI documentation: https://github.com/gitleaks/gitleaks
 - dependency-cruiser CLI and JSON reporting: https://github.com/sverweij/dependency-cruiser/blob/main/doc/cli.md
 - jscpd JSON reporting: https://jscpd.dev/reporters/json
+- Knip production mode and strict analysis: https://knip.dev/features/production-mode
+- Knip JSON reporter: https://knip.dev/features/reporters
+- Knip plugin/config loading behavior: https://knip.dev/explanations/plugins
+- npm package-lock format: https://docs.npmjs.com/cli/configuring-npm/package-lock-json
 - Node SQLite: https://nodejs.org/api/sqlite.html
 - Node TypeScript support: https://nodejs.org/api/typescript.html
 - SARIF specification: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html

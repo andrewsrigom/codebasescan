@@ -27,3 +27,7 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Lowered only the review priority, not severity, for transitive advisories with unknown source reachability so direct and referenced packages surface first.
 - Added pinned offline dependency structure and duplicate-code analysis with bounded report data, route-level control visibility, and a dedicated Mechanical workspace.
 - Expanded trusted local Semgrep rules for JWT, TLS, Node VM, MongoDB, error response, sensitive logging, unserialization, and URL credential review.
+- Added offline Node.js supply-chain checks for lifecycle scripts, dependency sources, registry/integrity metadata, and manifest-lock consistency.
+- Added isolated pinned Knip analysis, TypeScript quality hotspots, and bounded import of existing coverage summaries.
+- Added selected five-hop taint propagation and source rules for command injection, path traversal, NoSQL, unsafe deserialization, dynamic regex, prototype pollution, weak digests, and mass assignment.
+- Added tRPC procedure mapping and detection for Drizzle, Auth.js, GraphQL, Zod, Joi, and Valibot.
