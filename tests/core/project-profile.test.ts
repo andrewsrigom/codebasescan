@@ -99,6 +99,23 @@ test('common root aliases resolve only to files already captured in the snapshot
   );
 });
 
+test('declarative TypeScript path aliases resolve without loading config code', () => {
+  const snapshot = snapshotFromFiles({
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: { baseUrl: '.', paths: { '#security/*': ['src/security/*'] } },
+    }),
+    'src/app/api/team/route.ts': `
+      import { requireUser } from '#security/auth';
+      export async function DELETE() { await requireUser(); return Response.json({ ok: true }); }
+    `,
+    'src/security/auth.ts': `export async function requireUser() { return { id: '1' }; }`,
+  });
+
+  const result = profileProject(snapshot);
+  assert.equal(result.profile.imports[0]?.resolvedFile, 'src/security/auth.ts');
+  assert.equal(result.profile.status, 'complete');
+});
+
 test('profiling parses target code as data without executing it', () => {
   const result = profileProject(
     snapshotOf("throw new Error('must not run'); export function safe() { return 1; }"),

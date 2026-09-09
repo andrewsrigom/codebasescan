@@ -16,6 +16,7 @@ import type {
   SourceFile,
 } from '../domain/types.ts';
 import { isRuntimeSource } from '../security/paths.ts';
+import { typeScriptPathAliases, type TypeScriptPathAlias } from './declarative-config.ts';
 
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/i;
 const declarationPattern = /\.d\.[cm]?ts$/i;
@@ -310,8 +311,42 @@ function importBindings(node: ts.ImportDeclaration): ProjectImportBinding[] {
   return bindings;
 }
 
-function resolveImport(file: string, specifier: string, paths: Set<string>): string | undefined {
-  const bases: string[] = [];
+function configuredAliasBases(
+  file: string,
+  specifier: string,
+  aliases: TypeScriptPathAlias[],
+): string[] {
+  const output: string[] = [];
+  const applicable = aliases
+    .filter((alias) => {
+      const directory = path.posix.dirname(alias.configFile);
+      return directory === '.' || file.startsWith(`${directory}/`);
+    })
+    .sort((left, right) => right.configFile.length - left.configFile.length);
+  for (const alias of applicable) {
+    const wildcard = alias.pattern.indexOf('*');
+    let substitution = '';
+    if (wildcard < 0) {
+      if (specifier !== alias.pattern) continue;
+    } else {
+      const prefix = alias.pattern.slice(0, wildcard);
+      const suffix = alias.pattern.slice(wildcard + 1);
+      if (!specifier.startsWith(prefix) || !specifier.endsWith(suffix)) continue;
+      substitution = specifier.slice(prefix.length, specifier.length - suffix.length);
+    }
+    for (const target of alias.targets)
+      output.push(path.posix.normalize(target.replace('*', substitution)));
+  }
+  return output;
+}
+
+function resolveImport(
+  file: string,
+  specifier: string,
+  paths: Set<string>,
+  aliases: TypeScriptPathAlias[],
+): string | undefined {
+  const bases = configuredAliasBases(file, specifier, aliases);
   if (specifier.startsWith('.'))
     bases.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)));
   else if (specifier.startsWith('@/') || specifier.startsWith('~/')) {
@@ -320,7 +355,7 @@ function resolveImport(file: string, specifier: string, paths: Set<string>): str
   } else if (/^[A-Za-z0-9_.-]+\/.+/.test(specifier)) {
     const root = path.posix.normalize(specifier);
     bases.push(root, `src/${root}`);
-  } else return undefined;
+  } else if (!bases.length) return undefined;
 
   const candidates = new Set<string>();
   for (const base of bases) {
@@ -615,7 +650,8 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
     (file) =>
       isRuntimeSource(file) && sourcePattern.test(file.path) && !declarationPattern.test(file.path),
   );
-  const issues: string[] = [];
+  const aliasConfiguration = typeScriptPathAliases(snapshot);
+  const issues: string[] = [...aliasConfiguration.issues];
   let truncated = snapshot.truncated || candidates.length > maximumFiles;
   if (candidates.length > maximumFiles)
     issues.push(`Source profiling was limited to ${maximumFiles} files.`);
@@ -671,15 +707,19 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
         if (!cap(imports.length, maximumImports, 'Import')) {
           const specifier = node.moduleSpecifier.text.slice(0, 300);
           const line = lineOf(item.ast, node);
+          const resolvedFile = resolveImport(
+            item.source.path,
+            specifier,
+            sourcePaths,
+            aliasConfiguration.aliases,
+          );
           imports.push({
             id: stableId('import', item.source.path, specifier, line),
             file: item.source.path,
             line,
             specifier,
             bindings: importBindings(node).slice(0, 100),
-            ...(resolveImport(item.source.path, specifier, sourcePaths)
-              ? { resolvedFile: resolveImport(item.source.path, specifier, sourcePaths) }
-              : {}),
+            ...(resolvedFile ? { resolvedFile } : {}),
           });
         }
       }
@@ -878,9 +918,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
-        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), and ${facts.length} security-relevant fact(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
+        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), and ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }
