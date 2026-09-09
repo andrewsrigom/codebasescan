@@ -10,6 +10,7 @@ import type {
   Project,
   SecurityControlReviewDecision,
 } from '../domain/types.ts';
+import { effectiveEntrypointFacts, sensitiveProjectFactKinds } from '../domain/project-graph.ts';
 import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
@@ -161,7 +162,19 @@ export function AuditWorkspace({
               .includes(normalized)
           : true,
       )
-      .slice(0, 200);
+      .slice(0, 200)
+      .map((entrypoint) => {
+        const facts = effectiveEntrypointFacts(profile, entrypoint);
+        const factKinds = new Set(facts.map((fact) => fact.kind));
+        return {
+          entrypoint,
+          authentication: factKinds.has('authentication'),
+          authorization: factKinds.has('authorization') || factKinds.has('resource-scope'),
+          validation: factKinds.has('validation'),
+          sensitiveOperations: facts.filter((fact) => sensitiveProjectFactKinds.has(fact.kind))
+            .length,
+        };
+      });
   }, [mapQuery, report?.projectProfile]);
   const projectFactCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -676,18 +689,40 @@ export function AuditWorkspace({
                       <th>Route / action</th>
                       <th>Source</th>
                       <th>Parameters</th>
+                      <th>Authentication</th>
+                      <th>Authorization</th>
+                      <th>Validation</th>
+                      <th>Sensitive operations</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {projectMapRows.map((entrypoint) => (
-                      <tr key={entrypoint.id}>
-                        <td>{entrypoint.kind.replaceAll('-', ' ')}</td>
-                        <td className="mono">{entrypoint.methods.join(', ') || 'ACTION'}</td>
-                        <td className="strong mono">{entrypoint.route ?? entrypoint.name}</td>
-                        <td className="mono small">
-                          {entrypoint.file}:{entrypoint.line}
+                    {projectMapRows.map((row) => (
+                      <tr key={row.entrypoint.id}>
+                        <td>{row.entrypoint.kind.replaceAll('-', ' ')}</td>
+                        <td className="mono">{row.entrypoint.methods.join(', ') || 'ACTION'}</td>
+                        <td className="strong mono">
+                          {row.entrypoint.route ?? row.entrypoint.name}
                         </td>
-                        <td>{entrypoint.dynamicParameters.join(', ') || '—'}</td>
+                        <td className="mono small">
+                          {row.entrypoint.file}:{row.entrypoint.line}
+                        </td>
+                        <td>{row.entrypoint.dynamicParameters.join(', ') || '—'}</td>
+                        <td>
+                          <Badge tone={row.authentication ? 'success' : 'neutral'}>
+                            {row.authentication ? 'OBSERVED' : 'NOT OBSERVED'}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Badge tone={row.authorization ? 'success' : 'neutral'}>
+                            {row.authorization ? 'OBSERVED' : 'NOT OBSERVED'}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Badge tone={row.validation ? 'success' : 'neutral'}>
+                            {row.validation ? 'OBSERVED' : 'NOT OBSERVED'}
+                          </Badge>
+                        </td>
+                        <td>{row.sensitiveOperations}</td>
                       </tr>
                     ))}
                   </tbody>
