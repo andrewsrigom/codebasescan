@@ -16,7 +16,7 @@ Traceward does not replace a penetration test, prove exploitability, or certify 
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Project profiling  | TypeScript-owned AST parser maps supported frameworks, routes, actions, symbols, explicit local calls, and security facts without executing target code      |
 | Code-first rules   | Framework-aware auth/authz plus direct request flows into raw SQL, outbound requests, redirects, uploads, webhooks, cookies, and client configuration        |
-| Security checklist | Versioned controls keep evidenced facts, gap candidates, unknowns, partial coverage, failures, and non-applicability distinct                                |
+| Security checklist | Versioned controls plus auditable human assessments keep source status, external evidence, accepted gaps, unknowns, failures, and non-applicability distinct |
 | Static and secrets | Runtime code is separated from test/example code; Gitleaks still checks every captured scope while code rules avoid fixture noise                            |
 | Dependencies       | Workspace-aware npm/pnpm/Yarn inventory; bounded paginated OSV matching, package-specific severity, CVSS v3 scoring, cache, aliases, and fixes               |
 | Runtime posture    | One explicitly approved HTTP URL; SSRF/metadata controls, DNS pinning, redirect/timeout/body limits, HEAD with bounded GET fallback                          |

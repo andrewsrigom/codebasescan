@@ -20,6 +20,7 @@ Traceward now has a complete local-first audit slice:
 - deterministic project profile with stable route/symbol/import/call/fact IDs;
 - framework-aware auth/authz and direct raw-SQL, SSRF, redirect, upload, webhook, cookie, and client-secret AST candidates;
 - versioned control checklist with gap/evidenced/unverified/partial/failed/not-applicable states;
+- auditable checklist assessments for external evidence, accepted gaps, non-applicability, and follow-up without replacing deterministic status;
 - opaque evidence-ID context broker with two rounds, repeated/unknown-ID rejection, redaction, and 16,000-character cap;
 - structured model impact, precondition, remediation, safe-test, missing-evidence, and control output;
 - local audit comparison;

@@ -85,7 +85,7 @@ Calls are protected by persisted per-audit call/input/output budgets, a per-find
 
 ## Evidence, assessment, disposition, and coverage
 
-A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. These states are not collapsed into “verified.”
+A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. Checklist controls separately retain their deterministic status and an optional human assessment for verified external evidence, accepted gaps, non-applicability, or follow-up. These states are not collapsed into “verified.”
 
 Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. Traceward does not compute a global security score.
 

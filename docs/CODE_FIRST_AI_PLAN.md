@@ -6,7 +6,7 @@
 - Phase 5 workflow A is implemented for Ollama/OpenAI contracts; structured results include controls, missing evidence, impact, preconditions, remediation choices, and safe tests. Disabled mode remains complete. Checklist-gap calls and AI report synthesis are intentionally deferred until real-project evidence justifies their cost.
 - Phase 6 tooling is implemented through the anonymized `evaluate` command. A self-audit exposed fixture/test noise and drove explicit runtime/test/example scope handling; the diverse real-project dataset still requires user-supplied authorized repositories and human dispositions.
 - Phase 7 includes validated append-only reports, actual worker `SIGKILL` recovery, AI budget reservation persistence, checkpoint/config compatibility guards, scanner-version warnings, baseline-aware CI artifacts, and explicit pre-audit truncation approval.
-- Phase 8 includes Project Map, Checklist, Findings, Coverage, Investigations, Workflow, and a bounded Codex bundle export.
+- Phase 8 includes Project Map, Checklist, Findings, Coverage, Investigations, Workflow, a bounded Codex bundle export, and human checklist assessments that survive publication without rewriting deterministic state.
 
 The next product gate is evaluation on additional authorized real projects, followed by targeted rule corrections and optional live-model validation.
 

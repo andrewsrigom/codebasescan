@@ -10,6 +10,7 @@
 | OpenAI budget/cache                                                                 | Calls reserve persisted budgets; cache hits use the same prompt/model/finding/evidence/context key and do not make a request         |
 | Repository asks for secrets/files/policy changes                                    | Text stays untrusted data; models request only opaque IDs from a finding-specific captured catalog; `.env`/key paths remain excluded |
 | Human publishes unresolved findings                                                 | Allowed with rationale; publication does not confirm them                                                                            |
+| Human reviews a checklist control                                                   | Assessment and rationale are appended; deterministic checklist status remains unchanged and both survive publication                 |
 | Scanner disabled/missing/fails                                                      | `DISABLED`/`FAILED`, never “zero findings” coverage                                                                                  |
 | Semgrep/Gitleaks nonzero/malformed/oversized output                                 | Known contracts are normalized; unsupported states fail or become partial                                                            |
 | Same code flagged by multiple independent scanners                                  | Sources remain separate unless the narrow static/runtime posture reconciliation applies                                              |
