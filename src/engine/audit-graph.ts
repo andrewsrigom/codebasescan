@@ -32,6 +32,7 @@ const mergeRuns = (left: ScannerRun[], right: ScannerRun[]) => [
 ];
 export const AuditState = Annotation.Root({
   auditId: Annotation<string>(),
+  executionFingerprint: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
   snapshotDigest: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
   fileCount: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
   skipped: Annotation<Record<string, number>>({

@@ -5,6 +5,35 @@ import { createLocalReviewer } from './model.ts';
 import { createOpenAiReviewer } from './openai.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
+import { digest } from '../domain/findings.ts';
+import { auditWorkflowVersion, checkpointAdapterVersion } from '../domain/versions.ts';
+
+function executionFingerprint(
+  config: Configuration,
+  options: ReturnType<AuditStore['audit']>['options'],
+) {
+  return digest(
+    JSON.stringify({
+      workflow: auditWorkflowVersion,
+      checkpointAdapter: checkpointAdapterVersion,
+      aiMode: config.aiMode,
+      model: config.model,
+      strongModel: config.strongModel,
+      aiTimeoutMs: config.aiTimeoutMs,
+      aiMaxRetries: config.aiMaxRetries,
+      aiMaxCalls: config.aiMaxCalls,
+      aiMaxCallsPerFinding: config.aiMaxCallsPerFinding,
+      aiInputTokenBudget: config.aiInputTokenBudget,
+      aiOutputTokenBudget: config.aiOutputTokenBudget,
+      aiMaxOutputTokensPerCall: config.aiMaxOutputTokensPerCall,
+      semgrep: config.semgrep,
+      gitleaks: config.gitleaks,
+      osv: config.osv,
+      osvCacheHours: config.osvCacheHours,
+      httpProbe: options.httpProbe ?? null,
+    }),
+  );
+}
 export async function executeAudit(
   store: AuditStore,
   auditId: string,
@@ -13,6 +42,10 @@ export async function executeAudit(
   options: { humanReview?: boolean } = {},
 ): Promise<void> {
   const audit = store.audit(auditId);
+  if (audit.workflowVersion !== auditWorkflowVersion)
+    throw new Error(
+      `Audit workflow ${audit.workflowVersion} is incompatible with ${auditWorkflowVersion}. Start a new audit.`,
+    );
   const project = store.project(audit.projectId);
   const checkpointer = SqliteSaver.fromConnString(config.checkpointPath);
   try {
@@ -39,6 +72,20 @@ export async function executeAudit(
       signal,
     };
     let previous = await graph.getState(invocation);
+    const fingerprint = executionFingerprint(config, audit.options);
+    const hasPreviousState = previous.values && Object.keys(previous.values).length > 0;
+    const savedFingerprint = hasPreviousState ? previous.values.executionFingerprint : null;
+    if (savedFingerprint && savedFingerprint !== fingerprint)
+      throw new Error(
+        'Audit execution configuration changed after checkpoint creation. Start a new audit.',
+      );
+    if (hasPreviousState && !savedFingerprint)
+      store.event(
+        audit.id,
+        'legacy-checkpoint-configuration',
+        'checkpoint',
+        'Legacy checkpoint has no execution fingerprint. Resume is allowed with an explicit compatibility limitation.',
+      );
     if (audit.resumeNote) {
       for await (const snapshot of graph.getStateHistory(invocation, { limit: 100 })) {
         const publicationInterrupt = snapshot.tasks.some((task) =>
@@ -73,7 +120,7 @@ export async function executeAudit(
         })
       : previous.values && Object.keys(previous.values).length
         ? null
-        : { auditId: audit.id };
+        : { auditId: audit.id, executionFingerprint: fingerprint };
     const resumeInvocation = audit.resumeNote
       ? {
           ...invocation,

@@ -13,6 +13,7 @@ import type {
 } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
 import { parseAuditReport, parseStoredAuditOptions } from '../domain/report-schema.ts';
+import { auditWorkflowVersion } from '../domain/versions.ts';
 type Row = Record<string, unknown>;
 const now = () => new Date().toISOString();
 function storedJson(value: string, label: string): unknown {
@@ -25,6 +26,7 @@ function storedJson(value: string, label: string): unknown {
 function readAudit(row: Row): Audit {
   return {
     id: String(row.id),
+    workflowVersion: String(row.workflow_version ?? auditWorkflowVersion),
     projectId: String(row.project_id),
     projectName: String(row.project_name),
     status: row.status as AuditStatus,
@@ -62,7 +64,8 @@ export class AuditStore {
         project_name TEXT NOT NULL, status TEXT NOT NULL,
         created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
         error TEXT, report_json TEXT, resume_note TEXT, attempts INTEGER NOT NULL DEFAULT 0,
-        options_json TEXT NOT NULL DEFAULT '{}'
+        options_json TEXT NOT NULL DEFAULT '{}',
+        workflow_version TEXT NOT NULL DEFAULT 'traceward-audit-v1'
       );
       CREATE UNIQUE INDEX IF NOT EXISTS one_active_audit ON audits(project_id)
         WHERE status IN ('queued', 'running', 'awaiting_review');
@@ -95,7 +98,11 @@ export class AuditStore {
     const auditColumns = this.db.prepare('PRAGMA table_info(audits)').all() as Row[];
     if (!auditColumns.some((column) => column.name === 'options_json'))
       this.db.exec("ALTER TABLE audits ADD COLUMN options_json TEXT NOT NULL DEFAULT '{}'");
-    this.db.exec('PRAGMA user_version = 3;');
+    if (!auditColumns.some((column) => column.name === 'workflow_version'))
+      this.db.exec(
+        "ALTER TABLE audits ADD COLUMN workflow_version TEXT NOT NULL DEFAULT 'traceward-audit-v1'",
+      );
+    this.db.exec('PRAGMA user_version = 4;');
   }
   close(): void {
     this.db.close();
@@ -131,9 +138,18 @@ export class AuditStore {
     try {
       this.db
         .prepare(
-          'INSERT INTO audits(id, project_id, project_name, status, created_at, updated_at, options_json) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO audits(id, project_id, project_name, status, created_at, updated_at, options_json, workflow_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         )
-        .run(id, project.id, project.name, 'queued', now(), now(), JSON.stringify(options));
+        .run(
+          id,
+          project.id,
+          project.name,
+          'queued',
+          now(),
+          now(),
+          JSON.stringify(options),
+          auditWorkflowVersion,
+        );
     } catch (error) {
       if (error instanceof Error && error.message.includes('UNIQUE'))
         throw new Error('This project already has an active audit. Finish or cancel it first.');

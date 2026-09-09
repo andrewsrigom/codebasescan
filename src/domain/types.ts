@@ -360,6 +360,7 @@ export interface AuditReport {
 }
 export interface Audit {
   id: string;
+  workflowVersion: string;
   projectId: string;
   projectName: string;
   status: AuditStatus;

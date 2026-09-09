@@ -141,6 +141,46 @@ test('SQLite checkpoints survive graph reconstruction between review and resume'
   await executeAudit(store, audit.id, config);
   assert.equal(store.audit(audit.id).status, 'completed');
 });
+test('checkpoint resume rejects changed execution config and workflow versions', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-checkpoint-version-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const store = new AuditStore(path.join(directory, 'app.sqlite'));
+  context.after(() => store.close());
+  const project = store.registerProject(
+    'Checkpoint version fixture',
+    path.resolve('fixtures/hardened-saas'),
+  );
+  const config = {
+    ...configuration(),
+    dataDirectory: directory,
+    checkpointPath: path.join(directory, 'checkpoints.sqlite'),
+    temporaryDirectory: path.join(directory, 'temporary'),
+    aiMode: 'disabled' as const,
+    semgrep: false,
+    gitleaks: false,
+    osv: false,
+  };
+  const audit = store.enqueue(project.id);
+  store.claim(audit.id);
+  await executeAudit(store, audit.id, config);
+  store.publish(audit.id, 'Reviewed checkpoint compatibility before publication.');
+  store.claim(audit.id);
+  await assert.rejects(
+    () => executeAudit(store, audit.id, { ...config, osv: true }),
+    /configuration changed/,
+  );
+  store.transition(audit.id, 'failed', 'Expected compatibility fixture failure.');
+
+  const incompatible = store.enqueue(project.id);
+  store.claim(incompatible.id);
+  store.db
+    .prepare('UPDATE audits SET workflow_version = ? WHERE id = ?')
+    .run('traceward-audit-legacy', incompatible.id);
+  await assert.rejects(
+    () => executeAudit(store, incompatible.id, config),
+    /workflow .* incompatible/,
+  );
+});
 test('AI-disabled audits make zero AI or advisory network calls', async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-no-network-'));
   context.after(() => rm(directory, { recursive: true, force: true }));

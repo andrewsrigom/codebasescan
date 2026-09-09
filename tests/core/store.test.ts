@@ -100,7 +100,7 @@ test('database schema migration records the current version', (context) => {
   const { store } = setup();
   context.after(() => store.close());
   const version = store.db.prepare('PRAGMA user_version').get() as { user_version: number };
-  assert.equal(version.user_version, 3);
+  assert.equal(version.user_version, 4);
 });
 test('a second worker in a live local process is rejected', (context) => {
   const { store } = setup();
