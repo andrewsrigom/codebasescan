@@ -84,9 +84,9 @@ function npmLock(file: SourceFile, declared: Map<string, Declaration>): Dependen
   if (packages) {
     const output: Dependency[] = [];
     for (const [packagePath, raw] of Object.entries(packages)) {
-      if (!packagePath) continue;
+      if (!packagePath || !packagePath.includes('node_modules/')) continue;
       const entry = object(raw);
-      if (!entry || typeof entry.version !== 'string') continue;
+      if (!entry || entry.link === true || typeof entry.version !== 'string') continue;
       const name = npmName(packagePath, entry);
       const item = dependency(
         file,
@@ -177,7 +177,13 @@ function yarnBerry(file: SourceFile, declared: Map<string, Declaration>): Depend
   for (const [selector, raw] of Object.entries(root)) {
     if (selector === '__metadata') continue;
     const entry = object(raw);
-    if (!entry || typeof entry.version !== 'string') continue;
+    if (
+      !entry ||
+      typeof entry.version !== 'string' ||
+      selector.includes('@workspace:') ||
+      (typeof entry.resolution === 'string' && entry.resolution.includes('@workspace:'))
+    )
+      continue;
     const first = selector.split(',')[0]?.trim() ?? '';
     const npmMarker = first.lastIndexOf('@npm:');
     const fallback = first.startsWith('@') ? first.indexOf('@', 1) : first.indexOf('@');

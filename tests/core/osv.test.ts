@@ -79,6 +79,47 @@ test('pnpm and Yarn lockfiles produce resolved package inventory', () => {
   assert.equal(berry.dependencies.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
 });
 
+test('workspace lockfiles exclude local packages but retain direct external dependencies', () => {
+  const npm = resolvedInventory(
+    snapshot({
+      'package.json': '{"workspaces":["packages/*"]}',
+      'packages/app/package.json': '{"name":"@acme/app","dependencies":{"lodash":"^4.17.0"}}',
+      'package-lock.json': JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          '': { workspaces: ['packages/*'] },
+          'packages/app': {
+            name: '@acme/app',
+            version: '1.0.0',
+            dependencies: { lodash: '^4.17.0' },
+          },
+          'node_modules/@acme/app': { resolved: 'packages/app', link: true },
+          'node_modules/lodash': { version: '4.17.21' },
+        },
+      }),
+    }),
+  ).dependencies;
+  assert.equal(
+    npm.some((item) => item.name === '@acme/app'),
+    false,
+  );
+  assert.equal(npm.find((item) => item.name === 'lodash')?.relationship, 'direct');
+  assert.equal(npm.find((item) => item.name === 'lodash')?.manifest, 'packages/app/package.json');
+
+  const yarn = resolvedInventory(
+    snapshot({
+      'package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+      'yarn.lock':
+        '__metadata:\n  version: 8\n"@acme/app@workspace:packages/app":\n  version: 0.0.0-use.local\n  resolution: "@acme/app@workspace:packages/app"\n"alpha@npm:^1.0.0":\n  version: 1.2.3\n',
+    }),
+  ).dependencies;
+  assert.equal(
+    yarn.some((item) => item.name === '@acme/app'),
+    false,
+  );
+  assert.equal(yarn.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
+});
+
 test('CVSS v3 vectors are scored without understating critical advisories', () => {
   assert.equal(cvssV3BaseScore('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'), 9.8);
   assert.equal(cvssV3Severity('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'), 'critical');
