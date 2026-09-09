@@ -324,6 +324,55 @@ export interface ProjectProfile {
   issues: string[];
   truncated: boolean;
 }
+export interface ArchitectureHotspot {
+  file: string;
+  incoming: number;
+  outgoing: number;
+  instability: number;
+}
+export interface ArchitectureCycle {
+  id: string;
+  files: string[];
+}
+export interface ArchitectureAnalysis {
+  schemaVersion: 1;
+  modules: number;
+  localDependencies: number;
+  cycles: ArchitectureCycle[];
+  orphanCandidates: string[];
+  hotspots: ArchitectureHotspot[];
+  truncated: boolean;
+}
+export interface DuplicateLocation {
+  file: string;
+  startLine: number;
+  endLine: number;
+}
+export interface DuplicateBlock {
+  id: string;
+  kind: 'exact' | 'similar';
+  format: string;
+  lines: number;
+  tokens: number;
+  first: DuplicateLocation;
+  second: DuplicateLocation;
+}
+export interface DuplicationAnalysis {
+  schemaVersion: 1;
+  files: number;
+  lines: number;
+  tokens: number;
+  clones: number;
+  duplicatedLines: number;
+  percentage: number;
+  blocks: DuplicateBlock[];
+  truncated: boolean;
+}
+export interface MechanicalAnalysis {
+  schemaVersion: 1;
+  architecture?: ArchitectureAnalysis;
+  duplication?: DuplicationAnalysis;
+}
 export type SecurityControlStatus =
   'EVIDENCED' | 'GAP_CANDIDATE' | 'UNVERIFIED' | 'NOT_APPLICABLE' | 'PARTIAL' | 'FAILED';
 export type SecurityControlDomain =
@@ -380,7 +429,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3;
+  schemaVersion: 1 | 2 | 3 | 4;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -394,6 +443,7 @@ export interface AuditReport {
   dependencies: Dependency[];
   scopePreflight?: AuditScopePreflight;
   projectProfile?: ProjectProfile;
+  mechanicalAnalysis?: MechanicalAnalysis;
   checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];

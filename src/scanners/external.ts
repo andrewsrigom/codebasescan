@@ -8,7 +8,6 @@ import {
   rm,
   stat,
   unlink,
-  writeFile,
 } from 'node:fs/promises';
 import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
 import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
@@ -16,20 +15,24 @@ import { record } from '../domain/validation.ts';
 import { isRuntimeSource, safeRelative } from '../security/paths.ts';
 import { redact } from '../security/redact.ts';
 import { runScannerProcess } from '../security/process.ts';
+import { writeSnapshotStage } from './staging.ts';
 export interface ScanResult {
   findings: Finding[];
   run: ScannerRun;
 }
 type ExternalScanner = 'semgrep' | 'gitleaks';
+export type TrustedScanner = ExternalScanner | 'dependency-cruiser' | 'jscpd';
 export interface ExternalScanOptions {
   projectRoot?: string;
   gitHistory?: boolean;
 }
-export const testedScannerVersions: Record<ExternalScanner, readonly string[]> = {
+export const testedScannerVersions: Record<TrustedScanner, readonly string[]> = {
   semgrep: ['1.176.1'],
   gitleaks: ['8.30.1'],
+  'dependency-cruiser': ['18.2.0'],
+  jscpd: ['5.2.0'],
 };
-export function scannerCompatibility(name: ExternalScanner, version?: string) {
+export function scannerCompatibility(name: TrustedScanner, version?: string) {
   const tested = testedScannerVersions[name];
   if (!version)
     return {
@@ -46,7 +49,7 @@ export function scannerCompatibility(name: ExternalScanner, version?: string) {
     detail: `Compatibility warning: ${name} ${version} is outside the tested version set (${tested.join(', ')}). Parsed output is retained, but coverage is partial.`,
   };
 }
-const stagingName = /^(?:semgrep|gitleaks)-[A-Za-z0-9._-]+$/;
+const stagingName = /^(?:semgrep|gitleaks|dependency-cruiser|jscpd)-[A-Za-z0-9._-]+$/;
 export async function cleanupStaleScannerStaging(temporaryDirectory: string): Promise<number> {
   await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
   const root = path.resolve(temporaryDirectory);
@@ -279,12 +282,7 @@ export async function scanExternal(
       /* A scan can still be useful when version discovery alone fails. */
     }
     if (!history) {
-      await mkdir(sourceRoot, { mode: 0o700 });
-      for (const file of snapshot.files) {
-        const destination = path.join(sourceRoot, safeRelative(file.path));
-        await mkdir(path.dirname(destination), { recursive: true, mode: 0o700 });
-        await writeFile(destination, file.content, { mode: 0o600, flag: 'wx' });
-      }
+      await writeSnapshotStage(snapshot, sourceRoot);
     }
     const args =
       name === 'semgrep'

@@ -1,10 +1,32 @@
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 export interface ProcessResult {
   code: number;
   stdout: string;
 }
+export type TrustedScannerBinary = 'semgrep' | 'gitleaks' | 'depcruise' | 'jscpd';
+
+function scannerCommand(binary: TrustedScannerBinary, args: string[]) {
+  if (binary === 'depcruise')
+    return {
+      executable: process.execPath,
+      args: [
+        fileURLToPath(
+          new URL('../../node_modules/dependency-cruiser/bin/dependency-cruise.mjs', import.meta.url),
+        ),
+        ...args,
+      ],
+    };
+  if (binary === 'jscpd')
+    return {
+      executable: process.execPath,
+      args: [fileURLToPath(new URL('../../node_modules/jscpd/run-jscpd.js', import.meta.url)), ...args],
+    };
+  return { executable: binary, args };
+}
+
 export async function runScannerProcess(
-  binary: 'semgrep' | 'gitleaks',
+  binary: TrustedScannerBinary,
   args: string[],
   cwd: string,
   signal?: AbortSignal,
@@ -25,8 +47,10 @@ export async function runScannerProcess(
       SEMGREP_SEND_METRICS: 'off',
       SEMGREP_ENABLE_VERSION_CHECK: '0',
       NO_COLOR: '1',
+      JSCPD_NO_TIPS: '1',
     };
-    const child = spawn(binary, args, {
+    const command = scannerCommand(binary, args);
+    const child = spawn(command.executable, command.args, {
       cwd,
       env,
       shell: false,

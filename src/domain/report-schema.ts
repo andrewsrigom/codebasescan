@@ -222,6 +222,70 @@ const projectProfile = z.looseObject({
   truncated: z.boolean(),
 });
 
+const mechanicalAnalysis = z.looseObject({
+  schemaVersion: z.literal(1),
+  architecture: z
+    .looseObject({
+      schemaVersion: z.literal(1),
+      modules: z.number().int().nonnegative(),
+      localDependencies: z.number().int().nonnegative(),
+      cycles: z
+        .array(
+          z.looseObject({
+            id: shortText,
+            files: z.array(shortText).min(2).max(100),
+          }),
+        )
+        .max(100),
+      orphanCandidates: z.array(shortText).max(200),
+      hotspots: z
+        .array(
+          z.looseObject({
+            file: shortText,
+            incoming: z.number().int().nonnegative(),
+            outgoing: z.number().int().nonnegative(),
+            instability: z.number().min(0).max(1),
+          }),
+        )
+        .max(100),
+      truncated: z.boolean(),
+    })
+    .optional(),
+  duplication: z
+    .looseObject({
+      schemaVersion: z.literal(1),
+      files: z.number().int().nonnegative(),
+      lines: z.number().int().nonnegative(),
+      tokens: z.number().int().nonnegative(),
+      clones: z.number().int().nonnegative(),
+      duplicatedLines: z.number().int().nonnegative(),
+      percentage: z.number().min(0).max(100),
+      blocks: z
+        .array(
+          z.looseObject({
+            id: shortText,
+            kind: z.enum(['exact', 'similar']),
+            format: shortText,
+            lines: z.number().int().positive(),
+            tokens: z.number().int().positive(),
+            first: z.looseObject({
+              file: shortText,
+              startLine: z.number().int().positive(),
+              endLine: z.number().int().positive(),
+            }),
+            second: z.looseObject({
+              file: shortText,
+              startLine: z.number().int().positive(),
+              endLine: z.number().int().positive(),
+            }),
+          }),
+        )
+        .max(100),
+      truncated: z.boolean(),
+    })
+    .optional(),
+});
+
 const controlStatus = z.enum([
   'EVIDENCED',
   'GAP_CANDIDATE',
@@ -265,7 +329,7 @@ const checklist = z.looseObject({
 });
 
 export const auditReportSchema = z.looseObject({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   auditId: shortText,
   projectName: shortText,
   createdAt: shortText,
@@ -279,6 +343,7 @@ export const auditReportSchema = z.looseObject({
   dependencies: z.array(dependency).max(100_000),
   scopePreflight: scopePreflight.optional(),
   projectProfile: projectProfile.optional(),
+  mechanicalAnalysis: mechanicalAnalysis.optional(),
   checklist: checklist.optional(),
   httpProbe: z.looseObject({ requestedUrl: shortText, finalUrl: shortText }).optional(),
   coverage: z
