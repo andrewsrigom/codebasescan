@@ -52,11 +52,11 @@ export const rules: Rule[] = [
     id: 'TW-004',
     title: 'Object lookup needs tenant authorization review',
     pattern: /\.findUnique\s*\(\s*\{\s*where\s*:\s*\{\s*id(?:\s*[,}]|\s*:)/g,
-    severity: 'high',
+    severity: 'medium',
     category: 'authorization',
     cwe: ['CWE-639'],
     description:
-      'An object lookup begins with an ID filter. Authorization may exist elsewhere; inspect middleware, service policy, RLS and the complete call path.',
+      'An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path.',
     remediation:
       'Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.',
   },

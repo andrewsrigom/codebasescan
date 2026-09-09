@@ -35,6 +35,13 @@ test('does not flag a paired tenant-scoped alternative', () => {
     0,
   );
 });
+test('generic ID lookups remain medium-severity review hotspots', () => {
+  const finding = scanPatterns(snapshotOf('database.project.findUnique({ where: { id } })')).find(
+    (candidate) => candidate.ruleId === 'TW-004',
+  );
+  assert.equal(finding?.severity, 'medium');
+  assert.match(finding?.description ?? '', /review hotspot, not evidence/i);
+});
 test('documents a deliberate comment false positive', () => {
   const findings = scanPatterns(snapshotOf('// Do not use eval(input) anymore.'));
   assert.equal(findings.length, 1);
