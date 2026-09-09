@@ -9,8 +9,10 @@ const ignoredDirectories = new Set([
   '.git',
   'node_modules',
   '.next',
+  '.next-dev',
   'dist',
   'build',
+  'output',
   'coverage',
   '.traceward',
   '.turbo',
@@ -56,7 +58,7 @@ const testSegments = new Set([
 const exampleSegments = new Set(['example', 'examples', 'storybook', '.storybook', 'stories']);
 export const snapshotLimits = {
   files: 1500,
-  bytesPerFile: 256 * 1024,
+  bytesPerFile: 512 * 1024,
   lockfileBytes: 4 * 1024 * 1024,
   totalBytes: 8 * 1024 * 1024,
 };

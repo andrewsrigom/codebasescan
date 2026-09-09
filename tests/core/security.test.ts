@@ -185,9 +185,13 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-source-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'node_modules'));
+  await mkdir(path.join(root, '.next-dev'));
+  await mkdir(path.join(root, 'output'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
+  await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');
   if (process.platform !== 'win32') await symlink('/etc/passwd', path.join(root, 'outside.ts'));
   const snapshot = await captureSnapshot(root);
   assert.deepEqual(
@@ -217,7 +221,7 @@ test('snapshot records source scope without excluding secret-bearing test code',
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-'));
   context.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(path.join(root, 'large.ts'), 'a'.repeat(300000));
+  await writeFile(path.join(root, 'large.ts'), 'a'.repeat(600_000));
   const snapshot = await captureSnapshot(root);
   const estimate = await estimateProjectScope(root);
   assert.equal(snapshot.truncated, true);
@@ -226,6 +230,20 @@ test('large files are excluded and coverage is marked truncated', async (context
   assert.equal(estimate.oversizedFiles, 1);
   assert.equal(estimate.predictedTruncated, true);
   assert.deepEqual(estimate.reasons, ['per-file-byte-limit']);
+});
+test('large generated TypeScript modules within the bounded limit are retained', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-source-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(
+    path.join(root, 'generated.ts'),
+    `export const value = '${'a'.repeat(300_000)}';`,
+  );
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.equal(snapshot.files[0]?.path, 'generated.ts');
+  assert.equal(snapshot.truncated, false);
+  assert.equal(estimate.oversizedFiles, 0);
+  assert.equal(estimate.limits.bytesPerFile, 512 * 1024);
 });
 test('realistic lockfiles use a separate bounded size allowance', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-lockfile-size-'));
