@@ -30,16 +30,19 @@ const option = (name: string) => {
   const value = index >= 0 ? arguments_[index + 1] : undefined;
   return value && !value.startsWith('--') ? value : undefined;
 };
-const probeOptions = (): AuditOptions => {
+const commandAuditOptions = (): AuditOptions => {
   const url = option('--probe-url');
-  return url
-    ? {
-        httpProbe: {
-          url,
-          allowPrivateNetwork: arguments_.includes('--allow-private-network'),
-        },
-      }
-    : {};
+  return {
+    ...(url
+      ? {
+          httpProbe: {
+            url,
+            allowPrivateNetwork: arguments_.includes('--allow-private-network'),
+          },
+        }
+      : {}),
+    ...(arguments_.includes('--secret-history') ? { gitHistorySecrets: true } : {}),
+  };
 };
 function render(report: AuditReport, format: string): string {
   if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle'].includes(format))
@@ -120,7 +123,7 @@ try {
       const root = await validateProjectRoot(target, temporary);
       const scopePreflight = await preflight(root, true);
       const project = ciStore.registerProject(path.basename(root), root);
-      const audit = ciStore.enqueue(project.id, { ...probeOptions(), scopePreflight });
+      const audit = ciStore.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
       ciStore.claim(audit.id);
       await executeAudit(ciStore, audit.id, ciConfig, undefined, { humanReview: false });
       const completed = ciStore.audit(audit.id);
@@ -166,7 +169,7 @@ try {
       const project = store.registerProject(path.basename(root), root);
       if (command === 'register') console.log(JSON.stringify(project, null, 2));
       else {
-        const audit = store.enqueue(project.id, { ...probeOptions(), scopePreflight });
+        const audit = store.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
         console.log(
           `Queued ${audit.id}. Run npm run worker to process it, then review the report in the local UI.`,
         );
@@ -209,7 +212,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
+        'Traceward\n\n  npm run cli -- audit /path/to/project [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
       );
     }
   }

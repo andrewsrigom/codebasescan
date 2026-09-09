@@ -21,6 +21,7 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
   const [probeUrl, setProbeUrl] = useState('');
   const [probeApproved, setProbeApproved] = useState(false);
   const [allowPrivateNetwork, setAllowPrivateNetwork] = useState(false);
+  const [gitHistorySecrets, setGitHistorySecrets] = useState(false);
   const [estimate, setEstimate] = useState<ProjectScopeEstimate | null>(null);
   const [estimating, setEstimating] = useState(false);
   const [approveTruncation, setApproveTruncation] = useState(false);
@@ -54,6 +55,7 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
       const payload = (await mutate('/api/audits', {
         projectId: selected,
         approveTruncation,
+        gitHistorySecrets,
         ...(probeUrl.trim()
           ? {
               httpProbe: {
@@ -197,6 +199,14 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
                 </label>
               </div>
             )}
+            <label className="row gap">
+              <input
+                type="checkbox"
+                checked={gitHistorySecrets}
+                onChange={(event) => setGitHistorySecrets(event.target.checked)}
+              />
+              Scan Git history for secret patterns. Values are discarded; this can take longer.
+            </label>
             <button
               className="button primary full"
               disabled={

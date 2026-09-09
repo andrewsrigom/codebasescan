@@ -65,6 +65,14 @@ TRACEWARD_OSV=true
 
 Semgrep and Gitleaks must be trusted local binaries. OSV receives only resolved npm package names and versions.
 
+Current-source secret scanning classifies test/example matches separately. Git history is scanned only when explicitly selected for an audit:
+
+```bash
+npm run cli -- audit /absolute/path/to/project --secret-history
+```
+
+Historical findings retain only file, line, rule, and commit metadata. Raw matched values are discarded.
+
 Dependency inventory and local advisory matching work offline. Refresh the compact database for a project manually when network access is allowed:
 
 ```bash

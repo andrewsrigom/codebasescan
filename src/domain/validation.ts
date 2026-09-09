@@ -54,17 +54,22 @@ export function controlReviewDecision(value: unknown): ControlReviewDecision {
 
 export function auditOptions(value: unknown): AuditOptions {
   const input = record(value);
-  if (input.httpProbe === undefined) return {};
-  const probe = record(input.httpProbe);
-  if (probe.approved !== true)
-    throw new Error('The HTTP target must be explicitly approved for this audit.');
-  const url = text(probe.url, 'HTTP probe URL', 2048);
-  if (probe.allowPrivateNetwork !== undefined && typeof probe.allowPrivateNetwork !== 'boolean')
-    throw new Error('allowPrivateNetwork must be a boolean.');
-  return {
-    httpProbe: {
+  if (input.gitHistorySecrets !== undefined && typeof input.gitHistorySecrets !== 'boolean')
+    throw new Error('gitHistorySecrets must be a boolean.');
+  const result: AuditOptions = {
+    ...(input.gitHistorySecrets === true ? { gitHistorySecrets: true } : {}),
+  };
+  if (input.httpProbe !== undefined) {
+    const probe = record(input.httpProbe);
+    if (probe.approved !== true)
+      throw new Error('The HTTP target must be explicitly approved for this audit.');
+    const url = text(probe.url, 'HTTP probe URL', 2048);
+    if (probe.allowPrivateNetwork !== undefined && typeof probe.allowPrivateNetwork !== 'boolean')
+      throw new Error('allowPrivateNetwork must be a boolean.');
+    result.httpProbe = {
       url,
       allowPrivateNetwork: probe.allowPrivateNetwork === true,
-    },
-  };
+    };
+  }
+  return result;
 }

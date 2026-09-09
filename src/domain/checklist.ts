@@ -83,6 +83,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const reactRun = scanner(scanners, 'react-security');
   const postureRun = scanner(scanners, 'posture');
   const gitleaksRun = scanner(scanners, 'gitleaks');
+  const historySecretsScanned = gitleaksRun?.detail.includes('approved Git history') ?? false;
   const osvRun = scanner(scanners, 'osv');
   const httpRun = scanner(scanners, 'http-probe');
   const profilePartial = profile?.status === 'partial';
@@ -652,7 +653,9 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
       verification:
         'Review Git history, CI variables, deployment secrets, rotation, and provider-side secret scanning separately.',
       limitations: [
-        'Excluded credential files and Git history are not scanned. No finding does not prove that no secret exists.',
+        historySecretsScanned
+          ? 'Excluded working-tree credential files remain outside the snapshot. History matching does not validate credential activity.'
+          : 'Excluded credential files and Git history are not scanned. No finding does not prove that no secret exists.',
       ],
     }),
   );

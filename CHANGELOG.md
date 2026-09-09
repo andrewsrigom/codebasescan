@@ -16,3 +16,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added dedicated Next.js rules for sensitive reads, tenant/owner scope, mutation validation, user-specific caching, public secret-shaped configuration, shared authenticated caching, and sensitive response fields.
 - Added offline exact-version advisory matching, manual OSV database refresh, dependency source-reference hints, and CycloneDX 1.6 SBOM export.
 - Expanded the passive HTTP probe with reflected-origin CORS, cache isolation, script CSP, HTTPS downgrade, retained redirect-chain, and no-cookie-value checks.
+- Added explicit Git-history secret scanning, safe historical metadata, and separate probable versus test/example fixture classifications.

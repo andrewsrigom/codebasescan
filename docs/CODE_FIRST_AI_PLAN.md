@@ -24,7 +24,7 @@ The primary users are developers and reviewers auditing applications they own or
 
 - Never execute, install, build, or import the audited repository.
 - Parse captured source as data using Traceward-owned dependencies only.
-- Never follow symlinks or read excluded credentials, Git history, generated trees, or paths outside the approved root.
+- Never follow symlinks or read excluded working-tree credentials, generated trees, or paths outside the approved root. Git history is read only by the trusted Gitleaks adapter after explicit per-audit approval.
 - Repository text is untrusted input, including comments, prompts, configuration, and generated files.
 - Models receive no shell, network, filesystem, package-manager, browser, or mutation tools.
 - A model cannot delete a deterministic finding, lower scanner severity, mark a control complete, or publish a report.

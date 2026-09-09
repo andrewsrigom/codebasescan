@@ -68,6 +68,7 @@ export function buildAuditGraph(options: {
   checkpointer: BaseCheckpointSaver;
   reviewer: Reviewer | null;
   httpProbe?: HttpProbeOptions;
+  gitHistorySecrets?: boolean;
   humanReview?: boolean;
   signal?: AbortSignal;
 }) {
@@ -79,6 +80,7 @@ export function buildAuditGraph(options: {
     checkpointer,
     reviewer,
     httpProbe,
+    gitHistorySecrets = false,
     humanReview = true,
     signal,
   } = options;
@@ -210,6 +212,7 @@ export function buildAuditGraph(options: {
         config.temporaryDirectory,
         config.rulesDirectory,
         signal,
+        { projectRoot: root, gitHistory: gitHistorySecrets },
       );
       event(state, 'gitleaks', `Gitleaks: ${result.run.status}.`);
       return { findings: result.findings, scanners: [result.run] };

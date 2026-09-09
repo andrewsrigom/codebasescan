@@ -131,6 +131,7 @@ export function toInvestigationBundle(report: AuditReport): object {
       category: finding.category,
       severity: finding.severity,
       disposition: finding.disposition,
+      confidence: finding.confidence,
       description: finding.description,
       remediation: finding.remediation,
       cwe: finding.cwe,
@@ -145,6 +146,7 @@ export function toInvestigationBundle(report: AuditReport): object {
       })),
       analysis: finding.analysis,
       provenance: finding.provenance,
+      secret: finding.secret,
       review: finding.review,
     })),
     reportLimitations: report.limitations,
@@ -250,8 +252,14 @@ export function toMarkdown(report: AuditReport): string {
     lines.push(
       `### ${m(finding.severity.toUpperCase())}: ${m(finding.title)}`,
       '',
-      `Rule: ${finding.ruleId} | Source: ${finding.source} | Disposition: ${finding.disposition}`,
+      `Rule: ${finding.ruleId} | Source: ${finding.source} | Disposition: ${finding.disposition}${finding.confidence ? ` | Confidence: ${finding.confidence}` : ''}`,
       '',
+      ...(finding.secret
+        ? [
+            `Secret classification: ${m(finding.secret.classification.replaceAll('_', ' '))}${finding.secret.commit ? ` | Commit: ${finding.secret.commit.slice(0, 12)}` : ''}`,
+            '',
+          ]
+        : []),
       m(finding.description),
       '',
       `Remediation: ${m(finding.remediation)}`,

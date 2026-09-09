@@ -11,7 +11,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
-import { makeFinding, sourceEvidence } from '../domain/findings.ts';
+import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { record } from '../domain/validation.ts';
 import { isRuntimeSource, safeRelative } from '../security/paths.ts';
 import { redact } from '../security/redact.ts';
@@ -21,6 +21,10 @@ export interface ScanResult {
   run: ScannerRun;
 }
 type ExternalScanner = 'semgrep' | 'gitleaks';
+export interface ExternalScanOptions {
+  projectRoot?: string;
+  gitHistory?: boolean;
+}
 export const testedScannerVersions: Record<ExternalScanner, readonly string[]> = {
   semgrep: ['1.176.1'],
   gitleaks: ['8.30.1'],
@@ -75,6 +79,47 @@ function locate(snapshot: Snapshot, scannerPath: unknown, stagingRoot?: string) 
     return undefined;
   }
 }
+
+function historyEvidence(item: Record<string, unknown>, projectRoot?: string) {
+  if (typeof item.File !== 'string') return null;
+  try {
+    const relative = safeRelative(
+      projectRoot && path.isAbsolute(item.File) ? path.relative(projectRoot, item.File) : item.File,
+    );
+    const line =
+      typeof item.StartLine === 'number' &&
+      Number.isSafeInteger(item.StartLine) &&
+      item.StartLine > 0
+        ? item.StartLine
+        : 1;
+    const commit =
+      typeof item.Commit === 'string' && /^[a-f0-9]{7,64}$/i.test(item.Commit)
+        ? item.Commit.toLowerCase()
+        : undefined;
+    const observation = commit
+      ? `A secret-shaped value matched in Git commit ${commit.slice(0, 12)}. The raw value and matched line were discarded.`
+      : 'A secret-shaped value matched in Git history. The raw value and matched line were discarded.';
+    return {
+      evidence: {
+        id: makeHistoryEvidenceId(relative, line, commit),
+        kind: 'history' as const,
+        file: relative,
+        startLine: line,
+        endLine: line,
+        excerpt: '[Historical source excerpt withheld for secret findings]',
+        fileDigest: makeHistoryEvidenceId(relative, 0, commit),
+        observation,
+      },
+      commit,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function makeHistoryEvidenceId(file: string, line: number, commit?: string): string {
+  return digest(`git-history:${commit ?? 'unknown'}:${file}:${line}`).slice(0, 16);
+}
 export function normalizeSemgrep(
   value: unknown,
   snapshot: Snapshot,
@@ -124,41 +169,61 @@ export function normalizeGitleaks(
   value: unknown,
   snapshot: Snapshot,
   stagingRoot?: string,
+  history = false,
 ): Finding[] {
   if (!Array.isArray(value)) throw new Error('Unsupported Gitleaks JSON schema.');
   const findings: Finding[] = [];
   for (const raw of value.slice(0, 300)) {
     const item = record(raw);
     const file = locate(snapshot, item.File, stagingRoot);
-    if (!file) continue;
+    const historical = history ? historyEvidence(item, stagingRoot) : null;
+    if (history && !historical) continue;
+    if (!file && !history) continue;
     const line = item.StartLine;
-    if (
-      typeof line !== 'number' ||
-      !Number.isSafeInteger(line) ||
-      line < 1 ||
-      line > file.content.split('\n').length
-    )
-      continue;
-    const evidence = sourceEvidence(
-      file,
-      line,
-      'A secret-shaped value matched a Gitleaks rule. Activity and validity are not checked.',
-    );
-    evidence.excerpt = '[Source excerpt withheld for secret findings]';
+    if (!history) {
+      if (
+        typeof line !== 'number' ||
+        !Number.isSafeInteger(line) ||
+        line < 1 ||
+        line > file!.content.split('\n').length
+      )
+        continue;
+    }
+    const evidence = history
+      ? historical!.evidence
+      : sourceEvidence(
+          file!,
+          line as number,
+          'A secret-shaped value matched a Gitleaks rule. Activity and validity are not checked.',
+        );
+    if (!history) evidence.excerpt = '[Source excerpt withheld for secret findings]';
+    const fixtureCandidate = !history && file!.scope !== 'runtime';
     findings.push(
       makeFinding({
         source: 'gitleaks',
         ruleId: safeString(item.RuleID, 'gitleaks.unknown'),
         title: safeString(item.Description, 'Potential hardcoded credential'),
-        severity: 'high',
+        severity: fixtureCandidate ? 'medium' : 'high',
         sourceSeverity: 'UNSPECIFIED',
         category: 'secrets',
         cwe: ['CWE-798'],
-        description:
-          'A credential pattern was detected. The raw match and secret value are intentionally discarded, not stored or sent to a model.',
+        description: history
+          ? 'A credential pattern was detected in Git history. The raw match and secret value are intentionally discarded, not stored or sent to a model.'
+          : fixtureCandidate
+            ? 'A credential pattern was detected in test or example source. It is classified as a fixture candidate until a reviewer establishes whether it is active. The raw value is discarded.'
+            : 'A credential pattern was detected in runtime source. It is classified as probable until validity is reviewed. The raw match and secret value are intentionally discarded, not stored or sent to a model.',
         remediation:
           'Determine whether the value is real. If exposure is confirmed, rotate it and remove it from source and relevant history.',
         evidence: [evidence],
+        confidence: fixtureCandidate ? 'low' : 'medium',
+        secret: {
+          classification: history
+            ? 'historical'
+            : fixtureCandidate
+              ? 'fixture_candidate'
+              : 'probable',
+          ...(historical?.commit ? { commit: historical.commit } : {}),
+        },
       }),
     );
   }
@@ -171,6 +236,7 @@ export async function scanExternal(
   temporaryDirectory: string,
   rulesDirectory: string,
   signal?: AbortSignal,
+  options: ExternalScanOptions = {},
 ): Promise<ScanResult> {
   const started = performance.now();
   if (!enabled)
@@ -190,6 +256,15 @@ export async function scanExternal(
   const sourceRoot = path.join(stage, 'source');
   const reportPath = path.join(stage, 'result.json');
   try {
+    const history = name === 'gitleaks' && options.gitHistory === true;
+    const projectRoot = options.projectRoot ? path.resolve(options.projectRoot) : undefined;
+    if (history && !projectRoot)
+      throw new Error('Git history scanning requires the validated project root.');
+    if (history) {
+      const gitMetadata = await stat(path.join(projectRoot!, '.git'));
+      if (!gitMetadata.isDirectory() && !gitMetadata.isFile())
+        throw new Error('The project does not contain Git metadata.');
+    }
     let version: string | undefined;
     try {
       const versionResult = await runScannerProcess(
@@ -203,11 +278,13 @@ export async function scanExternal(
     } catch {
       /* A scan can still be useful when version discovery alone fails. */
     }
-    await mkdir(sourceRoot, { mode: 0o700 });
-    for (const file of snapshot.files) {
-      const destination = path.join(sourceRoot, safeRelative(file.path));
-      await mkdir(path.dirname(destination), { recursive: true, mode: 0o700 });
-      await writeFile(destination, file.content, { mode: 0o600, flag: 'wx' });
+    if (!history) {
+      await mkdir(sourceRoot, { mode: 0o700 });
+      for (const file of snapshot.files) {
+        const destination = path.join(sourceRoot, safeRelative(file.path));
+        await mkdir(path.dirname(destination), { recursive: true, mode: 0o700 });
+        await writeFile(destination, file.content, { mode: 0o600, flag: 'wx' });
+      }
     }
     const args =
       name === 'semgrep'
@@ -226,8 +303,8 @@ export async function scanExternal(
             sourceRoot,
           ]
         : [
-            'dir',
-            sourceRoot,
+            history ? 'git' : 'dir',
+            ...(history ? ['--log-opts=--all'] : [sourceRoot]),
             '--no-banner',
             '--ignore-gitleaks-allow',
             '--redact=100',
@@ -235,6 +312,7 @@ export async function scanExternal(
             path.join(rulesDirectory, 'gitleaks.toml'),
             '--report-format=json',
             `--report-path=${reportPath}`,
+            ...(history ? [projectRoot!] : []),
           ];
     const result = await runScannerProcess(name, args, stage, signal);
     if (result.code !== 0 && !(name === 'gitleaks' && result.code === 1))
@@ -250,7 +328,7 @@ export async function scanExternal(
     const findings =
       name === 'semgrep'
         ? normalizeSemgrep(parsed, snapshot, sourceRoot)
-        : normalizeGitleaks(parsed, snapshot, sourceRoot);
+        : normalizeGitleaks(parsed, snapshot, history ? projectRoot : sourceRoot, history);
     const envelope = name === 'semgrep' ? record(parsed) : null;
     const errors = envelope && Array.isArray(envelope.errors) ? envelope.errors.length : 0;
     const rawCount =
@@ -284,7 +362,7 @@ export async function scanExternal(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: findings.length,
-        detail: `${name} analyzed the bounded staging snapshot with trusted local configuration.${errors ? ' Some files could not be analyzed.' : ''} ${compatibility.detail}`,
+        detail: `${name} analyzed ${history ? 'the explicitly approved Git history' : 'the bounded staging snapshot'} with trusted local configuration. Raw secret values were discarded.${errors ? ' Some files could not be analyzed.' : ''} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

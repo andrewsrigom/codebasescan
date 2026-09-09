@@ -40,7 +40,7 @@ export interface Snapshot {
 }
 export interface Evidence {
   id: string;
-  kind?: 'source' | 'declared' | 'observed' | 'dependency' | 'inferred';
+  kind?: 'source' | 'declared' | 'observed' | 'dependency' | 'inferred' | 'history';
   scope?: SourceScope;
   file: string;
   startLine: number;
@@ -117,6 +117,7 @@ export interface Finding {
   cwe: string[];
   evidence: Evidence[];
   disposition: Disposition;
+  confidence?: 'low' | 'medium' | 'high';
   analysis?: Analysis;
   runtimeVerification?: {
     status: 'corroborated' | 'observed_safe' | 'different';
@@ -136,6 +137,10 @@ export interface Finding {
     lockfile: string;
     advisoryModified?: string;
   };
+  secret?: {
+    classification: 'probable' | 'fixture_candidate' | 'historical';
+    commit?: string;
+  };
   provenance?: {
     detector:
       'traceward-heuristic' | 'traceward-ast' | 'scanner' | 'runtime-probe' | 'advisory-database';
@@ -144,7 +149,7 @@ export interface Finding {
     scannerVersion?: string;
     originalSeverity: string;
     detectedAt: string;
-    evidenceKinds: ('source' | 'declared' | 'observed' | 'dependency' | 'inferred')[];
+    evidenceKinds: ('source' | 'declared' | 'observed' | 'dependency' | 'inferred' | 'history')[];
   };
   review?: {
     decision: Disposition;
@@ -197,6 +202,7 @@ export interface AuditScopePreflight extends ProjectScopeEstimate {
 }
 export interface AuditOptions {
   httpProbe?: HttpProbeOptions;
+  gitHistorySecrets?: boolean;
   scopePreflight?: AuditScopePreflight;
 }
 export interface HttpProbeReport {

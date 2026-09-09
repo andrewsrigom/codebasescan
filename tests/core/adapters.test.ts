@@ -55,6 +55,9 @@ test('Semgrep ignores non-runtime code while Gitleaks still inspects it', () => 
   assert.equal(semgrep.length, 0);
   assert.equal(gitleaks.length, 1);
   assert.equal(gitleaks[0]?.evidence[0]?.scope, 'test');
+  assert.equal(gitleaks[0]?.secret?.classification, 'fixture_candidate');
+  assert.equal(gitleaks[0]?.confidence, 'low');
+  assert.equal(gitleaks[0]?.severity, 'medium');
 });
 test('malformed scanner schemas fail explicitly', () => {
   assert.throws(() => normalizeSemgrep({ results: 'not-an-array' }, snapshotOf('')));
@@ -77,6 +80,32 @@ test('Gitleaks normalization discards raw secrets and matched lines', () => {
   const output = JSON.stringify(findings);
   assert.ok(!output.includes('sensitive-fixture-value'));
   assert.equal(findings[0]?.evidence[0]?.excerpt, '[Source excerpt withheld for secret findings]');
+  assert.equal(findings[0]?.secret?.classification, 'probable');
+  assert.equal(findings[0]?.confidence, 'medium');
+});
+
+test('Gitleaks history normalization keeps only safe metadata', () => {
+  const findings = normalizeGitleaks(
+    [
+      {
+        Description: 'Historical token',
+        RuleID: 'history-fixture',
+        File: 'removed/credentials.ts',
+        StartLine: 7,
+        Commit: 'a'.repeat(40),
+        Secret: 'historical-secret-value',
+        Match: 'historical-secret-value',
+      },
+    ],
+    snapshotOf('export const safe = true;'),
+    '/project',
+    true,
+  );
+  assert.equal(findings[0]?.secret?.classification, 'historical');
+  assert.equal(findings[0]?.secret?.commit, 'a'.repeat(40));
+  assert.equal(findings[0]?.evidence[0]?.kind, 'history');
+  assert.equal(findings[0]?.evidence[0]?.file, 'removed/credentials.ts');
+  assert.ok(!JSON.stringify(findings).includes('historical-secret-value'));
 });
 
 test('external scanner versions distinguish tested, unknown, and untested compatibility', () => {

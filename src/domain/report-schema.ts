@@ -5,7 +5,7 @@ const boundedText = z.string().max(1_000_000);
 const shortText = z.string().max(10_000);
 const evidence = z.looseObject({
   id: shortText,
-  kind: z.enum(['source', 'declared', 'observed', 'dependency', 'inferred']).optional(),
+  kind: z.enum(['source', 'declared', 'observed', 'dependency', 'inferred', 'history']).optional(),
   scope: z.enum(['runtime', 'test', 'example']).optional(),
   file: shortText,
   startLine: z.number().int().positive(),
@@ -84,6 +84,7 @@ const finding = z.looseObject({
   cwe: z.array(shortText).max(100),
   evidence: z.array(evidence).min(1).max(1_000),
   disposition: z.enum(['needs_review', 'confirmed', 'false_positive', 'accepted_risk']),
+  confidence: z.enum(['low', 'medium', 'high']).optional(),
   analysis: analysis.optional(),
   runtimeVerification: z
     .looseObject({
@@ -107,6 +108,12 @@ const finding = z.looseObject({
       advisoryModified: shortText.optional(),
     })
     .optional(),
+  secret: z
+    .looseObject({
+      classification: z.enum(['probable', 'fixture_candidate', 'historical']),
+      commit: shortText.optional(),
+    })
+    .optional(),
   provenance: z
     .looseObject({
       detector: z.enum([
@@ -122,7 +129,7 @@ const finding = z.looseObject({
       originalSeverity: shortText,
       detectedAt: shortText,
       evidenceKinds: z
-        .array(z.enum(['source', 'declared', 'observed', 'dependency', 'inferred']))
+        .array(z.enum(['source', 'declared', 'observed', 'dependency', 'inferred', 'history']))
         .max(100),
     })
     .optional(),
@@ -294,6 +301,7 @@ const storedOptionsSchema = z.looseObject({
       allowPrivateNetwork: z.boolean(),
     })
     .optional(),
+  gitHistorySecrets: z.boolean().optional(),
   scopePreflight: scopePreflight.optional(),
 });
 

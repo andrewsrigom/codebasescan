@@ -55,8 +55,18 @@ export function FindingDetails({
         <div className="row gap">
           <SeverityBadge severity={finding.severity} />
           <Badge>{finding.source}</Badge>
+          {finding.confidence && <Badge>confidence {finding.confidence}</Badge>}
           <Badge tone="neutral">{finding.disposition.replaceAll('_', ' ')}</Badge>
         </div>
+        {finding.secret && (
+          <div className="detail-row">
+            <span>Secret classification</span>
+            <strong>
+              {finding.secret.classification.replaceAll('_', ' ')}
+              {finding.secret.commit ? ` · commit ${finding.secret.commit.slice(0, 12)}` : ''}
+            </strong>
+          </div>
+        )}
         <h2 id="finding-title" className="finding-title">
           {finding.title}
         </h2>
@@ -115,6 +125,10 @@ export function FindingDetails({
             <div className="detail-row">
               <span>Dependency</span>
               <strong>{finding.vulnerability.relationship}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Source reachability</span>
+              <strong>{finding.vulnerability.reachability ?? 'unknown'}</strong>
             </div>
             <div className="detail-row">
               <span>Aliases</span>

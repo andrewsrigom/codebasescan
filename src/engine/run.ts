@@ -32,6 +32,7 @@ function executionFingerprint(
       osvCacheHours: config.osvCacheHours,
       advisoryDatabasePath: config.advisoryDatabasePath,
       httpProbe: options.httpProbe ?? null,
+      gitHistorySecrets: options.gitHistorySecrets ?? false,
     }),
   );
 }
@@ -63,6 +64,7 @@ export async function executeAudit(
             ? createOpenAiReviewer(config, store, audit.id)
             : null,
       httpProbe: audit.options.httpProbe,
+      gitHistorySecrets: audit.options.gitHistorySecrets,
       humanReview: options.humanReview,
       signal,
     });
