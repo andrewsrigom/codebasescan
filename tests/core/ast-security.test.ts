@@ -396,6 +396,27 @@ test('safe webhook bytes, validated upload, and complete cookies avoid gap candi
     }
   `);
   assert.ok(!streamedIds.includes('TW-AST007'));
+
+  const schemaIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const form = await request.formData();
+      const file = form.get('file');
+      const parsed = FileSchema.safeParse({ file });
+      if (!parsed.success) return Response.json({ error: 'invalid' }, { status: 400 });
+      return put('generated-name', file);
+    }
+  `);
+  assert.ok(!schemaIds.includes('TW-AST007'));
+
+  const unrelatedSchemaIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const form = await request.formData();
+      const file = form.get('file');
+      UserSchema.safeParse({ name: form.get('name') });
+      return put(file.name, file);
+    }
+  `);
+  assert.ok(unrelatedSchemaIds.includes('TW-AST007'));
 });
 
 test('webhook management APIs and response serialization are not inbound webhook parsing', () => {

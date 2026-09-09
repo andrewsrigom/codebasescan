@@ -596,10 +596,13 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
         );
         const multipart = calls.find((call) => /\.formData$/i.test(callName(call)));
         const streamedBody = requestBodyAccess(node, tainted);
-        const uploadGuard = calls.some((call) =>
-          /(?:validateUpload|assertFile|checkFile|safeFilename|sanitizePath|basename|mime|fileSize)/i.test(
-            callName(call),
-          ),
+        const uploadGuard = calls.some(
+          (call) =>
+            /(?:validateUpload|assertFile|checkFile|safeFilename|sanitizePath|basename|mime|fileSize)/i.test(
+              callName(call),
+            ) ||
+            (/(?:file|upload)[A-Za-z0-9_]*\.(?:parse|safeParse)$/i.test(callName(call)) &&
+              call.arguments.some((argument) => isTainted(argument, tainted))),
         );
         if ((multipart || streamedBody) && uploadSink && !uploadGuard) {
           const candidate = directFinding({
