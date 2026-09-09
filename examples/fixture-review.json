@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "auditId": "00000000-0000-4000-8000-000000000001",
   "projectName": "Review-worthy SaaS — fixture export",
   "createdAt": "2026-09-08T12:00:00.000Z",
@@ -267,10 +267,10 @@
       "id": "project-profile",
       "name": "Project structure profile",
       "status": "completed",
-      "durationMs": 23,
+      "durationMs": 69,
       "findings": 0,
       "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "id": "builtin",
@@ -331,6 +331,33 @@
       "findings": 0,
       "detail": "0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.",
       "version": "5.2.0"
+    },
+    {
+      "id": "supply-chain",
+      "name": "Node.js supply-chain integrity",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "Inspected 1 manifest(s), 0 lockfile(s), 4 dependency specifier(s), and 0 resolved lock entry(s) without installing packages.",
+      "version": "0.1.0"
+    },
+    {
+      "id": "quality-metrics",
+      "name": "TypeScript and JavaScript quality metrics",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "5 function(s) measured; 0 complexity, size, or parameter hotspot(s). 0 existing coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.",
+      "version": "0.1.0"
+    },
+    {
+      "id": "knip",
+      "name": "Dead code and dependency usage",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "0 unused file candidate(s), 0 unused dependency candidate(s), and 0 unused export candidate(s). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.",
+      "version": "6.35.1"
     }
   ],
   "dependencies": [
@@ -656,6 +683,40 @@
       "truncated": false
     }
   },
+  "supplyChainAnalysis": {
+    "schemaVersion": 1,
+    "manifests": 1,
+    "lockfiles": 0,
+    "lifecycleScripts": 0,
+    "dependencySpecs": 4,
+    "lockEntries": 0,
+    "issueCounts": {
+      "dangerousLifecycleScripts": 0,
+      "unsafeDependencySpecs": 0,
+      "weakLockfileIntegrity": 0,
+      "insecureLockfileUrls": 0,
+      "unexpectedLockfileHosts": 0,
+      "manifestLockMismatches": 0
+    },
+    "truncated": false
+  },
+  "codeQualityAnalysis": {
+    "schemaVersion": 1,
+    "filesAnalyzed": 7,
+    "functionsAnalyzed": 5,
+    "hotspots": [],
+    "deadCode": {
+      "schemaVersion": 1,
+      "unusedFiles": [],
+      "unusedDependencies": [],
+      "unlistedDependencies": [],
+      "unusedExports": [],
+      "unusedTypes": [],
+      "truncated": false
+    },
+    "coverageArtifacts": [],
+    "truncated": false
+  },
   "checklist": {
     "schemaVersion": 1,
     "packId": "traceward-web-application",
@@ -743,6 +804,28 @@
         "limitations": [
           "Indirect builders, ORM-specific safe tagged templates, and database-side controls may require manual review."
         ]
+      },
+      {
+        "id": "TW-CTRL-COMMAND-001",
+        "domain": "input-validation",
+        "title": "Process execution keeps request data out of commands and executable selection",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported process execution boundary was mapped.",
+        "applicability": "Applies when mapped request/action code can start a local process.",
+        "evidence": [],
+        "verification": "Use fixed executables and argument arrays without a shell, then test separators, option injection, encoding, and unexpected executable names.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-PATH-001",
+        "domain": "input-validation",
+        "title": "Filesystem paths remain inside server-owned roots",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported filesystem boundary was mapped.",
+        "applicability": "Applies when mapped entry points read, write, rename, or delete local files.",
+        "evidence": [],
+        "verification": "Test decoded parent traversal, absolute paths, separators, symlinks, and race conditions against the canonical storage root.",
+        "limitations": []
       },
       {
         "id": "TW-CTRL-OUTBOUND-001",
@@ -987,7 +1070,7 @@
       "EVIDENCED": 0,
       "GAP_CANDIDATE": 3,
       "UNVERIFIED": 14,
-      "NOT_APPLICABLE": 6,
+      "NOT_APPLICABLE": 8,
       "PARTIAL": 0,
       "FAILED": 0
     }
@@ -999,7 +1082,7 @@
       "status": "COMPLETE",
       "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
       "findings": 0,
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "id": "ast-security",
@@ -1020,6 +1103,14 @@
       "detail": "No scanner run was recorded for this capability."
     },
     {
+      "id": "supply-chain",
+      "label": "Node.js supply-chain integrity",
+      "status": "COMPLETE",
+      "detail": "Inspected 1 manifest(s), 0 lockfile(s), 4 dependency specifier(s), and 0 resolved lock entry(s) without installing packages.",
+      "findings": 0,
+      "version": "0.1.0"
+    },
+    {
       "id": "dependency-cruiser",
       "label": "JavaScript/TypeScript dependency structure",
       "status": "COMPLETE",
@@ -1034,6 +1125,22 @@
       "detail": "0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.",
       "findings": 0,
       "version": "5.2.0"
+    },
+    {
+      "id": "quality-metrics",
+      "label": "Code quality metrics",
+      "status": "COMPLETE",
+      "detail": "5 function(s) measured; 0 complexity, size, or parameter hotspot(s). 0 existing coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.",
+      "findings": 0,
+      "version": "0.1.0"
+    },
+    {
+      "id": "knip",
+      "label": "Dead code and dependency usage",
+      "status": "COMPLETE",
+      "detail": "0 unused file candidate(s), 0 unused dependency candidate(s), and 0 unused export candidate(s). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.",
+      "findings": 0,
+      "version": "6.35.1"
     },
     {
       "id": "builtin",

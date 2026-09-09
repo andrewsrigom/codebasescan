@@ -13,15 +13,22 @@ import { buildCoverage } from '../src/domain/coverage.ts';
 import { attachProvenance } from '../src/domain/provenance.ts';
 import { buildSecurityChecklist } from '../src/domain/checklist.ts';
 import { scanArchitecture, scanDuplication } from '../src/scanners/mechanical.ts';
+import { scanSupplyChain } from '../src/scanners/supply-chain.ts';
+import { scanCodeQuality } from '../src/scanners/quality.ts';
 import type { AuditReport, ScannerRun } from '../src/domain/types.ts';
 
 const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
-const rawFindings = mergeFindings(scanPatterns(source), scanPosture(source));
+const supplyChainResult = scanSupplyChain(source);
+const rawFindings = mergeFindings(
+  mergeFindings(scanPatterns(source), scanPosture(source)),
+  supplyChainResult.findings,
+);
 const profileResult = profileProject(source);
 const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-example-'));
-const [architectureResult, duplicationResult] = await Promise.all([
+const [architectureResult, duplicationResult, qualityResult] = await Promise.all([
   scanArchitecture(source, profileResult.profile, temporary),
   scanDuplication(source, temporary),
+  scanCodeQuality(source, profileResult.profile, temporary),
 ]).finally(() => rm(temporary, { recursive: true, force: true }));
 const scanners: ScannerRun[] = [
   profileResult.run,
@@ -70,11 +77,13 @@ const scanners: ScannerRun[] = [
   },
   { ...architectureResult.run, durationMs: 0 },
   { ...duplicationResult.run, durationMs: 0 },
+  { ...supplyChainResult.run, durationMs: 0 },
+  ...qualityResult.runs.map((run) => ({ ...run, durationMs: 0 })),
 ];
 const findings = attachProvenance(rawFindings, scanners, '2026-09-08T12:00:00.000Z');
 const dependencies = inventory(source);
 const report: AuditReport = {
-  schemaVersion: 4,
+  schemaVersion: 5,
   auditId: '00000000-0000-4000-8000-000000000001',
   projectName: 'Review-worthy SaaS — fixture export',
   createdAt: '2026-09-08T12:00:00.000Z',
@@ -92,6 +101,8 @@ const report: AuditReport = {
     ...(architectureResult.analysis ? { architecture: architectureResult.analysis } : {}),
     ...(duplicationResult.analysis ? { duplication: duplicationResult.analysis } : {}),
   },
+  supplyChainAnalysis: supplyChainResult.analysis,
+  codeQualityAnalysis: qualityResult.analysis,
   checklist: buildSecurityChecklist({
     projectProfile: profileResult.profile,
     findings,

@@ -126,17 +126,56 @@ test('Markdown includes scope and limitations', () => {
       truncated: false,
     },
   };
+  report.supplyChainAnalysis = {
+    schemaVersion: 1,
+    manifests: 1,
+    lockfiles: 1,
+    lifecycleScripts: 0,
+    dependencySpecs: 2,
+    lockEntries: 4,
+    issueCounts: {
+      dangerousLifecycleScripts: 0,
+      unsafeDependencySpecs: 0,
+      weakLockfileIntegrity: 1,
+      insecureLockfileUrls: 0,
+      unexpectedLockfileHosts: 0,
+      manifestLockMismatches: 0,
+    },
+    truncated: false,
+  };
+  report.codeQualityAnalysis = {
+    schemaVersion: 1,
+    filesAnalyzed: 2,
+    functionsAnalyzed: 3,
+    hotspots: [
+      { file: 'src/a.ts', line: 4, name: 'complex', lines: 90, parameters: 2, complexity: 16 },
+    ],
+    deadCode: {
+      schemaVersion: 1,
+      unusedFiles: ['src/unused.ts'],
+      unusedDependencies: ['unused-package'],
+      unlistedDependencies: [],
+      unusedExports: [],
+      unusedTypes: [],
+      truncated: false,
+    },
+    coverageArtifacts: [{ file: 'coverage/coverage-summary.json', lines: 80 }],
+    truncated: false,
+  };
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
   assert.ok(output.includes('## Mechanical analysis'));
+  assert.ok(output.includes('## Supply-chain integrity'));
+  assert.ok(output.includes('## Code quality'));
   assert.ok(output.includes('src/a.ts:1-12'));
   assert.ok(output.includes('## Security checklist'));
   assert.ok(output.includes('Human assessment: verified external'));
   assert.ok(toHtml(report).includes('Human assessment: verified external'));
-  assert.ok(toHtml(report).includes('Structure and duplication'));
+  assert.ok(toHtml(report).includes('Supply chain, quality, structure, and duplication'));
+  assert.ok(toHtml(report).includes('unused-package'));
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });

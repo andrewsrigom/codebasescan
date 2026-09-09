@@ -1,28 +1,50 @@
-import type { MechanicalAnalysis } from '../domain/types.ts';
+import type {
+  CodeQualityAnalysis,
+  MechanicalAnalysis,
+  SupplyChainAnalysis,
+} from '../domain/types.ts';
 import { Badge, EmptyState } from './ui.tsx';
 
-export function MechanicalReportPanel({ analysis }: { analysis?: MechanicalAnalysis }) {
+const supplyLabels: Record<keyof SupplyChainAnalysis['issueCounts'], string> = {
+  dangerousLifecycleScripts: 'Dangerous lifecycle scripts',
+  unsafeDependencySpecs: 'Unsafe dependency sources',
+  weakLockfileIntegrity: 'Weak or missing integrity',
+  insecureLockfileUrls: 'Plaintext lockfile URLs',
+  unexpectedLockfileHosts: 'Non-default package hosts',
+  manifestLockMismatches: 'Manifest/lock mismatches',
+};
+
+export function MechanicalReportPanel({
+  analysis,
+  supplyChain,
+  quality,
+}: {
+  analysis?: MechanicalAnalysis;
+  supplyChain?: SupplyChainAnalysis;
+  quality?: CodeQualityAnalysis;
+}) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
+  const complete = Boolean(architecture && duplication && supplyChain && quality?.deadCode);
   return (
     <section
       className="panel"
-      id="audit-panel-mechanical"
+      id="audit-panel-source-analysis"
       role="tabpanel"
-      aria-labelledby="audit-tab-mechanical"
+      aria-labelledby="audit-tab-source-analysis"
     >
       <div className="panel-header">
         <div>
-          <h2>Mechanical analysis</h2>
-          <p>Dependency structure and duplicated code from the bounded source snapshot.</p>
+          <h2>Source analysis</h2>
+          <p>Supply chain, code quality, dependency structure, and duplication.</p>
         </div>
-        <Badge tone={architecture && duplication ? 'success' : 'medium'}>
-          {architecture && duplication ? 'COMPLETE DATA' : 'PARTIAL DATA'}
+        <Badge tone={complete ? 'success' : 'medium'}>
+          {complete ? 'COMPLETE DATA' : 'PARTIAL DATA'}
         </Badge>
       </div>
-      {!architecture && !duplication ? (
-        <EmptyState title="Mechanical analysis unavailable">
-          <p>Check dependency-cruiser and jscpd status in Coverage. No clean result is implied.</p>
+      {!architecture && !duplication && !supplyChain && !quality ? (
+        <EmptyState title="Source analysis unavailable">
+          <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
       ) : (
         <>
@@ -63,6 +85,179 @@ export function MechanicalReportPanel({ analysis }: { analysis?: MechanicalAnaly
               not vulnerabilities by themselves.
             </p>
           </div>
+
+          {supplyChain && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Supply-chain integrity</h2>
+                  <p>Manifest and lockfile declarations only. No package was installed.</p>
+                </div>
+                <Badge>{supplyChain.lockEntries} lock entries</Badge>
+              </div>
+              <div className="panel-body">
+                <div className="stat-grid">
+                  <div className="stat-card">
+                    <div className="stat-label">Manifests</div>
+                    <div className="stat-number">{supplyChain.manifests}</div>
+                    <div className="stat-foot">{supplyChain.lockfiles} lockfiles</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Dependency specs</div>
+                    <div className="stat-number">{supplyChain.dependencySpecs}</div>
+                    <div className="stat-foot">
+                      {supplyChain.lifecycleScripts} lifecycle scripts
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Check</th>
+                      <th>Candidates</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(supplyChain.issueCounts).map(([key, count]) => (
+                      <tr key={key}>
+                        <td>{supplyLabels[key as keyof SupplyChainAnalysis['issueCounts']]}</td>
+                        <td>{count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {quality && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Code quality</h2>
+                  <p>Bounded TypeScript/JavaScript metrics and isolated dead-code analysis.</p>
+                </div>
+                <Badge>{quality.hotspots.length} hotspots</Badge>
+              </div>
+              <div className="panel-body">
+                <div className="stat-grid">
+                  <div className="stat-card">
+                    <div className="stat-label">Functions measured</div>
+                    <div className="stat-number">{quality.functionsAnalyzed}</div>
+                    <div className="stat-foot">{quality.filesAnalyzed} source files</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Unused files</div>
+                    <div className="stat-number">{quality.deadCode?.unusedFiles.length ?? '—'}</div>
+                    <div className="stat-foot">
+                      {quality.deadCode?.unusedDependencies.length ?? '—'} unused dependencies
+                    </div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Unused symbols</div>
+                    <div className="stat-number">
+                      {quality.deadCode
+                        ? quality.deadCode.unusedExports.length +
+                          quality.deadCode.unusedTypes.length
+                        : '—'}
+                    </div>
+                    <div className="stat-foot">Knip candidates</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Coverage artifacts</div>
+                    <div className="stat-number">{quality.coverageArtifacts.length}</div>
+                    <div className="stat-foot">Imported, never generated</div>
+                  </div>
+                </div>
+              </div>
+              {quality.hotspots.length > 0 && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Function</th>
+                        <th>Location</th>
+                        <th>Complexity</th>
+                        <th>Lines</th>
+                        <th>Parameters</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quality.hotspots.map((hotspot) => (
+                        <tr key={`${hotspot.file}:${hotspot.line}:${hotspot.name}`}>
+                          <td className="strong mono">{hotspot.name}</td>
+                          <td className="mono small">
+                            {hotspot.file}:{hotspot.line}
+                          </td>
+                          <td>{hotspot.complexity}</td>
+                          <td>{hotspot.lines}</td>
+                          <td>{hotspot.parameters}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {quality.deadCode &&
+                (quality.deadCode.unusedFiles.length > 0 ||
+                  quality.deadCode.unusedDependencies.length > 0) && (
+                  <div className="panel-body">
+                    {quality.deadCode.unusedFiles.length > 0 && (
+                      <>
+                        <h3 className="section-label">Unused file candidates</h3>
+                        <ul className="limitations">
+                          {quality.deadCode.unusedFiles.map((file) => (
+                            <li className="mono" key={file}>
+                              {file}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                    {quality.deadCode.unusedDependencies.length > 0 && (
+                      <>
+                        <h3 className="section-label">Unused dependency candidates</h3>
+                        <ul className="limitations">
+                          {quality.deadCode.unusedDependencies.map((dependency) => (
+                            <li className="mono" key={dependency}>
+                              {dependency}
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+                )}
+              {quality.coverageArtifacts.length > 0 && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Coverage artifact</th>
+                        <th>Lines</th>
+                        <th>Statements</th>
+                        <th>Functions</th>
+                        <th>Branches</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quality.coverageArtifacts.map((artifact) => (
+                        <tr key={artifact.file}>
+                          <td className="mono small">{artifact.file}</td>
+                          <td>{artifact.lines ?? '—'}</td>
+                          <td>{artifact.statements ?? '—'}</td>
+                          <td>{artifact.functions ?? '—'}</td>
+                          <td>{artifact.branches ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
 
           {architecture && (
             <>
@@ -165,7 +360,10 @@ export function MechanicalReportPanel({ analysis }: { analysis?: MechanicalAnaly
               )}
             </>
           )}
-          {(architecture?.truncated || duplication?.truncated) && (
+          {(architecture?.truncated ||
+            duplication?.truncated ||
+            supplyChain?.truncated ||
+            quality?.truncated) && (
             <div className="panel-footer">
               This mechanical report was truncated or filtered. Review Coverage before relying on
               the totals.

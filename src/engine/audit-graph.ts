@@ -455,7 +455,10 @@ export function buildAuditGraph(options: {
             : ['HTTP runtime posture was not run because no target was explicitly approved.']),
           'AI assessments cannot confirm findings, lower scanner severity, or suppress candidates automatically.',
           'Dependency resolution is limited to captured npm, pnpm, and Yarn lockfiles. OSV presence does not establish runtime reachability or exploitability.',
+          'Supply-chain checks inspect captured declarations and integrity metadata; private registries and intentional local dependencies still require trust review.',
           'Dependency cycles, orphan modules, coupling, and duplicated blocks are maintainability evidence. They are not security vulnerabilities by themselves.',
+          'Dead-code and complexity results are bounded maintenance candidates. Dynamic imports, generated routes, framework conventions, and runtime registration can make apparently unused code reachable.',
+          'Imported coverage artifacts describe a prior test run and do not prove which commit, environment, or security behavior was exercised.',
           'Secret files, Git history, symlinks, binary files, generated output and unsupported formats are excluded.',
           'Regex patterns can match comments and miss indirect flows; middleware, RLS and runtime policy need human review.',
           ...(reviewer &&

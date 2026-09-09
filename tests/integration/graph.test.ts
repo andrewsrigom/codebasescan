@@ -57,7 +57,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   }
   assert.ok(interruptedCheckpointId);
   assert.equal(store.audit(audit.id).report?.findings.length, 9);
-  assert.equal(store.audit(audit.id).report?.scanners.length, 12);
+  assert.equal(store.audit(audit.id).report?.scanners.length, 15);
   assert.ok(
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'react-security'),
   );
@@ -65,9 +65,11 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'next-security'),
   );
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
-  assert.equal(store.audit(audit.id).report?.schemaVersion, 4);
+  assert.equal(store.audit(audit.id).report?.schemaVersion, 5);
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.architecture);
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.duplication);
+  assert.ok(store.audit(audit.id).report?.supplyChainAnalysis);
+  assert.ok(store.audit(audit.id).report?.codeQualityAnalysis);
   assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');
   const reviewedControl = store.audit(audit.id).report?.checklist?.controls[0];
   assert.ok(reviewedControl);

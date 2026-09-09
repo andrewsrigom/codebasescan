@@ -233,9 +233,9 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
   }
   await walk(canonicalRoot, 0);
   for (const relative of coverageArtifactPaths) {
-    const absolute = path.join(canonicalRoot, relative);
+    const absolute = path.join(/* turbopackIgnore: true */ canonicalRoot, relative);
     try {
-      const resolved = await realpath(absolute);
+      const resolved = await realpath(/* turbopackIgnore: true */ absolute);
       const metadata = await lstat(absolute);
       if (!isWithin(canonicalRoot, resolved) || !metadata.isFile()) continue;
       supportedFiles++;
@@ -385,11 +385,14 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
       totalBytes >= snapshotLimits.totalBytes
     )
       continue;
-    const absolute = path.join(root, relative);
+    const absolute = path.join(/* turbopackIgnore: true */ root, relative);
     try {
-      const resolved = await realpath(absolute);
+      const resolved = await realpath(/* turbopackIgnore: true */ absolute);
       if (!isWithin(root, resolved)) continue;
-      const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const handle = await open(
+        /* turbopackIgnore: true */ absolute,
+        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
+      );
       try {
         const metadata = await handle.stat();
         if (

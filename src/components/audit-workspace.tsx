@@ -20,7 +20,7 @@ const tabs = [
   'Overview',
   'Findings',
   'Project map',
-  'Mechanical',
+  'Source analysis',
   'Checklist',
   'Investigations',
   'Dependencies',
@@ -349,10 +349,15 @@ export function AuditWorkspace({
             {label === 'Investigations' && investigations.length > 0 && (
               <span className="tab-count">{investigations.length}</span>
             )}
-            {label === 'Mechanical' && report?.mechanicalAnalysis && (
+            {label === 'Source analysis' && report && (
               <span className="tab-count">
-                {(report.mechanicalAnalysis.architecture?.cycles.length ?? 0) +
-                  (report.mechanicalAnalysis.duplication?.blocks.length ?? 0)}
+                {(report.mechanicalAnalysis?.architecture?.cycles.length ?? 0) +
+                  (report.mechanicalAnalysis?.duplication?.blocks.length ?? 0) +
+                  (report.codeQualityAnalysis?.hotspots.length ?? 0) +
+                  Object.values(report.supplyChainAnalysis?.issueCounts ?? {}).reduce(
+                    (total, count) => total + count,
+                    0,
+                  )}
               </span>
             )}
           </button>
@@ -791,7 +796,13 @@ export function AuditWorkspace({
           </div>
         </section>
       )}
-      {tab === 'Mechanical' && <MechanicalReportPanel analysis={report?.mechanicalAnalysis} />}
+      {tab === 'Source analysis' && (
+        <MechanicalReportPanel
+          analysis={report?.mechanicalAnalysis}
+          supplyChain={report?.supplyChainAnalysis}
+          quality={report?.codeQualityAnalysis}
+        />
+      )}
       {tab === 'Checklist' && (
         <section
           className="panel"
@@ -1199,6 +1210,8 @@ export function AuditWorkspace({
                 'react_security',
                 'architecture',
                 'duplication',
+                'supply_chain',
+                'code_quality',
                 'patterns',
                 'posture',
                 'semgrep',

@@ -487,6 +487,16 @@
           <li>
             <span class="status complete">COMPLETE</span>
             <div>
+              <strong>Node.js supply-chain integrity</strong>
+              <p>
+                Inspected 1 manifest(s), 0 lockfile(s), 4 dependency specifier(s), and 0 resolved
+                lock entry(s) without installing packages.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
               <strong>JavaScript/TypeScript dependency structure</strong>
               <p>
                 7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s)
@@ -504,6 +514,27 @@
                 0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments
                 were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd
                 5.2.0 is covered by the Traceward scanner compatibility fixtures.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>Code quality metrics</strong>
+              <p>
+                5 function(s) measured; 0 complexity, size, or parameter hotspot(s). 0 existing
+                coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>Dead code and dependency usage</strong>
+              <p>
+                0 unused file candidate(s), 0 unused dependency candidate(s), and 0 unused export
+                candidate(s). All target plugins and configuration loaders were disabled. knip
+                6.35.1 is covered by the Traceward scanner compatibility fixtures.
               </p>
             </div>
           </li>
@@ -603,8 +634,28 @@
         <p class="muted">Frameworks: Next.js App Router, Prisma.</p>
       </section>
       <section class="report-section">
-        <span class="kicker">MECHANICAL REVIEW</span>
-        <h2>Structure and duplication</h2>
+        <span class="kicker">SOURCE REVIEW</span>
+        <h2>Supply chain, quality, structure, and duplication</h2>
+        <div class="facts">
+          <span><strong>1</strong> manifests</span><span><strong>0</strong> lockfiles</span
+          ><span><strong>4</strong> dependency specs</span
+          ><span><strong>0</strong> supply-chain candidates</span>
+        </div>
+        <h3>Supply-chain checks</h3>
+        <ul>
+          <li>dangerousLifecycleScripts: 0</li>
+          <li>unsafeDependencySpecs: 0</li>
+          <li>weakLockfileIntegrity: 0</li>
+          <li>insecureLockfileUrls: 0</li>
+          <li>unexpectedLockfileHosts: 0</li>
+          <li>manifestLockMismatches: 0</li>
+        </ul>
+        <div class="facts">
+          <span><strong>5</strong> functions measured</span
+          ><span><strong>0</strong> quality hotspots</span
+          ><span><strong>0</strong> unused file candidates</span
+          ><span><strong>0</strong> coverage artifacts</span>
+        </div>
         <div class="facts">
           <span><strong>7</strong> modules</span><span><strong>0</strong> local dependencies</span
           ><span><strong>0</strong> cycles</span><span><strong>4</strong> orphan candidates</span>
@@ -614,7 +665,8 @@
           ><span><strong>0%</strong> duplication</span>
         </div>
         <p class="muted">
-          These measurements are maintainability evidence, not security vulnerabilities.
+          These measurements are bounded review evidence, not vulnerabilities or proof of adequate
+          testing.
         </p>
       </section>
       <section class="report-section">
@@ -622,7 +674,7 @@
         <h2>Security checklist</h2>
         <div class="facts checklist-facts">
           <span><strong>0</strong> EVIDENCED</span><span><strong>3</strong> GAP CANDIDATE</span
-          ><span><strong>14</strong> UNVERIFIED</span><span><strong>6</strong> NOT APPLICABLE</span
+          ><span><strong>14</strong> UNVERIFIED</span><span><strong>8</strong> NOT APPLICABLE</span
           ><span><strong>0</strong> PARTIAL</span><span><strong>0</strong> FAILED</span>
         </div>
         <div class="controls">
@@ -704,6 +756,30 @@
             <p>
               <strong>Verify:</strong> Trace each query fragment, replace structural interpolation
               with parameters, and test metacharacter payloads without modifying production data.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">input-validation · TW-CTRL-COMMAND-001</span>
+            </div>
+            <h3>Process execution keeps request data out of commands and executable selection</h3>
+            <p>No supported process execution boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Use fixed executables and argument arrays without a shell,
+              then test separators, option injection, encoding, and unexpected executable names.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">input-validation · TW-CTRL-PATH-001</span>
+            </div>
+            <h3>Filesystem paths remain inside server-owned roots</h3>
+            <p>No supported filesystem boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Test decoded parent traversal, absolute paths, separators,
+              symlinks, and race conditions against the canonical storage root.
             </p>
           </section>
           <section class="control">

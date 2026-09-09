@@ -106,6 +106,8 @@ export function toInvestigationBundle(report: AuditReport): object {
     },
     coverage: report.coverage ?? report.scanners,
     mechanicalAnalysis: report.mechanicalAnalysis ?? null,
+    supplyChainAnalysis: report.supplyChainAnalysis ?? null,
+    codeQualityAnalysis: report.codeQualityAnalysis ?? null,
     projectMap: profile
       ? {
           status: profile.status,
@@ -246,6 +248,40 @@ export function toMarkdown(report: AuditReport): string {
             : ['Code duplication analysis was unavailable.']),
           '',
           'These measurements are maintainability evidence, not security vulnerabilities.',
+        ]
+      : []),
+    ...(report.supplyChainAnalysis
+      ? [
+          '',
+          '## Supply-chain integrity',
+          '',
+          `${report.supplyChainAnalysis.manifests} manifests, ${report.supplyChainAnalysis.lockfiles} lockfiles, ${report.supplyChainAnalysis.dependencySpecs} dependency specifiers, and ${report.supplyChainAnalysis.lockEntries} resolved entries were inspected without installing packages.`,
+          ...Object.entries(report.supplyChainAnalysis.issueCounts).map(
+            ([kind, count]) => `- ${m(kind)}: ${count}`,
+          ),
+        ]
+      : []),
+    ...(report.codeQualityAnalysis
+      ? [
+          '',
+          '## Code quality',
+          '',
+          `${report.codeQualityAnalysis.functionsAnalyzed} functions across ${report.codeQualityAnalysis.filesAnalyzed} files were measured; ${report.codeQualityAnalysis.hotspots.length} complexity, size, or parameter hotspots were retained.`,
+          ...(report.codeQualityAnalysis.deadCode
+            ? [
+                `Knip candidates: ${report.codeQualityAnalysis.deadCode.unusedFiles.length} unused files, ${report.codeQualityAnalysis.deadCode.unusedDependencies.length} unused dependencies, ${report.codeQualityAnalysis.deadCode.unusedExports.length + report.codeQualityAnalysis.deadCode.unusedTypes.length} unused exports/types.`,
+              ]
+            : ['Dead-code analysis was unavailable.']),
+          ...report.codeQualityAnalysis.hotspots.map(
+            (hotspot) =>
+              `- ${m(hotspot.file)}:${hotspot.line} ${m(hotspot.name)}: complexity ${hotspot.complexity}, ${hotspot.lines} lines, ${hotspot.parameters} parameters`,
+          ),
+          ...report.codeQualityAnalysis.coverageArtifacts.map(
+            (artifact) =>
+              `- Coverage ${m(artifact.file)}: lines ${artifact.lines ?? 'unknown'}%, statements ${artifact.statements ?? 'unknown'}%, functions ${artifact.functions ?? 'unknown'}%, branches ${artifact.branches ?? 'unknown'}%`,
+          ),
+          '',
+          'These are bounded maintenance and test signals, not vulnerabilities or proof of adequate testing.',
         ]
       : []),
     ...(report.checklist
@@ -508,41 +544,85 @@ export function toHtml(report: AuditReport): string {
         : '') +
       '</section>'
     : '';
-  const mechanical = report.mechanicalAnalysis
-    ? '<section class="report-section"><span class="kicker">MECHANICAL REVIEW</span><h2>Structure and duplication</h2>' +
-      (report.mechanicalAnalysis.architecture
-        ? '<div class="facts"><span><strong>' +
-          report.mechanicalAnalysis.architecture.modules +
-          '</strong> modules</span><span><strong>' +
-          report.mechanicalAnalysis.architecture.localDependencies +
-          '</strong> local dependencies</span><span><strong>' +
-          report.mechanicalAnalysis.architecture.cycles.length +
-          '</strong> cycles</span><span><strong>' +
-          report.mechanicalAnalysis.architecture.orphanCandidates.length +
-          '</strong> orphan candidates</span></div>' +
-          list(
-            'Dependency cycles',
-            report.mechanicalAnalysis.architecture.cycles.map((cycle) => cycle.files.join(' → ')),
-          )
-        : '<p>Dependency structure analysis was unavailable.</p>') +
-      (report.mechanicalAnalysis.duplication
-        ? '<div class="facts"><span><strong>' +
-          report.mechanicalAnalysis.duplication.clones +
-          '</strong> clones</span><span><strong>' +
-          report.mechanicalAnalysis.duplication.duplicatedLines +
-          '</strong> duplicated lines</span><span><strong>' +
-          report.mechanicalAnalysis.duplication.percentage +
-          '%</strong> duplication</span></div>' +
-          list(
-            'Largest duplicate blocks',
-            report.mechanicalAnalysis.duplication.blocks.map(
-              (block) =>
-                `${block.first.file}:${block.first.startLine}-${block.first.endLine} and ${block.second.file}:${block.second.startLine}-${block.second.endLine}`,
-            ),
-          )
-        : '<p>Code duplication analysis was unavailable.</p>') +
-      '<p class="muted">These measurements are maintainability evidence, not security vulnerabilities.</p></section>'
-    : '';
+  const mechanical =
+    report.mechanicalAnalysis || report.supplyChainAnalysis || report.codeQualityAnalysis
+      ? '<section class="report-section"><span class="kicker">SOURCE REVIEW</span><h2>Supply chain, quality, structure, and duplication</h2>' +
+        (report.supplyChainAnalysis
+          ? '<div class="facts"><span><strong>' +
+            report.supplyChainAnalysis.manifests +
+            '</strong> manifests</span><span><strong>' +
+            report.supplyChainAnalysis.lockfiles +
+            '</strong> lockfiles</span><span><strong>' +
+            report.supplyChainAnalysis.dependencySpecs +
+            '</strong> dependency specs</span><span><strong>' +
+            Object.values(report.supplyChainAnalysis.issueCounts).reduce(
+              (total, count) => total + count,
+              0,
+            ) +
+            '</strong> supply-chain candidates</span></div>' +
+            list(
+              'Supply-chain checks',
+              Object.entries(report.supplyChainAnalysis.issueCounts).map(
+                ([kind, count]) => `${kind}: ${count}`,
+              ),
+            )
+          : '<p>Supply-chain integrity analysis was unavailable.</p>') +
+        (report.codeQualityAnalysis
+          ? '<div class="facts"><span><strong>' +
+            report.codeQualityAnalysis.functionsAnalyzed +
+            '</strong> functions measured</span><span><strong>' +
+            report.codeQualityAnalysis.hotspots.length +
+            '</strong> quality hotspots</span><span><strong>' +
+            (report.codeQualityAnalysis.deadCode?.unusedFiles.length ?? 0) +
+            '</strong> unused file candidates</span><span><strong>' +
+            report.codeQualityAnalysis.coverageArtifacts.length +
+            '</strong> coverage artifacts</span></div>' +
+            list(
+              'Quality hotspots',
+              report.codeQualityAnalysis.hotspots.map(
+                (hotspot) =>
+                  `${hotspot.file}:${hotspot.line} ${hotspot.name}: complexity ${hotspot.complexity}, ${hotspot.lines} lines, ${hotspot.parameters} parameters`,
+              ),
+            ) +
+            list('Unused file candidates', report.codeQualityAnalysis.deadCode?.unusedFiles) +
+            list(
+              'Unused dependency candidates',
+              report.codeQualityAnalysis.deadCode?.unusedDependencies,
+            )
+          : '<p>Code quality analysis was unavailable.</p>') +
+        (report.mechanicalAnalysis?.architecture
+          ? '<div class="facts"><span><strong>' +
+            report.mechanicalAnalysis.architecture.modules +
+            '</strong> modules</span><span><strong>' +
+            report.mechanicalAnalysis.architecture.localDependencies +
+            '</strong> local dependencies</span><span><strong>' +
+            report.mechanicalAnalysis.architecture.cycles.length +
+            '</strong> cycles</span><span><strong>' +
+            report.mechanicalAnalysis.architecture.orphanCandidates.length +
+            '</strong> orphan candidates</span></div>' +
+            list(
+              'Dependency cycles',
+              report.mechanicalAnalysis.architecture.cycles.map((cycle) => cycle.files.join(' → ')),
+            )
+          : '<p>Dependency structure analysis was unavailable.</p>') +
+        (report.mechanicalAnalysis?.duplication
+          ? '<div class="facts"><span><strong>' +
+            report.mechanicalAnalysis.duplication.clones +
+            '</strong> clones</span><span><strong>' +
+            report.mechanicalAnalysis.duplication.duplicatedLines +
+            '</strong> duplicated lines</span><span><strong>' +
+            report.mechanicalAnalysis.duplication.percentage +
+            '%</strong> duplication</span></div>' +
+            list(
+              'Largest duplicate blocks',
+              report.mechanicalAnalysis.duplication.blocks.map(
+                (block) =>
+                  `${block.first.file}:${block.first.startLine}-${block.first.endLine} and ${block.second.file}:${block.second.startLine}-${block.second.endLine}`,
+              ),
+            )
+          : '<p>Code duplication analysis was unavailable.</p>') +
+        '<p class="muted">These measurements are bounded review evidence, not vulnerabilities or proof of adequate testing.</p></section>'
+      : '';
   const checklist = report.checklist
     ? '<section class="report-section"><span class="kicker">CONTROL PACK ' +
       e(report.checklist.packVersion) +

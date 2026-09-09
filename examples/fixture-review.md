@@ -20,6 +20,9 @@ AI mode: disabled
 - Dependency vulnerabilities: skipped. OSV lookup was disabled for this reproducible fixture export.
 - Dependency structure: completed. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.
 - Code duplication: completed. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.
+- Node.js supply\-chain integrity: completed. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
+- TypeScript and JavaScript quality metrics: completed. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
+- Dead code and dependency usage: completed. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.
 
 ### Capability summary
 
@@ -27,8 +30,11 @@ AI mode: disabled
 - Framework\-aware authorization: NOT RUN. No scanner run was recorded for this capability.
 - Next.js application security: NOT RUN. No scanner run was recorded for this capability.
 - React client security: NOT RUN. No scanner run was recorded for this capability.
+- Node.js supply\-chain integrity: COMPLETE. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
 - JavaScript/TypeScript dependency structure: COMPLETE. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.
 - JavaScript/TypeScript code duplication: COMPLETE. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.
+- Code quality metrics: COMPLETE. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
+- Dead code and dependency usage: COMPLETE. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.
 - Built\-in static patterns: COMPLETE. Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.
 - Static code analysis: DISABLED. Not executed for this fixture export.
 - Secret scanning: DISABLED. Not executed for this fixture export.
@@ -54,9 +60,27 @@ Duplication: 0 clones and 0 duplicated lines (0%).
 
 These measurements are maintainability evidence, not security vulnerabilities.
 
+## Supply-chain integrity
+
+1 manifests, 0 lockfiles, 4 dependency specifiers, and 0 resolved entries were inspected without installing packages.
+
+- dangerousLifecycleScripts: 0
+- unsafeDependencySpecs: 0
+- weakLockfileIntegrity: 0
+- insecureLockfileUrls: 0
+- unexpectedLockfileHosts: 0
+- manifestLockMismatches: 0
+
+## Code quality
+
+5 functions across 7 files were measured; 0 complexity, size, or parameter hotspots were retained.
+Knip candidates: 0 unused files, 0 unused dependencies, 0 unused exports/types.
+
+These are bounded maintenance and test signals, not vulnerabilities or proof of adequate testing.
+
 ## Security checklist
 
-Pack: traceward\-web\-application 0.4.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 6.
+Pack: traceward\-web\-application 0.4.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 8.
 
 ### NOT\_APPLICABLE: Sensitive mutations authenticate a principal
 
@@ -105,6 +129,22 @@ Control: TW\-CTRL\-INJECTION\-001 | Domain: input\-validation
 1 raw SQL input\-flow candidate\(s\) require review.
 
 Verification: Trace each query fragment, replace structural interpolation with parameters, and test metacharacter payloads without modifying production data.
+
+### NOT\_APPLICABLE: Process execution keeps request data out of commands and executable selection
+
+Control: TW\-CTRL\-COMMAND\-001 | Domain: input\-validation
+
+No supported process execution boundary was mapped.
+
+Verification: Use fixed executables and argument arrays without a shell, then test separators, option injection, encoding, and unexpected executable names.
+
+### NOT\_APPLICABLE: Filesystem paths remain inside server\-owned roots
+
+Control: TW\-CTRL\-PATH\-001 | Domain: input\-validation
+
+No supported filesystem boundary was mapped.
+
+Verification: Test decoded parent traversal, absolute paths, separators, symlinks, and race conditions against the canonical storage root.
 
 ### NOT\_APPLICABLE: Outbound destinations are server\-owned or safely constrained
 
