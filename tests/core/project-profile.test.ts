@@ -161,3 +161,18 @@ test('Next route wrappers, aliases, and destructured handlers are mapped', () =>
   ).profile.entrypoints[0];
   assert.deepEqual(destructured?.methods, ['GET', 'POST']);
 });
+
+test('Pages API method switches are mapped without executing handlers', () => {
+  const profile = profileProject(
+    snapshotOf(
+      `export default async function handler(req, res) {
+        switch (req.method) {
+          case 'GET': return list(req, res);
+          case 'DELETE': return remove(req, res);
+        }
+      }`,
+      'pages/api/teams/[id].ts',
+    ),
+  ).profile;
+  assert.deepEqual(profile.entrypoints[0]?.methods, ['GET', 'DELETE']);
+});

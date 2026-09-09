@@ -73,6 +73,40 @@ test('authentication wrappers protect mapped Next route callbacks', () => {
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('Pages API method switches participate in bounded authorization analysis', () => {
+  const vulnerable = snapshotOf(
+    `export default async function handler(req, res) {
+      switch (req.method) { case 'DELETE': return remove(req, res); }
+    }
+    async function remove(req, res) {
+      return database.team.delete({ where: { id: req.query.id } });
+    }`,
+    'pages/api/teams/[id].ts',
+  );
+  assert.ok(
+    scanAstSecurity(vulnerable, profileProject(vulnerable).profile).findings.some(
+      (finding) => finding.ruleId === 'TW-AST001',
+    ),
+  );
+
+  const safe = snapshotOf(
+    `export default async function handler(req, res) {
+      switch (req.method) { case 'DELETE': return remove(req, res); }
+    }
+    async function remove(req, res) {
+      const member = await throwIfNoTeamAccess(req, res);
+      throwIfNotAllowed(member, 'team', 'delete');
+      return database.team.delete({ where: { id: req.query.id } });
+    }`,
+    'pages/api/teams/[id].ts',
+  );
+  assert.ok(
+    !scanAstSecurity(safe, profileProject(safe).profile).findings.some(
+      (finding) => finding.ruleId === 'TW-AST001',
+    ),
+  );
+});
+
 test('read-only routes and webhook boundaries are not treated as missing login mutations', () => {
   const getSnapshot = snapshotOf(
     'export async function GET() { return prisma.project.findMany(); }',

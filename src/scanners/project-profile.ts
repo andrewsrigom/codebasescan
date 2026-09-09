@@ -148,13 +148,13 @@ function callName(expression: ts.Expression): string {
 function factKind(callee: string): ProjectFactKind | null {
   const value = callee.toLowerCase();
   if (
-    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|getserver(?:session|user)|currentuser|verifytoken|validatesession|withauth)$/.test(
+    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|getserver(?:session|user)|currentuser|verifytoken|validatesession|withauth|throwifnoteamaccess)$/.test(
       value,
     )
   )
     return 'authentication';
   if (
-    /(?:^|\.)(?:authorize|requirerole|haspermission|assertaccess|canaccess|checkpermission)$/.test(
+    /(?:^|\.)(?:authorize|requirerole|haspermission|assertaccess|canaccess|checkpermission|throwifnotallowed)$/.test(
       value,
     )
   )
@@ -332,6 +332,33 @@ function dynamicParameters(file: string): string[] {
   return [...file.matchAll(/\[(?:\.\.\.)?([^\]]+)\]/g)].map((match) => match[1]!).slice(0, 20);
 }
 
+function httpMethodsInFile(source: ts.SourceFile): string[] {
+  const methods = new Set<string>();
+  const add = (node: ts.Expression | undefined): void => {
+    if (node && ts.isStringLiteralLike(node)) {
+      const method = node.text.toUpperCase();
+      if (/^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(method)) methods.add(method);
+    }
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isCaseClause(node)) add(node.expression);
+    if (
+      ts.isBinaryExpression(node) &&
+      [ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.EqualsEqualsEqualsToken].includes(
+        node.operatorToken.kind,
+      )
+    ) {
+      if (ts.isPropertyAccessExpression(node.left) && node.left.name.text === 'method')
+        add(node.right);
+      if (ts.isPropertyAccessExpression(node.right) && node.right.name.text === 'method')
+        add(node.left);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return [...methods];
+}
+
 function addFileEntrypoints(
   item: ParsedFile,
   symbols: ProjectSymbol[],
@@ -416,7 +443,7 @@ function addFileEntrypoints(
       line: 1,
       name: 'default',
       route: routeFromFile(file, 'pages/api'),
-      methods: [],
+      methods: httpMethodsInFile(item.ast),
       dynamicParameters: dynamicParameters(file),
       symbolIds: fileSymbols.map((symbol) => symbol.id).slice(0, 20),
     });
