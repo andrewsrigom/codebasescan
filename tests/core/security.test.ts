@@ -44,6 +44,10 @@ test('classifies runtime, test, and example source scopes', () => {
   assert.equal(classifySourceScope('src/app/api/users/route.ts'), 'runtime');
   assert.equal(classifySourceScope('src/users.spec.ts'), 'test');
   assert.equal(classifySourceScope('fixtures/express/package.json'), 'test');
+  assert.equal(classifySourceScope('src/test-utils/axe.ts'), 'test');
+  assert.equal(classifySourceScope('src/domain-test-helpers.ts'), 'test');
+  assert.equal(classifySourceScope('src/test-figma-node.ts'), 'test');
+  assert.equal(classifySourceScope('src/token-test-fixtures.ts'), 'test');
   assert.equal(classifySourceScope('e2e/workspace.spec.ts'), 'test');
   assert.equal(classifySourceScope('.storybook/preview.ts'), 'example');
   assert.equal(classifySourceScope('examples/insecure.ts'), 'example');

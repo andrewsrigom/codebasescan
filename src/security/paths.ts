@@ -56,6 +56,10 @@ const testSegments = new Set([
   'spec',
   'specs',
   'testdata',
+  'test-utils',
+  'test-helpers',
+  '__fixtures__',
+  '__test__',
   '__mocks__',
   'mocks',
   'benchmark',
@@ -111,7 +115,8 @@ export function classifySourceScope(relativePath: string): SourceScope {
   const file = segments.at(-1) ?? '';
   if (
     segments.some((segment) => testSegments.has(segment)) ||
-    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file) ||
+    /(?:^test-|-(?:test|spec)-(?:helpers?|fixtures?|harness))[^/]*\.[cm]?[jt]sx?$/.test(file)
   )
     return 'test';
   if (
