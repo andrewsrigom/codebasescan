@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-ast-request-flows-safe",
+  "category": "false-positives",
+  "scanners": ["ast"],
+  "expectedRuleIds": []
+}

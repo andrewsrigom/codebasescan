@@ -1,0 +1,14 @@
+{
+  "id": "code-first-ast-request-flows",
+  "category": "code-first",
+  "scanners": ["ast"],
+  "expectedRuleIds": [
+    "TW-AST004",
+    "TW-AST005",
+    "TW-AST006",
+    "TW-AST007",
+    "TW-AST008",
+    "TW-AST009",
+    "TW-AST010"
+  ]
+}
