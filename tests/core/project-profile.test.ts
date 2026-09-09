@@ -143,6 +143,18 @@ test('catch clauses are recorded as error-handling facts', () => {
   assert.equal(handling?.ownerSymbolId, handler?.id);
 });
 
+test('regular expression execution is not classified as operating-system command execution', () => {
+  const result = profileProject(
+    snapshotOf(
+      `const METHOD = /^(GET|POST) /;
+       export function sanitize(value: string) { return METHOD.exec(value)?.[1] ?? ''; }
+       export async function GET() { return Response.json({ method: sanitize('GET /') }); }`,
+      'src/app/api/example/route.ts',
+    ),
+  );
+  assert.ok(!result.profile.facts.some((fact) => fact.kind === 'command-execution'));
+});
+
 test('Next route wrappers, aliases, and destructured handlers are mapped', () => {
   const wrappedSnapshot = snapshotOf(
     `

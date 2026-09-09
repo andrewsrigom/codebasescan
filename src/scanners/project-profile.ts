@@ -170,7 +170,11 @@ function factKind(callee: string): ProjectFactKind | null {
   )
     return 'database';
   if (/^(?:fetch|axios|got)(?:\.|$)|\.(?:fetch|request)$/.test(value)) return 'outbound-request';
-  if (/(?:^|\.)(?:exec|execfile|spawn|fork)$/.test(value)) return 'command-execution';
+  if (
+    /^(?:exec|execfile|spawn|fork)$/.test(value) ||
+    /(?:^|\.)(?:child_process|childprocess)\.(?:exec|execfile|spawn|fork)$/.test(value)
+  )
+    return 'command-execution';
   if (
     /(?:^|\.)(?:readfile|writefile|appendfile|createwritestream|createreadstream|unlink|rename)$/.test(
       value,
