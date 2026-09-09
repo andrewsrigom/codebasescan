@@ -59,6 +59,20 @@ test('recognized two-hop auth, permission, and owner scope avoid AST gap candida
   assert.deepEqual(result.findings, []);
 });
 
+test('authentication wrappers protect mapped Next route callbacks', () => {
+  const snapshot = snapshotOf(
+    `
+      import { auth } from './auth';
+      export const DELETE = auth(async (request) => {
+        return database.user.delete({ where: { id: request.id } });
+      });
+    `,
+    'src/app/api/user/route.ts',
+  );
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('read-only routes and webhook boundaries are not treated as missing login mutations', () => {
   const getSnapshot = snapshotOf(
     'export async function GET() { return prisma.project.findMany(); }',

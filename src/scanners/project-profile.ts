@@ -228,7 +228,7 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
     name.startsWith('@supabase/'),
   )?.[1];
   const appRoute = parsed.find((item) =>
-    /(?:^|\/)app\/.+\/route\.[cm]?[jt]sx?$/.test(item.source.path),
+    /(?:^|\/)app\/(?:.+\/)?route\.[cm]?[jt]sx?$/.test(item.source.path),
   );
   const pagesRoute = parsed.find((item) =>
     /(?:^|\/)pages\/api\/.+\.[cm]?[jt]sx?$/.test(item.source.path),
@@ -340,20 +340,72 @@ function addFileEntrypoints(
   const file = item.source.path;
   const allFileSymbols = symbols.filter((symbol) => symbol.file === file);
   const fileSymbols = allFileSymbols.filter((symbol) => symbol.exported);
-  const routeMethods = fileSymbols.filter((symbol) =>
-    /^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/.test(symbol.name),
-  );
-  if (/(?:^|\/)app\/.+\/route\.[cm]?[jt]sx?$/.test(file) && routeMethods.length) {
+  const methodPattern = /^(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)$/;
+  const routeBindings = new Map<string, { line: number; symbolIds: string[] }>();
+  for (const symbol of fileSymbols.filter((candidate) => methodPattern.test(candidate.name)))
+    routeBindings.set(symbol.name, { line: symbol.line, symbolIds: [symbol.id] });
+
+  for (const statement of item.ast.statements) {
+    if (ts.isVariableStatement(statement) && hasModifier(statement, ts.SyntaxKind.ExportKeyword)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name) && methodPattern.test(declaration.name.text)) {
+          const callback =
+            declaration.initializer && ts.isCallExpression(declaration.initializer)
+              ? declaration.initializer.arguments.find(
+                  (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
+                )
+              : undefined;
+          const callbackSymbol = callback ? functionSymbol(file, item.ast, callback) : null;
+          const directSymbol = allFileSymbols.find(
+            (symbol) => symbol.name === declaration.name.getText(item.ast),
+          );
+          const aliasedSymbol =
+            declaration.initializer && ts.isIdentifier(declaration.initializer)
+              ? allFileSymbols.find((symbol) => symbol.name === declaration.initializer!.getText())
+              : undefined;
+          const target = callbackSymbol ?? directSymbol ?? aliasedSymbol;
+          routeBindings.set(declaration.name.text, {
+            line: lineOf(item.ast, declaration),
+            symbolIds: target ? [target.id] : [],
+          });
+        } else if (ts.isObjectBindingPattern(declaration.name)) {
+          for (const element of declaration.name.elements) {
+            const method = propertyName(element.name);
+            if (method && methodPattern.test(method))
+              routeBindings.set(method, { line: lineOf(item.ast, element), symbolIds: [] });
+          }
+        }
+      }
+    }
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.moduleSpecifier &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    )
+      for (const element of statement.exportClause.elements) {
+        const method = element.name.text;
+        if (!methodPattern.test(method)) continue;
+        const localName = element.propertyName?.text ?? method;
+        const target = allFileSymbols.find((symbol) => symbol.name === localName);
+        routeBindings.set(method, {
+          line: lineOf(item.ast, element),
+          symbolIds: target ? [target.id] : [],
+        });
+      }
+  }
+  if (/(?:^|\/)app\/(?:.+\/)?route\.[cm]?[jt]sx?$/.test(file) && routeBindings.size) {
+    const bindings = [...routeBindings.entries()];
     entrypoints.push({
       id: stableId('entrypoint', 'next-route', file),
       kind: 'next-route',
       file,
-      line: Math.min(...routeMethods.map((symbol) => symbol.line)),
-      name: routeMethods.map((symbol) => symbol.name).join(', '),
+      line: Math.min(...bindings.map(([, binding]) => binding.line)),
+      name: bindings.map(([method]) => method).join(', '),
       route: routeFromFile(file, 'app'),
-      methods: routeMethods.map((symbol) => symbol.name),
+      methods: bindings.map(([method]) => method),
       dynamicParameters: dynamicParameters(file),
-      symbolIds: routeMethods.map((symbol) => symbol.id),
+      symbolIds: [...new Set(bindings.flatMap(([, binding]) => binding.symbolIds))],
     });
   }
   if (/(?:^|\/)pages\/api\/.+\.[cm]?[jt]sx?$/.test(file)) {
@@ -532,14 +584,23 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             ...(ownerSymbolId ? { callerSymbolId: ownerSymbolId } : {}),
           });
         const kind = factKind(callee);
+        const callback = node.arguments.find(
+          (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
+        );
+        const callbackSymbol = callback
+          ? functionSymbol(item.source.path, item.ast, callback)
+          : null;
+        const factOwnerSymbolId =
+          ownerSymbolId ??
+          (kind === 'authentication' || kind === 'authorization' ? callbackSymbol?.id : undefined);
         if (kind && !cap(facts.length, maximumFacts, 'Security fact'))
           facts.push({
-            id: stableId('fact', kind, item.source.path, line, callee, ownerSymbolId),
+            id: stableId('fact', kind, item.source.path, line, callee, factOwnerSymbolId),
             kind,
             file: item.source.path,
             line,
             signal: callee,
-            ...(ownerSymbolId ? { ownerSymbolId } : {}),
+            ...(factOwnerSymbolId ? { ownerSymbolId: factOwnerSymbolId } : {}),
           });
         const scope = kind === 'database' ? resourceScopeSignal(node) : null;
         if (scope && !cap(facts.length, maximumFacts, 'Security fact'))

@@ -119,3 +119,45 @@ test('catch clauses are recorded as error-handling facts', () => {
   const handling = result.profile.facts.find((fact) => fact.kind === 'error-handling');
   assert.equal(handling?.ownerSymbolId, handler?.id);
 });
+
+test('Next route wrappers, aliases, and destructured handlers are mapped', () => {
+  const wrappedSnapshot = snapshotOf(
+    `
+      import { auth } from './auth';
+      export const DELETE = auth(async (request) => {
+        return database.user.delete({ where: { id: request.id } });
+      });
+    `,
+    'src/app/api/user/route.ts',
+  );
+  const wrapped = profileProject(wrappedSnapshot).profile;
+  const wrappedRoute = wrapped.entrypoints.find((entrypoint) => entrypoint.kind === 'next-route');
+  assert.deepEqual(wrappedRoute?.methods, ['DELETE']);
+  assert.equal(wrappedRoute?.symbolIds.length, 1);
+  assert.ok(
+    wrapped.facts.some(
+      (fact) => fact.kind === 'authentication' && fact.ownerSymbolId === wrappedRoute?.symbolIds[0],
+    ),
+  );
+
+  const direct = profileProject(
+    snapshotOf(`export const PUT = async () => Response.json({ ok: true });`, 'app/api/route.ts'),
+  ).profile.entrypoints[0];
+  assert.deepEqual(direct?.methods, ['PUT']);
+  assert.equal(direct?.symbolIds.length, 1);
+
+  const alias = profileProject(
+    snapshotOf(
+      `async function handler() { return Response.json({ ok: true }); }
+       export { handler as GET, handler as POST };`,
+      'app/route.ts',
+    ),
+  ).profile.entrypoints[0];
+  assert.deepEqual(alias?.methods, ['GET', 'POST']);
+  assert.equal(alias?.symbolIds.length, 1);
+
+  const destructured = profileProject(
+    snapshotOf(`export const { GET, POST } = handlers;`, 'app/auth/route.ts'),
+  ).profile.entrypoints[0];
+  assert.deepEqual(destructured?.methods, ['GET', 'POST']);
+});
