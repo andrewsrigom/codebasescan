@@ -1,14 +1,5 @@
 import path from 'node:path';
-import {
-  lstat,
-  mkdtemp,
-  mkdir,
-  readFile,
-  readdir,
-  rm,
-  stat,
-  unlink,
-} from 'node:fs/promises';
+import { lstat, mkdtemp, mkdir, readFile, readdir, rm, stat, unlink } from 'node:fs/promises';
 import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
 import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { record } from '../domain/validation.ts';

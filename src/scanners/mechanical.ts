@@ -65,7 +65,8 @@ function locateSource(snapshot: Snapshot, reportedPath: unknown, stagingRoot?: s
         : reportedPath.replace(/^\.\//, '');
     const normalized = safeRelative(relative);
     return snapshot.files.find(
-      (file) => file.path === normalized && isRuntimeSource(file) && sourceExtension.test(file.path),
+      (file) =>
+        file.path === normalized && isRuntimeSource(file) && sourceExtension.test(file.path),
     );
   } catch {
     return undefined;

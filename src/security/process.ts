@@ -12,7 +12,10 @@ function scannerCommand(binary: TrustedScannerBinary, args: string[]) {
       executable: process.execPath,
       args: [
         fileURLToPath(
-          new URL('../../node_modules/dependency-cruiser/bin/dependency-cruise.mjs', import.meta.url),
+          new URL(
+            '../../node_modules/dependency-cruiser/bin/dependency-cruise.mjs',
+            import.meta.url,
+          ),
         ),
         ...args,
       ],
@@ -20,7 +23,10 @@ function scannerCommand(binary: TrustedScannerBinary, args: string[]) {
   if (binary === 'jscpd')
     return {
       executable: process.execPath,
-      args: [fileURLToPath(new URL('../../node_modules/jscpd/run-jscpd.js', import.meta.url)), ...args],
+      args: [
+        fileURLToPath(new URL('../../node_modules/jscpd/run-jscpd.js', import.meta.url)),
+        ...args,
+      ],
     };
   return { executable: binary, args };
 }

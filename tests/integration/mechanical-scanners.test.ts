@@ -41,10 +41,7 @@ test('bundled mechanical scanners run against an inert staged snapshot', async (
   assert.equal(architecture.analysis?.modules, 2);
   assert.ok((architecture.analysis?.cycles.length ?? 0) >= 1);
 
-  assert.ok(
-    ['completed', 'partial'].includes(duplication.run.status),
-    JSON.stringify(duplication),
-  );
+  assert.ok(['completed', 'partial'].includes(duplication.run.status), JSON.stringify(duplication));
   assert.equal(duplication.run.version, '5.2.0');
   assert.ok((duplication.analysis?.clones ?? 0) >= 1);
   assert.ok((duplication.analysis?.blocks.length ?? 0) >= 1);

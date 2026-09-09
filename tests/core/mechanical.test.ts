@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  normalizeArchitecture,
-  normalizeDuplication,
-} from '../../src/scanners/mechanical.ts';
+import { normalizeArchitecture, normalizeDuplication } from '../../src/scanners/mechanical.ts';
 import { snapshotFromFiles } from '../helpers.ts';
 
 test('dependency structure normalization keeps bounded local evidence', () => {
@@ -55,9 +52,10 @@ test('dependency structure normalization keeps bounded local evidence', () => {
 });
 
 test('duplication normalization discards source fragments and unsafe paths', () => {
-  const repeated = Array.from({ length: 20 }, (_, index) => `export const value${index} = ${index};`).join(
-    '\n',
-  );
+  const repeated = Array.from(
+    { length: 20 },
+    (_, index) => `export const value${index} = ${index};`,
+  ).join('\n');
   const snapshot = snapshotFromFiles({
     'src/a.ts': repeated,
     'src/b.ts': repeated,
