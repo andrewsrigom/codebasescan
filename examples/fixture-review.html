@@ -1,28 +1,1231 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Traceward · Review-worthy SaaS — fixture export</title><style>:root{color-scheme:light;--ink:#182824;--muted:#5a6e64;--line:#dce5e0;--paper:#fff;--canvas:#f3f6f4;--accent:#08745c;--amber:#9b641f;--red:#a94943}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.65 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1040px;margin:auto;padding:56px 28px 80px}a{color:var(--accent)}h1{font-size:clamp(36px,6vw,58px);line-height:1.05;letter-spacing:-2.4px;margin:10px 0 16px}h2{font-size:24px;line-height:1.25;letter-spacing:-.5px;margin:0 0 12px}h3{font-size:13px;line-height:1.5;margin:18px 0 7px}.kicker,.meta{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.hero{border-bottom:1px solid var(--line);padding-bottom:30px}.hero-meta{display:flex;gap:10px 24px;flex-wrap:wrap;color:var(--muted);font-size:13px}.hero code{overflow-wrap:anywhere;font-size:11px}.callout{margin:22px 0;padding:16px 18px;border-left:4px solid var(--amber);background:#fff8eb}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:22px 0}.summary-card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:17px}.summary-card strong{display:block;font-size:30px;line-height:1.1}.summary-card span{display:block;color:var(--muted);font-size:12px;margin-top:6px}.report-section,.finding{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin:20px 0;padding:26px}.section-head,.finding-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.section-head h2{margin-top:5px}.finding-head a{font-size:11px;white-space:nowrap}.priority-list,.coverage-list{list-style:none;padding:0;margin:12px 0 0}.priority-list li+li,.coverage-list li+li{border-top:1px solid #edf1ef}.priority-list a,.coverage-list li{display:flex;align-items:flex-start;gap:12px;padding:13px 0;text-decoration:none}.priority-list a>span:last-child{font-weight:650}.priority-list small{display:block;color:var(--muted);font:11px ui-monospace,monospace;margin-top:3px;overflow-wrap:anywhere}.severity,.status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.severity.critical,.severity.high{background:#f9e6e3;color:var(--red)}.severity.medium{background:#fbefd9;color:var(--amber)}.severity.low,.severity.info{background:#edf2ef;color:#4f655a}.status.complete{background:#e6f3eb;color:#28704f}.status.gap{background:#f6ecdd;color:#895d25}.coverage-list strong{display:block}.coverage-list p{margin:2px 0 0;color:var(--muted)}.facts{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.facts span{background:#f4f7f5;border:1px solid #e7ece9;border-radius:8px;padding:9px 11px;font-size:12px}.facts strong{font-size:16px}.muted{color:var(--muted)}.checklist-facts{margin-bottom:22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.control{border:1px solid #e7ece9;border-radius:9px;padding:17px}.control h3{font-size:15px;text-transform:none}.control p{font-size:13px;color:#42564c}.control .meta{margin-left:8px}.findings-title{margin-top:42px}.finding>h2{margin-top:18px}.finding-section{border-top:1px solid #e8eeea;margin-top:20px;padding-top:4px}.evidence h3{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172b26;color:#edf5f0;padding:18px;border-radius:8px;font:12px/1.55 ui-monospace,monospace}.evidence p{color:var(--muted)}.remediation{border-left:3px solid var(--accent);padding-left:16px}.review{border-left:3px solid #739b7f;padding-left:16px}footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}@media print{body{background:white}main{max-width:none;padding:0}.report-section,.finding{break-inside:avoid;box-shadow:none}.finding-head a{display:none}.callout{border:1px solid #ddd}.priority-list a{color:var(--ink)}}</style></head><body><main id="top"><header class="hero"><span class="kicker">TRACEWARD / LOCAL SECURITY REVIEW</span><h1>Review-worthy SaaS — fixture export</h1><div class="hero-meta"><span>Audit 00000000</span><span>2026-09-08T12:00:00.000Z</span><span>8 files</span><span>draft</span><code>Snapshot be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48</code></div></header><aside class="callout"><strong>Evidence-led review, not a security certification.</strong> Severity and human disposition are separate. Missing or failed coverage never counts as a clean result.</aside><section aria-labelledby="summary-title"><span class="kicker">DECISION SUPPORT</span><h2 id="summary-title">Review summary</h2><div class="summary-grid"><div class="summary-card"><strong>7</strong><span>Need human review</span></div><div class="summary-card"><strong>4</strong><span>Critical + high pending</span></div><div class="summary-card"><strong>0</strong><span>Reviewed candidates</span></div><div class="summary-card"><strong>11</strong><span>Coverage gaps</span></div></div></section><nav class="report-section" aria-labelledby="priority-title"><span class="kicker">START HERE</span><h2 id="priority-title">Review priorities</h2><ol class="priority-list"><li><a href="#finding-1"><span class="severity high">high</span><span>Sensitive configuration uses a public environment name<small>src/lib/config.ts</small></span></a></li><li><a href="#finding-2"><span class="severity high">high</span><span>Destructive agent tool needs permission review<small>src/agents/account.ts</small></span></a></li><li><a href="#finding-3"><span class="severity high">high</span><span>Dynamic code execution needs trust-boundary review<small>src/lib/expression.ts</small></span></a></li><li><a href="#finding-4"><span class="severity high">high</span><span>Raw SQL execution needs input tracing<small>src/app/api/search/route.ts</small></span></a></li><li><a href="#finding-5"><span class="severity medium">medium</span><span>Object lookup needs tenant authorization review<small>src/app/api/projects/[id]/route.ts</small></span></a></li><li><a href="#finding-6"><span class="severity medium">medium</span><span>HTML rendering bypass needs sanitization review<small>src/components/preview.tsx</small></span></a></li><li><a href="#finding-7"><span class="severity medium">medium</span><span>Wildcard cross-origin policy needs context review<small>src/lib/cors.ts</small></span></a></li></ol></nav><section class="report-section"><div class="section-head"><div><span class="kicker">WHAT ACTUALLY RAN</span><h2>Coverage</h2></div><span class="status gap">11 gaps</span></div><ul class="coverage-list"><li><span class="status complete">COMPLETE</span><div><strong>Project structure profile</strong><p>Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).</p></div></li><li><span class="status gap">NOT RUN</span><div><strong>Framework-aware authorization</strong><p>No scanner run was recorded for this capability.</p></div></li><li><span class="status gap">NOT RUN</span><div><strong>Next.js application security</strong><p>No scanner run was recorded for this capability.</p></div></li><li><span class="status gap">NOT RUN</span><div><strong>React client security</strong><p>No scanner run was recorded for this capability.</p></div></li><li><span class="status complete">COMPLETE</span><div><strong>JavaScript/TypeScript dependency structure</strong><p>7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.</p></div></li><li><span class="status complete">COMPLETE</span><div><strong>JavaScript/TypeScript code duplication</strong><p>0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.</p></div></li><li><span class="status complete">COMPLETE</span><div><strong>Built-in static patterns</strong><p>Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.</p></div></li><li><span class="status gap">DISABLED</span><div><strong>Static code analysis</strong><p>Not executed for this fixture export.</p></div></li><li><span class="status gap">DISABLED</span><div><strong>Secret scanning</strong><p>Not executed for this fixture export.</p></div></li><li><span class="status gap">DISABLED</span><div><strong>Dependency vulnerabilities</strong><p>OSV lookup was disabled for this reproducible fixture export.</p></div></li><li><span class="status complete">COMPLETE</span><div><strong>Security configuration</strong><p>Conservative framework and configuration posture checks executed locally.</p></div></li><li><span class="status gap">NOT RUN</span><div><strong>HTTP runtime posture</strong><p>No scanner run was recorded for this capability.</p></div></li><li><span class="status gap">DISABLED</span><div><strong>AI contextual analysis</strong><p>Model inference was disabled. Deterministic findings remain available.</p></div></li><li><span class="status gap">NOT SUPPORTED</span><div><strong>Infrastructure as Code</strong><p>No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented.</p></div></li><li><span class="status gap">NOT SUPPORTED</span><div><strong>Cloud IAM</strong><p>Cloud account and effective IAM policy analysis are outside this release.</p></div></li><li><span class="status gap">NOT PERFORMED</span><div><strong>Dynamic exploitation</strong><p>Traceward does not exploit targets, brute-force authentication, or crawl applications.</p></div></li></ul></section><section class="report-section"><div class="section-head"><div><span class="kicker">SOURCE MODEL</span><h2>Project structure</h2></div><span class="status complete">complete</span></div><p>7 source files and 226 AST nodes were parsed as data. Target code was not executed.</p><div class="facts"><span><strong>2</strong> entry points</span><span><strong>5</strong> symbols</span><span><strong>8</strong> call edges</span><span><strong>6</strong> security facts</span></div><p class="muted">Frameworks: Next.js App Router, Prisma.</p></section><section class="report-section"><span class="kicker">MECHANICAL REVIEW</span><h2>Structure and duplication</h2><div class="facts"><span><strong>7</strong> modules</span><span><strong>0</strong> local dependencies</span><span><strong>0</strong> cycles</span><span><strong>4</strong> orphan candidates</span></div><div class="facts"><span><strong>0</strong> clones</span><span><strong>0</strong> duplicated lines</span><span><strong>0%</strong> duplication</span></div><p class="muted">These measurements are maintainability evidence, not security vulnerabilities.</p></section><section class="report-section"><span class="kicker">CONTROL PACK 0.4.0</span><h2>Security checklist</h2><div class="facts checklist-facts"><span><strong>0</strong> EVIDENCED</span><span><strong>3</strong> GAP CANDIDATE</span><span><strong>14</strong> UNVERIFIED</span><span><strong>6</strong> NOT APPLICABLE</span><span><strong>0</strong> PARTIAL</span><span><strong>0</strong> FAILED</span></div><div class="controls"><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">authentication · TW-CTRL-AUTHN-001</span></div><h3>Sensitive mutations authenticate a principal</h3><p>No supported sensitive mutation boundary was mapped.</p><p><strong>Verify:</strong> Test each boundary without a session/token and confirm rejection before the sensitive operation.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">authentication · TW-CTRL-AUTHN-002</span></div><h3>Sensitive read routes receive an authentication review</h3><p>No missing-authentication candidate was found across 2 mapped sensitive read route(s).</p><p><strong>Verify:</strong> Test anonymous and wrong-tenant reads. Confirm intentionally public routes expose only approved fields.</p></section><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">authorization · TW-CTRL-AUTHZ-001</span></div><h3>Administrative mutations enforce permission</h3><p>No supported admin/internal mutation boundary was mapped.</p><p><strong>Verify:</strong> Test an authenticated non-admin principal against every privileged action.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">authorization · TW-CTRL-AUTHZ-002</span></div><h3>Dynamic resource access is tenant or owner scoped</h3><p>0 of 1 dynamic database boundary(s) contain a recognized tenant, owner, account, organization, or user scope in the captured call arguments.</p><p><strong>Verify:</strong> Run cross-tenant and wrong-owner identifier tests and inspect effective RLS/database policy.</p></section><section class="control"><div><span class="status gap">GAP_CANDIDATE</span><span class="meta">input-validation · TW-CTRL-INPUT-001</span></div><h3>Sensitive entry points validate caller-controlled input</h3><p>0 of 2 sensitive entry point(s) contain a recognized validation call within five explicit call hops.</p><p><strong>Verify:</strong> Test malformed, oversized, unexpected-type, and boundary input before the sensitive operation.</p></section><section class="control"><div><span class="status gap">GAP_CANDIDATE</span><span class="meta">input-validation · TW-CTRL-INJECTION-001</span></div><h3>Raw SQL keeps request data out of query structure</h3><p>1 raw SQL input-flow candidate(s) require review.</p><p><strong>Verify:</strong> Trace each query fragment, replace structural interpolation with parameters, and test metacharacter payloads without modifying production data.</p></section><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">integrations · TW-CTRL-OUTBOUND-001</span></div><h3>Outbound destinations are server-owned or safely constrained</h3><p>No supported outbound request boundary was mapped.</p><p><strong>Verify:</strong> Test untrusted public, private, loopback, metadata, DNS-rebinding, and redirect destinations against the effective egress policy.</p></section><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">integrations · TW-CTRL-REDIRECT-001</span></div><h3>Redirect destinations are constrained</h3><p>No supported redirect boundary was mapped.</p><p><strong>Verify:</strong> Test external, scheme-relative, encoded, mixed-case, and userinfo-form destinations against the effective redirect policy.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">input-validation · TW-CTRL-UPLOAD-001</span></div><h3>File uploads enforce size, content, and storage-path constraints</h3><p>No decisive upload gap was mapped, but the profiler cannot prove that uploads are absent or fully constrained.</p><p><strong>Verify:</strong> Test byte limits, file count, MIME/content mismatch, polyglots, generated names, traversal, overwrite, and storage execution policy.</p></section><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">integrations · TW-CTRL-WEBHOOK-001</span></div><h3>Webhook authenticity is verified before processing</h3><p>No supported webhook/callback boundary reaching a sensitive operation was mapped.</p><p><strong>Verify:</strong> Send missing, invalid, replayed, and stale signatures and confirm rejection before parsing or persistence.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">browser-security · TW-CTRL-HEADERS-001</span></div><h3>Browser security policies are declared and observed</h3><p>No effective runtime response was available to confirm browser policies.</p><p><strong>Verify:</strong> Observe representative production responses and verify CSP, frame, MIME, referrer, permissions, and transport policies.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">authentication · TW-CTRL-SESSION-001</span></div><h3>Sensitive cookies use explicit protection attributes</h3><p>No cookie-based session signal was mapped.</p><p><strong>Verify:</strong> Inspect effective Set-Cookie attributes and test production HTTPS, expiry, logout, fixation, and CSRF behavior.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">browser-security · TW-CTRL-CORS-001</span></div><h3>Cross-origin access is intentionally constrained</h3><p>No effective cross-origin policy was observed; same-origin-only operation is possible but unverified.</p><p><strong>Verify:</strong> Test trusted and untrusted Origin values, credential mode, preflight behavior, and server-side authorization independently.</p></section><section class="control"><div><span class="status gap">GAP_CANDIDATE</span><span class="meta">secrets · TW-CTRL-SECRETS-001</span></div><h3>Captured current source has no detected secret exposure candidate</h3><p>1 secret or client/server configuration candidate(s) require review.</p><p><strong>Verify:</strong> Review Git history, CI variables, deployment secrets, rotation, and provider-side secret scanning separately.</p></section><section class="control"><div><span class="status gap">NOT_APPLICABLE</span><span class="meta">dependencies · TW-CTRL-DEPS-001</span></div><h3>Resolved dependencies are checked against OSV</h3><p>No supported resolved npm/pnpm/Yarn lockfile dependency was available.</p><p><strong>Verify:</strong> Review advisory freshness, runtime reachability, exploit preconditions, and supported upgrade paths.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">runtime · TW-CTRL-RUNTIME-001</span></div><h3>Approved HTTP response posture is observed</h3><p>No target URL was explicitly approved for runtime observation.</p><p><strong>Verify:</strong> Probe representative production routes and deployment layers under explicit authorization.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">logging · TW-CTRL-LOGGING-001</span></div><h3>Sensitive operations emit security-relevant audit events</h3><p>0 of 2 mapped sensitive boundary(s) contain a recognized audit/security logging call.</p><p><strong>Verify:</strong> Confirm event content, actor, target, outcome, correlation ID, retention, access controls, and alerting in the real logging system.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">logging · TW-CTRL-ERRORS-001</span></div><h3>Sensitive boundaries define explicit failure handling</h3><p>0 of 2 mapped sensitive boundary(s) contain an explicit catch clause within five call hops.</p><p><strong>Verify:</strong> Exercise dependency, validation, authorization, and storage failures; confirm safe responses and useful internal diagnostics.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">authorization · TW-CTRL-NEXT-001</span></div><h3>Next.js caching keeps user and tenant data isolated</h3><p>No supported user-specific cache isolation candidate was found in the bounded Next.js scan.</p><p><strong>Verify:</strong> Test two users or tenants against warm cache entries and inspect Cache-Control behavior at the deployed edge.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">secrets · TW-CTRL-NEXT-002</span></div><h3>Next.js client boundaries exclude privileged configuration and response data</h3><p>No supported privileged public environment or sensitive server response field candidate was found.</p><p><strong>Verify:</strong> Inspect production client bundles, RSC payloads, and API responses for privileged values.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">input-validation · TW-CTRL-REACT-001</span></div><h3>Dynamic HTML preserves React output encoding</h3><p>No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the bounded React scan.</p><p><strong>Verify:</strong> Test script, event-handler, URL, SVG, malformed markup, and mutation-XSS payloads at every intentional HTML rendering boundary.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">browser-security · TW-CTRL-REACT-002</span></div><h3>Client navigation, storage, and messaging use constrained browser boundaries</h3><p>No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern was found.</p><p><strong>Verify:</strong> Exercise untrusted URLs, message origins, storage access after script injection, and external new-tab navigation.</p></section><section class="control"><div><span class="status gap">UNVERIFIED</span><span class="meta">secrets · TW-CTRL-REACT-003</span></div><h3>Server and Client Component boundaries keep privileged data on the server</h3><p>No supported server-only import, sensitive prop, async Client Component, or private environment boundary candidate was found.</p><p><strong>Verify:</strong> Inspect serialized RSC payloads and production client bundles for credentials, privileged session objects, and server-only modules.</p></section></div></section><section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">7 review candidates. Static signals require human validation.</p></section><article class="finding" id="finding-1"><header class="finding-head"><div><span class="severity high">high</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Sensitive configuration uses a public environment name</h2><p>A sensitive-looking setting has a browser-public naming convention. No active credential or actual browser bundle exposure has been verified.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/lib/config.ts:1–5</h3><pre>export const configuration = {
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Traceward · Review-worthy SaaS — fixture export</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #182824;
+        --muted: #5a6e64;
+        --line: #dce5e0;
+        --paper: #fff;
+        --canvas: #f3f6f4;
+        --accent: #08745c;
+        --amber: #9b641f;
+        --red: #a94943;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          15px/1.65 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      main {
+        max-width: 1040px;
+        margin: auto;
+        padding: 56px 28px 80px;
+      }
+      a {
+        color: var(--accent);
+      }
+      h1 {
+        font-size: clamp(36px, 6vw, 58px);
+        line-height: 1.05;
+        letter-spacing: -2.4px;
+        margin: 10px 0 16px;
+      }
+      h2 {
+        font-size: 24px;
+        line-height: 1.25;
+        letter-spacing: -0.5px;
+        margin: 0 0 12px;
+      }
+      h3 {
+        font-size: 13px;
+        line-height: 1.5;
+        margin: 18px 0 7px;
+      }
+      .kicker,
+      .meta {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .hero {
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 30px;
+      }
+      .hero-meta {
+        display: flex;
+        gap: 10px 24px;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .hero code {
+        overflow-wrap: anywhere;
+        font-size: 11px;
+      }
+      .callout {
+        margin: 22px 0;
+        padding: 16px 18px;
+        border-left: 4px solid var(--amber);
+        background: #fff8eb;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 22px 0;
+      }
+      .summary-card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 17px;
+      }
+      .summary-card strong {
+        display: block;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+      .summary-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      .report-section,
+      .finding {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin: 20px 0;
+        padding: 26px;
+      }
+      .section-head,
+      .finding-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 18px;
+      }
+      .section-head h2 {
+        margin-top: 5px;
+      }
+      .finding-head a {
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .priority-list,
+      .coverage-list {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0;
+      }
+      .priority-list li + li,
+      .coverage-list li + li {
+        border-top: 1px solid #edf1ef;
+      }
+      .priority-list a,
+      .coverage-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 13px 0;
+        text-decoration: none;
+      }
+      .priority-list a > span:last-child {
+        font-weight: 650;
+      }
+      .priority-list small {
+        display: block;
+        color: var(--muted);
+        font:
+          11px ui-monospace,
+          monospace;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+      }
+      .severity,
+      .status {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .severity.critical,
+      .severity.high {
+        background: #f9e6e3;
+        color: var(--red);
+      }
+      .severity.medium {
+        background: #fbefd9;
+        color: var(--amber);
+      }
+      .severity.low,
+      .severity.info {
+        background: #edf2ef;
+        color: #4f655a;
+      }
+      .status.complete {
+        background: #e6f3eb;
+        color: #28704f;
+      }
+      .status.gap {
+        background: #f6ecdd;
+        color: #895d25;
+      }
+      .coverage-list strong {
+        display: block;
+      }
+      .coverage-list p {
+        margin: 2px 0 0;
+        color: var(--muted);
+      }
+      .facts {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 18px 0;
+      }
+      .facts span {
+        background: #f4f7f5;
+        border: 1px solid #e7ece9;
+        border-radius: 8px;
+        padding: 9px 11px;
+        font-size: 12px;
+      }
+      .facts strong {
+        font-size: 16px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .checklist-facts {
+        margin-bottom: 22px;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .control {
+        border: 1px solid #e7ece9;
+        border-radius: 9px;
+        padding: 17px;
+      }
+      .control h3 {
+        font-size: 15px;
+        text-transform: none;
+      }
+      .control p {
+        font-size: 13px;
+        color: #42564c;
+      }
+      .control .meta {
+        margin-left: 8px;
+      }
+      .findings-title {
+        margin-top: 42px;
+      }
+      .finding > h2 {
+        margin-top: 18px;
+      }
+      .finding-section {
+        border-top: 1px solid #e8eeea;
+        margin-top: 20px;
+        padding-top: 4px;
+      }
+      .evidence h3 {
+        font:
+          11px ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .evidence pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #172b26;
+        color: #edf5f0;
+        padding: 18px;
+        border-radius: 8px;
+        font:
+          12px/1.55 ui-monospace,
+          monospace;
+      }
+      .evidence p {
+        color: var(--muted);
+      }
+      .remediation {
+        border-left: 3px solid var(--accent);
+        padding-left: 16px;
+      }
+      .review {
+        border-left: 3px solid #739b7f;
+        padding-left: 16px;
+      }
+      footer {
+        margin-top: 38px;
+        padding-top: 24px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+      @media (max-width: 720px) {
+        main {
+          padding: 30px 16px 50px;
+        }
+        .summary-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .controls {
+          grid-template-columns: 1fr;
+        }
+        .report-section,
+        .finding {
+          padding: 19px;
+        }
+        .finding-head {
+          display: block;
+        }
+        .finding-head a {
+          display: inline-block;
+          margin-top: 10px;
+        }
+      }
+      @media print {
+        body {
+          background: white;
+        }
+        main {
+          max-width: none;
+          padding: 0;
+        }
+        .report-section,
+        .finding {
+          break-inside: avoid;
+          box-shadow: none;
+        }
+        .finding-head a {
+          display: none;
+        }
+        .callout {
+          border: 1px solid #ddd;
+        }
+        .priority-list a {
+          color: var(--ink);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="top">
+      <header class="hero">
+        <span class="kicker">TRACEWARD / LOCAL SECURITY REVIEW</span>
+        <h1>Review-worthy SaaS — fixture export</h1>
+        <div class="hero-meta">
+          <span>Audit 00000000</span><span>2026-09-08T12:00:00.000Z</span><span>8 files</span
+          ><span>draft</span
+          ><code>Snapshot be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48</code>
+        </div>
+      </header>
+      <aside class="callout">
+        <strong>Evidence-led review, not a security certification.</strong> Severity and human
+        disposition are separate. Missing or failed coverage never counts as a clean result.
+      </aside>
+      <section aria-labelledby="summary-title">
+        <span class="kicker">DECISION SUPPORT</span>
+        <h2 id="summary-title">Review summary</h2>
+        <div class="summary-grid">
+          <div class="summary-card"><strong>7</strong><span>Need human review</span></div>
+          <div class="summary-card"><strong>4</strong><span>Critical + high pending</span></div>
+          <div class="summary-card"><strong>0</strong><span>Reviewed candidates</span></div>
+          <div class="summary-card"><strong>11</strong><span>Coverage gaps</span></div>
+        </div>
+      </section>
+      <nav class="report-section" aria-labelledby="priority-title">
+        <span class="kicker">START HERE</span>
+        <h2 id="priority-title">Review priorities</h2>
+        <ol class="priority-list">
+          <li>
+            <a href="#finding-1"
+              ><span class="severity high">high</span
+              ><span
+                >Sensitive configuration uses a public environment name<small
+                  >src/lib/config.ts</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-2"
+              ><span class="severity high">high</span
+              ><span
+                >Destructive agent tool needs permission review<small
+                  >src/agents/account.ts</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-3"
+              ><span class="severity high">high</span
+              ><span
+                >Dynamic code execution needs trust-boundary review<small
+                  >src/lib/expression.ts</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-4"
+              ><span class="severity high">high</span
+              ><span
+                >Raw SQL execution needs input tracing<small
+                  >src/app/api/search/route.ts</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-5"
+              ><span class="severity medium">medium</span
+              ><span
+                >Object lookup needs tenant authorization review<small
+                  >src/app/api/projects/[id]/route.ts</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-6"
+              ><span class="severity medium">medium</span
+              ><span
+                >HTML rendering bypass needs sanitization review<small
+                  >src/components/preview.tsx</small
+                ></span
+              ></a
+            >
+          </li>
+          <li>
+            <a href="#finding-7"
+              ><span class="severity medium">medium</span
+              ><span
+                >Wildcard cross-origin policy needs context review<small
+                  >src/lib/cors.ts</small
+                ></span
+              ></a
+            >
+          </li>
+        </ol>
+      </nav>
+      <section class="report-section">
+        <div class="section-head">
+          <div>
+            <span class="kicker">WHAT ACTUALLY RAN</span>
+            <h2>Coverage</h2>
+          </div>
+          <span class="status gap">11 gaps</span>
+        </div>
+        <ul class="coverage-list">
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>Project structure profile</strong>
+              <p>
+                Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5
+                symbol(s), 8 call edge(s), and 6 security-relevant fact(s).
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT RUN</span>
+            <div>
+              <strong>Framework-aware authorization</strong>
+              <p>No scanner run was recorded for this capability.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT RUN</span>
+            <div>
+              <strong>Next.js application security</strong>
+              <p>No scanner run was recorded for this capability.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT RUN</span>
+            <div>
+              <strong>React client security</strong>
+              <p>No scanner run was recorded for this capability.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>JavaScript/TypeScript dependency structure</strong>
+              <p>
+                7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s)
+                are mechanical review data, not vulnerabilities. Target configuration was not
+                loaded. dependency-cruiser 18.2.0 is covered by the Traceward scanner compatibility
+                fixtures.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>JavaScript/TypeScript code duplication</strong>
+              <p>
+                0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments
+                were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd
+                5.2.0 is covered by the Traceward scanner compatibility fixtures.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>Built-in static patterns</strong>
+              <p>
+                Seven bounded regex heuristics executed against inert fixtures. Duration not
+                measured in this reproducible export.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">DISABLED</span>
+            <div>
+              <strong>Static code analysis</strong>
+              <p>Not executed for this fixture export.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">DISABLED</span>
+            <div>
+              <strong>Secret scanning</strong>
+              <p>Not executed for this fixture export.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">DISABLED</span>
+            <div>
+              <strong>Dependency vulnerabilities</strong>
+              <p>OSV lookup was disabled for this reproducible fixture export.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status complete">COMPLETE</span>
+            <div>
+              <strong>Security configuration</strong>
+              <p>Conservative framework and configuration posture checks executed locally.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT RUN</span>
+            <div>
+              <strong>HTTP runtime posture</strong>
+              <p>No scanner run was recorded for this capability.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">DISABLED</span>
+            <div>
+              <strong>AI contextual analysis</strong>
+              <p>Model inference was disabled. Deterministic findings remain available.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT SUPPORTED</span>
+            <div>
+              <strong>Infrastructure as Code</strong>
+              <p>
+                No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT SUPPORTED</span>
+            <div>
+              <strong>Cloud IAM</strong>
+              <p>Cloud account and effective IAM policy analysis are outside this release.</p>
+            </div>
+          </li>
+          <li>
+            <span class="status gap">NOT PERFORMED</span>
+            <div>
+              <strong>Dynamic exploitation</strong>
+              <p>
+                Traceward does not exploit targets, brute-force authentication, or crawl
+                applications.
+              </p>
+            </div>
+          </li>
+        </ul>
+      </section>
+      <section class="report-section">
+        <div class="section-head">
+          <div>
+            <span class="kicker">SOURCE MODEL</span>
+            <h2>Project structure</h2>
+          </div>
+          <span class="status complete">complete</span>
+        </div>
+        <p>7 source files and 226 AST nodes were parsed as data. Target code was not executed.</p>
+        <div class="facts">
+          <span><strong>2</strong> entry points</span><span><strong>5</strong> symbols</span
+          ><span><strong>8</strong> call edges</span><span><strong>6</strong> security facts</span>
+        </div>
+        <p class="muted">Frameworks: Next.js App Router, Prisma.</p>
+      </section>
+      <section class="report-section">
+        <span class="kicker">MECHANICAL REVIEW</span>
+        <h2>Structure and duplication</h2>
+        <div class="facts">
+          <span><strong>7</strong> modules</span><span><strong>0</strong> local dependencies</span
+          ><span><strong>0</strong> cycles</span><span><strong>4</strong> orphan candidates</span>
+        </div>
+        <div class="facts">
+          <span><strong>0</strong> clones</span><span><strong>0</strong> duplicated lines</span
+          ><span><strong>0%</strong> duplication</span>
+        </div>
+        <p class="muted">
+          These measurements are maintainability evidence, not security vulnerabilities.
+        </p>
+      </section>
+      <section class="report-section">
+        <span class="kicker">CONTROL PACK 0.4.0</span>
+        <h2>Security checklist</h2>
+        <div class="facts checklist-facts">
+          <span><strong>0</strong> EVIDENCED</span><span><strong>3</strong> GAP CANDIDATE</span
+          ><span><strong>14</strong> UNVERIFIED</span><span><strong>6</strong> NOT APPLICABLE</span
+          ><span><strong>0</strong> PARTIAL</span><span><strong>0</strong> FAILED</span>
+        </div>
+        <div class="controls">
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">authentication · TW-CTRL-AUTHN-001</span>
+            </div>
+            <h3>Sensitive mutations authenticate a principal</h3>
+            <p>No supported sensitive mutation boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Test each boundary without a session/token and confirm
+              rejection before the sensitive operation.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">authentication · TW-CTRL-AUTHN-002</span>
+            </div>
+            <h3>Sensitive read routes receive an authentication review</h3>
+            <p>
+              No missing-authentication candidate was found across 2 mapped sensitive read route(s).
+            </p>
+            <p>
+              <strong>Verify:</strong> Test anonymous and wrong-tenant reads. Confirm intentionally
+              public routes expose only approved fields.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">authorization · TW-CTRL-AUTHZ-001</span>
+            </div>
+            <h3>Administrative mutations enforce permission</h3>
+            <p>No supported admin/internal mutation boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Test an authenticated non-admin principal against every
+              privileged action.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">authorization · TW-CTRL-AUTHZ-002</span>
+            </div>
+            <h3>Dynamic resource access is tenant or owner scoped</h3>
+            <p>
+              0 of 1 dynamic database boundary(s) contain a recognized tenant, owner, account,
+              organization, or user scope in the captured call arguments.
+            </p>
+            <p>
+              <strong>Verify:</strong> Run cross-tenant and wrong-owner identifier tests and inspect
+              effective RLS/database policy.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">GAP_CANDIDATE</span
+              ><span class="meta">input-validation · TW-CTRL-INPUT-001</span>
+            </div>
+            <h3>Sensitive entry points validate caller-controlled input</h3>
+            <p>
+              0 of 2 sensitive entry point(s) contain a recognized validation call within five
+              explicit call hops.
+            </p>
+            <p>
+              <strong>Verify:</strong> Test malformed, oversized, unexpected-type, and boundary
+              input before the sensitive operation.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">GAP_CANDIDATE</span
+              ><span class="meta">input-validation · TW-CTRL-INJECTION-001</span>
+            </div>
+            <h3>Raw SQL keeps request data out of query structure</h3>
+            <p>1 raw SQL input-flow candidate(s) require review.</p>
+            <p>
+              <strong>Verify:</strong> Trace each query fragment, replace structural interpolation
+              with parameters, and test metacharacter payloads without modifying production data.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">integrations · TW-CTRL-OUTBOUND-001</span>
+            </div>
+            <h3>Outbound destinations are server-owned or safely constrained</h3>
+            <p>No supported outbound request boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Test untrusted public, private, loopback, metadata,
+              DNS-rebinding, and redirect destinations against the effective egress policy.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">integrations · TW-CTRL-REDIRECT-001</span>
+            </div>
+            <h3>Redirect destinations are constrained</h3>
+            <p>No supported redirect boundary was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Test external, scheme-relative, encoded, mixed-case, and
+              userinfo-form destinations against the effective redirect policy.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">input-validation · TW-CTRL-UPLOAD-001</span>
+            </div>
+            <h3>File uploads enforce size, content, and storage-path constraints</h3>
+            <p>
+              No decisive upload gap was mapped, but the profiler cannot prove that uploads are
+              absent or fully constrained.
+            </p>
+            <p>
+              <strong>Verify:</strong> Test byte limits, file count, MIME/content mismatch,
+              polyglots, generated names, traversal, overwrite, and storage execution policy.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">integrations · TW-CTRL-WEBHOOK-001</span>
+            </div>
+            <h3>Webhook authenticity is verified before processing</h3>
+            <p>No supported webhook/callback boundary reaching a sensitive operation was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Send missing, invalid, replayed, and stale signatures and
+              confirm rejection before parsing or persistence.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">browser-security · TW-CTRL-HEADERS-001</span>
+            </div>
+            <h3>Browser security policies are declared and observed</h3>
+            <p>No effective runtime response was available to confirm browser policies.</p>
+            <p>
+              <strong>Verify:</strong> Observe representative production responses and verify CSP,
+              frame, MIME, referrer, permissions, and transport policies.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">authentication · TW-CTRL-SESSION-001</span>
+            </div>
+            <h3>Sensitive cookies use explicit protection attributes</h3>
+            <p>No cookie-based session signal was mapped.</p>
+            <p>
+              <strong>Verify:</strong> Inspect effective Set-Cookie attributes and test production
+              HTTPS, expiry, logout, fixation, and CSRF behavior.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">browser-security · TW-CTRL-CORS-001</span>
+            </div>
+            <h3>Cross-origin access is intentionally constrained</h3>
+            <p>
+              No effective cross-origin policy was observed; same-origin-only operation is possible
+              but unverified.
+            </p>
+            <p>
+              <strong>Verify:</strong> Test trusted and untrusted Origin values, credential mode,
+              preflight behavior, and server-side authorization independently.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">GAP_CANDIDATE</span
+              ><span class="meta">secrets · TW-CTRL-SECRETS-001</span>
+            </div>
+            <h3>Captured current source has no detected secret exposure candidate</h3>
+            <p>1 secret or client/server configuration candidate(s) require review.</p>
+            <p>
+              <strong>Verify:</strong> Review Git history, CI variables, deployment secrets,
+              rotation, and provider-side secret scanning separately.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">NOT_APPLICABLE</span
+              ><span class="meta">dependencies · TW-CTRL-DEPS-001</span>
+            </div>
+            <h3>Resolved dependencies are checked against OSV</h3>
+            <p>No supported resolved npm/pnpm/Yarn lockfile dependency was available.</p>
+            <p>
+              <strong>Verify:</strong> Review advisory freshness, runtime reachability, exploit
+              preconditions, and supported upgrade paths.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">runtime · TW-CTRL-RUNTIME-001</span>
+            </div>
+            <h3>Approved HTTP response posture is observed</h3>
+            <p>No target URL was explicitly approved for runtime observation.</p>
+            <p>
+              <strong>Verify:</strong> Probe representative production routes and deployment layers
+              under explicit authorization.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">logging · TW-CTRL-LOGGING-001</span>
+            </div>
+            <h3>Sensitive operations emit security-relevant audit events</h3>
+            <p>
+              0 of 2 mapped sensitive boundary(s) contain a recognized audit/security logging call.
+            </p>
+            <p>
+              <strong>Verify:</strong> Confirm event content, actor, target, outcome, correlation
+              ID, retention, access controls, and alerting in the real logging system.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">logging · TW-CTRL-ERRORS-001</span>
+            </div>
+            <h3>Sensitive boundaries define explicit failure handling</h3>
+            <p>
+              0 of 2 mapped sensitive boundary(s) contain an explicit catch clause within five call
+              hops.
+            </p>
+            <p>
+              <strong>Verify:</strong> Exercise dependency, validation, authorization, and storage
+              failures; confirm safe responses and useful internal diagnostics.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">authorization · TW-CTRL-NEXT-001</span>
+            </div>
+            <h3>Next.js caching keeps user and tenant data isolated</h3>
+            <p>
+              No supported user-specific cache isolation candidate was found in the bounded Next.js
+              scan.
+            </p>
+            <p>
+              <strong>Verify:</strong> Test two users or tenants against warm cache entries and
+              inspect Cache-Control behavior at the deployed edge.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">secrets · TW-CTRL-NEXT-002</span>
+            </div>
+            <h3>Next.js client boundaries exclude privileged configuration and response data</h3>
+            <p>
+              No supported privileged public environment or sensitive server response field
+              candidate was found.
+            </p>
+            <p>
+              <strong>Verify:</strong> Inspect production client bundles, RSC payloads, and API
+              responses for privileged values.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">input-validation · TW-CTRL-REACT-001</span>
+            </div>
+            <h3>Dynamic HTML preserves React output encoding</h3>
+            <p>
+              No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the bounded
+              React scan.
+            </p>
+            <p>
+              <strong>Verify:</strong> Test script, event-handler, URL, SVG, malformed markup, and
+              mutation-XSS payloads at every intentional HTML rendering boundary.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">browser-security · TW-CTRL-REACT-002</span>
+            </div>
+            <h3>Client navigation, storage, and messaging use constrained browser boundaries</h3>
+            <p>
+              No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern was
+              found.
+            </p>
+            <p>
+              <strong>Verify:</strong> Exercise untrusted URLs, message origins, storage access
+              after script injection, and external new-tab navigation.
+            </p>
+          </section>
+          <section class="control">
+            <div>
+              <span class="status gap">UNVERIFIED</span
+              ><span class="meta">secrets · TW-CTRL-REACT-003</span>
+            </div>
+            <h3>Server and Client Component boundaries keep privileged data on the server</h3>
+            <p>
+              No supported server-only import, sensitive prop, async Client Component, or private
+              environment boundary candidate was found.
+            </p>
+            <p>
+              <strong>Verify:</strong> Inspect serialized RSC payloads and production client bundles
+              for credentials, privileged session objects, and server-only modules.
+            </p>
+          </section>
+        </div>
+      </section>
+      <section class="findings-title">
+        <span class="kicker">EVIDENCE AND ACTIONS</span>
+        <h2>Findings</h2>
+        <p class="muted">7 review candidates. Static signals require human validation.</p>
+      </section>
+      <article class="finding" id="finding-1">
+        <header class="finding-head">
+          <div>
+            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Sensitive configuration uses a public environment name</h2>
+        <p>
+          A sensitive-looking setting has a browser-public naming convention. No active credential
+          or actual browser bundle exposure has been verified.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/lib/config.ts:1–5</h3>
+            <pre>
+export const configuration = {
   serviceKey: process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY,
   environment: &#39;fixture-only&#39;,
 };
-</pre><p>Rule TW-005 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Keep privileged credentials in server-only configuration. If exposure is verified, rotate the credential and review its use.</p></section></article><article class="finding" id="finding-2"><header class="finding-head"><div><span class="severity high">high</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Destructive agent tool needs permission review</h2><p>A potentially destructive operation appears in an agent tool list. The pattern cannot determine whether approval and authorization are enforced inside the tool.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/agents/account.ts:4–8</h3><pre>export const accountAgent = createAgent({
+</pre>
+            <p>
+              Rule TW-005 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Keep privileged credentials in server-only configuration. If exposure is verified,
+            rotate the credential and review its use.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-2">
+        <header class="finding-head">
+          <div>
+            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Destructive agent tool needs permission review</h2>
+        <p>
+          A potentially destructive operation appears in an agent tool list. The pattern cannot
+          determine whether approval and authorization are enforced inside the tool.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/agents/account.ts:4–8</h3>
+            <pre>
+export const accountAgent = createAgent({
   model: &#39;local-fixture-model&#39;,
   tools: [readUser, deleteUser, issueRefund],
 });
-</pre><p>Rule TW-007 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Apply authorization inside each tool, restrict its capability, and require explicit approval where the operation warrants it.</p></section></article><article class="finding" id="finding-3"><header class="finding-head"><div><span class="severity high">high</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Dynamic code execution needs trust-boundary review</h2><p>A dynamic execution sink was detected. This is a pattern match, not proof of attacker-controlled execution.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/lib/expression.ts:1–4</h3><pre>export function evaluateExpression(expression: string) {
+</pre>
+            <p>
+              Rule TW-007 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Apply authorization inside each tool, restrict its capability, and require explicit
+            approval where the operation warrants it.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-3">
+        <header class="finding-head">
+          <div>
+            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Dynamic code execution needs trust-boundary review</h2>
+        <p>
+          A dynamic execution sink was detected. This is a pattern match, not proof of
+          attacker-controlled execution.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/lib/expression.ts:1–4</h3>
+            <pre>
+export function evaluateExpression(expression: string) {
   return eval(expression);
 }
-</pre><p>Rule TW-003 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Replace dynamic code execution with explicit operations where possible; otherwise document and enforce the trust boundary.</p></section></article><article class="finding" id="finding-4"><header class="finding-head"><div><span class="severity high">high</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Raw SQL execution needs input tracing</h2><p>An unsafe SQL execution API is present. User control of the query and runtime reachability have not been established.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/app/api/search/route.ts:3–8</h3><pre>export async function GET(request: Request) {
+</pre>
+            <p>
+              Rule TW-003 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Replace dynamic code execution with explicit operations where possible; otherwise
+            document and enforce the trust boundary.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-4">
+        <header class="finding-head">
+          <div>
+            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Raw SQL execution needs input tracing</h2>
+        <p>
+          An unsafe SQL execution API is present. User control of the query and runtime reachability
+          have not been established.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/app/api/search/route.ts:3–8</h3>
+            <pre>
+export async function GET(request: Request) {
   const term = new URL(request.url).searchParams.get(&#39;term&#39;);
   const records = await database.$queryRawUnsafe(`SELECT name FROM projects WHERE name = &#39;${term}&#39;`);
   return Response.json(records);
 }
-</pre><p>Rule TW-001 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Prefer parameterized queries. Trace every value reaching this call before deciding whether an injection vulnerability exists.</p></section></article><article class="finding" id="finding-5"><header class="finding-head"><div><span class="severity medium">medium</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Object lookup needs tenant authorization review</h2><p>An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/app/api/projects/[id]/route.ts:5–10</h3><pre>  await requireSession(request);
+</pre>
+            <p>
+              Rule TW-001 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Prefer parameterized queries. Trace every value reaching this call before deciding
+            whether an injection vulnerability exists.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-5">
+        <header class="finding-head">
+          <div>
+            <span class="severity medium">medium</span
+            ><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Object lookup needs tenant authorization review</h2>
+        <p>
+          An object lookup begins with an ID filter. This is a review hotspot, not evidence of a
+          missing authorization check; inspect middleware, service policy, RLS and the complete call
+          path.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/app/api/projects/[id]/route.ts:5–10</h3>
+            <pre>
+  await requireSession(request);
   const { id } = await context.params;
   const project = await database.project.findUnique({ where: { id } });
   return Response.json(project);
 }
-</pre><p>Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.</p></section></article><article class="finding" id="finding-6"><header class="finding-head"><div><span class="severity medium">medium</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>HTML rendering bypass needs sanitization review</h2><p>Raw HTML reaches a React rendering sink. The scanner does not prove that the value is attacker-controlled or unsanitized.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/components/preview.tsx:1–4</h3><pre>export function Preview({ html }: { html: string }) {
+</pre>
+            <p>
+              Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Verify object-level access for the authenticated tenant. Add a regression test using two
+            tenants and reject cross-tenant access.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-6">
+        <header class="finding-head">
+          <div>
+            <span class="severity medium">medium</span
+            ><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>HTML rendering bypass needs sanitization review</h2>
+        <p>
+          Raw HTML reaches a React rendering sink. The scanner does not prove that the value is
+          attacker-controlled or unsanitized.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/components/preview.tsx:1–4</h3>
+            <pre>
+export function Preview({ html }: { html: string }) {
   return &lt;article dangerouslySetInnerHTML={{ __html: html }} /&gt;;
 }
-</pre><p>Rule TW-002 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering text when rich HTML is unnecessary.</p></section></article><article class="finding" id="finding-7"><header class="finding-head"><div><span class="severity medium">medium</span><span class="meta">builtin · needs review</span></div><a href="#top">Back to summary ↑</a></header><h2>Wildcard cross-origin policy needs context review</h2><p>A wildcard CORS origin was found. Public endpoints may intentionally permit it; authentication and exposed data determine the risk.</p><section class="finding-section"><h3>Evidence</h3><div class="evidence"><h3>src/lib/cors.ts:1–4</h3><pre>export function responseHeaders() {
+</pre>
+            <p>
+              Rule TW-002 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering
+            text when rich HTML is unnecessary.
+          </p>
+        </section>
+      </article>
+      <article class="finding" id="finding-7">
+        <header class="finding-head">
+          <div>
+            <span class="severity medium">medium</span
+            ><span class="meta">builtin · needs review</span>
+          </div>
+          <a href="#top">Back to summary ↑</a>
+        </header>
+        <h2>Wildcard cross-origin policy needs context review</h2>
+        <p>
+          A wildcard CORS origin was found. Public endpoints may intentionally permit it;
+          authentication and exposed data determine the risk.
+        </p>
+        <section class="finding-section">
+          <h3>Evidence</h3>
+          <div class="evidence">
+            <h3>src/lib/cors.ts:1–4</h3>
+            <pre>
+export function responseHeaders() {
   return { &#39;Access-Control-Allow-Origin&#39;: &#39;*&#39; };
 }
-</pre><p>Rule TW-006 matched a review-relevant code pattern. Runtime exploitability is unverified.</p></div></section><section class="finding-section remediation"><h3>Recommended next step</h3><p>Define expected browser origins and validate the credential model. Do not treat CORS as an authorization mechanism.</p></section></article><footer><h2>Limitations</h2><ul><li>This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.</li><li>No model, optional external security scanner, or runtime exploit test was executed.</li><li>Bundled dependency and duplication analysis ran against an isolated inert snapshot; its output is maintainability evidence, not a vulnerability verdict.</li><li>All findings are review candidates; there are no automatically confirmed vulnerabilities.</li><li>Regex heuristics can match comments and miss indirect flows. This is not a security certification.</li></ul><p>Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in this report.</p></footer></main></body></html>
+</pre>
+            <p>
+              Rule TW-006 matched a review-relevant code pattern. Runtime exploitability is
+              unverified.
+            </p>
+          </div>
+        </section>
+        <section class="finding-section remediation">
+          <h3>Recommended next step</h3>
+          <p>
+            Define expected browser origins and validate the credential model. Do not treat CORS as
+            an authorization mechanism.
+          </p>
+        </section>
+      </article>
+      <footer>
+        <h2>Limitations</h2>
+        <ul>
+          <li>
+            This is an inert fixture export generated directly by the deterministic core, not an
+            executed LangGraph audit.
+          </li>
+          <li>
+            No model, optional external security scanner, or runtime exploit test was executed.
+          </li>
+          <li>
+            Bundled dependency and duplication analysis ran against an isolated inert snapshot; its
+            output is maintainability evidence, not a vulnerability verdict.
+          </li>
+          <li>
+            All findings are review candidates; there are no automatically confirmed
+            vulnerabilities.
+          </li>
+          <li>
+            Regex heuristics can match comments and miss indirect flows. This is not a security
+            certification.
+          </li>
+        </ul>
+        <p>
+          Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in
+          this report.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

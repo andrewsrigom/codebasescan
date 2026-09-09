@@ -1,6 +1,7 @@
 import path from 'node:path';
 import os from 'node:os';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { format as formatDocument, resolveConfig as resolvePrettierConfig } from 'prettier';
 import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import { scanPosture } from '../src/scanners/posture.ts';
@@ -108,12 +109,18 @@ const report: AuditReport = {
   publication: 'draft',
 };
 await mkdir('examples', { recursive: true });
+const prettierConfig =
+  (await resolvePrettierConfig(path.resolve('scripts/export-example.ts'))) ?? {};
 for (const [extension, content] of [
   ['json', JSON.stringify(report, null, 2)],
   ['html', toHtml(report)],
   ['md', toMarkdown(report)],
   ['sarif', JSON.stringify(toSarif(report), null, 2)],
 ] as const) {
-  await writeFile(`examples/fixture-review.${extension}`, content + '\n');
+  const destination = `examples/fixture-review.${extension}`;
+  await writeFile(
+    destination,
+    await formatDocument(content, { ...prettierConfig, filepath: destination }),
+  );
 }
 console.log('Wrote deterministic fixture exports to examples/. No graph or model was executed.');

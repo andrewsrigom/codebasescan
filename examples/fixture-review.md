@@ -242,7 +242,6 @@ No supported server\-only import, sensitive prop, async Client Component, or pri
 
 Verification: Inspect serialized RSC payloads and production client bundles for credentials, privileged session objects, and server\-only modules.
 
-
 ## Findings
 
 ### HIGH: Sensitive configuration uses a public environment name

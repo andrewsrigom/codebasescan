@@ -18,9 +18,7 @@
       "sourceSeverity": "high",
       "description": "A sensitive-looking setting has a browser-public naming convention. No active credential or actual browser bundle exposure has been verified.",
       "remediation": "Keep privileged credentials in server-only configuration. If exposure is verified, rotate the credential and review its use.",
-      "cwe": [
-        "CWE-200"
-      ],
+      "cwe": ["CWE-200"],
       "evidence": [
         {
           "id": "40b2fc37b7d6cdf6",
@@ -44,9 +42,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -58,9 +54,7 @@
       "sourceSeverity": "high",
       "description": "A potentially destructive operation appears in an agent tool list. The pattern cannot determine whether approval and authorization are enforced inside the tool.",
       "remediation": "Apply authorization inside each tool, restrict its capability, and require explicit approval where the operation warrants it.",
-      "cwe": [
-        "CWE-862"
-      ],
+      "cwe": ["CWE-862"],
       "evidence": [
         {
           "id": "2b014502ce370d18",
@@ -84,9 +78,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -98,9 +90,7 @@
       "sourceSeverity": "high",
       "description": "A dynamic execution sink was detected. This is a pattern match, not proof of attacker-controlled execution.",
       "remediation": "Replace dynamic code execution with explicit operations where possible; otherwise document and enforce the trust boundary.",
-      "cwe": [
-        "CWE-95"
-      ],
+      "cwe": ["CWE-95"],
       "evidence": [
         {
           "id": "15ebbc6a233a56c0",
@@ -124,9 +114,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -138,9 +126,7 @@
       "sourceSeverity": "high",
       "description": "An unsafe SQL execution API is present. User control of the query and runtime reachability have not been established.",
       "remediation": "Prefer parameterized queries. Trace every value reaching this call before deciding whether an injection vulnerability exists.",
-      "cwe": [
-        "CWE-89"
-      ],
+      "cwe": ["CWE-89"],
       "evidence": [
         {
           "id": "d10b2b1dccfd92f6",
@@ -164,9 +150,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -178,9 +162,7 @@
       "sourceSeverity": "medium",
       "description": "An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path.",
       "remediation": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.",
-      "cwe": [
-        "CWE-639"
-      ],
+      "cwe": ["CWE-639"],
       "evidence": [
         {
           "id": "58aab67f20e40b79",
@@ -204,9 +186,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -218,9 +198,7 @@
       "sourceSeverity": "medium",
       "description": "Raw HTML reaches a React rendering sink. The scanner does not prove that the value is attacker-controlled or unsanitized.",
       "remediation": "Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering text when rich HTML is unnecessary.",
-      "cwe": [
-        "CWE-79"
-      ],
+      "cwe": ["CWE-79"],
       "evidence": [
         {
           "id": "ada4a9e530c374fa",
@@ -244,9 +222,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     },
     {
@@ -258,9 +234,7 @@
       "sourceSeverity": "medium",
       "description": "A wildcard CORS origin was found. Public endpoints may intentionally permit it; authentication and exposed data determine the risk.",
       "remediation": "Define expected browser origins and validate the credential model. Do not treat CORS as an authorization mechanism.",
-      "cwe": [
-        "CWE-942"
-      ],
+      "cwe": ["CWE-942"],
       "evidence": [
         {
           "id": "08574edb56956038",
@@ -284,9 +258,7 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": [
-          "source"
-        ]
+        "evidenceKinds": ["source"]
       }
     }
   ],
@@ -295,7 +267,7 @@
       "id": "project-profile",
       "name": "Project structure profile",
       "status": "completed",
-      "durationMs": 22,
+      "durationMs": 23,
       "findings": 0,
       "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
       "version": "0.1.0"
@@ -394,9 +366,7 @@
   "projectProfile": {
     "schemaVersion": 1,
     "status": "complete",
-    "languages": [
-      "typescript"
-    ],
+    "languages": ["typescript"],
     "frameworks": [
       {
         "id": "nextjs-app-router",
@@ -419,15 +389,9 @@
         "line": 4,
         "name": "GET",
         "route": "/api/projects/[id]",
-        "methods": [
-          "GET"
-        ],
-        "dynamicParameters": [
-          "id"
-        ],
-        "symbolIds": [
-          "813a42eb60c26ffa2cb0"
-        ]
+        "methods": ["GET"],
+        "dynamicParameters": ["id"],
+        "symbolIds": ["813a42eb60c26ffa2cb0"]
       },
       {
         "id": "d0720de69cfd13cced0c",
@@ -436,13 +400,9 @@
         "line": 3,
         "name": "GET",
         "route": "/api/search",
-        "methods": [
-          "GET"
-        ],
+        "methods": ["GET"],
         "dynamicParameters": [],
-        "symbolIds": [
-          "97c2540180a3f3162833"
-        ]
+        "symbolIds": ["97c2540180a3f3162833"]
       }
     ],
     "symbols": [
@@ -760,9 +720,7 @@
         "applicability": "Applies to mapped routes/actions that reach sensitive operations.",
         "evidence": [],
         "verification": "Test malformed, oversized, unexpected-type, and boundary input before the sensitive operation.",
-        "limitations": [
-          "Inline/manual validation and framework coercion may not be recognized."
-        ]
+        "limitations": ["Inline/manual validation and framework coercion may not be recognized."]
       },
       {
         "id": "TW-CTRL-INJECTION-001",
@@ -819,9 +777,7 @@
         "applicability": "Applies when an HTTP boundary accepts files or multipart form data.",
         "evidence": [],
         "verification": "Test byte limits, file count, MIME/content mismatch, polyglots, generated names, traversal, overwrite, and storage execution policy.",
-        "limitations": [
-          "Streaming parsers and framework upload middleware may not be recognized."
-        ]
+        "limitations": ["Streaming parsers and framework upload middleware may not be recognized."]
       },
       {
         "id": "TW-CTRL-WEBHOOK-001",
@@ -926,9 +882,7 @@
           }
         ],
         "verification": "Review advisory freshness, runtime reachability, exploit preconditions, and supported upgrade paths.",
-        "limitations": [
-          "Advisory presence does not establish reachability or exploitability."
-        ]
+        "limitations": ["Advisory presence does not establish reachability or exploitability."]
       },
       {
         "id": "TW-CTRL-RUNTIME-001",
