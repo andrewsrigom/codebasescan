@@ -62,6 +62,12 @@ function safeString(input: unknown, fallback: string): string {
   return typeof input === 'string' ? redact(input).slice(0, 2000) : fallback;
 }
 
+function recordOrEmpty(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 function semgrepRuleId(input: unknown): string {
   const value = safeString(input, 'semgrep.unknown');
   const tracewardRule = value.lastIndexOf('traceward.');
@@ -102,6 +108,84 @@ function locate(snapshot: Snapshot, scannerPath: unknown, stagingRoot?: string) 
   } catch {
     return undefined;
   }
+}
+
+export interface SemgrepErrorSummary {
+  count: number;
+  locations: { file: string; line?: number; kind: string }[];
+  omitted: number;
+}
+
+function semgrepErrorKind(value: unknown): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,79}$/.test(raw)
+    ? raw
+    : 'scanner-error';
+}
+
+function semgrepErrorCandidates(item: Record<string, unknown>) {
+  const candidates: { path: unknown; line: unknown }[] = [
+    { path: item.path, line: recordOrEmpty(item.start).line },
+  ];
+  if (Array.isArray(item.spans))
+    for (const rawSpan of item.spans) {
+      const span = recordOrEmpty(rawSpan);
+      candidates.push({ path: span.file ?? span.path, line: recordOrEmpty(span.start).line });
+    }
+  if (Array.isArray(item.type) && Array.isArray(item.type[1]))
+    for (const rawLocation of item.type[1]) {
+      const location = recordOrEmpty(rawLocation);
+      candidates.push({
+        path: location.path ?? location.file,
+        line: recordOrEmpty(location.start).line,
+      });
+    }
+  return candidates;
+}
+
+export function summarizeSemgrepErrors(
+  value: unknown,
+  snapshot: Snapshot,
+  stagingRoot?: string,
+): SemgrepErrorSummary {
+  const envelope = record(value);
+  const errors = Array.isArray(envelope.errors) ? envelope.errors : [];
+  const locations: SemgrepErrorSummary['locations'] = [];
+  for (const rawError of errors) {
+    if (locations.length >= 10) break;
+    const item = recordOrEmpty(rawError);
+    const kind = semgrepErrorKind(item.type);
+    for (const candidate of semgrepErrorCandidates(item)) {
+      const file = locate(snapshot, candidate.path, stagingRoot);
+      if (!file) continue;
+      const line = candidate.line;
+      const validLine =
+        typeof line === 'number' &&
+        Number.isSafeInteger(line) &&
+        line > 0 &&
+        line <= file.content.split('\n').length
+          ? line
+          : undefined;
+      locations.push({ file: file.path, ...(validLine ? { line: validLine } : {}), kind });
+      break;
+    }
+  }
+  return { count: errors.length, locations, omitted: errors.length - locations.length };
+}
+
+function semgrepErrorDetail(summary: SemgrepErrorSummary): string {
+  if (!summary.count) return '';
+  const locations = summary.locations
+    .map(
+      (location) =>
+        `${location.file}${location.line ? `:${location.line}` : ''} (${location.kind})`,
+    )
+    .join(', ');
+  const locationDetail = locations ? `: ${locations}.` : '.';
+  const omittedDetail = summary.omitted
+    ? ` ${summary.omitted} diagnostic location(s) could not be mapped safely.`
+    : '';
+  return ` ${summary.count} scanner diagnostic(s) reported${locationDetail}${omittedDetail}`;
 }
 
 function historyEvidence(item: Record<string, unknown>, projectRoot?: string) {
@@ -355,7 +439,10 @@ export async function scanExternal(
         ? normalizeSemgrep(parsed, snapshot, sourceRoot)
         : normalizeGitleaks(parsed, snapshot, history ? projectRoot : sourceRoot, history);
     const envelope = name === 'semgrep' ? record(parsed) : null;
-    const errors = envelope && Array.isArray(envelope.errors) ? envelope.errors.length : 0;
+    const semgrepErrors =
+      name === 'semgrep'
+        ? summarizeSemgrepErrors(parsed, snapshot, sourceRoot)
+        : { count: 0, locations: [], omitted: 0 };
     const rawCount =
       name === 'semgrep' && Array.isArray(envelope?.results)
         ? envelope.results.length
@@ -375,10 +462,17 @@ export async function scanExternal(
       throw new Error('Scanner signaled findings but supplied no valid report entries.');
     const partial =
       findings.length >= 300 ||
-      errors > 0 ||
+      semgrepErrors.count > 0 ||
       snapshot.truncated ||
       applicableRawCount !== findings.length ||
       compatibility.status !== 'tested';
+    const discardedResults = Math.max(0, applicableRawCount - findings.length);
+    const discardedDetail = discardedResults
+      ? ` ${discardedResults} applicable result(s) were discarded because the report exceeded the result limit or did not contain valid snapshot evidence.`
+      : '';
+    const snapshotDetail = snapshot.truncated
+      ? ' The staging snapshot was already truncated before this scan.'
+      : '';
     return {
       findings,
       run: {
@@ -387,7 +481,7 @@ export async function scanExternal(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: findings.length,
-        detail: `${name} analyzed ${history ? 'the explicitly approved Git history' : 'the bounded staging snapshot'} with trusted local configuration. Raw secret values were discarded.${errors ? ' Some files could not be analyzed.' : ''} ${compatibility.detail}`,
+        detail: `${name} analyzed ${history ? 'the explicitly approved Git history' : 'the bounded staging snapshot'} with trusted local configuration. Raw secret values were discarded.${semgrepErrorDetail(semgrepErrors)}${discardedDetail}${snapshotDetail} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

@@ -4,6 +4,7 @@ import {
   normalizeGitleaks,
   normalizeSemgrep,
   scannerCompatibility,
+  summarizeSemgrepErrors,
 } from '../../src/scanners/external.ts';
 import { snapshotOf } from '../helpers.ts';
 test('Semgrep normalization preserves source severity without inventing CVSS', () => {
@@ -58,6 +59,37 @@ test('scanner paths cannot escape the snapshot', () => {
     snapshotOf('eval(input)'),
   );
   assert.equal(result.length, 0);
+});
+
+test('Semgrep diagnostics retain only safe snapshot locations', () => {
+  const snapshot = snapshotOf('first line\nsecond line');
+  const summary = summarizeSemgrepErrors(
+    {
+      errors: [
+        {
+          type: ['PartialParsing', [{ path: '/stage/source/src/example.ts', start: { line: 2 } }]],
+          message: 'raw parser text must not be retained',
+        },
+        {
+          type: [
+            'PartialParsing',
+            [{ path: '/stage/source/../../outside.ts', start: { line: 1 } }],
+          ],
+          message: 'outside path must not be retained',
+        },
+      ],
+    },
+    snapshot,
+    '/stage/source',
+  );
+
+  assert.deepEqual(summary, {
+    count: 2,
+    locations: [{ file: 'src/example.ts', line: 2, kind: 'PartialParsing' }],
+    omitted: 1,
+  });
+  assert.ok(!JSON.stringify(summary).includes('raw parser text'));
+  assert.ok(!JSON.stringify(summary).includes('outside.ts'));
 });
 test('Semgrep ignores non-runtime code while Gitleaks still inspects it', () => {
   const snapshot = snapshotOf('eval(input)', 'tests/example.ts');
