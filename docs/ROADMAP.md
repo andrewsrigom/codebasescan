@@ -6,7 +6,7 @@
 - Semgrep and Gitleaks adapters validated with installed binaries and version reporting.
 - Conservative TypeScript/Node/Next posture rules with paired vulnerable/benign fixtures.
 - Approved single-URL HTTP posture probe with SSRF, metadata, redirect, method, timeout, and size controls.
-- npm/pnpm/Yarn resolved dependency inventory and opt-in cached OSV matching.
+- npm/pnpm/Yarn resolved dependency inventory, manually refreshed offline OSV matching, source-reference reachability hints, and CycloneDX 1.6 export.
 - Explicit coverage, provenance, OpenAI Responses API adapter, cloud redaction, prompt-injection controls, benchmark, audit comparison, and CI mode.
 - Deterministic TypeScript/JavaScript project profiling, framework-aware AST auth/authz, bounded direct request flows, and paired benign fixtures.
 - Versioned security checklist, evidence-ID context broker, structured AI investigation, Project Map/Investigations UI, and bounded Codex bundle.
@@ -24,7 +24,7 @@ Repeat evaluation on owner-authorized applications with production context and i
 
 Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, custom `tsconfig` aliases, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
-Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Reachability remains separate work and must not be inferred from presence.
+Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 
 ## Next — operational hardening
 

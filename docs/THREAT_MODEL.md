@@ -35,7 +35,7 @@ This is an application boundary, not a hardened sandbox. A compromised dependenc
 
 ## Data lifecycle
 
-`.traceward/application.sqlite` stores project paths, jobs, reports, review notes, events, AI usage, and structured AI cache entries. `.traceward/checkpoints.sqlite` stores graph state. `.traceward/osv-cache.json` stores compact advisory data. WAL/SHM files may exist. None are encrypted by Traceward; use encrypted local storage when needed.
+`.traceward/application.sqlite` stores project paths, jobs, reports, review notes, events, AI usage, and structured AI cache entries. `.traceward/checkpoints.sqlite` stores graph state. `.traceward/advisory-database.json` stores compact exact-version OSV records, including explicit clean query results. WAL/SHM files may exist. None are encrypted by Traceward; use encrypted local storage when needed.
 
 `.traceward/temporary` contains selected source while external scanners run. Normal completion deletes it; an exclusive worker removes only recognized Semgrep/Gitleaks staging directories at its next start. Exports and caches are private source-derived artifacts; inspect them before sharing. Redaction is not a data-loss-prevention guarantee.
 

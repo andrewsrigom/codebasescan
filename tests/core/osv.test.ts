@@ -166,6 +166,7 @@ test('OSV normalizes aliases, fixed versions, and provenance without exploitabil
   assert.equal(result.findings[0]?.vulnerability?.severity[0]?.type, 'CVSS_V3');
   assert.deepEqual(result.findings[0]?.vulnerability?.aliases, ['CVE-2099-0001']);
   assert.deepEqual(result.findings[0]?.vulnerability?.fixedVersions, ['4.17.21']);
+  assert.equal(result.findings[0]?.vulnerability?.reachability, 'not_found');
   assert.match(result.findings[0]?.description ?? '', /not assessed/);
   assert.ok(requests[0]?.body?.includes('"name":"lodash"'));
   assert.ok(!requests[0]?.body?.includes('development-fallback'));
@@ -181,6 +182,90 @@ test('OSV normalizes aliases, fixed versions, and provenance without exploitabil
   assert.equal(cached.run.status, 'completed');
   assert.equal(cached.findings.length, 1);
   assert.equal(cachedCalls, 0);
+
+  const offline = await scanOsv(source, false, path.join(directory, 'cache.json'), 24);
+  assert.equal(offline.run.status, 'completed');
+  assert.equal(offline.findings.length, 1);
+  assert.match(offline.run.detail, /without network access/);
+});
+
+test('dependency reachability records an explicit runtime import without claiming execution', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-reference-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const source = snapshot({
+    'package.json': '{"dependencies":{"fixture-package":"1.0.0"}}',
+    'package-lock.json': JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': { dependencies: { 'fixture-package': '1.0.0' } },
+        'node_modules/fixture-package': { version: '1.0.0' },
+      },
+    }),
+    'src/runtime.ts': `import { parse } from 'fixture-package/parser';\nexport const value = parse(input);`,
+  });
+  const fetcher: typeof fetch = async (input) =>
+    String(input).endsWith('/querybatch')
+      ? Response.json({ results: [{ vulns: [{ id: 'GHSA-reachable-fixture' }] }] })
+      : Response.json({
+          id: 'GHSA-reachable-fixture',
+          summary: 'Reachability fixture',
+          affected: [{ package: { name: 'fixture-package' }, ranges: [] }],
+        });
+  const result = await scanOsv(source, true, path.join(directory, 'database.json'), 24, undefined, {
+    fetch: fetcher,
+  });
+  assert.equal(result.findings[0]?.vulnerability?.reachability, 'referenced');
+  assert.ok(result.findings[0]?.evidence.some((item) => item.file === 'src/runtime.ts'));
+  assert.match(result.findings[0]?.description ?? '', /vulnerable code path was not proven/);
+});
+
+test('offline advisory coverage stays partial when the local database lacks packages', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-partial-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const source = snapshot({
+    'package.json': '{"dependencies":{"alpha":"1.0.0","beta":"2.0.0"}}',
+    'package-lock.json': JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': { dependencies: { alpha: '1.0.0', beta: '2.0.0' } },
+        'node_modules/alpha': { version: '1.0.0' },
+        'node_modules/beta': { version: '2.0.0' },
+      },
+    }),
+  });
+  const database = path.join(directory, 'database.json');
+  const fetcher: typeof fetch = async (input, init) => {
+    if (String(input).endsWith('/querybatch')) {
+      const body = JSON.parse(String(init?.body)) as { queries: { package: { name: string } }[] };
+      return Response.json({
+        results: body.queries.map((query) =>
+          query.package.name === 'alpha' ? {} : { vulns: [{ id: 'GHSA-beta' }] },
+        ),
+      });
+    }
+    return Response.json({
+      id: 'GHSA-beta',
+      affected: [{ package: { name: 'beta' }, ranges: [] }],
+    });
+  };
+  await scanOsv(source, true, database, 24, undefined, { fetch: fetcher });
+
+  const changed = snapshot({
+    ...Object.fromEntries(source.files.map((file) => [file.path, file.content])),
+    'package.json': '{"dependencies":{"alpha":"1.0.0","beta":"2.0.0","gamma":"3.0.0"}}',
+    'package-lock.json': JSON.stringify({
+      lockfileVersion: 3,
+      packages: {
+        '': { dependencies: { alpha: '1.0.0', beta: '2.0.0', gamma: '3.0.0' } },
+        'node_modules/alpha': { version: '1.0.0' },
+        'node_modules/beta': { version: '2.0.0' },
+        'node_modules/gamma': { version: '3.0.0' },
+      },
+    }),
+  });
+  const offline = await scanOsv(changed, false, database, 24);
+  assert.equal(offline.run.status, 'partial');
+  assert.match(offline.run.detail, /remain unverified/);
 });
 
 test('OSV clean and malformed responses remain distinct', async (context) => {

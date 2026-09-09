@@ -65,6 +65,14 @@ TRACEWARD_OSV=true
 
 Semgrep and Gitleaks must be trusted local binaries. OSV receives only resolved npm package names and versions.
 
+Dependency inventory and local advisory matching work offline. Refresh the compact database for a project manually when network access is allowed:
+
+```bash
+npm run cli -- advisories update /absolute/path/to/project
+```
+
+Future audits use the saved exact-version records without a network request. Dependency findings distinguish direct/transitive relationships, source-reference reachability, fixed versions, and unknown exploitability. Reports can be exported as CycloneDX 1.6 SBOMs.
+
 AI is optional and never receives an arbitrary filesystem tool:
 
 ```dotenv

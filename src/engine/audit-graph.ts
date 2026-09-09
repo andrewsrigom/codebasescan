@@ -16,7 +16,6 @@ import { attachProvenance } from '../domain/provenance.ts';
 import { buildSecurityChecklist } from '../domain/checklist.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
-import path from 'node:path';
 import { scanExternal } from '../scanners/external.ts';
 import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
@@ -228,7 +227,7 @@ export function buildAuditGraph(options: {
       const result = await scanOsv(
         await checkedSnapshot(state),
         config.osv,
-        path.join(config.dataDirectory, 'osv-cache.json'),
+        config.advisoryDatabasePath,
         config.osvCacheHours,
         signal,
       );

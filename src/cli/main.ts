@@ -3,15 +3,22 @@ import os from 'node:os';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
-import { estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
+import { captureSnapshot, estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
-import { toHtml, toInvestigationBundle, toMarkdown, toSarif } from '../domain/reports.ts';
+import {
+  toCycloneDx,
+  toHtml,
+  toInvestigationBundle,
+  toMarkdown,
+  toSarif,
+} from '../domain/reports.ts';
 import { compareReports } from '../domain/comparison.ts';
 import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
+import { scanOsv } from '../scanners/osv.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -35,8 +42,8 @@ const probeOptions = (): AuditOptions => {
     : {};
 };
 function render(report: AuditReport, format: string): string {
-  if (!['json', 'md', 'html', 'sarif', 'bundle'].includes(format))
-    throw new Error('Use json, md, html, sarif, or bundle.');
+  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle'].includes(format))
+    throw new Error('Use json, md, html, sarif, sbom, or bundle.');
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
@@ -44,9 +51,11 @@ function render(report: AuditReport, format: string): string {
       : JSON.stringify(
           format === 'sarif'
             ? toSarif(report)
-            : format === 'bundle'
-              ? toInvestigationBundle(report)
-              : report,
+            : format === 'sbom'
+              ? toCycloneDx(report)
+              : format === 'bundle'
+                ? toInvestigationBundle(report)
+                : report,
           null,
           2,
         );
@@ -81,7 +90,23 @@ async function preflight(root: string, requireApproval: boolean) {
 
 let store: AuditStore | null = null;
 try {
-  if (command === 'audit' && target) {
+  if (command === 'advisories' && target === 'update' && arguments_[2]) {
+    const root = await validateProjectRoot(arguments_[2], config.dataDirectory);
+    await preflight(root, true);
+    const snapshot = await captureSnapshot(root);
+    const result = await scanOsv(
+      snapshot,
+      true,
+      config.advisoryDatabasePath,
+      config.osvCacheHours,
+      undefined,
+      { forceRefresh: true },
+    );
+    if (result.run.status === 'failed') throw new Error(result.run.detail);
+    console.log(
+      `Updated ${config.advisoryDatabasePath} for ${result.dependencies.filter((item) => item.resolvedVersion).length} resolved package(s). ${result.findings.length} advisory match(es).`,
+    );
+  } else if (command === 'audit' && target) {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
     try {
@@ -165,7 +190,7 @@ try {
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
       const destination = path.resolve(
-        `traceward-${report.auditId}.${format === 'bundle' ? 'bundle.json' : format}`,
+        `traceward-${report.auditId}.${['bundle', 'sbom'].includes(format) ? `${format}.json` : format}`,
       );
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
@@ -184,7 +209,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
+        'Traceward\n\n  npm run cli -- audit /path/to/project [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
       );
     }
   }

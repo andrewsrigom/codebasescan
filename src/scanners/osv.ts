@@ -10,8 +10,9 @@ import type {
   Severity,
   Snapshot,
 } from '../domain/types.ts';
-import { digest, makeFinding } from '../domain/findings.ts';
+import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { redact } from '../security/redact.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 import { resolvedInventory } from './inventory.ts';
 
 const batchSchema = z.object({
@@ -132,6 +133,7 @@ export interface OsvScanResult {
 export interface OsvRuntime {
   fetch?: typeof fetch;
   now?: () => number;
+  forceRefresh?: boolean;
 }
 
 function compact(value: unknown): CompactRecord {
@@ -397,6 +399,43 @@ function dependencyEvidence(
   };
 }
 
+function escapePattern(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function dependencyReference(snapshot: Snapshot, dependency: Dependency): Evidence | null {
+  const packageName = escapePattern(dependency.name);
+  const reference = new RegExp(
+    `(?:from\\s*|import\\s*\\(|require\\s*\\(|import\\s*)['\"]${packageName}(?:/[^'\"]*)?['\"]`,
+  );
+  for (const file of snapshot.files.filter(
+    (item) => isRuntimeSource(item) && /\.[cm]?[jt]sx?$/i.test(item.path),
+  )) {
+    const match = reference.exec(file.content);
+    if (!match) continue;
+    const line = file.content.slice(0, match.index).split('\n').length;
+    const evidence = sourceEvidence(
+      file,
+      line,
+      `${dependency.name} is explicitly referenced by captured runtime source. This does not establish that the vulnerable path executes.`,
+    );
+    evidence.kind = 'inferred';
+    return evidence;
+  }
+  return null;
+}
+
+function reachability(
+  snapshot: Snapshot,
+  dependency: Dependency,
+): { status: 'referenced' | 'not_found' | 'unknown'; evidence?: Evidence } {
+  const evidence = dependencyReference(snapshot, dependency);
+  if (evidence) return { status: 'referenced', evidence };
+  return {
+    status: dependency.relationship === 'direct' ? 'not_found' : 'unknown',
+  };
+}
+
 function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRecord): Finding {
   const affected = record.packages.find((item) => item.name === dependency.name);
   const fixedVersions = affected?.fixedVersions ?? [];
@@ -407,6 +446,13 @@ function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRe
     (affected?.severity.length ? affected.severity : record.severity)
       .map((item) => `${item.type}:${item.score}`)
       .join(', ');
+  const usage = reachability(snapshot, dependency);
+  const reachabilityText =
+    usage.status === 'referenced'
+      ? 'Captured runtime source references the package, but the vulnerable code path was not proven.'
+      : usage.status === 'not_found'
+        ? 'No runtime source reference was found for this direct dependency; dynamic or indirect use remains possible.'
+        : 'Source reachability is unknown for this transitive dependency.';
   const finding = makeFinding({
     source: 'osv',
     ruleId: record.id,
@@ -414,12 +460,15 @@ function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRe
     category: 'dependencies',
     severity: normalizedSeverity,
     sourceSeverity: originalSeverity || 'UNSPECIFIED',
-    description: `OSV reports ${dependency.name}@${dependency.resolvedVersion} as affected. The dependency is ${dependency.relationship ?? 'unknown'} in the captured lockfile; runtime reachability and exploitability were not assessed.`,
+    description: `OSV reports ${dependency.name}@${dependency.resolvedVersion} as affected. The dependency is ${dependency.relationship ?? 'unknown'} in the captured lockfile. ${reachabilityText} Exploitability was not assessed.`,
     remediation: fixedVersions.length
       ? `Evaluate an upgrade to a non-affected release. OSV records fixed version(s): ${fixedVersions.join(', ')}.`
       : 'Review the advisory and supported upgrade path. No fixed version was present in the returned OSV record.',
     cwe: [],
-    evidence: [dependencyEvidence(snapshot, dependency, record)],
+    evidence: [
+      dependencyEvidence(snapshot, dependency, record),
+      ...(usage.evidence ? [usage.evidence] : []),
+    ],
   });
   finding.vulnerability = {
     id: record.id,
@@ -429,6 +478,7 @@ function normalize(snapshot: Snapshot, dependency: Dependency, record: CompactRe
     fixedVersions,
     severity: affected?.severity.length ? affected.severity : record.severity,
     relationship: dependency.relationship ?? 'unknown',
+    reachability: usage.status,
     lockfile: dependency.lockfile ?? dependency.manifest,
     ...(record.modified ? { advisoryModified: record.modified } : {}),
   };
@@ -448,20 +498,6 @@ export async function scanOsv(
   const resolved = inventory.dependencies
     .filter((item) => item.resolvedVersion && item.lockfile)
     .slice(0, 1000);
-  if (!enabled)
-    return {
-      dependencies: inventory.dependencies,
-      findings: [],
-      run: {
-        id: 'osv',
-        name: 'Dependency vulnerabilities',
-        status: 'skipped',
-        durationMs: Math.max(0, Math.round(performance.now() - started)),
-        findings: 0,
-        detail: `OSV network lookup is disabled. ${resolved.length} resolved lockfile package(s) were inventoried locally.`,
-        version: 'API v1',
-      },
-    };
   if (!resolved.length)
     return {
       dependencies: inventory.dependencies,
@@ -475,18 +511,53 @@ export async function scanOsv(
         detail: inventory.errors.length
           ? 'A supported lockfile was malformed; no clean dependency result is implied.'
           : 'No resolved npm, pnpm, or Yarn lockfile packages were available. Declared ranges were not queried.',
-        version: 'API v1',
+        version: enabled ? 'API v1' : 'Local OSV snapshot v1',
       },
     };
+  const cache = await readCache(cachePath);
+  if (!enabled) {
+    const findings: Finding[] = [];
+    let covered = 0;
+    for (const item of resolved) {
+      const entry = cache.entries[cacheKey(item)];
+      if (!entry) continue;
+      covered++;
+      for (const vulnerability of consolidate(entry.vulnerabilities)) {
+        if (findings.length >= 300) break;
+        findings.push(normalize(snapshot, item, vulnerability));
+      }
+    }
+    const limited = findings.length >= 300;
+    return {
+      dependencies: inventory.dependencies,
+      findings,
+      run: {
+        id: 'osv',
+        name: 'Dependency vulnerabilities',
+        status:
+          covered === 0
+            ? 'skipped'
+            : covered < resolved.length || inventory.errors.length || limited
+              ? 'partial'
+              : 'completed',
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        findings: findings.length,
+        detail:
+          covered === 0
+            ? `The local advisory database has no records for ${resolved.length} resolved package(s). No network request was made and no clean result is implied.`
+            : `Checked ${covered} of ${resolved.length} resolved package(s) against the local advisory database without network access.${covered < resolved.length ? ' Packages not present in the database remain unverified.' : ''}`,
+        version: 'Local OSV snapshot v1',
+      },
+    };
+  }
   const fetcher = runtime.fetch ?? fetch;
   const clock = runtime.now ?? Date.now;
-  const cache = await readCache(cachePath);
   const records = new Map<string, CompactRecord[]>();
   const missing: Dependency[] = [];
   const freshAfter = clock() - cacheHours * 60 * 60 * 1000;
   for (const item of resolved) {
     const entry = cache.entries[cacheKey(item)];
-    if (entry && Date.parse(entry.fetchedAt) >= freshAfter)
+    if (entry && !runtime.forceRefresh && Date.parse(entry.fetchedAt) >= freshAfter)
       records.set(cacheKey(item), consolidate(entry.vulnerabilities));
     else missing.push(item);
   }

@@ -30,6 +30,7 @@ function executionFingerprint(
       gitleaks: config.gitleaks,
       osv: config.osv,
       osvCacheHours: config.osvCacheHours,
+      advisoryDatabasePath: config.advisoryDatabasePath,
       httpProbe: options.httpProbe ?? null,
     }),
   );

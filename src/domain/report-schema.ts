@@ -102,6 +102,7 @@ const finding = z.looseObject({
       fixedVersions: z.array(shortText).max(1_000),
       severity: z.array(z.looseObject({ type: shortText, score: shortText })).max(1_000),
       relationship: z.enum(['direct', 'transitive', 'unknown']),
+      reachability: z.enum(['referenced', 'not_found', 'unknown']).optional(),
       lockfile: shortText,
       advisoryModified: shortText.optional(),
     })

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   escapeHtml,
   escapeMarkdown,
+  toCycloneDx,
   toHtml,
   toInvestigationBundle,
   toMarkdown,
@@ -40,6 +41,40 @@ test('SARIF export retains unresolved status and valid local locations', () => {
   };
   assert.equal(result.version, '2.1.0');
   assert.equal(result.runs[0]?.results[0]?.properties.disposition, 'needs_review');
+});
+test('CycloneDX export preserves dependency scope and direct relationships', () => {
+  const report = sampleReport();
+  report.dependencies = [
+    {
+      name: '@scope/runtime',
+      requestedVersion: '^1.0.0',
+      resolvedVersion: '1.2.3',
+      manifest: 'package.json',
+      lockfile: 'package-lock.json',
+      relationship: 'direct',
+      scope: 'runtime',
+    },
+    {
+      name: 'test-helper',
+      requestedVersion: '2.0.0',
+      resolvedVersion: '2.0.0',
+      manifest: 'package.json',
+      lockfile: 'package-lock.json',
+      relationship: 'transitive',
+      scope: 'development',
+    },
+  ];
+  const result = toCycloneDx(report) as {
+    bomFormat: string;
+    specVersion: string;
+    components: { name: string; scope: string; purl: string }[];
+    dependencies: { dependsOn: string[] }[];
+  };
+  assert.equal(result.bomFormat, 'CycloneDX');
+  assert.equal(result.specVersion, '1.6');
+  assert.equal(result.components[0]?.scope, 'required');
+  assert.match(result.components[0]?.purl ?? '', /^pkg:npm\/%40scope\/runtime@1\.2\.3$/);
+  assert.equal(result.dependencies[0]?.dependsOn.length, 1);
 });
 test('Markdown includes scope and limitations', () => {
   const report = sampleReport();

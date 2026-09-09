@@ -132,6 +132,7 @@ export interface Finding {
     fixedVersions: string[];
     severity: { type: string; score: string }[];
     relationship: 'direct' | 'transitive' | 'unknown';
+    reachability: 'referenced' | 'not_found' | 'unknown';
     lockfile: string;
     advisoryModified?: string;
   };

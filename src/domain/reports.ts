@@ -1,4 +1,87 @@
 import type { AuditReport } from './types.ts';
+import { digest } from './findings.ts';
+
+function npmPurl(name: string, version: string): string {
+  const encodedName = encodeURIComponent(name).replace('%2F', '/');
+  return `pkg:npm/${encodedName}@${encodeURIComponent(version)}`;
+}
+
+export function toCycloneDx(report: AuditReport): object {
+  const components = report.dependencies.map((dependency) => {
+    const version = dependency.resolvedVersion ?? dependency.requestedVersion;
+    const reference = `pkg:${digest(`${dependency.manifest}:${dependency.name}:${version}`).slice(0, 24)}`;
+    return {
+      type: 'library',
+      'bom-ref': reference,
+      name: dependency.name,
+      version,
+      purl: npmPurl(dependency.name, version),
+      scope: dependency.scope === 'runtime' ? 'required' : 'optional',
+      properties: [
+        { name: 'traceward:manifest', value: dependency.manifest },
+        { name: 'traceward:requestedVersion', value: dependency.requestedVersion },
+        { name: 'traceward:relationship', value: dependency.relationship ?? 'unknown' },
+        ...(dependency.lockfile
+          ? [{ name: 'traceward:lockfile', value: dependency.lockfile }]
+          : []),
+      ],
+    };
+  });
+  const references = new Map(
+    components.map((component) => [`${component.name}@${component.version}`, component['bom-ref']]),
+  );
+  const rootReference = `application:${report.auditId}`;
+  const vulnerabilities = report.findings.flatMap((finding) => {
+    const vulnerability = finding.vulnerability;
+    if (!vulnerability) return [];
+    const affected = references.get(`${vulnerability.package}@${vulnerability.version}`);
+    return [
+      {
+        id: vulnerability.id,
+        source: {
+          name: 'OSV',
+          url: `https://osv.dev/vulnerability/${encodeURIComponent(vulnerability.id)}`,
+        },
+        ratings: [{ severity: finding.severity, method: 'other' }],
+        description: finding.description,
+        recommendation: finding.remediation,
+        affects: affected ? [{ ref: affected }] : [],
+        properties: [
+          { name: 'traceward:disposition', value: finding.disposition },
+          { name: 'traceward:reachability', value: vulnerability.reachability ?? 'unknown' },
+        ],
+      },
+    ];
+  });
+  return {
+    bomFormat: 'CycloneDX',
+    specVersion: '1.6',
+    serialNumber: `urn:uuid:${report.auditId}`,
+    version: 1,
+    metadata: {
+      timestamp: report.createdAt,
+      tools: {
+        components: [{ type: 'application', name: 'Traceward', version: '0.2.0' }],
+      },
+      component: {
+        type: 'application',
+        'bom-ref': rootReference,
+        name: report.projectName,
+        version: report.snapshotDigest.slice(0, 12),
+      },
+    },
+    components,
+    dependencies: [
+      {
+        ref: rootReference,
+        dependsOn: components
+          .filter((_component, index) => report.dependencies[index]?.relationship === 'direct')
+          .map((component) => component['bom-ref']),
+      },
+    ],
+    ...(vulnerabilities.length ? { vulnerabilities } : {}),
+  };
+}
 
 export function toInvestigationBundle(report: AuditReport): object {
   const profile = report.projectProfile;

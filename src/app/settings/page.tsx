@@ -73,12 +73,13 @@ export default function SettingsPage() {
               <Badge>{config.gitleaks ? 'Opted in' : 'Disabled'}</Badge>
             </div>
             <div className="detail-row">
-              <span>OSV / Trivy</span>
-              <Badge>{config.osv ? 'OSV opted in' : 'OSV disabled'}</Badge>
+              <span>Local advisory database</span>
+              <Badge>{config.osv ? 'Network refresh enabled' : 'Offline only'}</Badge>
             </div>
             <p className="small muted">
               Install trusted binaries yourself. The application never downloads executables or
-              rules from a scanned repository.
+              rules from a scanned repository. Offline audits use only the local advisory database
+              at <code>{config.advisoryDatabasePath}</code>.
             </p>
             <pre className="command">
               TRACEWARD_SEMGREP=true
@@ -87,6 +88,10 @@ export default function SettingsPage() {
               <br />
               TRACEWARD_OSV=true
             </pre>
+            <p className="small muted">
+              Refresh exact package versions manually with{' '}
+              <code>npm run cli -- advisories update /path/to/project</code>.
+            </p>
           </div>
         </section>
       </div>

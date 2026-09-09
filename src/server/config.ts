@@ -22,6 +22,7 @@ export interface Configuration {
   gitleaks: boolean;
   osv: boolean;
   osvCacheHours: number;
+  advisoryDatabasePath: string;
 }
 function boundedInteger(
   value: string | undefined,
@@ -99,5 +100,8 @@ export function configuration(): Configuration {
     gitleaks: process.env.TRACEWARD_GITLEAKS === 'true',
     osv: process.env.TRACEWARD_OSV === 'true',
     osvCacheHours: boundedInteger(process.env.TRACEWARD_OSV_CACHE_HOURS, 24, 1, 720),
+    advisoryDatabasePath: path.resolve(
+      process.env.TRACEWARD_ADVISORY_DB || path.join(dataDirectory, 'advisory-database.json'),
+    ),
   };
 }
