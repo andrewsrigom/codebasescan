@@ -329,6 +329,22 @@ test('realistic lockfiles use a separate bounded size allowance', async (context
   assert.equal(estimate.oversizedFiles, 0);
   assert.equal(estimate.limits.lockfileBytes, 4 * 1024 * 1024);
 });
+test('bounded coverage summaries are captured without traversing generated coverage output', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-coverage-artifact-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'coverage'));
+  await writeFile(path.join(root, 'coverage', 'coverage-summary.json'), '{"total":{}}');
+  await writeFile(path.join(root, 'coverage', 'lcov.info'), 'LF:1\nLH:1\n');
+  await writeFile(path.join(root, 'coverage', 'generated.json'), '{"must":"stay excluded"}');
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.deepEqual(
+    snapshot.files.map((file) => file.path),
+    ['coverage/coverage-summary.json', 'coverage/lcov.info'],
+  );
+  assert.ok(snapshot.files.every((file) => file.scope === 'test'));
+  assert.equal(estimate.supportedFiles, 2);
+});
 test('registration rejects home and overlapping audit storage', async (context) => {
   await assert.rejects(() => validateProjectRoot(os.homedir(), path.join(os.tmpdir(), 'tw-state')));
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-root-'));

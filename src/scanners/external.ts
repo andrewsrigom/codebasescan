@@ -12,7 +12,7 @@ export interface ScanResult {
   run: ScannerRun;
 }
 type ExternalScanner = 'semgrep' | 'gitleaks';
-export type TrustedScanner = ExternalScanner | 'dependency-cruiser' | 'jscpd';
+export type TrustedScanner = ExternalScanner | 'dependency-cruiser' | 'jscpd' | 'knip';
 export interface ExternalScanOptions {
   projectRoot?: string;
   gitHistory?: boolean;
@@ -22,6 +22,7 @@ export const testedScannerVersions: Record<TrustedScanner, readonly string[]> = 
   gitleaks: ['8.30.1'],
   'dependency-cruiser': ['18.2.0'],
   jscpd: ['5.2.0'],
+  knip: ['6.35.1'],
 };
 export function scannerCompatibility(name: TrustedScanner, version?: string) {
   const tested = testedScannerVersions[name];
@@ -40,7 +41,7 @@ export function scannerCompatibility(name: TrustedScanner, version?: string) {
     detail: `Compatibility warning: ${name} ${version} is outside the tested version set (${tested.join(', ')}). Parsed output is retained, but coverage is partial.`,
   };
 }
-const stagingName = /^(?:semgrep|gitleaks|dependency-cruiser|jscpd)-[A-Za-z0-9._-]+$/;
+const stagingName = /^(?:semgrep|gitleaks|dependency-cruiser|jscpd|knip)-[A-Za-z0-9._-]+$/;
 export async function cleanupStaleScannerStaging(temporaryDirectory: string): Promise<number> {
   await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
   const root = path.resolve(temporaryDirectory);

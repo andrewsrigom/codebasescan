@@ -3,6 +3,7 @@ import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import type {
   ArchitectureAnalysis,
   AuditReport,
+  CodeQualityAnalysis,
   Dependency,
   DuplicationAnalysis,
   Finding,
@@ -29,6 +30,7 @@ import { scanReactSecurity } from '../scanners/react-security.ts';
 import { scanNextSecurity } from '../scanners/next-security.ts';
 import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
 import { scanSupplyChain } from '../scanners/supply-chain.ts';
+import { scanCodeQuality } from '../scanners/quality.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -68,6 +70,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   supplyChainAnalysis: Annotation<SupplyChainAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  codeQualityAnalysis: Annotation<CodeQualityAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -228,6 +234,16 @@ export function buildAuditGraph(options: {
         scanners: [result.run],
       };
     })
+    .addNode('code_quality', async (state) => {
+      const result = await scanCodeQuality(
+        await checkedSnapshot(state),
+        state.projectProfile ?? undefined,
+        config.temporaryDirectory,
+        signal,
+      );
+      event(state, 'code_quality', 'Static quality and dead-code analysis completed.');
+      return { codeQualityAnalysis: result.analysis, scanners: result.runs };
+    })
     .addNode('posture', async (state) => {
       const started = performance.now();
       const source = await checkedSnapshot(state);
@@ -386,6 +402,7 @@ export function buildAuditGraph(options: {
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
+        ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         coverage: buildCoverage(state.scanners, findings, config.aiMode),
@@ -503,6 +520,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'next_security')
     .addEdge('project_profile', 'react_security')
     .addEdge('project_profile', 'architecture')
+    .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
     .addEdge('snapshot', 'supply_chain')
     .addEdge('snapshot', 'posture')
@@ -519,6 +537,7 @@ export function buildAuditGraph(options: {
         'architecture',
         'duplication',
         'supply_chain',
+        'code_quality',
         'posture',
         'semgrep',
         'gitleaks',

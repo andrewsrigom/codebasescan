@@ -391,6 +391,44 @@ export interface SupplyChainAnalysis {
   };
   truncated: boolean;
 }
+export interface FunctionHotspot {
+  file: string;
+  line: number;
+  name: string;
+  lines: number;
+  parameters: number;
+  complexity: number;
+}
+export interface DeadCodeSymbol {
+  file: string;
+  line: number;
+  name: string;
+}
+export interface DeadCodeAnalysis {
+  schemaVersion: 1;
+  unusedFiles: string[];
+  unusedDependencies: string[];
+  unlistedDependencies: DeadCodeSymbol[];
+  unusedExports: DeadCodeSymbol[];
+  unusedTypes: DeadCodeSymbol[];
+  truncated: boolean;
+}
+export interface CoverageArtifactSummary {
+  file: string;
+  lines?: number;
+  statements?: number;
+  functions?: number;
+  branches?: number;
+}
+export interface CodeQualityAnalysis {
+  schemaVersion: 1;
+  filesAnalyzed: number;
+  functionsAnalyzed: number;
+  hotspots: FunctionHotspot[];
+  deadCode?: DeadCodeAnalysis;
+  coverageArtifacts: CoverageArtifactSummary[];
+  truncated: boolean;
+}
 export type SecurityControlStatus =
   'EVIDENCED' | 'GAP_CANDIDATE' | 'UNVERIFIED' | 'NOT_APPLICABLE' | 'PARTIAL' | 'FAILED';
 export type SecurityControlDomain =
@@ -463,6 +501,7 @@ export interface AuditReport {
   projectProfile?: ProjectProfile;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
+  codeQualityAnalysis?: CodeQualityAnalysis;
   checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];

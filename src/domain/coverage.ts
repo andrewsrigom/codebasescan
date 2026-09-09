@@ -73,6 +73,8 @@ export function buildCoverage(
       'NOT SUPPORTED',
     ),
     scannerCapability(runs, 'jscpd', 'JavaScript/TypeScript code duplication', 'NOT SUPPORTED'),
+    scannerCapability(runs, 'quality-metrics', 'Code quality metrics', 'NOT RUN'),
+    scannerCapability(runs, 'knip', 'Dead code and dependency usage', 'NOT SUPPORTED'),
     scannerCapability(runs, 'builtin', 'Built-in static patterns', 'NOT RUN'),
     scannerCapability(runs, 'semgrep', 'Static code analysis', 'DISABLED'),
     scannerCapability(runs, 'gitleaks', 'Secret scanning', 'DISABLED'),

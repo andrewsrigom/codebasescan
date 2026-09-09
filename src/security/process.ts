@@ -3,8 +3,9 @@ import { fileURLToPath } from 'node:url';
 export interface ProcessResult {
   code: number;
   stdout: string;
+  stderr: string;
 }
-export type TrustedScannerBinary = 'semgrep' | 'gitleaks' | 'depcruise' | 'jscpd';
+export type TrustedScannerBinary = 'semgrep' | 'gitleaks' | 'depcruise' | 'jscpd' | 'knip';
 
 function scannerCommand(binary: TrustedScannerBinary, args: string[]) {
   if (binary === 'depcruise')
@@ -28,6 +29,14 @@ function scannerCommand(binary: TrustedScannerBinary, args: string[]) {
         ...args,
       ],
     };
+  if (binary === 'knip')
+    return {
+      executable: process.execPath,
+      args: [
+        fileURLToPath(new URL('../../node_modules/knip/bin/knip.js', import.meta.url)),
+        ...args,
+      ],
+    };
   return { executable: binary, args };
 }
 
@@ -39,6 +48,7 @@ export async function runScannerProcess(
 ): Promise<ProcessResult> {
   return new Promise((resolve, reject) => {
     let output = '';
+    let errorOutput = '';
     let bytes = 0;
     let settled = false;
     const env: NodeJS.ProcessEnv = {
@@ -62,7 +72,7 @@ export async function runScannerProcess(
       shell: false,
       windowsHide: true,
       detached: process.platform !== 'win32',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     const kill = () => {
       try {
@@ -92,6 +102,14 @@ export async function runScannerProcess(
       }
       output += chunk.toString('utf8');
     });
+    child.stderr.on('data', (chunk: Buffer) => {
+      bytes += chunk.length;
+      if (bytes > 4 * 1024 * 1024) {
+        fail('Scanner output exceeded the 4 MB limit.');
+        return;
+      }
+      errorOutput += chunk.toString('utf8');
+    });
     child.on('error', () =>
       fail(`${binary} could not start. Install the trusted scanner binary separately.`),
     );
@@ -101,7 +119,7 @@ export async function runScannerProcess(
       clearTimeout(timer);
       signal?.removeEventListener('abort', abort);
       if (code === null) reject(new Error('Scanner terminated without an exit code.'));
-      else resolve({ code, stdout: output });
+      else resolve({ code, stdout: output, stderr: errorOutput });
     });
   });
 }

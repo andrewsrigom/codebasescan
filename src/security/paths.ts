@@ -91,6 +91,7 @@ const dependencyLockfiles = new Set([
   'pnpm-lock.yaml',
   'yarn.lock',
 ]);
+const coverageArtifactPaths = ['coverage/coverage-summary.json', 'coverage/lcov.info'] as const;
 function fileByteLimit(name: string): number {
   return dependencyLockfiles.has(name) ? snapshotLimits.lockfileBytes : snapshotLimits.bytesPerFile;
 }
@@ -231,6 +232,20 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
     }
   }
   await walk(canonicalRoot, 0);
+  for (const relative of coverageArtifactPaths) {
+    const absolute = path.join(canonicalRoot, relative);
+    try {
+      const resolved = await realpath(absolute);
+      const metadata = await lstat(absolute);
+      if (!isWithin(canonicalRoot, resolved) || !metadata.isFile()) continue;
+      supportedFiles++;
+      supportedBytes += metadata.size;
+      scopeFiles.test++;
+      if (metadata.size > snapshotLimits.bytesPerFile) oversizedFiles++;
+    } catch {
+      // Coverage artifacts are optional.
+    }
+  }
   if (supportedFiles > snapshotLimits.files) reasons.add('file-count-limit');
   if (supportedBytes > snapshotLimits.totalBytes) reasons.add('total-byte-limit');
   if (oversizedFiles) reasons.add('per-file-byte-limit');
@@ -363,6 +378,53 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
     }
   }
   await walk(root, 0);
+  for (const relative of coverageArtifactPaths) {
+    if (
+      files.some((file) => file.path === relative) ||
+      files.length >= snapshotLimits.files ||
+      totalBytes >= snapshotLimits.totalBytes
+    )
+      continue;
+    const absolute = path.join(root, relative);
+    try {
+      const resolved = await realpath(absolute);
+      if (!isWithin(root, resolved)) continue;
+      const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      try {
+        const metadata = await handle.stat();
+        if (
+          !metadata.isFile() ||
+          metadata.size > snapshotLimits.bytesPerFile ||
+          totalBytes + metadata.size > snapshotLimits.totalBytes
+        ) {
+          skip('coverage-artifact-size-limit');
+          truncated = true;
+          continue;
+        }
+        const buffer = Buffer.alloc(metadata.size + 1);
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+        if (bytesRead !== metadata.size || bytesRead > snapshotLimits.bytesPerFile) {
+          skip('changed-during-read');
+          truncated = true;
+          continue;
+        }
+        const content = buffer.subarray(0, bytesRead).toString('utf8');
+        if (content.includes('\0')) continue;
+        files.push({
+          path: relative,
+          scope: 'test',
+          content,
+          digest: digest(content),
+          bytes: bytesRead,
+        });
+        totalBytes += bytesRead;
+      } finally {
+        await handle.close();
+      }
+    } catch {
+      // Coverage artifacts are optional.
+    }
+  }
   return {
     files,
     totalBytes,

@@ -305,6 +305,59 @@ const supplyChainAnalysis = z.looseObject({
   truncated: z.boolean(),
 });
 
+const codeQualityAnalysis = z.looseObject({
+  schemaVersion: z.literal(1),
+  filesAnalyzed: z.number().int().nonnegative(),
+  functionsAnalyzed: z.number().int().nonnegative(),
+  hotspots: z
+    .array(
+      z.looseObject({
+        file: shortText,
+        line: z.number().int().positive(),
+        name: shortText,
+        lines: z.number().int().positive(),
+        parameters: z.number().int().nonnegative(),
+        complexity: z.number().int().positive(),
+      }),
+    )
+    .max(200),
+  deadCode: z
+    .looseObject({
+      schemaVersion: z.literal(1),
+      unusedFiles: z.array(shortText).max(300),
+      unusedDependencies: z.array(shortText).max(300),
+      unlistedDependencies: z
+        .array(
+          z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),
+        )
+        .max(300),
+      unusedExports: z
+        .array(
+          z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),
+        )
+        .max(300),
+      unusedTypes: z
+        .array(
+          z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),
+        )
+        .max(300),
+      truncated: z.boolean(),
+    })
+    .optional(),
+  coverageArtifacts: z
+    .array(
+      z.looseObject({
+        file: shortText,
+        lines: z.number().min(0).max(100).optional(),
+        statements: z.number().min(0).max(100).optional(),
+        functions: z.number().min(0).max(100).optional(),
+        branches: z.number().min(0).max(100).optional(),
+      }),
+    )
+    .max(10),
+  truncated: z.boolean(),
+});
+
 const controlStatus = z.enum([
   'EVIDENCED',
   'GAP_CANDIDATE',
@@ -364,6 +417,7 @@ export const auditReportSchema = z.looseObject({
   projectProfile: projectProfile.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
+  codeQualityAnalysis: codeQualityAnalysis.optional(),
   checklist: checklist.optional(),
   httpProbe: z.looseObject({ requestedUrl: shortText, finalUrl: shortText }).optional(),
   coverage: z
