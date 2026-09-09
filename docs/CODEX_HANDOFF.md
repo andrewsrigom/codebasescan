@@ -18,6 +18,7 @@ Traceward now has a complete local-first audit slice:
 - prompt-injection fixtures and snapshot-only file access;
 - category-organized benchmark with precision/recall;
 - deterministic project profile with stable route/symbol/import/call/fact IDs;
+- inline, wrapped, aliased, destructured, App Router, and Pages Router entrypoint mapping with captured source-alias resolution;
 - framework-aware auth/authz and direct raw-SQL, SSRF, redirect, upload, webhook, cookie, and client-secret AST candidates;
 - versioned control checklist with gap/evidenced/unverified/partial/failed/not-applicable states;
 - auditable checklist assessments for external evidence, accepted gaps, non-applicability, and follow-up without replacing deterministic status;
@@ -41,8 +42,8 @@ The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md
 
 ## Next work, in priority order
 
-1. Run Traceward on 10 authorized real TypeScript/Next.js repositories, review every candidate, use `npm run cli -- evaluate ...`, and record anonymized metrics. This requires repository paths and owner authorization.
-2. Fix only rule/profile/checklist failures demonstrated by that evaluation: aliases, wrappers, middleware, ORM shapes, uploads, cookies, or framework guards.
+1. Repeat evaluation on owner-authorized applications with production context, independent manual review, and durable human dispositions; the public ten-project source pass is recorded in `docs/REAL_PROJECT_EVALUATION.md`.
+2. Add review-time and duplicate-rate instrumentation, then extend rules only from observed failures.
 3. Validate one economical and one stronger OpenAI model only with an explicit key/spend approval; validate Ollama only if local-model disk/RAM cost is accepted. Measure whether either improves human triage.
 4. Expand the fault matrix beyond tested worker `SIGKILL`, AI reservation persistence, and checkpoint/config mismatch behavior.
 5. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.

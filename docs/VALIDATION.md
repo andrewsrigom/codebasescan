@@ -4,32 +4,33 @@
 
 Validation was repeated on **2026-09-09 BRT** in WSL2 Ubuntu **24.04.4 LTS**, Node.js **24.19.0**, npm **11.17.0**, Next.js **16.3.4**, Semgrep **1.176.1**, and Gitleaks **8.30.1**.
 
-| Check                         | Result                                                                                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`        | Passed                                                                                                                                 |
-| `npm run typecheck`           | Passed                                                                                                                                 |
-| `npm run lint`                | Passed with zero warnings                                                                                                              |
-| `npm test`                    | **114 passed**, 0 failed, 0 skipped                                                                                                    |
-| `npm run test:graph`          | **8 passed**, including real scanners, actual worker `SIGKILL`, checkpoint/config rejection, and disabled-network behavior             |
-| Interrupt/resume repetition   | **50 consecutive passes** using exact persisted checkpoint and interrupt IDs                                                           |
-| Worker crash recovery         | A replacement worker recovered persisted state after actual `SIGKILL`; cleanup remains limited to recognized staging names             |
-| `npm run benchmark`           | TP 19, FP 1, FN 0, precision 0.95, recall 1.00; AST subset TP 10, FP 0, FN 0, precision 1.00, recall 1.00                              |
-| `npm run build`               | Passed; all application and API routes compiled                                                                                        |
-| `npm run test:e2e`            | **6 passed** in Chromium, including scope preflight and persisted human checklist assessment                                           |
-| `npm audit --audit-level=low` | 0 known vulnerabilities                                                                                                                |
-| Browser verification          | Fresh audit rendered Project Map, 17 checklist controls, source-scope preflight and bounded-investigation state; no framework error UI |
-| Browser console               | No page errors; only expected Next.js development messages                                                                             |
-| Local HTTP response           | HTTP 200 with CSP, frame, MIME, referrer, permissions and cache-control headers                                                        |
-| Traceward self-audit          | 185 supported files: 76 runtime, 108 test, 1 example; complete profile/scanners and one low HSTS declaration candidate                 |
-| Dependency hardening          | Bounded OSV pagination, package-level CVSS v3 severity, cache compatibility, and npm/Yarn local-workspace exclusion covered            |
-| CI/compatibility              | Baseline-only gates, JSON/SARIF artifacts, scope approval, scanner-version warnings, and workflow/config fingerprints covered          |
-| Checklist review              | Human external-evidence/gap/follow-up decisions append revisions, keep deterministic status, survive publication, and export           |
+| Check                         | Result                                                                                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`        | Passed                                                                                                                                    |
+| `npm run typecheck`           | Passed                                                                                                                                    |
+| `npm run lint`                | Passed with zero warnings                                                                                                                 |
+| `npm test`                    | **134 passed**, 0 failed, 0 skipped                                                                                                       |
+| `npm run test:graph`          | **8 passed**, including real scanners, actual worker `SIGKILL`, checkpoint/config rejection, and disabled-network behavior                |
+| Interrupt/resume repetition   | **50 consecutive passes** using exact persisted checkpoint and interrupt IDs                                                              |
+| Worker crash recovery         | A replacement worker recovered persisted state after actual `SIGKILL`; cleanup remains limited to recognized staging names                |
+| `npm run benchmark`           | TP 19, FP 1, FN 0, precision 0.95, recall 1.00; AST subset TP 10, FP 0, FN 0, precision 1.00, recall 1.00                                 |
+| `npm run build`               | Passed; all application and API routes compiled                                                                                           |
+| `npm run test:e2e`            | **6 passed** in Chromium, including scope preflight and persisted human checklist assessment                                              |
+| `npm audit --audit-level=low` | 0 known vulnerabilities                                                                                                                   |
+| Browser verification          | Fresh audit rendered Project Map, 17 checklist controls, source-scope preflight and bounded-investigation state; no framework error UI    |
+| Browser console               | No page errors; only expected Next.js development messages                                                                                |
+| Local HTTP response           | HTTP 200 with CSP, frame, MIME, referrer, permissions and cache-control headers                                                           |
+| Traceward self-audit          | 185 supported files: 76 runtime, 108 test, 1 example; complete profile/scanners and one low HSTS declaration candidate                    |
+| Dependency hardening          | Bounded OSV pagination, package-level CVSS v3 severity, cache compatibility, and npm/Yarn local-workspace exclusion covered               |
+| CI/compatibility              | Baseline-only gates, JSON/SARIF artifacts, scope approval, scanner-version warnings, and workflow/config fingerprints covered             |
+| Checklist review              | Human external-evidence/gap/follow-up decisions append revisions, keep deterministic status, survive publication, and export              |
+| Real-project source pass      | 10 public repositories, 1,010 supported files, 10 complete profiles, 0 truncations, 23 final candidates; see `REAL_PROJECT_EVALUATION.md` |
 
 The benchmark uses declared fixtures and is not a general accuracy claim. The self-audit is one authorized repository, not a diverse evaluation set. Its first pass exposed fixture/benchmark findings being treated as application code; runtime/test/example separation removed those two noise candidates while Gitleaks retained all captured scopes. The remaining low header candidate identifies absent static HSTS evidence without claiming the loopback-only runtime is vulnerable.
 
 Deterministic profiling, ten AST rules, checklist mapping, evidence-ID context brokerage, bounded investigation output, persisted schema validation, report revisions, Codex bundle export, and anonymized outcome aggregation are covered without enabling a model provider.
 
-OpenAI remains covered by mocked contract tests only because no credential was supplied. Ollama remains optional and uninstalled. Evaluation on authorized real repositories is still required before publishing usefulness or accuracy claims; source paths and retention approval are an explicit stop condition.
+OpenAI remains covered by mocked contract tests only because no credential was supplied. Ollama remains optional and uninstalled. The ten-project pass demonstrates real-project behavior but does not provide owner-confirmed ground truth or justify a general accuracy claim. Private-project evaluation still requires explicit source and retention approval.
 
 ## Security workflow expansion pass
 

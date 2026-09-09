@@ -14,12 +14,13 @@
 - Runtime/test/example source separation, pre-audit scope estimates, explicit partial-snapshot approval, baseline-aware CI artifacts, and scanner compatibility warnings.
 - Actual dead-worker `SIGKILL` recovery, checkpoint/config compatibility guards, and persisted AI request reservations.
 - Bounded OSV pagination, CVSS v3 scoring, package-specific severity, advisory modification display, and local npm/Yarn workspace-package exclusion.
+- Initial ten-project source-only evaluation: 1,010 files, complete profiles, lockfile/alias/entrypoint/upload hardening, and documented manual triage without a broad accuracy claim.
 
-## Next — real-project detection quality
+## Next — independent real-project ground truth
 
-Evaluate at least 10 authorized TypeScript/Next.js projects with human review. Record false positives, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and AI cost per confirmed finding. Disable or narrow rules that fail outside fixtures. Do not publish generic accuracy claims from the fixture benchmark.
+Repeat evaluation on owner-authorized applications with production context and independent human review. Record durable dispositions, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and later AI cost per accepted finding. Do not publish generic accuracy claims from fixtures or the initial public source pass.
 
-Extend structural analysis only from observed real-project failures: path aliases, wrapper composition, middleware/proxy matchers, more ORM/query-builder shapes, streaming uploads, cookie overloads, and framework-specific safe destination guards. Keep unsupported relationships explicit.
+Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, custom `tsconfig` aliases, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
 Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Reachability remains separate work and must not be inferred from presence.
 

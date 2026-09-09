@@ -6,7 +6,7 @@ Traceward helps developers find and review security gaps in TypeScript, Node.js,
 
 Traceward does not replace a penetration test, prove exploitability, or certify that software is secure. Missing and failed coverage stay visible.
 
-> **Status:** the complete local workflow is validated in WSL2 with Next.js, LangGraph persistence, Semgrep 1.176.1, Gitleaks 8.30.1, the OSV API, report exports, and Chromium tests. OpenAI is covered with mocked Responses API contracts because no API key was supplied. Ollama and native Windows/macOS remain unvalidated. See [Validation](docs/VALIDATION.md).
+> **Status:** the complete local workflow is validated in WSL2 with Next.js, LangGraph persistence, Semgrep 1.176.1, Gitleaks 8.30.1, the OSV API, report exports, Chromium tests, and a ten-repository source-only evaluation. OpenAI is covered with mocked Responses API contracts because no API key was supplied. Ollama and native Windows/macOS remain unvalidated. See [Validation](docs/VALIDATION.md) and [Real-project evaluation](docs/REAL_PROJECT_EVALUATION.md).
 
 ![Traceward audit workspace](docs/assets/workspace-styling-preview.png)
 
@@ -26,7 +26,7 @@ Traceward does not replace a penetration test, prove exploitability, or certify 
 | Reports            | JSON, Markdown, standalone HTML, SARIF 2.1.0, bounded Codex bundle, finding provenance, and local audit comparison                                           |
 | CI and evaluation  | Non-interactive severity gates, TP/FP/FN benchmark, and anonymized aggregation of human dispositions and AI cost                                             |
 
-Known limits include bounded syntax-only AST analysis rather than target typechecking or whole-program taint analysis, no Git-history secret scan, no reachability proof for vulnerable dependencies, no broad crawler or exploitation, and no cloud/IAM/IaC analysis. Fixture precision is not evidence of real-project accuracy.
+Known limits include bounded syntax-only AST analysis rather than target typechecking or whole-program taint analysis, no Git-history secret scan, no reachability proof for vulnerable dependencies, no broad crawler or exploitation, and no cloud/IAM/IaC analysis. Fixture precision and the initial real-project pass are not general accuracy claims.
 
 ## Start locally
 

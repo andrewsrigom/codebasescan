@@ -4,11 +4,11 @@
 
 - Phases 1-4 are implemented: deterministic profiler, bounded relationships, framework-aware AST rules, versioned checklist, and opaque evidence-ID context broker.
 - Phase 5 workflow A is implemented for Ollama/OpenAI contracts; structured results include controls, missing evidence, impact, preconditions, remediation choices, and safe tests. Disabled mode remains complete. Checklist-gap calls and AI report synthesis are intentionally deferred until real-project evidence justifies their cost.
-- Phase 6 tooling is implemented through the anonymized `evaluate` command. A self-audit exposed fixture/test noise and drove explicit runtime/test/example scope handling; the diverse real-project dataset still requires user-supplied authorized repositories and human dispositions.
+- Phase 6 tooling is implemented through the anonymized `evaluate` command. A ten-project public source-only pass covered 1,010 files and drove lockfile, entrypoint, alias, Pages Router, upload, taint, and false-positive corrections. Owner-confirmed private-project ground truth remains future validation.
 - Phase 7 includes validated append-only reports, actual worker `SIGKILL` recovery, AI budget reservation persistence, checkpoint/config compatibility guards, scanner-version warnings, baseline-aware CI artifacts, and explicit pre-audit truncation approval.
 - Phase 8 includes Project Map, Checklist, Findings, Coverage, Investigations, Workflow, a bounded Codex bundle export, and human checklist assessments that survive publication without rewriting deterministic state.
 
-The next product gate is evaluation on additional authorized real projects, followed by targeted rule corrections and optional live-model validation.
+The next product gate is independent human ground truth on owner-authorized applications, followed by optional live-model validation only if it improves review quality.
 
 ## Goal
 
@@ -59,7 +59,7 @@ Build a deterministic profile before running AI.
 
 - Maximum 2,000 source files, 200,000 AST nodes per file, 20,000 symbols, and 50,000 edges.
 - Parse only captured text with TypeScript's parser. No typecheck against the target, module resolution, plugins, transformers, or `tsconfig` execution.
-- Cross-file analysis initially follows explicit relative imports and exported identifiers for at most two hops.
+- Cross-file analysis follows captured relative, `@/`, `~/`, and root-alias imports plus exported identifiers for at most two hops. It does not execute or fully interpret target `tsconfig` path logic.
 
 ### Exit gate
 
