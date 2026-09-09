@@ -8,6 +8,7 @@ export interface EvaluationSummary {
   findings: number;
   reviewedFindings: number;
   confirmedFindings: number;
+  fixedFindings: number;
   falsePositives: number;
   acceptedRisks: number;
   unresolvedFindings: number;
@@ -23,6 +24,7 @@ export interface EvaluationSummary {
     ruleId: string;
     candidates: number;
     confirmed: number;
+    fixed: number;
     falsePositives: number;
     acceptedRisks: number;
     unresolved: number;
@@ -66,6 +68,7 @@ export function evaluateReports(reports: AuditReport[]): EvaluationSummary {
     findings: findings.length,
     reviewedFindings: findings.filter((finding) => finding.review).length,
     confirmedFindings,
+    fixedFindings: countDisposition(findings, 'fixed'),
     falsePositives: countDisposition(findings, 'false_positive'),
     acceptedRisks: countDisposition(findings, 'accepted_risk'),
     unresolvedFindings: countDisposition(findings, 'needs_review'),
@@ -91,6 +94,7 @@ export function evaluateReports(reports: AuditReport[]): EvaluationSummary {
         ruleId,
         candidates: candidates.length,
         confirmed: countDisposition(candidates, 'confirmed'),
+        fixed: countDisposition(candidates, 'fixed'),
         falsePositives: countDisposition(candidates, 'false_positive'),
         acceptedRisks: countDisposition(candidates, 'accepted_risk'),
         unresolved: countDisposition(candidates, 'needs_review'),

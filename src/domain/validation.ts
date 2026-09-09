@@ -27,6 +27,7 @@ export function reviewDecision(value: unknown): ReviewDecision {
   const disposition = input.disposition;
   if (
     disposition !== 'confirmed' &&
+    disposition !== 'fixed' &&
     disposition !== 'false_positive' &&
     disposition !== 'accepted_risk' &&
     disposition !== 'needs_review'

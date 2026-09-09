@@ -12,7 +12,7 @@ export function ciGate(
   const threshold = severityRank(failOn);
   const gatedFindings = report.findings.filter(
     (finding) =>
-      !['false_positive', 'accepted_risk'].includes(finding.disposition) &&
+      !['fixed', 'false_positive', 'accepted_risk'].includes(finding.disposition) &&
       !finding.suppression &&
       severityRank(finding.severity) <= threshold,
   ).length;

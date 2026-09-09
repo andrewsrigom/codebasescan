@@ -43,6 +43,8 @@ test('CI severity gates use meaningful exit codes', () => {
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 1, gatedFindings: 1 });
   report.findings[0]!.disposition = 'accepted_risk';
   assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
+  report.findings[0]!.disposition = 'fixed';
+  assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
   report.findings[0]!.disposition = 'needs_review';
   report.findings[0]!.suppression = {
     reason: 'Project exception with reviewed rationale.',

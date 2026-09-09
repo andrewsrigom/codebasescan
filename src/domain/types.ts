@@ -9,7 +9,8 @@ export type Category =
   | 'ai-security'
   | 'dependencies'
   | 'code';
-export type Disposition = 'needs_review' | 'confirmed' | 'false_positive' | 'accepted_risk';
+export type Disposition =
+  'needs_review' | 'confirmed' | 'fixed' | 'false_positive' | 'accepted_risk';
 export type AuditStatus =
   'queued' | 'running' | 'awaiting_review' | 'completed' | 'failed' | 'cancelled';
 export type ScannerStatus = 'completed' | 'partial' | 'skipped' | 'failed';

@@ -20,3 +20,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added detector confidence, probable exposure, explainable priority scores, evidence-preserving deduplication, expiring project exceptions, and explicit project baselines.
 - Added vulnerable and benign benchmark projects for every dedicated Next.js and React rule, with separate precision and recall gates.
 - AI-disabled audits now skip the contextual investigation subgraph entirely; workflow v2 prevents incompatible checkpoint reuse.
+- Added priority, confidence, and exposure filters plus a reviewed `fixed` disposition that no longer blocks CI.

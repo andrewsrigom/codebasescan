@@ -92,7 +92,7 @@ const finding = z.looseObject({
   remediation: shortText,
   cwe: z.array(shortText).max(100),
   evidence: z.array(evidence).min(1).max(1_000),
-  disposition: z.enum(['needs_review', 'confirmed', 'false_positive', 'accepted_risk']),
+  disposition: z.enum(['needs_review', 'confirmed', 'fixed', 'false_positive', 'accepted_risk']),
   confidence: z.enum(['low', 'medium', 'high']).optional(),
   analysis: analysis.optional(),
   runtimeVerification: z
@@ -144,7 +144,7 @@ const finding = z.looseObject({
     .optional(),
   review: z
     .looseObject({
-      decision: z.enum(['needs_review', 'confirmed', 'false_positive', 'accepted_risk']),
+      decision: z.enum(['needs_review', 'confirmed', 'fixed', 'false_positive', 'accepted_risk']),
       note: shortText,
       at: shortText,
     })

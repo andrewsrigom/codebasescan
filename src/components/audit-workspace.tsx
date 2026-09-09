@@ -48,6 +48,9 @@ export function AuditWorkspace({
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('all');
   const [disposition, setDisposition] = useState('all');
+  const [confidence, setConfidence] = useState('all');
+  const [exposure, setExposure] = useState('all');
+  const [priority, setPriority] = useState('all');
   const [mapQuery, setMapQuery] = useState('');
   const [selected, setSelected] = useState<Finding | null>(null);
   const [error, setError] = useState('');
@@ -114,6 +117,12 @@ export function AuditWorkspace({
     (finding) =>
       (severity === 'all' || finding.severity === severity) &&
       (disposition === 'all' || finding.disposition === disposition) &&
+      (confidence === 'all' || finding.confidence === confidence) &&
+      (exposure === 'all' || finding.exposure === exposure) &&
+      (priority === 'all' ||
+        (priority === 'high' && (finding.priority ?? 0) >= 70) ||
+        (priority === 'medium' && (finding.priority ?? 0) >= 40 && (finding.priority ?? 0) < 70) ||
+        (priority === 'low' && (finding.priority ?? 0) < 40)) &&
       `${finding.title} ${finding.category} ${finding.ruleId} ${finding.evidence[0]?.file ?? ''}`
         .toLowerCase()
         .includes(query.toLowerCase()),
@@ -537,8 +546,40 @@ export function AuditWorkspace({
               <option value="all">All review states</option>
               <option value="needs_review">Needs review</option>
               <option value="confirmed">Confirmed</option>
+              <option value="fixed">Fixed</option>
               <option value="accepted_risk">Accepted risk</option>
               <option value="false_positive">False positive</option>
+            </select>
+            <select
+              aria-label="Filter confidence"
+              value={confidence}
+              onChange={(event) => setConfidence(event.target.value)}
+            >
+              <option value="all">All confidence</option>
+              <option value="high">High confidence</option>
+              <option value="medium">Medium confidence</option>
+              <option value="low">Low confidence</option>
+            </select>
+            <select
+              aria-label="Filter exposure"
+              value={exposure}
+              onChange={(event) => setExposure(event.target.value)}
+            >
+              <option value="all">All exposure</option>
+              <option value="potentially_public">Potentially public</option>
+              <option value="authenticated">Authenticated</option>
+              <option value="local">Local</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select
+              aria-label="Filter priority"
+              value={priority}
+              onChange={(event) => setPriority(event.target.value)}
+            >
+              <option value="all">All priorities</option>
+              <option value="high">Priority 70–100</option>
+              <option value="medium">Priority 40–69</option>
+              <option value="low">Priority 0–39</option>
             </select>
             <Badge>{visible.length} results</Badge>
           </div>

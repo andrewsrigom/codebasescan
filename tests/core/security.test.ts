@@ -132,6 +132,14 @@ test('human decisions require an explanation and valid disposition', () => {
     }).disposition,
     'needs_review',
   );
+  assert.equal(
+    reviewDecision({
+      findingId: 'x',
+      disposition: 'fixed',
+      note: 'A regression test verifies the corrected trust boundary.',
+    }).disposition,
+    'fixed',
+  );
   assert.throws(() => uuid('../../etc/passwd'));
 });
 test('control reviews require a known decision and meaningful rationale', () => {

@@ -45,6 +45,7 @@ test('evaluation aggregates anonymized human outcomes without accuracy claims', 
   assert.equal(result.reports, 2);
   assert.equal(result.confirmedFindings, 1);
   assert.equal(result.falsePositives, 1);
+  assert.equal(result.fixedFindings, 0);
   assert.equal(result.approximateAiCostPerConfirmedFindingUsd, 0.01);
   assert.equal(result.reviewedControls, 1);
   assert.equal(result.controlReviews.verified_external, 1);

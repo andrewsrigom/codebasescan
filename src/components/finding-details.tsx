@@ -29,14 +29,14 @@ export function FindingDetails({
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
-  async function save() {
+  async function save(nextDisposition: Disposition = disposition) {
     setPending(true);
     setError('');
     try {
       await mutate(`/api/audits/${auditId}`, {
         action: 'review',
         findingId: finding.id,
-        disposition,
+        disposition: nextDisposition,
         note,
       });
       await refresh();
@@ -333,6 +333,7 @@ export function FindingDetails({
           >
             <option value="needs_review">Needs review</option>
             <option value="confirmed">Confirmed by reviewer</option>
+            <option value="fixed">Fixed and verified</option>
             <option value="false_positive">False positive</option>
             <option value="accepted_risk">Accepted risk</option>
           </select>
@@ -350,13 +351,22 @@ export function FindingDetails({
             This is an analyst assertion, not an automatically verified exploit. At least 12
             characters are required.
           </p>
-          <button
-            className="button primary"
-            disabled={!reviewable || pending || note.trim().length < 12}
-            onClick={save}
-          >
-            Save review
-          </button>
+          <div className="row gap">
+            <button
+              className="button primary"
+              disabled={!reviewable || pending || note.trim().length < 12}
+              onClick={() => void save()}
+            >
+              Save review
+            </button>
+            <button
+              className="button"
+              disabled={!reviewable || pending || note.trim().length < 12}
+              onClick={() => void save('fixed')}
+            >
+              Mark fixed
+            </button>
+          </div>
           {error && (
             <p className="error-text" role="alert">
               {error}
