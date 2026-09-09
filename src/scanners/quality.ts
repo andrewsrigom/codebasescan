@@ -343,6 +343,32 @@ function generatedKnipConfig(
         : ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
     };
   }
+  if (Object.keys(workspaces).length) {
+    const rootConfigured =
+      workspaces['.'] && typeof workspaces['.'] === 'object' && !Array.isArray(workspaces['.'])
+        ? (workspaces['.'] as Record<string, unknown>)
+        : {};
+    const rootSettings = Object.fromEntries(
+      Object.entries(imported).filter(([key]) => key !== 'workspaces'),
+    );
+    workspaces['.'] = {
+      ...rootSettings,
+      ...rootConfigured,
+      entry: [
+        ...new Set([
+          ...stringArray(rootSettings.entry),
+          ...stringArray(rootConfigured.entry),
+          ...rootEntries,
+        ]),
+      ],
+      project: stringArray(rootConfigured.project).length
+        ? stringArray(rootConfigured.project)
+        : stringArray(rootSettings.project).length
+          ? stringArray(rootSettings.project)
+          : ['**/*.{js,jsx,cjs,mjs,ts,tsx,cts,mts}'],
+    };
+    return { workspaces };
+  }
   return {
     ...imported,
     entry: [...new Set([...stringArray(imported.entry), ...rootEntries])],
