@@ -4,6 +4,7 @@ import {
   escapeHtml,
   escapeMarkdown,
   toHtml,
+  toInvestigationBundle,
   toMarkdown,
   toSarif,
 } from '../../src/domain/reports.ts';
@@ -74,4 +75,30 @@ test('Markdown escapes raw HTML and link syntax from untrusted report text', () 
 test('standard HTML metacharacters are escaped', () => {
   assert.equal(escapeHtml('<>&"'), '&lt;&gt;&amp;&quot;');
   assert.equal(escapeMarkdown('<tag> [label](target)'), '&lt;tag&gt; \\[label\\]\\(target\\)');
+});
+test('investigation bundle is bounded, evidence-led, and ready for manual AI review', () => {
+  const report = sampleReport();
+  report.projectProfile = profileProject(
+    snapshotOf('export function handler() { return Response.json({ ok: true }); }'),
+  ).profile;
+  report.checklist = buildSecurityChecklist({
+    projectProfile: report.projectProfile,
+    findings: report.findings,
+    scanners: report.scanners,
+    dependencies: [],
+  });
+  const bundle = toInvestigationBundle(report) as {
+    kind: string;
+    policy: string[];
+    findings: { id: string; evidence: { id: string }[] }[];
+    projectMap: { entrypoints: unknown[]; securityFacts: unknown[]; callEdges: unknown[] };
+  };
+  assert.equal(bundle.kind, 'traceward-investigation-bundle');
+  assert.ok(bundle.policy.some((item) => item.includes('untrusted evidence')));
+  assert.equal(bundle.findings[0]?.id, report.findings[0]?.id);
+  assert.equal(bundle.findings[0]?.evidence[0]?.id, report.findings[0]?.evidence[0]?.id);
+  assert.ok(bundle.projectMap.entrypoints.length <= 500);
+  assert.ok(bundle.projectMap.securityFacts.length <= 1_000);
+  assert.ok(bundle.projectMap.callEdges.length <= 1_000);
+  assert.equal('root' in bundle, false);
 });

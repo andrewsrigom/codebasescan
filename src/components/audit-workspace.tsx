@@ -999,6 +999,7 @@ export function AuditWorkspace({
               <a href={`/api/audits/${audit.id}/export?format=json`}>JSON</a>
               <a href={`/api/audits/${audit.id}/export?format=md`}>Markdown</a>
               <a href={`/api/audits/${audit.id}/export?format=sarif`}>SARIF</a>
+              <a href={`/api/audits/${audit.id}/export?format=bundle`}>Codex bundle</a>
             </>
           )}
           {['queued', 'running', 'awaiting_review'].includes(audit.status) && (

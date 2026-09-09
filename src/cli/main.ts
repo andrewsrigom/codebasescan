@@ -5,7 +5,7 @@ import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
 import { validateProjectRoot } from '../security/paths.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
-import { toHtml, toMarkdown, toSarif } from '../domain/reports.ts';
+import { toHtml, toInvestigationBundle, toMarkdown, toSarif } from '../domain/reports.ts';
 import { compareReports } from '../domain/comparison.ts';
 import { ciGate } from '../domain/ci.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
@@ -33,13 +33,21 @@ const probeOptions = (): AuditOptions => {
     : {};
 };
 function render(report: AuditReport, format: string): string {
-  if (!['json', 'md', 'html', 'sarif'].includes(format))
-    throw new Error('Use json, md, html, or sarif.');
+  if (!['json', 'md', 'html', 'sarif', 'bundle'].includes(format))
+    throw new Error('Use json, md, html, sarif, or bundle.');
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
       ? toMarkdown(report)
-      : JSON.stringify(format === 'sarif' ? toSarif(report) : report, null, 2);
+      : JSON.stringify(
+          format === 'sarif'
+            ? toSarif(report)
+            : format === 'bundle'
+              ? toInvestigationBundle(report)
+              : report,
+          null,
+          2,
+        );
 }
 
 let store: AuditStore | null = null;
@@ -114,7 +122,9 @@ try {
       const report = store.audit(target).report;
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
-      const destination = path.resolve(`traceward-${report.auditId}.${format}`);
+      const destination = path.resolve(
+        `traceward-${report.auditId}.${format === 'bundle' ? 'bundle.json' : format}`,
+      );
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
     } else if (command === 'compare' && target && arguments_[2]) {
@@ -124,7 +134,7 @@ try {
       console.log(JSON.stringify(compareReports(base, current), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project --ci [--fail-on high] [--format json|sarif|md|html] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- export <audit-id> json|md|html|sarif',
+        'Traceward\n\n  npm run cli -- audit /path/to/project --ci [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
       );
     }
   }
