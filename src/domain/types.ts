@@ -162,8 +162,27 @@ export interface HttpProbeOptions {
   url: string;
   allowPrivateNetwork: boolean;
 }
+export interface ProjectScopeEstimate {
+  schemaVersion: 1;
+  estimatedAt: string;
+  supportedFiles: number;
+  supportedBytes: number;
+  oversizedFiles: number;
+  visitedEntries: number;
+  predictedTruncated: boolean;
+  reasons: string[];
+  limits: {
+    files: number;
+    bytesPerFile: number;
+    totalBytes: number;
+  };
+}
+export interface AuditScopePreflight extends ProjectScopeEstimate {
+  truncationApproved: boolean;
+}
 export interface AuditOptions {
   httpProbe?: HttpProbeOptions;
+  scopePreflight?: AuditScopePreflight;
 }
 export interface HttpProbeReport {
   requestedUrl: string;

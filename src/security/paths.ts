@@ -3,7 +3,7 @@ import os from 'node:os';
 import { constants } from 'node:fs';
 import { lstat, open, realpath, readdir } from 'node:fs/promises';
 import { digest } from '../domain/findings.ts';
-import type { Snapshot, SourceFile } from '../domain/types.ts';
+import type { ProjectScopeEstimate, Snapshot, SourceFile } from '../domain/types.ts';
 import { redact } from './redact.ts';
 const ignoredDirectories = new Set([
   '.git',
@@ -41,6 +41,15 @@ export const snapshotLimits = {
   bytesPerFile: 256 * 1024,
   totalBytes: 8 * 1024 * 1024,
 };
+function fileExclusion(name: string): 'sensitive-file' | 'unsupported-file' | null {
+  if (name.startsWith('.env') || /\.(pem|key|p12|pfx)$/i.test(name)) return 'sensitive-file';
+  if (
+    excludedFiles.has(name) ||
+    (!extensions.has(path.extname(name)) && name !== 'Dockerfile' && name !== 'yarn.lock')
+  )
+    return 'unsupported-file';
+  return null;
+}
 export function isWithin(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return (
@@ -74,6 +83,75 @@ export async function validateProjectRoot(input: string, dataDirectory: string):
       'Project and audit storage must not overlap. Move TRACEWARD_DATA_DIR outside the repository.',
     );
   return root;
+}
+export async function estimateProjectScope(root: string): Promise<ProjectScopeEstimate> {
+  const canonicalRoot = await realpath(root);
+  const reasons = new Set<string>();
+  let supportedFiles = 0;
+  let supportedBytes = 0;
+  let oversizedFiles = 0;
+  let visitedEntries = 0;
+  let stopped = false;
+  async function walk(directory: string, depth: number): Promise<void> {
+    if (stopped) return;
+    if (depth > 24) {
+      reasons.add('depth-limit');
+      return;
+    }
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch {
+      reasons.add('unreadable-entry');
+      return;
+    }
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      if (++visitedEntries > 12_000) {
+        reasons.add('entry-limit');
+        stopped = true;
+        return;
+      }
+      if (entry.isSymbolicLink()) continue;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (ignoredDirectories.has(entry.name)) continue;
+        try {
+          const resolved = await realpath(absolute);
+          if (isWithin(canonicalRoot, resolved)) await walk(absolute, depth + 1);
+        } catch {
+          reasons.add('unreadable-entry');
+        }
+        continue;
+      }
+      if (!entry.isFile() || fileExclusion(entry.name)) continue;
+      try {
+        const resolved = await realpath(absolute);
+        const metadata = await lstat(absolute);
+        if (!isWithin(canonicalRoot, resolved) || !metadata.isFile()) continue;
+        supportedFiles++;
+        supportedBytes += metadata.size;
+        if (metadata.size > snapshotLimits.bytesPerFile) oversizedFiles++;
+      } catch {
+        reasons.add('unreadable-entry');
+      }
+    }
+  }
+  await walk(canonicalRoot, 0);
+  if (supportedFiles > snapshotLimits.files) reasons.add('file-count-limit');
+  if (supportedBytes > snapshotLimits.totalBytes) reasons.add('total-byte-limit');
+  if (oversizedFiles) reasons.add('per-file-byte-limit');
+  return {
+    schemaVersion: 1,
+    estimatedAt: new Date().toISOString(),
+    supportedFiles,
+    supportedBytes,
+    oversizedFiles,
+    visitedEntries,
+    predictedTruncated: reasons.size > 0,
+    reasons: [...reasons].sort(),
+    limits: { ...snapshotLimits },
+  };
 }
 export async function captureSnapshot(root: string): Promise<Snapshot> {
   const files: SourceFile[] = [];
@@ -124,17 +202,9 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         skip('special-file');
         continue;
       }
-      if (entry.name.startsWith('.env') || /\.(pem|key|p12|pfx)$/i.test(entry.name)) {
-        skip('sensitive-file');
-        continue;
-      }
-      if (
-        excludedFiles.has(entry.name) ||
-        (!extensions.has(path.extname(entry.name)) &&
-          entry.name !== 'Dockerfile' &&
-          entry.name !== 'yarn.lock')
-      ) {
-        skip('unsupported-file');
+      const exclusion = fileExclusion(entry.name);
+      if (exclusion) {
+        skip(exclusion);
         continue;
       }
       try {

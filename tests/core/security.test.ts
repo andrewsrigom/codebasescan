@@ -7,6 +7,7 @@ import {
   safeRelative,
   isWithin,
   captureSnapshot,
+  estimateProjectScope,
   validateProjectRoot,
 } from '../../src/security/paths.ts';
 import { redact } from '../../src/security/redact.ts';
@@ -163,8 +164,13 @@ test('large files are excluded and coverage is marked truncated', async (context
   context.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(path.join(root, 'large.ts'), 'a'.repeat(300000));
   const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
   assert.equal(snapshot.truncated, true);
   assert.equal(snapshot.files.length, 0);
+  assert.equal(estimate.supportedFiles, 1);
+  assert.equal(estimate.oversizedFiles, 1);
+  assert.equal(estimate.predictedTruncated, true);
+  assert.deepEqual(estimate.reasons, ['per-file-byte-limit']);
 });
 test('registration rejects home and overlapping audit storage', async (context) => {
   await assert.rejects(() => validateProjectRoot(os.homedir(), path.join(os.tmpdir(), 'tw-state')));
