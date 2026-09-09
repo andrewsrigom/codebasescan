@@ -177,14 +177,13 @@ test('snapshot records source scope without excluding secret-bearing test code',
   await writeFile(path.join(root, 'tests', 'app.test.ts'), 'export const test = true;');
   await writeFile(path.join(root, 'examples', 'demo.ts'), 'export const demo = true;');
   const snapshot = await captureSnapshot(root);
-  assert.deepEqual(
-    Object.fromEntries(snapshot.files.map((file) => [file.path, file.scope])),
-    {
-      'app.ts': 'runtime',
-      'examples/demo.ts': 'example',
-      'tests/app.test.ts': 'test',
-    },
-  );
+  const estimate = await estimateProjectScope(root);
+  assert.deepEqual(Object.fromEntries(snapshot.files.map((file) => [file.path, file.scope])), {
+    'app.ts': 'runtime',
+    'examples/demo.ts': 'example',
+    'tests/app.test.ts': 'test',
+  });
+  assert.deepEqual(estimate.scopeFiles, { runtime: 1, test: 1, example: 1 });
 });
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-'));

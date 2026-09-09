@@ -411,9 +411,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
   const started = performance.now();
   const candidates = snapshot.files.filter(
     (file) =>
-      isRuntimeSource(file) &&
-      sourcePattern.test(file.path) &&
-      !declarationPattern.test(file.path),
+      isRuntimeSource(file) && sourcePattern.test(file.path) && !declarationPattern.test(file.path),
   );
   const issues: string[] = [];
   let truncated = snapshot.truncated || candidates.length > maximumFiles;

@@ -138,6 +138,12 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
                     {estimate.limits.files} files /{' '}
                     {(estimate.limits.totalBytes / (1024 * 1024)).toFixed(0)} MiB.
                   </p>
+                  {estimate.scopeFiles && (
+                    <p>
+                      Runtime analysis: {estimate.scopeFiles.runtime}. Secret-only test/example
+                      scope: {estimate.scopeFiles.test + estimate.scopeFiles.example}.
+                    </p>
+                  )}
                   {estimate.predictedTruncated && (
                     <>
                       <p>Partial snapshot expected: {estimate.reasons.join(', ')}.</p>

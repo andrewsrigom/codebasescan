@@ -843,6 +843,15 @@ export function AuditWorkspace({
                     Expected limits: {report.scopePreflight.reasons.join(', ')}.
                   </p>
                 )}
+                {report.scopePreflight.scopeFiles && (
+                  <p className="small muted">
+                    Runtime rules: {report.scopePreflight.scopeFiles.runtime} files. Test/example
+                    code retained only for secret detection:{' '}
+                    {report.scopePreflight.scopeFiles.test +
+                      report.scopePreflight.scopeFiles.example}{' '}
+                    files.
+                  </p>
+                )}
               </div>
             </section>
           )}

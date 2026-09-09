@@ -170,6 +170,7 @@ export interface ProjectScopeEstimate {
   estimatedAt: string;
   supportedFiles: number;
   supportedBytes: number;
+  scopeFiles?: Record<SourceScope, number>;
   oversizedFiles: number;
   visitedEntries: number;
   predictedTruncated: boolean;

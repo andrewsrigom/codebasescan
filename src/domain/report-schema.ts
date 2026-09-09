@@ -150,6 +150,13 @@ const scopePreflight = z.looseObject({
   estimatedAt: shortText,
   supportedFiles: z.number().int().nonnegative(),
   supportedBytes: z.number().int().nonnegative(),
+  scopeFiles: z
+    .object({
+      runtime: z.number().int().nonnegative(),
+      test: z.number().int().nonnegative(),
+      example: z.number().int().nonnegative(),
+    })
+    .optional(),
   oversizedFiles: z.number().int().nonnegative(),
   visitedEntries: z.number().int().nonnegative(),
   predictedTruncated: z.boolean(),

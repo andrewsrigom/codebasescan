@@ -131,6 +131,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
   const reasons = new Set<string>();
   let supportedFiles = 0;
   let supportedBytes = 0;
+  const scopeFiles: Record<SourceScope, number> = { runtime: 0, test: 0, example: 0 };
   let oversizedFiles = 0;
   let visitedEntries = 0;
   let stopped = false;
@@ -177,6 +178,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
         if (!isWithin(canonicalRoot, resolved) || !metadata.isFile()) continue;
         supportedFiles++;
         supportedBytes += metadata.size;
+        scopeFiles[classifySourceScope(path.relative(canonicalRoot, absolute))]++;
         if (metadata.size > snapshotLimits.bytesPerFile) oversizedFiles++;
       } catch {
         reasons.add('unreadable-entry');
@@ -192,6 +194,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
     estimatedAt: new Date().toISOString(),
     supportedFiles,
     supportedBytes,
+    scopeFiles,
     oversizedFiles,
     visitedEntries,
     predictedTruncated: reasons.size > 0,
