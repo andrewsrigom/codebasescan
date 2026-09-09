@@ -45,6 +45,7 @@ export function AuditWorkspace({
   const [tab, setTab] = useState<Tab>('Overview');
   const [query, setQuery] = useState('');
   const [severity, setSeverity] = useState('all');
+  const [disposition, setDisposition] = useState('all');
   const [mapQuery, setMapQuery] = useState('');
   const [selected, setSelected] = useState<Finding | null>(null);
   const [error, setError] = useState('');
@@ -110,19 +111,30 @@ export function AuditWorkspace({
   const visible = findings.filter(
     (finding) =>
       (severity === 'all' || finding.severity === severity) &&
-      `${finding.title} ${finding.category} ${finding.evidence[0]?.file ?? ''}`
+      (disposition === 'all' || finding.disposition === disposition) &&
+      `${finding.title} ${finding.category} ${finding.ruleId} ${finding.evidence[0]?.file ?? ''}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const completedScanners = report?.coverage
     ? report.coverage.filter((capability) => capability.status === 'COMPLETE').length
     : (report?.scanners.filter((scanner) => scanner.status === 'completed').length ?? 0);
-  const openFindings = findings.filter(
-    (finding) => !['false_positive', 'accepted_risk'].includes(finding.disposition),
-  );
-  const highFindings = openFindings.filter((finding) =>
+  const needsReviewFindings = findings.filter((finding) => finding.disposition === 'needs_review');
+  const reviewedFindings = findings.length - needsReviewFindings.length;
+  const highFindings = needsReviewFindings.filter((finding) =>
     ['critical', 'high'].includes(finding.severity),
   ).length;
+  const coverageTotal = report?.coverage?.length ?? report?.scanners.length ?? 0;
+  const coverageGaps = Math.max(0, coverageTotal - completedScanners);
+  const reviewSummary = active
+    ? 'Audit in progress. Results update as scanners finish.'
+    : highFindings > 0
+      ? `${highFindings} high-priority ${highFindings === 1 ? 'candidate needs' : 'candidates need'} human review. ${coverageGaps} coverage ${coverageGaps === 1 ? 'gap remains' : 'gaps remain'} visible.`
+      : needsReviewFindings.length > 0
+        ? `${needsReviewFindings.length} ${needsReviewFindings.length === 1 ? 'candidate needs' : 'candidates need'} human review before this report is relied on.`
+        : coverageGaps > 0
+          ? `No pending candidate decisions. Review ${coverageGaps} coverage ${coverageGaps === 1 ? 'gap' : 'gaps'} before relying on this report.`
+          : 'No pending candidate decisions in the captured scope.';
   const investigations = findings.filter((finding) => finding.analysis?.provider);
   const projectMapRows = useMemo(() => {
     const profile = report?.projectProfile;
@@ -197,7 +209,7 @@ export function AuditWorkspace({
         <div>
           <div className="eyebrow">EVIDENCE-LED SECURITY</div>
           <h1>{audit.projectName}</h1>
-          <p className="subtitle">Understand the finding. Inspect the evidence. Make the call.</p>
+          <p className="subtitle">{reviewSummary}</p>
         </div>
         <NewAudit projects={projects} />
       </div>
@@ -212,10 +224,16 @@ export function AuditWorkspace({
           {utcDate(audit.createdAt)} UTC
         </span>
         <span className="mono">AUDIT {audit.id.slice(0, 8)}</span>
-        <span className="meta-right">
-          <span className={workerOnline ? 'live-dot' : 'offline-dot'} />
-          Worker {workerOnline ? 'online' : 'offline'}
-        </span>
+        {active ? (
+          <span className="meta-right">
+            <span className={workerOnline ? 'live-dot' : 'offline-dot'} />
+            Worker {workerOnline ? 'online' : 'offline'}
+          </span>
+        ) : (
+          <span className="meta-right">
+            <Icon name="lock" size={13} /> Local report · {report?.publication ?? 'draft'}
+          </span>
+        )}
       </div>
       {error && (
         <div className="notice danger" role="alert">
@@ -240,14 +258,14 @@ export function AuditWorkspace({
       <div className="stat-grid">
         <div className="stat-card">
           <div className="stat-label">
-            Open review candidates
+            Needs human review
             <Icon name="scan" />
           </div>
           <div className="stat-number">
-            {openFindings.length.toString().padStart(2, '0')}
-            <span>to investigate</span>
+            {needsReviewFindings.length.toString().padStart(2, '0')}
+            <span>pending decisions</span>
           </div>
-          <div className="stat-foot">Not automatically confirmed</div>
+          <div className="stat-foot">{reviewedFindings} reviewed · never auto-confirmed</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">
@@ -275,14 +293,14 @@ export function AuditWorkspace({
         </div>
         <div className="stat-card">
           <div className="stat-label">
-            Completed scanner checks
+            Coverage gaps
             <Icon name="layers" />
           </div>
           <div className="stat-number">
-            {completedScanners}
-            <span>/{report?.coverage?.length ?? report?.scanners.length ?? 6}</span>
+            {coverageGaps}
+            <span>of {coverageTotal || '—'} capabilities</span>
           </div>
-          <div className="stat-foot">Skipped checks stay visible</div>
+          <div className="stat-foot">{completedScanners} complete · gaps stay visible</div>
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label="Audit sections">
@@ -506,6 +524,17 @@ export function AuditWorkspace({
               {['critical', 'high', 'medium', 'low', 'info'].map((level) => (
                 <option key={level}>{level}</option>
               ))}
+            </select>
+            <select
+              aria-label="Filter review status"
+              value={disposition}
+              onChange={(event) => setDisposition(event.target.value)}
+            >
+              <option value="all">All review states</option>
+              <option value="needs_review">Needs review</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="accepted_risk">Accepted risk</option>
+              <option value="false_positive">False positive</option>
             </select>
             <Badge>{visible.length} results</Badge>
           </div>
@@ -1095,10 +1124,11 @@ export function AuditWorkspace({
         <section className="publication-panel">
           <div>
             <div className="eyebrow">HUMAN-IN-THE-LOOP</div>
-            <h2>Ready for your review.</h2>
+            <h2>Publish an accountable report.</h2>
             <p>
-              Review findings individually, then acknowledge publication. This does not mark
-              unresolved findings as confirmed.
+              {reviewedFindings}/{findings.length} candidates reviewed · {coverageGaps} coverage
+              {coverageGaps === 1 ? ' gap' : ' gaps'}. Publication records your acknowledgement; it
+              does not confirm unresolved findings.
             </p>
           </div>
           <div className="publication-form">
@@ -1116,7 +1146,7 @@ export function AuditWorkspace({
               disabled={pending || note.trim().length < 12}
               onClick={() => action('publish')}
             >
-              Publish reviewed report
+              Acknowledge gaps and publish
               <Icon name="arrow" size={16} />
             </button>
           </div>

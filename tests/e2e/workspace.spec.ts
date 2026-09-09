@@ -5,6 +5,7 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
     page.getByRole('heading', { name: 'Review-worthy SaaS', exact: true }),
   ).toBeVisible();
   await page.getByRole('tab', { name: /Findings/ }).click();
+  await expect(page.getByLabel('Filter review status')).toBeVisible();
   await page.getByLabel('Search findings').fill('Raw SQL');
   await page.getByRole('button', { name: /Raw SQL execution/ }).click();
   await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
