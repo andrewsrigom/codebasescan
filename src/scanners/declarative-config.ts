@@ -77,6 +77,13 @@ function safePackagePattern(value: unknown): string | undefined {
     : undefined;
 }
 
+function safeAliasPath(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value || value.length > 300 || value.includes('\0'))
+    return undefined;
+  const normalized = value.replaceAll('\\', '/');
+  return normalized.startsWith('/') || /^[a-z]:/i.test(normalized) ? undefined : normalized;
+}
+
 function rejectedList(value: unknown, sanitize: (item: unknown) => string | undefined): boolean {
   return (
     !Array.isArray(value) ||
@@ -310,14 +317,14 @@ export function typeScriptPathAliases(snapshot: Snapshot): {
     const paths = object(compilerOptions?.paths);
     if (!paths) continue;
     const directory = path.posix.dirname(file.path) === '.' ? '' : path.posix.dirname(file.path);
-    const baseUrl = safePathPattern(compilerOptions?.baseUrl) ?? '';
+    const baseUrl = safeAliasPath(compilerOptions?.baseUrl) ?? '';
     for (const [pattern, rawTargets] of Object.entries(paths).slice(0, maximumPatterns)) {
       if (pattern.split('*').length > 2 || !Array.isArray(rawTargets)) {
         issues.push(`${file.path} contains an unsupported path alias for ${pattern}.`);
         continue;
       }
       const targets = rawTargets.flatMap((rawTarget) => {
-        const target = safePathPattern(rawTarget);
+        const target = safeAliasPath(rawTarget);
         if (!target || target.split('*').length > 2) return [];
         const resolved = path.posix.normalize(path.posix.join(directory, baseUrl, target));
         return resolved === '..' || resolved.startsWith('../') ? [] : [resolved];

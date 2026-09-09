@@ -70,10 +70,14 @@ test('TypeScript aliases accept JSONC and cannot escape the captured project', (
         },
       },
     }`,
+    'apps/mock/tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@/*': ['../../src/*'] } },
+    }),
   });
   const result = typeScriptPathAliases(snapshot);
   assert.deepEqual(result.aliases, [
     { configFile: 'tsconfig.json', pattern: '#lib/*', targets: ['src/lib/*'] },
+    { configFile: 'apps/mock/tsconfig.json', pattern: '@/*', targets: ['src/*'] },
   ]);
   assert.equal(result.issues.length, 1);
 });
