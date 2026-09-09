@@ -72,6 +72,7 @@ function authorizationFinding(input: {
   description: string;
   remediation: string;
   cwe: string[];
+  severity: 'high' | 'medium';
 }): Finding | null {
   const observation = `${input.entrypoint.kind} ${input.entrypoint.route ?? input.entrypoint.name} reaches ${input.fact.signal} within the bounded structural call map.`;
   const mappedEvidence = evidence(input.snapshot, input.fact, input.entrypoint, observation);
@@ -81,8 +82,8 @@ function authorizationFinding(input: {
     ruleId: input.ruleId,
     title: input.title,
     category: 'authorization',
-    severity: 'high',
-    sourceSeverity: 'HIGH',
+    severity: input.severity,
+    sourceSeverity: input.severity.toUpperCase(),
     description: input.description,
     remediation: input.remediation,
     cwe: input.cwe,
@@ -96,6 +97,15 @@ function scriptKind(file: string): ts.ScriptKind {
   if (lower.endsWith('.jsx')) return ts.ScriptKind.JSX;
   if (/\.[cm]?js$/.test(lower)) return ts.ScriptKind.JS;
   return ts.ScriptKind.TS;
+}
+
+function sensitiveOperationSeverity(fact: ProjectFact): 'high' | 'medium' {
+  if (
+    fact.kind === 'database' &&
+    /\.(?:findUnique|findFirst|findMany|count|aggregate|groupBy)$/i.test(fact.signal)
+  )
+    return 'medium';
+  return 'high';
 }
 
 function lineOf(source: ts.SourceFile, node: ts.Node): number {
@@ -649,7 +659,8 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         entrypoint,
         fact: sensitive,
         ruleId: 'TW-AST001',
-        title: 'Sensitive mutation has no mapped authentication guard',
+        title: 'Sensitive operation has no mapped authentication guard',
+        severity: sensitiveOperationSeverity(sensitive),
         description:
           'The structural profile connects a mutating entry point to a sensitive operation but found no recognized authentication or authorization fact in the entry point or two explicit call hops. Middleware, an API gateway, database policy, or an unrecognized wrapper may still protect it.',
         remediation:
@@ -667,6 +678,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         fact: sensitive,
         ruleId: 'TW-AST002',
         title: 'Administrative mutation has no mapped permission check',
+        severity: 'high',
         description:
           'A privileged-looking entry point reaches a sensitive operation, but the bounded structural map found no recognized role, permission, or policy decision. Authentication alone would not establish administrative authorization.',
         remediation:
@@ -684,6 +696,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         fact: resourceOperation,
         ruleId: 'TW-AST003',
         title: 'Dynamic resource operation has no mapped tenant or owner scope',
+        severity: 'high',
         description:
           'A route with caller-selectable path parameters reaches a database operation, but the captured call arguments contain no recognized tenant, owner, account, organization, or user scope. A prior policy decision, wrapper, or database RLS may still enforce object access.',
         remediation:

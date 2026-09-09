@@ -39,6 +39,18 @@ test('AST authorization covers nested inline server actions', () => {
   assert.equal(finding?.evidence[0]?.file, 'src/app/posts/[id]/page.tsx');
 });
 
+test('read-only server action candidates do not carry high mutation severity', () => {
+  const snapshot = snapshotOf(
+    `'use server'; export async function checkTable() { return prisma.post.findFirst(); }`,
+    'src/app/actions.ts',
+  );
+  const finding = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings.find(
+    (candidate) => candidate.ruleId === 'TW-AST001',
+  );
+  assert.equal(finding?.severity, 'medium');
+  assert.match(finding?.title ?? '', /operation/);
+});
+
 test('recognized two-hop auth, permission, and owner scope avoid AST gap candidates', async () => {
   const snapshot = await captureSnapshot(path.resolve('fixtures/profile-nextjs'));
   const profile = profileProject(snapshot).profile;
