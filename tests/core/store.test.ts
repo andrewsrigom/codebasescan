@@ -26,8 +26,21 @@ test('audit options are persisted with the queued run', (context) => {
   context.after(() => store.close());
   const audit = store.enqueue(project.id, {
     httpProbe: { url: 'http://127.0.0.1:3000/', allowPrivateNetwork: false },
+    scopePreflight: {
+      schemaVersion: 1,
+      estimatedAt: '2026-09-09T00:00:00.000Z',
+      supportedFiles: 12,
+      supportedBytes: 4096,
+      oversizedFiles: 0,
+      visitedEntries: 20,
+      predictedTruncated: false,
+      reasons: [],
+      limits: { files: 1500, bytesPerFile: 262144, totalBytes: 8388608 },
+      truncationApproved: false,
+    },
   });
   assert.equal(store.audit(audit.id).options.httpProbe?.url, 'http://127.0.0.1:3000/');
+  assert.equal(store.audit(audit.id).options.scopePreflight?.supportedFiles, 12);
 });
 test('cancellation cannot be overwritten by a late worker completion', (context) => {
   const { store, project } = setup();

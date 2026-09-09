@@ -348,6 +348,7 @@ export interface AuditReport {
   findings: Finding[];
   scanners: ScannerRun[];
   dependencies: Dependency[];
+  scopePreflight?: AuditScopePreflight;
   projectProfile?: ProjectProfile;
   checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;

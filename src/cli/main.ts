@@ -3,7 +3,7 @@ import os from 'node:os';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
-import { validateProjectRoot } from '../security/paths.ts';
+import { estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
 import { toHtml, toInvestigationBundle, toMarkdown, toSarif } from '../domain/reports.ts';
 import { compareReports } from '../domain/comparison.ts';
@@ -65,6 +65,20 @@ async function loadBaseline(file: string): Promise<AuditReport> {
   }
 }
 
+async function preflight(root: string, requireApproval: boolean) {
+  const estimate = await estimateProjectScope(root);
+  const truncationApproved = arguments_.includes('--allow-partial-snapshot');
+  const size = (estimate.supportedBytes / (1024 * 1024)).toFixed(2);
+  console.error(
+    `Scope estimate: ${estimate.supportedFiles} supported file(s), ${size} MiB, ${estimate.predictedTruncated ? 'partial snapshot expected' : 'within current limits'}.`,
+  );
+  if (requireApproval && estimate.predictedTruncated && !truncationApproved)
+    throw new Error(
+      `A partial snapshot is expected (${estimate.reasons.join(', ')}). Review the estimate and pass --allow-partial-snapshot to continue.`,
+    );
+  return { ...estimate, truncationApproved };
+}
+
 let store: AuditStore | null = null;
 try {
   if (command === 'audit' && target) {
@@ -79,8 +93,9 @@ try {
         temporaryDirectory: path.join(temporary, 'scanner-staging'),
       };
       const root = await validateProjectRoot(target, temporary);
+      const scopePreflight = await preflight(root, true);
       const project = ciStore.registerProject(path.basename(root), root);
-      const audit = ciStore.enqueue(project.id, probeOptions());
+      const audit = ciStore.enqueue(project.id, { ...probeOptions(), scopePreflight });
       ciStore.claim(audit.id);
       await executeAudit(ciStore, audit.id, ciConfig, undefined, { humanReview: false });
       const completed = ciStore.audit(audit.id);
@@ -122,10 +137,11 @@ try {
     store = new AuditStore(config.databasePath);
     if ((command === 'register' || command === 'scan') && target) {
       const root = await validateProjectRoot(target, config.dataDirectory);
+      const scopePreflight = await preflight(root, command === 'scan');
       const project = store.registerProject(path.basename(root), root);
       if (command === 'register') console.log(JSON.stringify(project, null, 2));
       else {
-        const audit = store.enqueue(project.id, probeOptions());
+        const audit = store.enqueue(project.id, { ...probeOptions(), scopePreflight });
         console.log(
           `Queued ${audit.id}. Run npm run worker to process it, then review the report in the local UI.`,
         );
@@ -168,7 +184,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project [--baseline previous.json] [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
+        'Traceward\n\n  npm run cli -- audit /path/to/project [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
       );
     }
   }

@@ -144,6 +144,23 @@ const dependency = z.looseObject({
   lockfileLine: z.number().int().positive().optional(),
 });
 
+const scopePreflight = z.looseObject({
+  schemaVersion: z.literal(1),
+  estimatedAt: shortText,
+  supportedFiles: z.number().int().nonnegative(),
+  supportedBytes: z.number().int().nonnegative(),
+  oversizedFiles: z.number().int().nonnegative(),
+  visitedEntries: z.number().int().nonnegative(),
+  predictedTruncated: z.boolean(),
+  reasons: z.array(shortText).max(100),
+  limits: z.looseObject({
+    files: z.number().int().positive(),
+    bytesPerFile: z.number().int().positive(),
+    totalBytes: z.number().int().positive(),
+  }),
+  truncationApproved: z.boolean(),
+});
+
 const projectProfile = z.looseObject({
   schemaVersion: z.literal(1),
   status: z.enum(['complete', 'partial', 'unsupported']),
@@ -212,6 +229,7 @@ export const auditReportSchema = z.looseObject({
   findings: z.array(finding).max(10_000),
   scanners: z.array(scanner).max(1_000),
   dependencies: z.array(dependency).max(100_000),
+  scopePreflight: scopePreflight.optional(),
   projectProfile: projectProfile.optional(),
   checklist: checklist.optional(),
   httpProbe: z.looseObject({ requestedUrl: shortText, finalUrl: shortText }).optional(),
@@ -244,6 +262,7 @@ const storedOptionsSchema = z.looseObject({
       allowPrivateNetwork: z.boolean(),
     })
     .optional(),
+  scopePreflight: scopePreflight.optional(),
 });
 
 export function parseAuditReport(value: unknown): AuditReport {

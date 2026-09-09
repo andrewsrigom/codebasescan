@@ -2,7 +2,7 @@ import path from 'node:path';
 import { configuration } from '../src/server/config.ts';
 import { AuditStore } from '../src/server/store.ts';
 import { disableRemoteTracing } from '../src/security/privacy.ts';
-import { validateProjectRoot } from '../src/security/paths.ts';
+import { estimateProjectScope, validateProjectRoot } from '../src/security/paths.ts';
 disableRemoteTracing();
 process.umask(0o077);
 const config = {
@@ -22,7 +22,12 @@ try {
   );
   const project = store.registerProject('Review-worthy SaaS', root);
   let audit = store.audits().find((candidate) => candidate.projectId === project.id);
-  if (!audit || ['failed', 'cancelled'].includes(audit.status)) audit = store.enqueue(project.id);
+  if (!audit || ['failed', 'cancelled'].includes(audit.status)) {
+    const estimate = await estimateProjectScope(root);
+    audit = store.enqueue(project.id, {
+      scopePreflight: { ...estimate, truncationApproved: false },
+    });
+  }
   if (audit.status === 'queued') {
     store.claim(audit.id);
     await executeAudit(store, audit.id, config);

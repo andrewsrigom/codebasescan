@@ -254,6 +254,7 @@ export function buildAuditGraph(options: {
     })
     .addNode('prepare_report', (state) => {
       const createdAt = new Date().toISOString();
+      const scopePreflight = store.audit(state.auditId).options.scopePreflight;
       const findings = attachProvenance(
         mergeFindings(state.normalizedFindings, state.analyzed),
         state.scanners,
@@ -283,6 +284,7 @@ export function buildAuditGraph(options: {
         findings,
         scanners: state.scanners,
         dependencies: state.dependencies,
+        ...(scopePreflight ? { scopePreflight } : {}),
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
@@ -346,6 +348,11 @@ export function buildAuditGraph(options: {
           ...(state.truncated
             ? [
                 'The source snapshot was truncated. Review skipped files before relying on coverage.',
+              ]
+            : []),
+          ...(scopePreflight?.predictedTruncated
+            ? [
+                'The pre-audit scope estimate predicted truncation and the operator explicitly approved a partial snapshot.',
               ]
             : []),
         ],

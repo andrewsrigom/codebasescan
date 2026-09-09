@@ -809,6 +809,43 @@ export function AuditWorkspace({
               </div>
             ))}
           </section>
+          {report?.scopePreflight && (
+            <section className="panel">
+              <div className="panel-header">
+                <h2>Pre-audit scope estimate</h2>
+                <Badge tone={report.scopePreflight.predictedTruncated ? 'medium' : 'success'}>
+                  {report.scopePreflight.predictedTruncated ? 'PARTIAL EXPECTED' : 'WITHIN LIMITS'}
+                </Badge>
+              </div>
+              <div className="panel-body">
+                <div className="detail-row">
+                  <span>Supported source</span>
+                  <strong>
+                    {report.scopePreflight.supportedFiles} files ·{' '}
+                    {(report.scopePreflight.supportedBytes / (1024 * 1024)).toFixed(2)} MiB
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Snapshot limits</span>
+                  <strong>
+                    {report.scopePreflight.limits.files} files ·{' '}
+                    {(report.scopePreflight.limits.totalBytes / (1024 * 1024)).toFixed(0)} MiB
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Truncation approval</span>
+                  <strong>
+                    {report.scopePreflight.truncationApproved ? 'Explicit' : 'Not needed'}
+                  </strong>
+                </div>
+                {report.scopePreflight.reasons.length > 0 && (
+                  <p className="small muted">
+                    Expected limits: {report.scopePreflight.reasons.join(', ')}.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
           {report?.httpProbe && (
             <section className="panel">
               <div className="panel-header">

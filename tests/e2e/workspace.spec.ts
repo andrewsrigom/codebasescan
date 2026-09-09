@@ -40,6 +40,14 @@ test('rejects a forged cross-origin mutation', async ({ request }) => {
   expect(response.status()).toBe(403);
 });
 
+test('shows a bounded source estimate before an audit can be queued', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New audit' }).click();
+  await expect(page.getByText('Pre-audit scope estimate', { exact: true })).toBeVisible();
+  await expect(page.getByText(/supported files/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Queue audit/ })).toBeEnabled();
+});
+
 test('supports keyboard tabs and keeps collapsed mobile navigation named', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
