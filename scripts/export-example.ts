@@ -2,15 +2,64 @@ import path from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
+import { scanPosture } from '../src/scanners/posture.ts';
 import { mergeFindings } from '../src/domain/findings.ts';
 import { inventory } from '../src/scanners/inventory.ts';
 import { toHtml, toMarkdown, toSarif } from '../src/domain/reports.ts';
-import type { AuditReport } from '../src/domain/types.ts';
+import { buildCoverage } from '../src/domain/coverage.ts';
+import { attachProvenance } from '../src/domain/provenance.ts';
+import type { AuditReport, ScannerRun } from '../src/domain/types.ts';
 
 const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
-const findings = mergeFindings([], scanPatterns(source));
+const rawFindings = mergeFindings(scanPatterns(source), scanPosture(source));
+const scanners: ScannerRun[] = [
+  {
+    id: 'builtin',
+    name: 'Built-in patterns',
+    status: 'completed',
+    durationMs: 0,
+    findings: rawFindings.filter((finding) => finding.source === 'builtin').length,
+    detail:
+      'Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.',
+    version: '0.2.0',
+  },
+  {
+    id: 'posture',
+    name: 'Application posture',
+    status: 'completed',
+    durationMs: 0,
+    findings: rawFindings.filter((finding) => finding.source === 'posture').length,
+    detail: 'Conservative framework and configuration posture checks executed locally.',
+    version: '0.2.0',
+  },
+  {
+    id: 'semgrep',
+    name: 'Semgrep',
+    status: 'skipped',
+    durationMs: 0,
+    findings: 0,
+    detail: 'Not executed for this fixture export.',
+  },
+  {
+    id: 'gitleaks',
+    name: 'Gitleaks',
+    status: 'skipped',
+    durationMs: 0,
+    findings: 0,
+    detail: 'Not executed for this fixture export.',
+  },
+  {
+    id: 'osv',
+    name: 'Dependency vulnerabilities',
+    status: 'skipped',
+    durationMs: 0,
+    findings: 0,
+    detail: 'OSV lookup was disabled for this reproducible fixture export.',
+  },
+];
+const findings = attachProvenance(rawFindings, scanners, '2026-09-08T12:00:00.000Z');
 const report: AuditReport = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   auditId: '00000000-0000-4000-8000-000000000001',
   projectName: 'Review-worthy SaaS — fixture export',
   createdAt: '2026-09-08T12:00:00.000Z',
@@ -20,13 +69,9 @@ const report: AuditReport = {
   truncated: source.truncated,
   aiMode: 'disabled',
   findings,
-  scanners: [
-    { id: 'builtin', name: 'Built-in patterns', status: 'completed', durationMs: 0, findings: findings.length, detail: 'Seven regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.' },
-    { id: 'semgrep', name: 'Semgrep', status: 'skipped', durationMs: 0, findings: 0, detail: 'Not executed for this fixture export.' },
-    { id: 'gitleaks', name: 'Gitleaks', status: 'skipped', durationMs: 0, findings: 0, detail: 'Not executed for this fixture export.' },
-    { id: 'dependency-matching', name: 'Dependency vulnerabilities', status: 'skipped', durationMs: 0, findings: 0, detail: 'Manifest inventory only; vulnerability matching is not implemented.' },
-  ],
+  scanners,
   dependencies: inventory(source),
+  coverage: buildCoverage(scanners, findings, 'disabled'),
   limitations: [
     'This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.',
     'No model, external scanner, or runtime exploit test was executed.',

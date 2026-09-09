@@ -11,13 +11,15 @@ let stopping = false;
 let active: AbortController | null = null;
 let activeId: string | null = null;
 for (const signal of ['SIGINT', 'SIGTERM'] as const)
-  process.on(signal, () => { stopping = true; active?.abort(); });
+  process.on(signal, () => {
+    stopping = true;
+    active?.abort();
+  });
 const heartbeat = setInterval(() => {
   store.heartbeat(token);
-  if (activeId && store.audit(activeId).status === 'cancelled')
-    active?.abort();
+  if (activeId && store.audit(activeId).status === 'cancelled') active?.abort();
 }, 2000);
-console.log('Traceward worker ready. Read-only scans, local inference only, one audit at a time.');
+console.log(`Traceward worker ready. Read-only scans, AI ${config.aiMode}, one audit at a time.`);
 try {
   const { executeAudit } = await import('../engine/run.ts');
   while (!stopping) {
@@ -31,21 +33,26 @@ try {
     try {
       await executeAudit(store, audit.id, config, active.signal);
       console.log(`Audit ${audit.id}: ${store.audit(audit.id).status}`);
-    }
-    catch {
+    } catch {
       if (stopping)
-        store.transition(audit.id, 'queued', 'Worker stopped. A checkpoint resume will be attempted.');
+        store.transition(
+          audit.id,
+          'queued',
+          'Worker stopped. A checkpoint resume will be attempted.',
+        );
       else
-        store.transition(audit.id, 'failed', 'Audit could not complete. No clean result is implied. Check local setup and source changes, then start a new audit.');
+        store.transition(
+          audit.id,
+          'failed',
+          'Audit could not complete. No clean result is implied. Check local setup and source changes, then start a new audit.',
+        );
       console.error(`Audit ${audit.id} did not complete.`);
-    }
-    finally {
+    } finally {
       active = null;
       activeId = null;
     }
   }
-}
-finally {
+} finally {
   clearInterval(heartbeat);
   store.releaseWorker(token);
   store.close();

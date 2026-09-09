@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeHtml, toHtml, toMarkdown, toSarif } from '../../src/domain/reports.ts';
+import {
+  escapeHtml,
+  escapeMarkdown,
+  toHtml,
+  toMarkdown,
+  toSarif,
+} from '../../src/domain/reports.ts';
 import { sampleReport } from '../helpers.ts';
+import { buildCoverage } from '../../src/domain/coverage.ts';
 test('HTML export escapes source and titles rather than executing them', () => {
   const report = sampleReport();
   report.projectName = '<script>alert(1)</script>';
@@ -27,11 +34,30 @@ test('SARIF export retains unresolved status and valid local locations', () => {
   assert.equal(result.runs[0]?.results[0]?.properties.disposition, 'needs_review');
 });
 test('Markdown includes scope and limitations', () => {
-  const output = toMarkdown(sampleReport());
+  const report = sampleReport();
+  report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
+  const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
+  assert.ok(output.includes('Capability summary'));
+  assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
+});
+test('Markdown escapes raw HTML and link syntax from untrusted report text', () => {
+  const report = sampleReport();
+  report.projectName = '<script>alert(1)</script> [run](javascript:alert(1))';
+  report.findings[0]!.review = {
+    decision: 'needs_review',
+    note: '<img src=x onerror=alert(1)>',
+    at: '2026-09-08T12:00:00.000Z',
+  };
+  const output = toMarkdown(report);
+  assert.ok(!output.includes('<script>'));
+  assert.ok(!output.includes('<img'));
+  assert.ok(!output.includes('[run](javascript:'));
+  assert.ok(output.includes('&lt;script&gt;'));
 });
 test('standard HTML metacharacters are escaped', () => {
   assert.equal(escapeHtml('<>&"'), '&lt;&gt;&amp;&quot;');
+  assert.equal(escapeMarkdown('<tag> [label](target)'), '&lt;tag&gt; \\[label\\]\\(target\\)');
 });

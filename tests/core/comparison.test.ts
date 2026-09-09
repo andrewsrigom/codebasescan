@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { compareReports } from '../../src/domain/comparison.ts';
+import { sampleReport } from '../helpers.ts';
+import { ciGate } from '../../src/domain/ci.ts';
+
+test('report comparison separates new, resolved, unchanged, and severity changes', () => {
+  const base = sampleReport();
+  base.auditId = '00000000-0000-4000-8000-000000000001';
+  const unchanged = { ...base.findings[0]!, severity: 'critical' as const };
+  const added = {
+    ...base.findings[0]!,
+    id: 'new-id',
+    fingerprint: 'new-fingerprint',
+    ruleId: 'TW-NEW',
+  };
+  const current = sampleReport();
+  current.auditId = '00000000-0000-4000-8000-000000000002';
+  current.findings = [unchanged, added];
+  const comparison = compareReports(base, current);
+  assert.equal(comparison.newFindings.length, 1);
+  assert.equal(comparison.resolvedFindings.length, 0);
+  assert.equal(comparison.unchangedFindings.length, 1);
+  assert.deepEqual(comparison.severityChanges[0], {
+    finding: {
+      id: unchanged.id,
+      fingerprint: unchanged.fingerprint,
+      ruleId: unchanged.ruleId,
+      title: unchanged.title,
+      severity: 'critical',
+    },
+    before: 'high',
+    after: 'critical',
+  });
+
+  current.findings = [added];
+  assert.equal(compareReports(base, current).resolvedFindings.length, 1);
+});
+
+test('CI severity gates use meaningful exit codes', () => {
+  const report = sampleReport();
+  assert.deepEqual(ciGate(report, 'critical'), { exitCode: 0, gatedFindings: 0 });
+  assert.deepEqual(ciGate(report, 'high'), { exitCode: 1, gatedFindings: 1 });
+  report.findings[0]!.disposition = 'accepted_risk';
+  assert.deepEqual(ciGate(report, 'high'), { exitCode: 0, gatedFindings: 0 });
+});

@@ -21,6 +21,14 @@ test('claim is atomic and increments an attempt', (context) => {
   assert.equal(store.audit(audit.id).attempts, 1);
   assert.equal(store.claim(), null);
 });
+test('audit options are persisted with the queued run', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id, {
+    httpProbe: { url: 'http://127.0.0.1:3000/', allowPrivateNetwork: false },
+  });
+  assert.equal(store.audit(audit.id).options.httpProbe?.url, 'http://127.0.0.1:3000/');
+});
 test('cancellation cannot be overwritten by a late worker completion', (context) => {
   const { store, project } = setup();
   context.after(() => store.close());
@@ -51,7 +59,11 @@ test('human review preserves findings instead of deleting them', (context) => {
   const report = sampleReport();
   store.saveProgress(audit.id, report);
   store.transition(audit.id, 'awaiting_review');
-  store.reviewFinding(audit.id, { findingId: report.findings[0]!.id, disposition: 'false_positive', note: 'Inspected the call site; input is a fixed internal literal.' });
+  store.reviewFinding(audit.id, {
+    findingId: report.findings[0]!.id,
+    disposition: 'false_positive',
+    note: 'Inspected the call site; input is a fixed internal literal.',
+  });
   assert.equal(store.audit(audit.id).report?.findings.length, 1);
   assert.equal(store.audit(audit.id).report?.findings[0]?.disposition, 'false_positive');
 });
