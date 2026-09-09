@@ -8,11 +8,13 @@ import { scanPosture } from '../src/scanners/posture.ts';
 import { scanOsv } from '../src/scanners/osv.ts';
 import { profileProject } from '../src/scanners/project-profile.ts';
 import { scanAstSecurity } from '../src/scanners/ast-security.ts';
+import { scanNextSecurity } from '../src/scanners/next-security.ts';
+import { scanReactSecurity } from '../src/scanners/react-security.ts';
 
 const truthSchema = z.object({
   id: z.string(),
   category: z.string(),
-  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'osv'])),
+  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'next', 'react', 'osv'])),
   expectedRuleIds: z.array(z.string()),
 });
 
@@ -55,16 +57,23 @@ let falseNegatives = 0;
 let astTruePositives = 0;
 let astFalsePositives = 0;
 let astFalseNegatives = 0;
+let nextTruePositives = 0;
+let nextFalsePositives = 0;
+let nextFalseNegatives = 0;
+let reactTruePositives = 0;
+let reactFalsePositives = 0;
+let reactFalseNegatives = 0;
 try {
   for (const truthFile of await truthFiles(path.resolve('benchmarks'))) {
     const truth = truthSchema.parse(JSON.parse(await readFile(truthFile, 'utf8')) as unknown);
     const source = await captureSnapshot(path.dirname(truthFile));
+    const profile = profileProject(source).profile;
     const findings = [
       ...(truth.scanners.includes('builtin') ? scanPatterns(source) : []),
       ...(truth.scanners.includes('posture') ? scanPosture(source) : []),
-      ...(truth.scanners.includes('ast')
-        ? scanAstSecurity(source, profileProject(source).profile).findings
-        : []),
+      ...(truth.scanners.includes('ast') ? scanAstSecurity(source, profile).findings : []),
+      ...(truth.scanners.includes('next') ? scanNextSecurity(source, profile).findings : []),
+      ...(truth.scanners.includes('react') ? scanReactSecurity(source, profile).findings : []),
     ];
     if (truth.scanners.includes('osv')) {
       const osv = await scanOsv(
@@ -90,6 +99,16 @@ try {
       astFalsePositives += falsePositive;
       astFalseNegatives += falseNegative;
     }
+    if (truth.scanners.length === 1 && truth.scanners[0] === 'next') {
+      nextTruePositives += truePositive;
+      nextFalsePositives += falsePositive;
+      nextFalseNegatives += falseNegative;
+    }
+    if (truth.scanners.length === 1 && truth.scanners[0] === 'react') {
+      reactTruePositives += truePositive;
+      reactFalsePositives += falsePositive;
+      reactFalseNegatives += falseNegative;
+    }
     console.log(
       JSON.stringify({
         id: truth.id,
@@ -110,6 +129,10 @@ const precision = truePositives / Math.max(1, truePositives + falsePositives);
 const recall = truePositives / Math.max(1, truePositives + falseNegatives);
 const astPrecision = astTruePositives / Math.max(1, astTruePositives + astFalsePositives);
 const astRecall = astTruePositives / Math.max(1, astTruePositives + astFalseNegatives);
+const nextPrecision = nextTruePositives / Math.max(1, nextTruePositives + nextFalsePositives);
+const nextRecall = nextTruePositives / Math.max(1, nextTruePositives + nextFalseNegatives);
+const reactPrecision = reactTruePositives / Math.max(1, reactTruePositives + reactFalsePositives);
+const reactRecall = reactTruePositives / Math.max(1, reactTruePositives + reactFalseNegatives);
 console.log(
   JSON.stringify({
     summary: {
@@ -125,6 +148,20 @@ console.log(
         precision: Number(astPrecision.toFixed(4)),
         recall: Number(astRecall.toFixed(4)),
       },
+      next: {
+        truePositives: nextTruePositives,
+        falsePositives: nextFalsePositives,
+        falseNegatives: nextFalseNegatives,
+        precision: Number(nextPrecision.toFixed(4)),
+        recall: Number(nextRecall.toFixed(4)),
+      },
+      react: {
+        truePositives: reactTruePositives,
+        falsePositives: reactFalsePositives,
+        falseNegatives: reactFalseNegatives,
+        precision: Number(reactPrecision.toFixed(4)),
+        recall: Number(reactRecall.toFixed(4)),
+      },
     },
   }),
 );
@@ -132,4 +169,13 @@ console.log(
   'Benchmark measures Traceward rules on declared ground truth. It is not a security certification or a generic model evaluation.',
 );
 process.exitCode =
-  precision >= 0.85 && recall >= 0.95 && astPrecision >= 0.9 && astRecall >= 0.85 ? 0 : 1;
+  precision >= 0.85 &&
+  recall >= 0.95 &&
+  astPrecision >= 0.9 &&
+  astRecall >= 0.85 &&
+  nextPrecision >= 0.9 &&
+  nextRecall >= 0.85 &&
+  reactPrecision >= 0.9 &&
+  reactRecall >= 0.85
+    ? 0
+    : 1;

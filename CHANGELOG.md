@@ -18,3 +18,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Expanded the passive HTTP probe with reflected-origin CORS, cache isolation, script CSP, HTTPS downgrade, retained redirect-chain, and no-cookie-value checks.
 - Added explicit Git-history secret scanning, safe historical metadata, and separate probable versus test/example fixture classifications.
 - Added detector confidence, probable exposure, explainable priority scores, evidence-preserving deduplication, expiring project exceptions, and explicit project baselines.
+- Added vulnerable and benign benchmark projects for every dedicated Next.js and React rule, with separate precision and recall gates.

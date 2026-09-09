@@ -1,0 +1,7 @@
+{
+  "name": "next-security-rules",
+  "private": true,
+  "dependencies": {
+    "next": "16.3.4"
+  }
+}

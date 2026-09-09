@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-next-security-safe",
+  "category": "false-positives",
+  "scanners": ["next"],
+  "expectedRuleIds": []
+}

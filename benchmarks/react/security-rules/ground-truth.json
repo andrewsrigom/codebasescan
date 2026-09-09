@@ -1,0 +1,16 @@
+{
+  "id": "react-security-rules",
+  "category": "react",
+  "scanners": ["react"],
+  "expectedRuleIds": [
+    "TW-REACT001",
+    "TW-REACT002",
+    "TW-REACT003",
+    "TW-REACT004",
+    "TW-REACT005",
+    "TW-REACT006",
+    "TW-REACT007",
+    "TW-REACT008",
+    "TW-REACT009"
+  ]
+}

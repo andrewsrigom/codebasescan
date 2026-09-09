@@ -20,6 +20,7 @@
 - The approved passive HTTP probe now covers effective headers, CSP, CORS reflection and variation, sensitive cookie metadata, shared caching, and redirect downgrades without crawling or mutation.
 - Secret scanning distinguishes probable runtime matches from test/example fixture candidates and supports an explicit, redacted Git-history mode.
 - Findings now carry detector confidence, probable exposure, priority scores, merged evidence, expiring project exceptions, and a selectable project baseline.
+- Every dedicated Next.js and React rule now has declared vulnerable ground truth plus paired benign benchmark coverage.
 
 ## Next — independent real-project ground truth
 

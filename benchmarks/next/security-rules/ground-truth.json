@@ -1,0 +1,14 @@
+{
+  "id": "next-security-rules",
+  "category": "next",
+  "scanners": ["next"],
+  "expectedRuleIds": [
+    "TW-NEXT001",
+    "TW-NEXT002",
+    "TW-NEXT003",
+    "TW-NEXT004",
+    "TW-NEXT005",
+    "TW-NEXT006",
+    "TW-NEXT007"
+  ]
+}

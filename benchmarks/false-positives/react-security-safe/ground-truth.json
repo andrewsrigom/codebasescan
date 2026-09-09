@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-react-security-safe",
+  "category": "false-positives",
+  "scanners": ["react"],
+  "expectedRuleIds": []
+}
