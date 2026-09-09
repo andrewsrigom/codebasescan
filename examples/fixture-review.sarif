@@ -9,18 +9,6 @@
           "version": "0.2.0",
           "rules": [
             {
-              "id": "TW-004",
-              "shortDescription": {
-                "text": "Object lookup needs tenant authorization review"
-              },
-              "fullDescription": {
-                "text": "An object lookup begins with an ID filter. Authorization may exist elsewhere; inspect middleware, service policy, RLS and the complete call path."
-              },
-              "help": {
-                "text": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access."
-              }
-            },
-            {
               "id": "TW-005",
               "shortDescription": {
                 "text": "Sensitive configuration uses a public environment name"
@@ -69,6 +57,18 @@
               }
             },
             {
+              "id": "TW-004",
+              "shortDescription": {
+                "text": "Object lookup needs tenant authorization review"
+              },
+              "fullDescription": {
+                "text": "An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path."
+              },
+              "help": {
+                "text": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access."
+              }
+            },
+            {
               "id": "TW-002",
               "shortDescription": {
                 "text": "HTML rendering bypass needs sanitization review"
@@ -101,35 +101,6 @@
         }
       ],
       "results": [
-        {
-          "ruleId": "TW-004",
-          "level": "error",
-          "message": {
-            "text": "Object lookup needs tenant authorization review. Disposition: needs_review. An object lookup begins with an ID filter. Authorization may exist elsewhere; inspect middleware, service policy, RLS and the complete call path."
-          },
-          "partialFingerprints": {
-            "traceward/v1": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2"
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "src/app/api/projects/%5Bid%5D/route.ts"
-                },
-                "region": {
-                  "startLine": 5,
-                  "endLine": 10
-                }
-              }
-            }
-          ],
-          "properties": {
-            "severity": "high",
-            "source": "builtin",
-            "disposition": "needs_review",
-            "snapshot": "be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48"
-          }
-        },
         {
           "ruleId": "TW-005",
           "level": "error",
@@ -241,6 +212,35 @@
           ],
           "properties": {
             "severity": "high",
+            "source": "builtin",
+            "disposition": "needs_review",
+            "snapshot": "be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48"
+          }
+        },
+        {
+          "ruleId": "TW-004",
+          "level": "warning",
+          "message": {
+            "text": "Object lookup needs tenant authorization review. Disposition: needs_review. An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path."
+          },
+          "partialFingerprints": {
+            "traceward/v1": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/app/api/projects/%5Bid%5D/route.ts"
+                },
+                "region": {
+                  "startLine": 5,
+                  "endLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "severity": "medium",
             "source": "builtin",
             "disposition": "needs_review",
             "snapshot": "be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48"

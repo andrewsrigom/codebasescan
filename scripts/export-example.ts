@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import { scanPosture } from '../src/scanners/posture.ts';
@@ -10,11 +11,17 @@ import { toHtml, toMarkdown, toSarif } from '../src/domain/reports.ts';
 import { buildCoverage } from '../src/domain/coverage.ts';
 import { attachProvenance } from '../src/domain/provenance.ts';
 import { buildSecurityChecklist } from '../src/domain/checklist.ts';
+import { scanArchitecture, scanDuplication } from '../src/scanners/mechanical.ts';
 import type { AuditReport, ScannerRun } from '../src/domain/types.ts';
 
 const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
 const rawFindings = mergeFindings(scanPatterns(source), scanPosture(source));
 const profileResult = profileProject(source);
+const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-example-'));
+const [architectureResult, duplicationResult] = await Promise.all([
+  scanArchitecture(source, profileResult.profile, temporary),
+  scanDuplication(source, temporary),
+]).finally(() => rm(temporary, { recursive: true, force: true }));
 const scanners: ScannerRun[] = [
   profileResult.run,
   {
@@ -60,11 +67,13 @@ const scanners: ScannerRun[] = [
     findings: 0,
     detail: 'OSV lookup was disabled for this reproducible fixture export.',
   },
+  { ...architectureResult.run, durationMs: 0 },
+  { ...duplicationResult.run, durationMs: 0 },
 ];
 const findings = attachProvenance(rawFindings, scanners, '2026-09-08T12:00:00.000Z');
 const dependencies = inventory(source);
 const report: AuditReport = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   auditId: '00000000-0000-4000-8000-000000000001',
   projectName: 'Review-worthy SaaS — fixture export',
   createdAt: '2026-09-08T12:00:00.000Z',
@@ -77,6 +86,11 @@ const report: AuditReport = {
   scanners,
   dependencies,
   projectProfile: profileResult.profile,
+  mechanicalAnalysis: {
+    schemaVersion: 1,
+    ...(architectureResult.analysis ? { architecture: architectureResult.analysis } : {}),
+    ...(duplicationResult.analysis ? { duplication: duplicationResult.analysis } : {}),
+  },
   checklist: buildSecurityChecklist({
     projectProfile: profileResult.profile,
     findings,
@@ -86,7 +100,8 @@ const report: AuditReport = {
   coverage: buildCoverage(scanners, findings, 'disabled'),
   limitations: [
     'This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.',
-    'No model, external scanner, or runtime exploit test was executed.',
+    'No model, optional external security scanner, or runtime exploit test was executed.',
+    'Bundled dependency and duplication analysis ran against an isolated inert snapshot; its output is maintainability evidence, not a vulnerability verdict.',
     'All findings are review candidates; there are no automatically confirmed vulnerabilities.',
     'Regex heuristics can match comments and miss indirect flows. This is not a security certification.',
   ],

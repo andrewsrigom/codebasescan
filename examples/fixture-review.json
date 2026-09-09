@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "auditId": "00000000-0000-4000-8000-000000000001",
   "projectName": "Review-worthy SaaS — fixture export",
   "createdAt": "2026-09-08T12:00:00.000Z",
@@ -11,41 +11,6 @@
   "findings": [
     {
       "source": "builtin",
-      "ruleId": "TW-004",
-      "title": "Object lookup needs tenant authorization review",
-      "category": "authorization",
-      "severity": "high",
-      "sourceSeverity": "high",
-      "description": "An object lookup begins with an ID filter. Authorization may exist elsewhere; inspect middleware, service policy, RLS and the complete call path.",
-      "remediation": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.",
-      "cwe": ["CWE-639"],
-      "evidence": [
-        {
-          "id": "58aab67f20e40b79",
-          "kind": "source",
-          "file": "src/app/api/projects/[id]/route.ts",
-          "startLine": 5,
-          "endLine": 10,
-          "excerpt": "  await requireSession(request);\n  const { id } = await context.params;\n  const project = await database.project.findUnique({ where: { id } });\n  return Response.json(project);\n}\n",
-          "fileDigest": "b55885bb6307f1c7d7839044a38d8dd89629223d5e126f6c665e7d62ac6bcca3",
-          "observation": "Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is unverified."
-        }
-      ],
-      "id": "5bffd93b08bf04fd705d",
-      "fingerprint": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2",
-      "disposition": "needs_review",
-      "provenance": {
-        "detector": "traceward-heuristic",
-        "scanner": "Built-in patterns",
-        "ruleId": "TW-004",
-        "scannerVersion": "0.2.0",
-        "originalSeverity": "high",
-        "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
-      }
-    },
-    {
-      "source": "builtin",
       "ruleId": "TW-005",
       "title": "Sensitive configuration uses a public environment name",
       "category": "secrets",
@@ -53,11 +18,14 @@
       "sourceSeverity": "high",
       "description": "A sensitive-looking setting has a browser-public naming convention. No active credential or actual browser bundle exposure has been verified.",
       "remediation": "Keep privileged credentials in server-only configuration. If exposure is verified, rotate the credential and review its use.",
-      "cwe": ["CWE-200"],
+      "cwe": [
+        "CWE-200"
+      ],
       "evidence": [
         {
           "id": "40b2fc37b7d6cdf6",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/lib/config.ts",
           "startLine": 1,
           "endLine": 5,
@@ -76,7 +44,9 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
       }
     },
     {
@@ -88,11 +58,14 @@
       "sourceSeverity": "high",
       "description": "A potentially destructive operation appears in an agent tool list. The pattern cannot determine whether approval and authorization are enforced inside the tool.",
       "remediation": "Apply authorization inside each tool, restrict its capability, and require explicit approval where the operation warrants it.",
-      "cwe": ["CWE-862"],
+      "cwe": [
+        "CWE-862"
+      ],
       "evidence": [
         {
           "id": "2b014502ce370d18",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/agents/account.ts",
           "startLine": 4,
           "endLine": 8,
@@ -111,7 +84,9 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
       }
     },
     {
@@ -123,11 +98,14 @@
       "sourceSeverity": "high",
       "description": "A dynamic execution sink was detected. This is a pattern match, not proof of attacker-controlled execution.",
       "remediation": "Replace dynamic code execution with explicit operations where possible; otherwise document and enforce the trust boundary.",
-      "cwe": ["CWE-95"],
+      "cwe": [
+        "CWE-95"
+      ],
       "evidence": [
         {
           "id": "15ebbc6a233a56c0",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/lib/expression.ts",
           "startLine": 1,
           "endLine": 4,
@@ -146,7 +124,9 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
       }
     },
     {
@@ -158,11 +138,14 @@
       "sourceSeverity": "high",
       "description": "An unsafe SQL execution API is present. User control of the query and runtime reachability have not been established.",
       "remediation": "Prefer parameterized queries. Trace every value reaching this call before deciding whether an injection vulnerability exists.",
-      "cwe": ["CWE-89"],
+      "cwe": [
+        "CWE-89"
+      ],
       "evidence": [
         {
           "id": "d10b2b1dccfd92f6",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/app/api/search/route.ts",
           "startLine": 3,
           "endLine": 8,
@@ -181,7 +164,49 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
+      }
+    },
+    {
+      "source": "builtin",
+      "ruleId": "TW-004",
+      "title": "Object lookup needs tenant authorization review",
+      "category": "authorization",
+      "severity": "medium",
+      "sourceSeverity": "medium",
+      "description": "An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path.",
+      "remediation": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.",
+      "cwe": [
+        "CWE-639"
+      ],
+      "evidence": [
+        {
+          "id": "58aab67f20e40b79",
+          "kind": "source",
+          "scope": "runtime",
+          "file": "src/app/api/projects/[id]/route.ts",
+          "startLine": 5,
+          "endLine": 10,
+          "excerpt": "  await requireSession(request);\n  const { id } = await context.params;\n  const project = await database.project.findUnique({ where: { id } });\n  return Response.json(project);\n}\n",
+          "fileDigest": "b55885bb6307f1c7d7839044a38d8dd89629223d5e126f6c665e7d62ac6bcca3",
+          "observation": "Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is unverified."
+        }
+      ],
+      "id": "5bffd93b08bf04fd705d",
+      "fingerprint": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2",
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-004",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "medium",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": [
+          "source"
+        ]
       }
     },
     {
@@ -193,11 +218,14 @@
       "sourceSeverity": "medium",
       "description": "Raw HTML reaches a React rendering sink. The scanner does not prove that the value is attacker-controlled or unsanitized.",
       "remediation": "Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering text when rich HTML is unnecessary.",
-      "cwe": ["CWE-79"],
+      "cwe": [
+        "CWE-79"
+      ],
       "evidence": [
         {
           "id": "ada4a9e530c374fa",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/components/preview.tsx",
           "startLine": 1,
           "endLine": 4,
@@ -216,7 +244,9 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
       }
     },
     {
@@ -228,11 +258,14 @@
       "sourceSeverity": "medium",
       "description": "A wildcard CORS origin was found. Public endpoints may intentionally permit it; authentication and exposed data determine the risk.",
       "remediation": "Define expected browser origins and validate the credential model. Do not treat CORS as an authorization mechanism.",
-      "cwe": ["CWE-942"],
+      "cwe": [
+        "CWE-942"
+      ],
       "evidence": [
         {
           "id": "08574edb56956038",
           "kind": "source",
+          "scope": "runtime",
           "file": "src/lib/cors.ts",
           "startLine": 1,
           "endLine": 4,
@@ -251,7 +284,9 @@
         "scannerVersion": "0.2.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
-        "evidenceKinds": ["source"]
+        "evidenceKinds": [
+          "source"
+        ]
       }
     }
   ],
@@ -260,7 +295,7 @@
       "id": "project-profile",
       "name": "Project structure profile",
       "status": "completed",
-      "durationMs": 33,
+      "durationMs": 22,
       "findings": 0,
       "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 8 call edge(s), and 6 security-relevant fact(s).",
       "version": "0.1.0"
@@ -306,6 +341,24 @@
       "durationMs": 0,
       "findings": 0,
       "detail": "OSV lookup was disabled for this reproducible fixture export."
+    },
+    {
+      "id": "dependency-cruiser",
+      "name": "Dependency structure",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.",
+      "version": "18.2.0"
+    },
+    {
+      "id": "jscpd",
+      "name": "Code duplication",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.",
+      "version": "5.2.0"
     }
   ],
   "dependencies": [
@@ -341,7 +394,9 @@
   "projectProfile": {
     "schemaVersion": 1,
     "status": "complete",
-    "languages": ["typescript"],
+    "languages": [
+      "typescript"
+    ],
     "frameworks": [
       {
         "id": "nextjs-app-router",
@@ -358,26 +413,36 @@
     ],
     "entrypoints": [
       {
-        "id": "cbb38c7ca7f8007f69f9",
+        "id": "6d5987878aca9ee570ee",
         "kind": "next-route",
         "file": "src/app/api/projects/[id]/route.ts",
         "line": 4,
         "name": "GET",
         "route": "/api/projects/[id]",
-        "methods": ["GET"],
-        "dynamicParameters": ["id"],
-        "symbolIds": ["813a42eb60c26ffa2cb0"]
+        "methods": [
+          "GET"
+        ],
+        "dynamicParameters": [
+          "id"
+        ],
+        "symbolIds": [
+          "813a42eb60c26ffa2cb0"
+        ]
       },
       {
-        "id": "aca25a25441ac0a8452c",
+        "id": "d0720de69cfd13cced0c",
         "kind": "next-route",
         "file": "src/app/api/search/route.ts",
         "line": 3,
         "name": "GET",
         "route": "/api/search",
-        "methods": ["GET"],
+        "methods": [
+          "GET"
+        ],
         "dynamicParameters": [],
-        "symbolIds": ["97c2540180a3f3162833"]
+        "symbolIds": [
+          "97c2540180a3f3162833"
+        ]
       }
     ],
     "symbols": [
@@ -603,10 +668,38 @@
     "issues": [],
     "truncated": false
   },
+  "mechanicalAnalysis": {
+    "schemaVersion": 1,
+    "architecture": {
+      "schemaVersion": 1,
+      "modules": 7,
+      "localDependencies": 0,
+      "cycles": [],
+      "orphanCandidates": [
+        "src/components/preview.tsx",
+        "src/lib/config.ts",
+        "src/lib/cors.ts",
+        "src/lib/expression.ts"
+      ],
+      "hotspots": [],
+      "truncated": false
+    },
+    "duplication": {
+      "schemaVersion": 1,
+      "files": 0,
+      "lines": 0,
+      "tokens": 0,
+      "clones": 0,
+      "duplicatedLines": 0,
+      "percentage": 0,
+      "blocks": [],
+      "truncated": false
+    }
+  },
   "checklist": {
     "schemaVersion": 1,
     "packId": "traceward-web-application",
-    "packVersion": "0.1.0",
+    "packVersion": "0.4.0",
     "controls": [
       {
         "id": "TW-CTRL-AUTHN-001",
@@ -619,6 +712,19 @@
         "verification": "Test each boundary without a session/token and confirm rejection before the sensitive operation.",
         "limitations": [
           "Gateway, middleware, identity-provider, and database policy outside the bounded map may change the result."
+        ]
+      },
+      {
+        "id": "TW-CTRL-AUTHN-002",
+        "domain": "authentication",
+        "title": "Sensitive read routes receive an authentication review",
+        "status": "UNVERIFIED",
+        "rationale": "No missing-authentication candidate was found across 2 mapped sensitive read route(s).",
+        "applicability": "Applies to mapped Next.js GET and HEAD routes that reach database, raw SQL, command, or file operations.",
+        "evidence": [],
+        "verification": "Test anonymous and wrong-tenant reads. Confirm intentionally public routes expose only approved fields.",
+        "limitations": [
+          "Gateway controls and public-route intent outside the captured source remain unverified."
         ]
       },
       {
@@ -636,8 +742,8 @@
         "id": "TW-CTRL-AUTHZ-002",
         "domain": "authorization",
         "title": "Dynamic resource access is tenant or owner scoped",
-        "status": "NOT_APPLICABLE",
-        "rationale": "No supported dynamic resource mutation was mapped.",
+        "status": "UNVERIFIED",
+        "rationale": "0 of 1 dynamic database boundary(s) contain a recognized tenant, owner, account, organization, or user scope in the captured call arguments.",
         "applicability": "Applies when a caller-selectable path parameter reaches a mapped database operation.",
         "evidence": [],
         "verification": "Run cross-tenant and wrong-owner identifier tests and inspect effective RLS/database policy.",
@@ -649,12 +755,73 @@
         "id": "TW-CTRL-INPUT-001",
         "domain": "input-validation",
         "title": "Sensitive entry points validate caller-controlled input",
-        "status": "NOT_APPLICABLE",
-        "rationale": "No supported sensitive entry point was mapped.",
+        "status": "GAP_CANDIDATE",
+        "rationale": "0 of 2 sensitive entry point(s) contain a recognized validation call within five explicit call hops.",
         "applicability": "Applies to mapped routes/actions that reach sensitive operations.",
         "evidence": [],
         "verification": "Test malformed, oversized, unexpected-type, and boundary input before the sensitive operation.",
-        "limitations": ["Inline/manual validation and framework coercion may not be recognized."]
+        "limitations": [
+          "Inline/manual validation and framework coercion may not be recognized."
+        ]
+      },
+      {
+        "id": "TW-CTRL-INJECTION-001",
+        "domain": "input-validation",
+        "title": "Raw SQL keeps request data out of query structure",
+        "status": "GAP_CANDIDATE",
+        "rationale": "1 raw SQL input-flow candidate(s) require review.",
+        "applicability": "Applies when mapped request/action code reaches raw SQL execution.",
+        "evidence": [
+          {
+            "kind": "finding",
+            "id": "c7eebdb7ae0d43ddd1f2"
+          },
+          {
+            "kind": "profile-fact",
+            "id": "0ae9920f576ae4da5979"
+          }
+        ],
+        "verification": "Trace each query fragment, replace structural interpolation with parameters, and test metacharacter payloads without modifying production data.",
+        "limitations": [
+          "Indirect builders, ORM-specific safe tagged templates, and database-side controls may require manual review."
+        ]
+      },
+      {
+        "id": "TW-CTRL-OUTBOUND-001",
+        "domain": "integrations",
+        "title": "Outbound destinations are server-owned or safely constrained",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported outbound request boundary was mapped.",
+        "applicability": "Applies when mapped entry points can initiate server-side network requests.",
+        "evidence": [],
+        "verification": "Test untrusted public, private, loopback, metadata, DNS-rebinding, and redirect destinations against the effective egress policy.",
+        "limitations": [
+          "Network egress controls and DNS behavior are outside source-only evidence."
+        ]
+      },
+      {
+        "id": "TW-CTRL-REDIRECT-001",
+        "domain": "integrations",
+        "title": "Redirect destinations are constrained",
+        "status": "NOT_APPLICABLE",
+        "rationale": "No supported redirect boundary was mapped.",
+        "applicability": "Applies when mapped entry points construct a redirect response.",
+        "evidence": [],
+        "verification": "Test external, scheme-relative, encoded, mixed-case, and userinfo-form destinations against the effective redirect policy.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-UPLOAD-001",
+        "domain": "input-validation",
+        "title": "File uploads enforce size, content, and storage-path constraints",
+        "status": "UNVERIFIED",
+        "rationale": "No decisive upload gap was mapped, but the profiler cannot prove that uploads are absent or fully constrained.",
+        "applicability": "Applies when an HTTP boundary accepts files or multipart form data.",
+        "evidence": [],
+        "verification": "Test byte limits, file count, MIME/content mismatch, polyglots, generated names, traversal, overwrite, and storage execution policy.",
+        "limitations": [
+          "Streaming parsers and framework upload middleware may not be recognized."
+        ]
       },
       {
         "id": "TW-CTRL-WEBHOOK-001",
@@ -691,7 +858,7 @@
         "id": "TW-CTRL-SESSION-001",
         "domain": "authentication",
         "title": "Sensitive cookies use explicit protection attributes",
-        "status": "NOT_APPLICABLE",
+        "status": "UNVERIFIED",
         "rationale": "No cookie-based session signal was mapped.",
         "applicability": "Applies when captured source uses cookie-based authentication/session state.",
         "evidence": [
@@ -759,7 +926,9 @@
           }
         ],
         "verification": "Review advisory freshness, runtime reachability, exploit preconditions, and supported upgrade paths.",
-        "limitations": ["Advisory presence does not establish reachability or exploitability."]
+        "limitations": [
+          "Advisory presence does not establish reachability or exploitability."
+        ]
       },
       {
         "id": "TW-CTRL-RUNTIME-001",
@@ -778,8 +947,8 @@
         "id": "TW-CTRL-LOGGING-001",
         "domain": "logging",
         "title": "Sensitive operations emit security-relevant audit events",
-        "status": "NOT_APPLICABLE",
-        "rationale": "No supported sensitive operation boundary was mapped.",
+        "status": "UNVERIFIED",
+        "rationale": "0 of 2 mapped sensitive boundary(s) contain a recognized audit/security logging call.",
         "applicability": "Applies to authentication, authorization, administrative, data-changing, and integration-sensitive operations.",
         "evidence": [],
         "verification": "Confirm event content, actor, target, outcome, correlation ID, retention, access controls, and alerting in the real logging system.",
@@ -791,21 +960,80 @@
         "id": "TW-CTRL-ERRORS-001",
         "domain": "logging",
         "title": "Sensitive boundaries define explicit failure handling",
-        "status": "NOT_APPLICABLE",
-        "rationale": "No supported sensitive operation boundary was mapped.",
+        "status": "UNVERIFIED",
+        "rationale": "0 of 2 mapped sensitive boundary(s) contain an explicit catch clause within five call hops.",
         "applicability": "Applies to mapped sensitive request/action boundaries.",
         "evidence": [],
         "verification": "Exercise dependency, validation, authorization, and storage failures; confirm safe responses and useful internal diagnostics.",
         "limitations": [
           "Framework-level error boundaries and centralized handlers may remain unverified."
         ]
+      },
+      {
+        "id": "TW-CTRL-NEXT-001",
+        "domain": "authorization",
+        "title": "Next.js caching keeps user and tenant data isolated",
+        "status": "UNVERIFIED",
+        "rationale": "No supported user-specific cache isolation candidate was found in the bounded Next.js scan.",
+        "applicability": "Applies to captured Next.js cache functions and authenticated route responses.",
+        "evidence": [],
+        "verification": "Test two users or tenants against warm cache entries and inspect Cache-Control behavior at the deployed edge.",
+        "limitations": [
+          "Runtime cache keys, CDN configuration, and reverse-proxy behavior remain outside source-only proof."
+        ]
+      },
+      {
+        "id": "TW-CTRL-NEXT-002",
+        "domain": "secrets",
+        "title": "Next.js client boundaries exclude privileged configuration and response data",
+        "status": "UNVERIFIED",
+        "rationale": "No supported privileged public environment or sensitive server response field candidate was found.",
+        "applicability": "Applies to NEXT_PUBLIC variables and captured Next.js server response objects.",
+        "evidence": [],
+        "verification": "Inspect production client bundles, RSC payloads, and API responses for privileged values.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-REACT-001",
+        "domain": "input-validation",
+        "title": "Dynamic HTML preserves React output encoding",
+        "status": "UNVERIFIED",
+        "rationale": "No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the bounded React scan.",
+        "applicability": "Applies to captured runtime JSX and TSX modules.",
+        "evidence": [],
+        "verification": "Test script, event-handler, URL, SVG, malformed markup, and mutation-XSS payloads at every intentional HTML rendering boundary.",
+        "limitations": [
+          "Sanitizer policy configuration and browser mutation behavior require runtime review."
+        ]
+      },
+      {
+        "id": "TW-CTRL-REACT-002",
+        "domain": "browser-security",
+        "title": "Client navigation, storage, and messaging use constrained browser boundaries",
+        "status": "UNVERIFIED",
+        "rationale": "No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern was found.",
+        "applicability": "Applies to explicit Client Component modules.",
+        "evidence": [],
+        "verification": "Exercise untrusted URLs, message origins, storage access after script injection, and external new-tab navigation.",
+        "limitations": []
+      },
+      {
+        "id": "TW-CTRL-REACT-003",
+        "domain": "secrets",
+        "title": "Server and Client Component boundaries keep privileged data on the server",
+        "status": "UNVERIFIED",
+        "rationale": "No supported server-only import, sensitive prop, async Client Component, or private environment boundary candidate was found.",
+        "applicability": "Applies to Next.js applications using React Server and Client Components.",
+        "evidence": [],
+        "verification": "Inspect serialized RSC payloads and production client bundles for credentials, privileged session objects, and server-only modules.",
+        "limitations": []
       }
     ],
     "summary": {
       "EVIDENCED": 0,
-      "GAP_CANDIDATE": 1,
-      "UNVERIFIED": 3,
-      "NOT_APPLICABLE": 9,
+      "GAP_CANDIDATE": 3,
+      "UNVERIFIED": 14,
+      "NOT_APPLICABLE": 6,
       "PARTIAL": 0,
       "FAILED": 0
     }
@@ -824,6 +1052,34 @@
       "label": "Framework-aware authorization",
       "status": "NOT RUN",
       "detail": "No scanner run was recorded for this capability."
+    },
+    {
+      "id": "next-security",
+      "label": "Next.js application security",
+      "status": "NOT RUN",
+      "detail": "No scanner run was recorded for this capability."
+    },
+    {
+      "id": "react-security",
+      "label": "React client security",
+      "status": "NOT RUN",
+      "detail": "No scanner run was recorded for this capability."
+    },
+    {
+      "id": "dependency-cruiser",
+      "label": "JavaScript/TypeScript dependency structure",
+      "status": "COMPLETE",
+      "detail": "7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.",
+      "findings": 0,
+      "version": "18.2.0"
+    },
+    {
+      "id": "jscpd",
+      "label": "JavaScript/TypeScript code duplication",
+      "status": "COMPLETE",
+      "detail": "0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.",
+      "findings": 0,
+      "version": "5.2.0"
     },
     {
       "id": "builtin",
@@ -895,7 +1151,8 @@
   ],
   "limitations": [
     "This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.",
-    "No model, external scanner, or runtime exploit test was executed.",
+    "No model, optional external security scanner, or runtime exploit test was executed.",
+    "Bundled dependency and duplication analysis ran against an isolated inert snapshot; its output is maintainability evidence, not a vulnerability verdict.",
     "All findings are review candidates; there are no automatically confirmed vulnerabilities.",
     "Regex heuristics can match comments and miss indirect flows. This is not a security certification."
   ],
