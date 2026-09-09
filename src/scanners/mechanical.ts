@@ -53,7 +53,9 @@ function sourceFiles(snapshot: Snapshot): SourceFile[] {
 }
 
 function isSupportedSource(file: SourceFile): boolean {
-  return isRuntimeSource(file) && sourceExtension.test(file.path) && !file.path.endsWith('.d.ts');
+  return (
+    isRuntimeSource(file) && sourceExtension.test(file.path) && !/\.d\.[cm]?ts$/i.test(file.path)
+  );
 }
 
 function locateSource(snapshot: Snapshot, reportedPath: unknown, stagingRoot?: string) {
@@ -64,10 +66,7 @@ function locateSource(snapshot: Snapshot, reportedPath: unknown, stagingRoot?: s
         ? path.relative(stagingRoot, reportedPath)
         : reportedPath.replace(/^\.\//, '');
     const normalized = safeRelative(relative);
-    return snapshot.files.find(
-      (file) =>
-        file.path === normalized && isRuntimeSource(file) && sourceExtension.test(file.path),
-    );
+    return snapshot.files.find((file) => file.path === normalized && isSupportedSource(file));
   } catch {
     return undefined;
   }
@@ -414,7 +413,7 @@ export async function scanDuplication(
         '--format',
         'javascript,jsx,typescript,tsx',
         '--ignore',
-        '**/*.d.ts,**/*.min.js,**/*.generated.*,**/node_modules/**',
+        '**/*.d.ts,**/*.d.cts,**/*.d.mts,**/*.min.js,**/*.generated.*,**/node_modules/**',
         '--workers',
         '2',
         '.',

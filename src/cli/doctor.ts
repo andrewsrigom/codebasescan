@@ -97,10 +97,15 @@ async function scannerCheck(
       detail: `${version}; ${enabled ? 'enabled' : 'installed but disabled'}. ${compatibility.detail}`,
     };
   } catch {
+    const bundled = binary === 'depcruise' || binary === 'jscpd';
     return {
       name,
       status: enabled ? 'fail' : 'warn',
-      detail: enabled ? 'Enabled but unavailable on PATH.' : 'Optional binary not found; disabled.',
+      detail: enabled
+        ? bundled
+          ? 'Bundled scanner is unavailable.'
+          : 'Enabled but unavailable on PATH.'
+        : 'Optional binary not found; disabled.',
     };
   }
 }
