@@ -175,6 +175,16 @@ function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
 
   if (ts.isPropertyAccessExpression(value.expression)) {
     const method = value.expression.name.text;
+    const [pattern, replacement] = value.arguments;
+    if (
+      method === 'replace' &&
+      pattern &&
+      replacement &&
+      ['/[^a-z0-9-]/g', '/[^a-z0-9_-]/g'].includes(pattern.getText()) &&
+      ts.isStringLiteralLike(replacement) &&
+      replacement.text === ''
+    )
+      return false;
     if (
       /^(?:get|json|formData|text|arrayBuffer|toString|toLowerCase|toUpperCase|trim|slice|substring|substr|replace|replaceAll|concat)$/i.test(
         method,

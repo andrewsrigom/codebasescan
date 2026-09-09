@@ -139,6 +139,25 @@ test('request data passed into an external client does not taint its response', 
   assert.ok(!ids.includes('TW-AST006'));
 });
 
+test('strict host-label allowlisting avoids an open-redirect candidate', () => {
+  const safeIds = astRuleIds(`
+    export async function POST(prevState: unknown, formData: FormData) {
+      const subdomain = formData.get('subdomain') as string;
+      const safeSubdomain = subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      return redirect(\`https://${'${safeSubdomain}'}.example.test\`);
+    }
+  `);
+  assert.ok(!safeIds.includes('TW-AST006'));
+
+  const unsafeIds = astRuleIds(`
+    export async function POST(prevState: unknown, formData: FormData) {
+      const destination = (formData.get('next') as string).replace(/\\s/g, '');
+      return redirect(destination);
+    }
+  `);
+  assert.ok(unsafeIds.includes('TW-AST006'));
+});
+
 test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
   assert.ok(
     astRuleIds(
