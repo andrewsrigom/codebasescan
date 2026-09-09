@@ -27,6 +27,10 @@ test(
       const agent = new https.Agent({ rejectUnauthorized: false });
       users.find({ $where: code });
       response.json({ message: 'failed', stack: error.stack });
+      response.logger.info({ token });
+      response.serializer.unserialize(code);
+      const callback = new URL('https://example.test/callback');
+      callback.searchParams.set('access_token', token);
       return agent;
     }
 
@@ -50,6 +54,9 @@ test(
       'traceward.disabled-tls-verification',
       'traceward.mongodb-where-review',
       'traceward.error-stack-response',
+      'traceward.sensitive-log-field',
+      'traceward.unsafe-deserialization-review',
+      'traceward.token-in-url',
     ])
       assert.ok(rules.has(rule), `${rule} was not reported: ${JSON.stringify(result)}`);
     assert.equal(

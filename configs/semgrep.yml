@@ -84,3 +84,42 @@ rules:
       category: configuration
       cwe: [CWE-209]
       remediation: Return a stable public error shape and keep stack traces only in protected server-side diagnostics.
+  - id: traceward.sensitive-log-field
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: A sensitive-shaped value is included in structured application logging.
+    pattern-either:
+      - pattern: |
+          $LOGGER.$METHOD({ ..., token: $VALUE, ... })
+      - pattern: |
+          $LOGGER.$METHOD({ ..., password: $VALUE, ... })
+      - pattern: |
+          $LOGGER.$METHOD({ ..., authorization: $VALUE, ... })
+      - pattern: |
+          $LOGGER.$METHOD({ ..., cookie: $VALUE, ... })
+    metadata:
+      category: secrets
+      cwe: [CWE-532]
+      remediation: Log stable identifiers and event metadata instead of credentials, session material, or personal data.
+  - id: traceward.unsafe-deserialization-review
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: An unserialize API needs strict input provenance review.
+    pattern: $SERIALIZER.unserialize(...)
+    metadata:
+      category: injection
+      cwe: [CWE-502]
+      remediation: Do not deserialize untrusted object graphs; use a schema-validated data format with explicit allowed fields.
+  - id: traceward.token-in-url
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: A credential-shaped value is placed in a URL query parameter.
+    pattern-either:
+      - pattern: $URL.searchParams.set('token', $VALUE)
+      - pattern: $URL.searchParams.set('access_token', $VALUE)
+      - pattern: $URL.searchParams.set('api_key', $VALUE)
+      - pattern: $URL.searchParams.set('password', $VALUE)
+    metadata:
+      category: secrets
+      cwe: [CWE-598]
+      remediation: Send credentials in an appropriate protected header or request body and keep them out of URLs and logs.
