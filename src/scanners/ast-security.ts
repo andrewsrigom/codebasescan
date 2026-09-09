@@ -270,6 +270,27 @@ function callsIn(node: ts.FunctionLikeDeclarationBase): ts.CallExpression[] {
   return calls.sort((left, right) => left.getStart() - right.getStart());
 }
 
+function requestBodyAccess(
+  node: ts.FunctionLikeDeclarationBase,
+  tainted: Set<string>,
+): ts.PropertyAccessExpression | undefined {
+  let found: ts.PropertyAccessExpression | undefined;
+  const visit = (child: ts.Node): void => {
+    if (found || (child !== node && isExecutableFunction(child))) return;
+    if (
+      ts.isPropertyAccessExpression(child) &&
+      child.name.text === 'body' &&
+      isTainted(child.expression, tainted)
+    ) {
+      found = child;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  if (node.body) visit(node.body);
+  return found;
+}
+
 function propertyValue(
   object: ts.ObjectLiteralExpression,
   name: string,
@@ -571,15 +592,16 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
         }
 
         const uploadSink = calls.find((call) =>
-          /(?:writeFile|createWriteStream|\.upload|\.put)$/i.test(callName(call)),
+          /(?:^|\.)(?:writeFile|createWriteStream|upload|put)$/i.test(callName(call)),
         );
         const multipart = calls.find((call) => /\.formData$/i.test(callName(call)));
+        const streamedBody = requestBodyAccess(node, tainted);
         const uploadGuard = calls.some((call) =>
           /(?:validateUpload|assertFile|checkFile|safeFilename|sanitizePath|basename|mime|fileSize)/i.test(
             callName(call),
           ),
         );
-        if (multipart && uploadSink && !uploadGuard) {
+        if ((multipart || streamedBody) && uploadSink && !uploadGuard) {
           const candidate = directFinding({
             snapshot,
             file: file.path,
@@ -590,7 +612,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
             category: 'configuration',
             severity: 'high',
             description:
-              'A mapped handler reads multipart form data and reaches a file or upload sink without a recognized size, type, or path validation call in the same function.',
+              'A mapped handler reads multipart or direct request-body data and reaches a file or upload sink without a recognized size, type, or path validation call in the same function.',
             remediation:
               'Enforce byte, MIME/content, extension, count, and server-owned path limits before storage. Use generated filenames and add oversized, polyglot, and traversal tests.',
             cwe: ['CWE-434', 'CWE-22'],

@@ -343,6 +343,15 @@ test('AST identifies webhook ordering, upload constraints, and cookie attributes
   assert.ok(
     astRuleIds(`
       export async function POST(request: Request) {
+        const file = request.body;
+        const name = request.headers.get('x-filename');
+        return put(name, file, { access: 'public' });
+      }
+    `).includes('TW-AST007'),
+  );
+  assert.ok(
+    astRuleIds(`
+      export async function POST(request: Request) {
         cookies().set('session', request.headers.get('token'));
         return Response.json({ ok: true });
       }
@@ -377,6 +386,16 @@ test('safe webhook bytes, validated upload, and complete cookies avoid gap candi
   `);
   assert.ok(!hardenedIds.includes('TW-AST007'));
   assert.ok(!hardenedIds.includes('TW-AST009'));
+
+  const streamedIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const file = request.body;
+      const name = request.headers.get('x-filename');
+      validateUpload(file, name, { fileSize: 1_000_000, mime: ['image/png'] });
+      return put('generated-name', file);
+    }
+  `);
+  assert.ok(!streamedIds.includes('TW-AST007'));
 });
 
 test('webhook management APIs and response serialization are not inbound webhook parsing', () => {
