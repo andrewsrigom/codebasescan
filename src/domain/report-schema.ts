@@ -218,6 +218,18 @@ const checklist = z.looseObject({
         evidence: z.array(z.looseObject({ kind: shortText, id: shortText })).max(10_000),
         verification: shortText,
         limitations: z.array(shortText).max(1_000),
+        review: z
+          .object({
+            decision: z.enum([
+              'verified_external',
+              'accepted_gap',
+              'not_applicable',
+              'needs_follow_up',
+            ]),
+            note: shortText,
+            at: shortText,
+          })
+          .optional(),
       }),
     )
     .max(1_000),

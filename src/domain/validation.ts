@@ -1,4 +1,4 @@
-import type { AuditOptions, ReviewDecision } from './types.ts';
+import type { AuditOptions, ControlReviewDecision, ReviewDecision } from './types.ts';
 import { redact } from '../security/redact.ts';
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -31,6 +31,25 @@ export function reviewDecision(value: unknown): ReviewDecision {
   if (note.length < 12)
     throw new Error('Explain the decision and supporting evidence in at least 12 characters.');
   return { findingId, disposition, note };
+}
+
+export function controlReviewDecision(value: unknown): ControlReviewDecision {
+  const input = record(value);
+  const controlId = text(input.controlId, 'control', 100);
+  const decision = input.decision;
+  if (
+    decision !== 'verified_external' &&
+    decision !== 'accepted_gap' &&
+    decision !== 'not_applicable' &&
+    decision !== 'needs_follow_up'
+  )
+    throw new Error('Invalid control review decision.');
+  const note = redact(text(input.note, 'control review note'));
+  if (note.length < 12)
+    throw new Error(
+      'Explain the control decision and supporting evidence in at least 12 characters.',
+    );
+  return { controlId, decision, note };
 }
 
 export function auditOptions(value: unknown): AuditOptions {

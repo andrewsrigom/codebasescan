@@ -386,6 +386,7 @@ export function buildAuditGraph(options: {
       const report: AuditReport = {
         ...state.report,
         findings: latest?.findings ?? state.report.findings,
+        checklist: latest?.checklist ?? state.report.checklist,
         publication: 'reviewed',
         reviewNote: state.reviewNote,
       };

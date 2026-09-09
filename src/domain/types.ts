@@ -308,6 +308,8 @@ export interface SecurityControlEvidenceRef {
   kind: 'finding' | 'profile-fact' | 'scanner' | 'http-observation';
   id: string;
 }
+export type SecurityControlReviewDecision =
+  'verified_external' | 'accepted_gap' | 'not_applicable' | 'needs_follow_up';
 export interface SecurityControlResult {
   id: string;
   domain: SecurityControlDomain;
@@ -318,6 +320,11 @@ export interface SecurityControlResult {
   evidence: SecurityControlEvidenceRef[];
   verification: string;
   limitations: string[];
+  review?: {
+    decision: SecurityControlReviewDecision;
+    note: string;
+    at: string;
+  };
 }
 export interface SecurityChecklist {
   schemaVersion: 1;
@@ -379,6 +386,11 @@ export interface Audit {
 export interface ReviewDecision {
   findingId: string;
   disposition: Disposition;
+  note: string;
+}
+export interface ControlReviewDecision {
+  controlId: string;
+  decision: SecurityControlReviewDecision;
   note: string;
 }
 export interface FindingReference {

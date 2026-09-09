@@ -48,6 +48,11 @@ test('Markdown includes scope and limitations', () => {
     scanners: report.scanners,
     dependencies: report.dependencies,
   });
+  report.checklist.controls[0]!.review = {
+    decision: 'verified_external',
+    note: 'Gateway enforcement was inspected in the authorized environment.',
+    at: '2026-09-09T12:00:00.000Z',
+  };
   report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
@@ -55,6 +60,8 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
   assert.ok(output.includes('## Security checklist'));
+  assert.ok(output.includes('Human assessment: verified external'));
+  assert.ok(toHtml(report).includes('Human assessment: verified external'));
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });

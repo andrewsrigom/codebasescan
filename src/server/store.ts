@@ -8,6 +8,7 @@ import type {
   AuditEvent,
   AuditReport,
   AuditStatus,
+  ControlReviewDecision,
   Project,
   ReviewDecision,
 } from '../domain/types.ts';
@@ -267,6 +268,39 @@ export class AuditStore {
       `review:${decision.findingId}:${randomUUID()}`,
       'human_review',
       `An analyst changed finding ${decision.findingId} to ${decision.disposition}.`,
+    );
+  }
+  reviewControl(id: string, decision: ControlReviewDecision): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const audit = this.audit(id);
+      if (!['awaiting_review', 'completed'].includes(audit.status) || !audit.report?.checklist)
+        throw new Error('Controls can be reviewed only after a checklist is available.');
+      const control = audit.report.checklist.controls.find(
+        (item) => item.id === decision.controlId,
+      );
+      if (!control) throw new Error('Control not found.');
+      control.review = { decision: decision.decision, note: redact(decision.note), at: now() };
+      const serialized = JSON.stringify(parseAuditReport(audit.report));
+      const timestamp = now();
+      this.db
+        .prepare('UPDATE audits SET report_json = ?, updated_at = ? WHERE id = ?')
+        .run(serialized, timestamp, id);
+      this.db
+        .prepare(
+          'INSERT INTO report_revisions(audit_id, source, report_json, created_at) VALUES (?, ?, ?, ?)',
+        )
+        .run(id, 'human-review', serialized, timestamp);
+      this.db.exec('COMMIT');
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+    this.event(
+      id,
+      `control-review:${decision.controlId}:${randomUUID()}`,
+      'human_review',
+      `An analyst assessed control ${decision.controlId} as ${decision.decision}.`,
     );
   }
   cancel(id: string): void {

@@ -1,6 +1,12 @@
 import { store } from '../../../../server/context.ts';
 import { boundedJson, localRequestError } from '../../../../security/local-http.ts';
-import { record, reviewDecision, text, uuid } from '../../../../domain/validation.ts';
+import {
+  controlReviewDecision,
+  record,
+  reviewDecision,
+  text,
+  uuid,
+} from '../../../../domain/validation.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Context = {
@@ -39,6 +45,8 @@ export async function POST(request: Request, context: Context) {
       database.publish(id, note);
     } else if (input.action === 'cancel') database.cancel(id);
     else if (input.action === 'review') database.reviewFinding(id, reviewDecision(input));
+    else if (input.action === 'review-control')
+      database.reviewControl(id, controlReviewDecision(input));
     else throw new Error('Unsupported audit action.');
     return Response.json({ ok: true });
   } catch (cause) {

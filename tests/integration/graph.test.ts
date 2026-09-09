@@ -60,6 +60,15 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   assert.equal(store.audit(audit.id).report?.scanners.length, 8);
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
   assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');
+  const reviewedControl = store.audit(audit.id).report?.checklist?.controls[0];
+  assert.ok(reviewedControl);
+  store.transition(audit.id, 'awaiting_review');
+  store.reviewControl(audit.id, {
+    controlId: reviewedControl.id,
+    decision: 'needs_follow_up',
+    note: 'Runtime enforcement remains outside this source-only fixture.',
+  });
+  store.transition(audit.id, 'running');
   const resumed = await graph.invoke(
     new Command({
       resume: {
@@ -73,6 +82,10 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   );
   assert.equal(graph.isInterrupted(resumed), false);
   assert.equal(store.audit(audit.id).report?.publication, 'reviewed');
+  assert.equal(
+    store.audit(audit.id).report?.checklist?.controls[0]?.review?.decision,
+    'needs_follow_up',
+  );
   assert.ok(
     store
       .audit(audit.id)

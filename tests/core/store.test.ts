@@ -86,6 +86,50 @@ test('human review preserves findings instead of deleting them', (context) => {
   assert.equal(revisions[1]?.source, 'human-review');
   assert.equal(revisions[1]?.report.findings[0]?.disposition, 'false_positive');
 });
+test('human control review is appended without changing deterministic checklist state', (context) => {
+  const { store, project } = setup();
+  context.after(() => store.close());
+  const audit = store.enqueue(project.id);
+  store.claim();
+  const report = sampleReport();
+  report.checklist = {
+    schemaVersion: 1,
+    packId: 'traceward-web-application',
+    packVersion: 'fixture',
+    controls: [
+      {
+        id: 'TW-CTRL-AUTHN-001',
+        domain: 'authentication',
+        title: 'Authentication control',
+        status: 'UNVERIFIED',
+        rationale: 'Runtime gateway evidence is outside the snapshot.',
+        applicability: 'Applies to sensitive routes.',
+        evidence: [],
+        verification: 'Inspect and test the gateway policy.',
+        limitations: [],
+      },
+    ],
+    summary: {
+      EVIDENCED: 0,
+      GAP_CANDIDATE: 0,
+      UNVERIFIED: 1,
+      NOT_APPLICABLE: 0,
+      PARTIAL: 0,
+      FAILED: 0,
+    },
+  };
+  store.saveProgress(audit.id, report);
+  store.transition(audit.id, 'awaiting_review');
+  store.reviewControl(audit.id, {
+    controlId: 'TW-CTRL-AUTHN-001',
+    decision: 'verified_external',
+    note: 'Gateway policy was inspected and exercised with an unauthorized request.',
+  });
+  const control = store.audit(audit.id).report?.checklist?.controls[0];
+  assert.equal(control?.status, 'UNVERIFIED');
+  assert.equal(control?.review?.decision, 'verified_external');
+  assert.equal(store.reportRevisions(audit.id).at(-1)?.source, 'human-review');
+});
 test('invalid reports fail validation on write and read', (context) => {
   const { store, project } = setup();
   context.after(() => store.close());

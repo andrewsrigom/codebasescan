@@ -1,4 +1,4 @@
-import type { AuditReport, Finding } from './types.ts';
+import type { AuditReport, Finding, SecurityControlReviewDecision } from './types.ts';
 
 export interface EvaluationSummary {
   schemaVersion: 1;
@@ -13,6 +13,8 @@ export interface EvaluationSummary {
   unresolvedFindings: number;
   modelInvestigations: number;
   modelInconclusive: number;
+  reviewedControls: number;
+  controlReviews: Record<SecurityControlReviewDecision, number>;
   approximateAiCostUsd?: number;
   approximateAiCostPerConfirmedFindingUsd?: number;
   internalCandidates: number;
@@ -36,6 +38,7 @@ function countDisposition(findings: Finding[], disposition: Finding['disposition
 export function evaluateReports(reports: AuditReport[]): EvaluationSummary {
   if (!reports.length) throw new Error('At least one audit report is required for evaluation.');
   const findings = reports.flatMap((report) => report.findings);
+  const controls = reports.flatMap((report) => report.checklist?.controls ?? []);
   const confirmedFindings = countDisposition(findings, 'confirmed');
   const approximateAiCostUsd = reports.reduce(
     (sum, report) => sum + (report.aiUsage?.approximateCostUsd ?? 0),
@@ -48,6 +51,13 @@ export function evaluateReports(reports: AuditReport[]): EvaluationSummary {
       coverage[`${capability.id}:${capability.status}`] =
         (coverage[`${capability.id}:${capability.status}`] ?? 0) + 1;
   const externalSources = new Set<FindingsSource>(['semgrep', 'gitleaks', 'osv']);
+  const controlReviews: Record<SecurityControlReviewDecision, number> = {
+    verified_external: 0,
+    accepted_gap: 0,
+    not_applicable: 0,
+    needs_follow_up: 0,
+  };
+  for (const control of controls) if (control.review) controlReviews[control.review.decision]++;
   return {
     schemaVersion: 1,
     reports: reports.length,
@@ -63,6 +73,8 @@ export function evaluateReports(reports: AuditReport[]): EvaluationSummary {
     modelInconclusive: findings.filter(
       (finding) => finding.analysis?.provider && finding.analysis.assessment === 'inconclusive',
     ).length,
+    reviewedControls: Object.values(controlReviews).reduce((sum, count) => sum + count, 0),
+    controlReviews,
     ...(approximateAiCostUsd > 0 ? { approximateAiCostUsd } : {}),
     ...(approximateAiCostUsd > 0 && confirmedFindings > 0
       ? { approximateAiCostPerConfirmedFindingUsd: approximateAiCostUsd / confirmedFindings }

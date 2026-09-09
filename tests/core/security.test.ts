@@ -13,7 +13,12 @@ import {
 } from '../../src/security/paths.ts';
 import { redact } from '../../src/security/redact.ts';
 import { boundedJson, localRequestError } from '../../src/security/local-http.ts';
-import { auditOptions, reviewDecision, uuid } from '../../src/domain/validation.ts';
+import {
+  auditOptions,
+  controlReviewDecision,
+  reviewDecision,
+  uuid,
+} from '../../src/domain/validation.ts';
 import { createContextBroker } from '../../src/engine/context-broker.ts';
 import { scanPatterns } from '../../src/scanners/builtin.ts';
 import { snapshotOf } from '../helpers.ts';
@@ -127,6 +132,30 @@ test('human decisions require an explanation and valid disposition', () => {
     'needs_review',
   );
   assert.throws(() => uuid('../../etc/passwd'));
+});
+test('control reviews require a known decision and meaningful rationale', () => {
+  assert.throws(() =>
+    controlReviewDecision({
+      controlId: 'TW-CTRL-AUTHN-001',
+      decision: 'safe',
+      note: 'Enough context here.',
+    }),
+  );
+  assert.throws(() =>
+    controlReviewDecision({
+      controlId: 'TW-CTRL-AUTHN-001',
+      decision: 'verified_external',
+      note: 'short',
+    }),
+  );
+  assert.equal(
+    controlReviewDecision({
+      controlId: 'TW-CTRL-AUTHN-001',
+      decision: 'verified_external',
+      note: 'Gateway policy was inspected and tested.',
+    }).decision,
+    'verified_external',
+  );
 });
 test('HTTP probe options require explicit approval', () => {
   assert.throws(
