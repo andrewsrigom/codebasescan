@@ -103,6 +103,10 @@ export function FindingDetails({
           <section>
             <h3 className="section-label">Advisory metadata</h3>
             <div className="detail-row">
+              <span>Advisory</span>
+              <strong className="mono">{finding.vulnerability.id}</strong>
+            </div>
+            <div className="detail-row">
               <span>Package</span>
               <strong className="mono">
                 {finding.vulnerability.package}@{finding.vulnerability.version}
@@ -119,11 +123,25 @@ export function FindingDetails({
               </span>
             </div>
             <div className="detail-row">
+              <span>Severity data</span>
+              <span className="mono small">
+                {finding.vulnerability.severity
+                  .map((item) => `${item.type}: ${item.score}`)
+                  .join(', ') || 'Not supplied'}
+              </span>
+            </div>
+            <div className="detail-row">
               <span>Known fixed versions</span>
               <span className="mono small">
                 {finding.vulnerability.fixedVersions.join(', ') || 'Not listed'}
               </span>
             </div>
+            {finding.vulnerability.advisoryModified && (
+              <div className="detail-row">
+                <span>Advisory modified</span>
+                <span className="mono small">{finding.vulnerability.advisoryModified}</span>
+              </div>
+            )}
           </section>
         )}
         {finding.analysis && (

@@ -279,6 +279,68 @@ function cacheKey(dependency: Dependency): string {
   return `npm:${dependency.name}@${dependency.resolvedVersion}`;
 }
 
+function roundUpTenth(value: number): number {
+  return Math.ceil((value - 1e-10) * 10) / 10;
+}
+
+export function cvssV3BaseScore(vector: string): number | null {
+  if (!/^CVSS:3\.[01]\//.test(vector)) return null;
+  const metrics = new Map(
+    vector
+      .split('/')
+      .slice(1)
+      .map((part) => part.split(':', 2) as [string, string]),
+  );
+  const scope = metrics.get('S');
+  const values = {
+    AV: { N: 0.85, A: 0.62, L: 0.55, P: 0.2 },
+    AC: { L: 0.77, H: 0.44 },
+    UI: { N: 0.85, R: 0.62 },
+    CIA: { N: 0, L: 0.22, H: 0.56 },
+  } as const;
+  const av = values.AV[metrics.get('AV') as keyof typeof values.AV];
+  const ac = values.AC[metrics.get('AC') as keyof typeof values.AC];
+  const ui = values.UI[metrics.get('UI') as keyof typeof values.UI];
+  const confidentiality = values.CIA[metrics.get('C') as keyof typeof values.CIA];
+  const integrity = values.CIA[metrics.get('I') as keyof typeof values.CIA];
+  const availability = values.CIA[metrics.get('A') as keyof typeof values.CIA];
+  const privileges =
+    scope === 'C'
+      ? { N: 0.85, L: 0.68, H: 0.5 }[metrics.get('PR') ?? '']
+      : scope === 'U'
+        ? { N: 0.85, L: 0.62, H: 0.27 }[metrics.get('PR') ?? '']
+        : undefined;
+  if (
+    [av, ac, ui, confidentiality, integrity, availability, privileges].some(
+      (value) => typeof value !== 'number',
+    )
+  )
+    return null;
+  const impactSubscore = 1 - (1 - confidentiality!) * (1 - integrity!) * (1 - availability!);
+  const impact =
+    scope === 'U'
+      ? 6.42 * impactSubscore
+      : 7.52 * (impactSubscore - 0.029) - 3.25 * (impactSubscore - 0.02) ** 15;
+  if (impact <= 0) return 0;
+  const exploitability = 8.22 * av! * ac! * privileges! * ui!;
+  return roundUpTenth(
+    Math.min(scope === 'C' ? 1.08 * (impact + exploitability) : impact + exploitability, 10),
+  );
+}
+
+function scoreSeverity(score: number): Severity {
+  if (score >= 9) return 'critical';
+  if (score >= 7) return 'high';
+  if (score >= 4) return 'medium';
+  if (score > 0) return 'low';
+  return 'info';
+}
+
+export function cvssV3Severity(vector: string): Severity | null {
+  const score = cvssV3BaseScore(vector);
+  return score === null ? null : scoreSeverity(score);
+}
+
 function severity(record: CompactRecord, packageName: string): Severity {
   const packageSeverity = record.packages.find(
     (item) => item.name === packageName,
@@ -286,7 +348,18 @@ function severity(record: CompactRecord, packageName: string): Severity {
   const label = (packageSeverity ?? record.databaseSeverity ?? '').toUpperCase();
   if (label.includes('CRITICAL')) return 'critical';
   if (label.includes('HIGH')) return 'high';
+  if (label.includes('MODERATE') || label.includes('MEDIUM')) return 'medium';
   if (label.includes('LOW')) return 'low';
+  if (label.includes('NONE')) return 'info';
+  const scores = record.severity
+    .map((item) => {
+      const numeric = Number(item.score);
+      return Number.isFinite(numeric) && numeric >= 0 && numeric <= 10
+        ? numeric
+        : cvssV3BaseScore(item.score);
+    })
+    .filter((value): value is number => value !== null);
+  if (scores.length) return scoreSeverity(Math.max(...scores));
   return 'medium';
 }
 

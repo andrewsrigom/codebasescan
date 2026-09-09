@@ -5,7 +5,7 @@ import path from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { digest } from '../../src/domain/findings.ts';
 import { resolvedInventory } from '../../src/scanners/inventory.ts';
-import { scanOsv } from '../../src/scanners/osv.ts';
+import { cvssV3BaseScore, cvssV3Severity, scanOsv } from '../../src/scanners/osv.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import type { Snapshot } from '../../src/domain/types.ts';
 
@@ -77,6 +77,14 @@ test('pnpm and Yarn lockfiles produce resolved package inventory', () => {
     }),
   );
   assert.equal(berry.dependencies.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
+});
+
+test('CVSS v3 vectors are scored without understating critical advisories', () => {
+  assert.equal(cvssV3BaseScore('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'), 9.8);
+  assert.equal(cvssV3Severity('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'), 'critical');
+  assert.equal(cvssV3BaseScore('CVSS:3.1/AV:L/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:L'), 4.2);
+  assert.equal(cvssV3BaseScore('CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N'), null);
+  assert.equal(cvssV3BaseScore('not-a-vector'), null);
 });
 
 test('OSV normalizes aliases, fixed versions, and provenance without exploitability claims', async (context) => {
