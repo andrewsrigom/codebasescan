@@ -14,7 +14,15 @@ test('Semgrep normalization preserves source severity without inventing CVSS', (
           check_id: 'example.rule',
           path: 'src/example.ts',
           start: { line: 1 },
-          extra: { severity: 'ERROR', message: 'Review this sink.' },
+          extra: {
+            severity: 'ERROR',
+            message: 'Review this sink.',
+            metadata: {
+              category: 'authentication',
+              cwe: ['CWE-347', 'not-a-cwe'],
+              remediation: 'Verify the signed token before trusting claims.',
+            },
+          },
         },
       ],
     },
@@ -24,6 +32,25 @@ test('Semgrep normalization preserves source severity without inventing CVSS', (
   assert.equal(findings[0]?.severity, 'high');
   assert.equal(findings[0]?.disposition, 'needs_review');
   assert.equal(findings[0]?.analysis, undefined);
+  assert.equal(findings[0]?.category, 'authentication');
+  assert.deepEqual(findings[0]?.cwe, ['CWE-347']);
+  assert.equal(findings[0]?.remediation, 'Verify the signed token before trusting claims.');
+});
+test('Traceward Semgrep rule IDs stay stable when Semgrep prefixes the config path', () => {
+  const findings = normalizeSemgrep(
+    {
+      results: [
+        {
+          check_id: 'home.user.traceward.configs.traceward.jwt-ignore-expiration',
+          path: 'src/example.ts',
+          start: { line: 1 },
+          extra: { severity: 'ERROR', message: 'Review this sink.' },
+        },
+      ],
+    },
+    snapshotOf('jwt.verify(token, key, { ignoreExpiration: true });'),
+  );
+  assert.equal(findings[0]?.ruleId, 'traceward.jwt-ignore-expiration');
 });
 test('scanner paths cannot escape the snapshot', () => {
   const result = normalizeSemgrep(

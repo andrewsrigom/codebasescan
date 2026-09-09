@@ -4,8 +4,83 @@ rules:
     severity: WARNING
     message: Raw SQL execution needs input and parameterization review.
     pattern: $DB.$queryRawUnsafe(...)
+    metadata:
+      category: injection
+      cwe: [CWE-89]
+      remediation: Prefer parameterized database APIs and trace every value reaching this call.
   - id: traceward.dynamic-code-review
     languages: [typescript, javascript]
     severity: WARNING
     message: Dynamic code execution needs a trust-boundary review.
     pattern: eval(...)
+    metadata:
+      category: code
+      cwe: [CWE-95]
+      remediation: Replace dynamic evaluation with explicit operations or enforce a documented trusted input boundary.
+  - id: traceward.jwt-decode-review
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: JWT decoding does not verify authenticity; confirm a verified token is used for security decisions.
+    pattern: $JWT.decode(...)
+    metadata:
+      category: authentication
+      cwe: [CWE-347]
+      remediation: Verify the token signature, issuer, audience, algorithm, and expiration before using claims for security decisions.
+  - id: traceward.jwt-ignore-expiration
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: JWT verification explicitly ignores token expiration.
+    pattern: |
+      $JWT.verify($TOKEN, $KEY, { ..., ignoreExpiration: true, ... })
+    metadata:
+      category: authentication
+      cwe: [CWE-613]
+      remediation: Enforce token expiration and use an explicit refresh or reauthentication flow.
+  - id: traceward.node-vm-execution
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: Node VM code execution needs an explicit trust-boundary review.
+    pattern-either:
+      - pattern: $VM.runInNewContext(...)
+      - pattern: $VM.runInThisContext(...)
+      - pattern: $VM.compileFunction(...)
+    metadata:
+      category: code
+      cwe: [CWE-95]
+      remediation: Do not execute caller-controlled code; replace it with a fixed operation allowlist.
+  - id: traceward.disabled-tls-verification
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: TLS certificate verification is explicitly disabled.
+    pattern: |
+      new $AGENT({ ..., rejectUnauthorized: false, ... })
+    metadata:
+      category: configuration
+      cwe: [CWE-295]
+      remediation: Keep certificate verification enabled and install the expected trust chain instead of bypassing validation.
+  - id: traceward.mongodb-where-review
+    languages: [typescript, javascript]
+    severity: ERROR
+    message: MongoDB $where executes JavaScript and needs input tracing.
+    pattern-either:
+      - pattern: |
+          $COLLECTION.find({ ..., $where: $CODE, ... })
+      - pattern: |
+          $COLLECTION.findOne({ ..., $where: $CODE, ... })
+    metadata:
+      category: injection
+      cwe: [CWE-95]
+      remediation: Replace $where with declarative MongoDB query operators and validate caller-controlled filter values.
+  - id: traceward.error-stack-response
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: An internal error stack is included in an HTTP response.
+    pattern-either:
+      - pattern: |
+          $RESPONSE.json({ ..., stack: $ERROR.stack, ... })
+      - pattern: |
+          $RESPONSE.send({ ..., stack: $ERROR.stack, ... })
+    metadata:
+      category: configuration
+      cwe: [CWE-209]
+      remediation: Return a stable public error shape and keep stack traces only in protected server-side diagnostics.

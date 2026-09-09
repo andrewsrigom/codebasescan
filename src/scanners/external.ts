@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { lstat, mkdtemp, mkdir, readFile, readdir, rm, stat, unlink } from 'node:fs/promises';
-import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
+import type { Category, Finding, ScannerRun, Snapshot } from '../domain/types.ts';
 import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { record } from '../domain/validation.ts';
 import { isRuntimeSource, safeRelative } from '../security/paths.ts';
@@ -59,6 +59,35 @@ export async function cleanupStaleScannerStaging(temporaryDirectory: string): Pr
 }
 function safeString(input: unknown, fallback: string): string {
   return typeof input === 'string' ? redact(input).slice(0, 2000) : fallback;
+}
+
+function semgrepRuleId(input: unknown): string {
+  const value = safeString(input, 'semgrep.unknown');
+  const tracewardRule = value.lastIndexOf('traceward.');
+  return tracewardRule >= 0 ? value.slice(tracewardRule) : value;
+}
+
+function semgrepCategory(input: unknown): Category {
+  const supported = new Set<Category>([
+    'authentication',
+    'authorization',
+    'injection',
+    'secrets',
+    'configuration',
+    'ai-security',
+    'dependencies',
+    'code',
+  ]);
+  return typeof input === 'string' && supported.has(input as Category)
+    ? (input as Category)
+    : 'code';
+}
+
+function semgrepCwe(input: unknown): string[] {
+  const values = Array.isArray(input) ? input : typeof input === 'string' ? [input] : [];
+  return values.flatMap((value) =>
+    typeof value === 'string' && /^CWE-\d{1,6}$/.test(value) ? [value] : [],
+  );
 }
 function locate(snapshot: Snapshot, scannerPath: unknown, stagingRoot?: string) {
   if (typeof scannerPath !== 'string') return undefined;
@@ -128,6 +157,10 @@ export function normalizeSemgrep(
     if (!file || !isRuntimeSource(file)) continue;
     const start = record(item.start);
     const extra = record(item.extra);
+    const metadata =
+      extra.metadata && typeof extra.metadata === 'object' && !Array.isArray(extra.metadata)
+        ? record(extra.metadata)
+        : {};
     const line = start.line;
     if (
       typeof line !== 'number' ||
@@ -138,7 +171,7 @@ export function normalizeSemgrep(
       continue;
     const severity =
       extra.severity === 'ERROR' ? 'high' : extra.severity === 'WARNING' ? 'medium' : 'info';
-    const ruleId = safeString(item.check_id, 'semgrep.unknown');
+    const ruleId = semgrepRuleId(item.check_id);
     findings.push(
       makeFinding({
         source: 'semgrep',
@@ -146,12 +179,14 @@ export function normalizeSemgrep(
         title: safeString(extra.message, 'Static analysis finding'),
         severity,
         sourceSeverity: safeString(extra.severity, 'UNKNOWN'),
-        category: 'code',
+        category: semgrepCategory(metadata.category),
         description:
           'Semgrep matched a rule against this snapshot. Source severity is preserved; exploitability still requires contextual review.',
-        remediation:
+        remediation: safeString(
+          metadata.remediation,
           'Inspect the complete data flow and verify a fix with a focused regression test.',
-        cwe: [],
+        ),
+        cwe: semgrepCwe(metadata.cwe),
         evidence: [sourceEvidence(file, line, `Semgrep rule: ${ruleId}`)],
       }),
     );
