@@ -160,7 +160,7 @@ fixtures/         inert positive, benign, dependency, and prompt-injection cases
 benchmarks/       category-organized ground truth
 ```
 
-Read [Architecture](docs/ARCHITECTURE.md), [Threat model](docs/THREAT_MODEL.md), [Validation](docs/VALIDATION.md), and [Portfolio plan](docs/PORTFOLIO.md).
+Read [Architecture](docs/ARCHITECTURE.md), [Threat model](docs/THREAT_MODEL.md), [Validation](docs/VALIDATION.md), [Code-first AI plan](docs/CODE_FIRST_AI_PLAN.md), and [Portfolio plan](docs/PORTFOLIO.md).
 
 ## License and publishing
 

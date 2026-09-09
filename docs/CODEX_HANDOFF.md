@@ -26,6 +26,8 @@ Primary environment: WSL2 Ubuntu 24.04.4, Node 24.19.0, npm 11.17.0. Semgrep 1.1
 
 See `docs/VALIDATION.md` for commands and exact counts. Do not repeat scanner installation unless version checks fail.
 
+The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md`.
+
 ## Next work, in priority order
 
 1. Add AST-aware TypeScript analysis for authentication/authorization and middleware composition. Keep regex findings as candidates and add real framework counterexamples.
