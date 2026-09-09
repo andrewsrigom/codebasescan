@@ -1,0 +1,333 @@
+import path from 'node:path';
+import ts from 'typescript';
+import { parseDocument } from 'yaml';
+import type { Snapshot, SourceFile } from '../domain/types.ts';
+import { isRuntimeSource } from '../security/paths.ts';
+
+const maximumPatterns = 200;
+const maximumWorkspaces = 50;
+const workspaceKeys = new Set([
+  'entry',
+  'project',
+  'ignore',
+  'ignoreFiles',
+  'ignoreDependencies',
+  'ignoreBinaries',
+  'ignoreUnresolved',
+  'ignoreIssues',
+  'includeEntryExports',
+  'ignoreExportsUsedInFile',
+]);
+const allowedIssueTypes = new Set([
+  'files',
+  'dependencies',
+  'devDependencies',
+  'unlisted',
+  'exports',
+  'types',
+]);
+const executableKnipConfig = /(?:^|\/)(?:\.knip|knip(?:\.config)?)\.[cm]?[jt]s$/i;
+
+export interface TrustedKnipConfiguration {
+  config: Record<string, unknown>;
+  sources: string[];
+  issues: string[];
+}
+
+export interface TypeScriptPathAlias {
+  configFile: string;
+  pattern: string;
+  targets: string[];
+}
+
+function object(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function parseJsonc(file: SourceFile): Record<string, unknown> | null {
+  const parsed = ts.parseConfigFileTextToJson(file.path, file.content);
+  return parsed.error ? null : object(parsed.config);
+}
+
+function safePathPattern(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value || value.length > 300 || value.includes('\0'))
+    return undefined;
+  const normalized = value.replaceAll('\\', '/');
+  const inspected = normalized.startsWith('!') ? normalized.slice(1) : normalized;
+  if (
+    !inspected ||
+    inspected.startsWith('/') ||
+    /^[a-z]:/i.test(inspected) ||
+    inspected.includes('..')
+  )
+    return undefined;
+  return normalized;
+}
+
+function safePackagePattern(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 214 &&
+    !value.includes('..') &&
+    !value.startsWith('/') &&
+    /^[A-Za-z0-9@._*?/-]+$/.test(value)
+    ? value
+    : undefined;
+}
+
+function rejectedList(value: unknown, sanitize: (item: unknown) => string | undefined): boolean {
+  return (
+    !Array.isArray(value) ||
+    value.length > maximumPatterns ||
+    value.some((item) => sanitize(item) === undefined)
+  );
+}
+
+function workspaceHasRejectedSettings(value: unknown): boolean {
+  const input = object(value);
+  if (!input) return true;
+  if (Object.keys(input).some((key) => !workspaceKeys.has(key))) return true;
+  for (const key of ['entry', 'project', 'ignore', 'ignoreFiles'] as const)
+    if (input[key] !== undefined && rejectedList(input[key], safePathPattern)) return true;
+  for (const key of ['ignoreDependencies', 'ignoreBinaries', 'ignoreUnresolved'] as const)
+    if (input[key] !== undefined && rejectedList(input[key], safePackagePattern)) return true;
+  for (const key of ['includeEntryExports', 'ignoreExportsUsedInFile'] as const)
+    if (input[key] !== undefined && typeof input[key] !== 'boolean') return true;
+  if (input.ignoreIssues !== undefined) {
+    const ignoreIssues = object(input.ignoreIssues);
+    if (!ignoreIssues || Object.keys(ignoreIssues).length > maximumPatterns) return true;
+    for (const [pattern, types] of Object.entries(ignoreIssues))
+      if (
+        !safePathPattern(pattern) ||
+        !Array.isArray(types) ||
+        types.some((item) => typeof item !== 'string' || !allowedIssueTypes.has(item))
+      )
+        return true;
+  }
+  return false;
+}
+
+function knipHasRejectedSettings(value: unknown): boolean {
+  const input = object(value);
+  if (!input) return true;
+  if (
+    Object.keys(input).some(
+      (key) => key !== '$schema' && key !== 'workspaces' && !workspaceKeys.has(key),
+    )
+  )
+    return true;
+  const rootSettings = Object.fromEntries(
+    Object.entries(input).filter(([key]) => workspaceKeys.has(key)),
+  );
+  if (workspaceHasRejectedSettings(rootSettings)) return true;
+  if (input.workspaces === undefined) return false;
+  const workspaces = object(input.workspaces);
+  if (!workspaces || Object.keys(workspaces).length > maximumWorkspaces) return true;
+  return Object.entries(workspaces).some(
+    ([pattern, config]) => !safePathPattern(pattern) || workspaceHasRejectedSettings(config),
+  );
+}
+
+function strings(
+  value: unknown,
+  sanitize: (item: unknown) => string | undefined,
+): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = [
+    ...new Set(value.slice(0, maximumPatterns).map(sanitize).filter(Boolean)),
+  ] as string[];
+  return items.length ? items : undefined;
+}
+
+function sanitizeIgnoreIssues(value: unknown): Record<string, string[]> | undefined {
+  const input = object(value);
+  if (!input) return undefined;
+  const output: Record<string, string[]> = {};
+  for (const [rawPattern, rawTypes] of Object.entries(input).slice(0, maximumPatterns)) {
+    const pattern = safePathPattern(rawPattern);
+    if (!pattern || !Array.isArray(rawTypes)) continue;
+    const types = [
+      ...new Set(
+        rawTypes.filter((item): item is string =>
+          typeof item === 'string' ? allowedIssueTypes.has(item) : false,
+        ),
+      ),
+    ];
+    if (types.length) output[pattern] = types;
+  }
+  return Object.keys(output).length ? output : undefined;
+}
+
+function sanitizeWorkspace(value: unknown): Record<string, unknown> {
+  const input = object(value) ?? {};
+  const output: Record<string, unknown> = {};
+  for (const key of ['entry', 'project', 'ignore', 'ignoreFiles'] as const) {
+    const items = strings(input[key], safePathPattern);
+    if (items) output[key] = items;
+  }
+  for (const key of ['ignoreDependencies', 'ignoreBinaries', 'ignoreUnresolved'] as const) {
+    const items = strings(input[key], safePackagePattern);
+    if (items) output[key] = items;
+  }
+  const ignoreIssues = sanitizeIgnoreIssues(input.ignoreIssues);
+  if (ignoreIssues) output.ignoreIssues = ignoreIssues;
+  if (typeof input.includeEntryExports === 'boolean')
+    output.includeEntryExports = input.includeEntryExports;
+  if (typeof input.ignoreExportsUsedInFile === 'boolean')
+    output.ignoreExportsUsedInFile = input.ignoreExportsUsedInFile;
+  return output;
+}
+
+function sanitizeKnipRoot(value: unknown): Record<string, unknown> {
+  const input = object(value) ?? {};
+  const output = sanitizeWorkspace(input);
+  const rawWorkspaces = object(input.workspaces);
+  if (rawWorkspaces) {
+    const workspaces: Record<string, unknown> = {};
+    for (const [rawPattern, rawConfig] of Object.entries(rawWorkspaces).slice(
+      0,
+      maximumWorkspaces,
+    )) {
+      const pattern = safePathPattern(rawPattern);
+      if (pattern && object(rawConfig)) workspaces[pattern] = sanitizeWorkspace(rawConfig);
+    }
+    if (Object.keys(workspaces).length) output.workspaces = workspaces;
+  }
+  return output;
+}
+
+export function declarativeKnipConfiguration(snapshot: Snapshot): TrustedKnipConfiguration {
+  const sources: string[] = [];
+  const issues: string[] = [];
+  const candidates = ['knip.json', '.knip.json', 'knip.jsonc', '.knip.jsonc'];
+  for (const name of candidates) {
+    const file = snapshot.files.find((item) => item.path === name && isRuntimeSource(item));
+    if (!file) continue;
+    const parsed = parseJsonc(file);
+    if (!parsed) {
+      issues.push(`${name} could not be parsed as declarative JSON.`);
+      return { config: {}, sources, issues };
+    }
+    sources.push(name);
+    if (knipHasRejectedSettings(parsed))
+      issues.push(`${name} contains unsupported or unsafe settings that were ignored.`);
+    return { config: sanitizeKnipRoot(parsed), sources, issues };
+  }
+  const manifest = snapshot.files.find(
+    (item) => item.path === 'package.json' && isRuntimeSource(item),
+  );
+  if (manifest) {
+    const parsed = parseJsonc(manifest);
+    if (parsed?.knip && object(parsed.knip)) {
+      sources.push('package.json#knip');
+      if (knipHasRejectedSettings(parsed.knip))
+        issues.push('package.json#knip contains unsupported or unsafe settings that were ignored.');
+      return { config: sanitizeKnipRoot(parsed.knip), sources, issues };
+    }
+  }
+  if (snapshot.files.some((file) => isRuntimeSource(file) && executableKnipConfig.test(file.path)))
+    issues.push('Executable Knip configuration was ignored. Use knip.json for safe import.');
+  return { config: {}, sources, issues };
+}
+
+function workspacePatternsFromManifest(file: SourceFile): string[] {
+  const parsed = parseJsonc(file);
+  const workspaces = parsed?.workspaces;
+  if (Array.isArray(workspaces)) return strings(workspaces, safePathPattern) ?? [];
+  return strings(object(workspaces)?.packages, safePathPattern) ?? [];
+}
+
+export function declarativeWorkspacePatterns(snapshot: Snapshot): string[] {
+  const patterns = new Set<string>();
+  const manifest = snapshot.files.find(
+    (file) => file.path === 'package.json' && isRuntimeSource(file),
+  );
+  if (manifest)
+    for (const pattern of workspacePatternsFromManifest(manifest)) patterns.add(pattern);
+  const pnpm = snapshot.files.find(
+    (file) => file.path === 'pnpm-workspace.yaml' && isRuntimeSource(file),
+  );
+  if (pnpm) {
+    try {
+      const document = parseDocument(pnpm.content, { schema: 'core' });
+      const root = document.errors.length ? null : object(document.toJS({ maxAliasCount: 20 }));
+      for (const pattern of strings(root?.packages, safePathPattern) ?? []) patterns.add(pattern);
+    } catch {
+      // Invalid workspace files are ignored; no external file is loaded.
+    }
+  }
+  return [...patterns].sort();
+}
+
+export function sanitizedManifest(
+  file: SourceFile,
+  workspacePatterns: string[] = [],
+): Record<string, unknown> {
+  const parsed = parseJsonc(file) ?? {};
+  const output: Record<string, unknown> = {
+    name: typeof parsed.name === 'string' ? parsed.name.slice(0, 214) : 'traceward-staged-project',
+    private: true,
+  };
+  if (parsed.type === 'module') output.type = 'module';
+  for (const key of [
+    'dependencies',
+    'devDependencies',
+    'optionalDependencies',
+    'peerDependencies',
+  ] as const) {
+    const section = object(parsed[key]);
+    if (!section) continue;
+    const safe = Object.fromEntries(
+      Object.entries(section)
+        .slice(0, 2000)
+        .filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+    );
+    if (Object.keys(safe).length) output[key] = safe;
+  }
+  if (file.path === 'package.json' && workspacePatterns.length)
+    output.workspaces = workspacePatterns;
+  return output;
+}
+
+export function typeScriptPathAliases(snapshot: Snapshot): {
+  aliases: TypeScriptPathAlias[];
+  issues: string[];
+} {
+  const aliases: TypeScriptPathAlias[] = [];
+  const issues: string[] = [];
+  const configs = snapshot.files.filter(
+    (file) => isRuntimeSource(file) && /(?:^|\/)tsconfig(?:\.[^/]+)?\.jsonc?$/.test(file.path),
+  );
+  for (const file of configs.slice(0, 50)) {
+    const parsed = parseJsonc(file);
+    if (!parsed) {
+      issues.push(`${file.path} could not be parsed as JSON.`);
+      continue;
+    }
+    const compilerOptions = object(parsed.compilerOptions);
+    const paths = object(compilerOptions?.paths);
+    if (!paths) continue;
+    const directory = path.posix.dirname(file.path) === '.' ? '' : path.posix.dirname(file.path);
+    const baseUrl = safePathPattern(compilerOptions?.baseUrl) ?? '';
+    for (const [pattern, rawTargets] of Object.entries(paths).slice(0, maximumPatterns)) {
+      if (pattern.split('*').length > 2 || !Array.isArray(rawTargets)) {
+        issues.push(`${file.path} contains an unsupported path alias for ${pattern}.`);
+        continue;
+      }
+      const targets = rawTargets.flatMap((rawTarget) => {
+        const target = safePathPattern(rawTarget);
+        if (!target || target.split('*').length > 2) return [];
+        const resolved = path.posix.normalize(path.posix.join(directory, baseUrl, target));
+        return resolved === '..' || resolved.startsWith('../') ? [] : [resolved];
+      });
+      if (targets.length) aliases.push({ configFile: file.path, pattern, targets });
+      if (targets.length !== rawTargets.length)
+        issues.push(`${file.path} contains an unsafe path target for ${pattern}.`);
+    }
+    if (Object.keys(paths).length > maximumPatterns)
+      issues.push(`${file.path} path aliases were limited to ${maximumPatterns}.`);
+  }
+  return { aliases: aliases.slice(0, maximumPatterns), issues };
+}

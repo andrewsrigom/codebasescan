@@ -32,6 +32,7 @@ const extensions = new Set([
   '.mjs',
   '.cjs',
   '.json',
+  '.jsonc',
   '.yaml',
   '.yml',
   '.toml',
