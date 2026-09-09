@@ -34,6 +34,7 @@ test('coverage keeps zero findings, scanner failure, and unsupported scope disti
   const coverage = buildCoverage(runs, [], 'disabled');
   assert.equal(coverage.find((item) => item.id === 'builtin')?.status, 'COMPLETE');
   assert.equal(coverage.find((item) => item.id === 'project-profile')?.status, 'NOT RUN');
+  assert.equal(coverage.find((item) => item.id === 'ast-security')?.status, 'NOT RUN');
   assert.equal(coverage.find((item) => item.id === 'semgrep')?.status, 'FAILED');
   assert.equal(coverage.find((item) => item.id === 'gitleaks')?.status, 'DISABLED');
   assert.equal(coverage.find((item) => item.id === 'http-probe')?.status, 'NOT RUN');

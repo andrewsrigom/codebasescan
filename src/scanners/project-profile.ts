@@ -90,6 +90,12 @@ function functionSymbol(file: string, source: ts.SourceFile, node: ts.Node): Pro
     name = propertyName(node.parent.name);
     kind = ts.isArrowFunction(node) ? 'arrow-function' : 'function';
     exported = isExported(node.parent);
+  } else if (
+    (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+    ts.isCallExpression(node.parent)
+  ) {
+    name = `callback@${lineOf(source, node)}`;
+    kind = ts.isArrowFunction(node) ? 'arrow-function' : 'function';
   }
   if (!name) return null;
   const line = lineOf(source, node);
@@ -101,6 +107,27 @@ function functionSymbol(file: string, source: ts.SourceFile, node: ts.Node): Pro
     kind,
     exported,
   };
+}
+
+function resourceScopeSignal(node: ts.CallExpression): string | null {
+  let found: string | null = null;
+  let inspected = 0;
+  const visit = (child: ts.Node): void => {
+    if (found || inspected++ > 2000) return;
+    if (ts.isPropertyAssignment(child) || ts.isShorthandPropertyAssignment(child)) {
+      const name = propertyName(child.name);
+      if (
+        name &&
+        /^(?:tenant|tenantId|owner|ownerId|userId|accountId|organizationId|orgId)$/i.test(name)
+      ) {
+        found = name;
+        return;
+      }
+    }
+    ts.forEachChild(child, visit);
+  };
+  for (const argument of node.arguments) visit(argument);
+  return found;
 }
 
 function callName(expression: ts.Expression): string {
@@ -120,7 +147,7 @@ function callName(expression: ts.Expression): string {
 function factKind(callee: string): ProjectFactKind | null {
   const value = callee.toLowerCase();
   if (
-    /(?:^|\.)(?:auth|authenticate|requiresession|getserversession|currentuser|verifytoken|validatesession|withauth)$/.test(
+    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|getserver(?:session|user)|currentuser|verifytoken|validatesession|withauth)$/.test(
       value,
     )
   )
@@ -459,6 +486,16 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             signal: callee,
             ...(ownerSymbolId ? { ownerSymbolId } : {}),
           });
+        const scope = kind === 'database' ? resourceScopeSignal(node) : null;
+        if (scope && !cap(facts.length, maximumFacts, 'Security fact'))
+          facts.push({
+            id: stableId('fact', 'resource-scope', item.source.path, line, scope, ownerSymbolId),
+            kind: 'resource-scope',
+            file: item.source.path,
+            line,
+            signal: scope,
+            ...(ownerSymbolId ? { ownerSymbolId } : {}),
+          });
         const route = /^(?:app|router)\.(get|post|put|patch|delete|head|options|use)$/i.exec(
           callee,
         );
@@ -468,7 +505,11 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           routeArgument &&
           ts.isStringLiteralLike(routeArgument) &&
           !cap(entrypoints.length, maximumEntrypoints, 'Entrypoint')
-        )
+        ) {
+          const handler = node.arguments.at(-1);
+          const handlerSymbol = handler
+            ? functionSymbol(item.source.path, item.ast, handler)
+            : null;
           entrypoints.push({
             id: stableId('entrypoint', 'express-route', item.source.path, line, callee),
             kind: 'express-route',
@@ -480,8 +521,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             dynamicParameters: [...routeArgument.text.matchAll(/:([A-Za-z0-9_]+)/g)].map(
               (match) => match[1]!,
             ),
-            symbolIds: ownerSymbolId ? [ownerSymbolId] : [],
+            symbolIds: handlerSymbol ? [handlerSymbol.id] : ownerSymbolId ? [ownerSymbolId] : [],
           });
+        }
       }
       if (
         ts.isPropertyAccessExpression(node) &&

@@ -360,12 +360,15 @@ function environmentCandidates(snapshot: Snapshot): Candidate[] {
   return candidates;
 }
 
-export function scanPosture(snapshot: Snapshot): Finding[] {
+export function scanPosture(
+  snapshot: Snapshot,
+  options: { includeStructuralCandidates?: boolean } = {},
+): Finding[] {
   return [
     ...headerCandidates(snapshot),
     ...cookieCandidates(snapshot),
     ...corsCandidates(snapshot),
-    ...authorizationCandidates(snapshot),
+    ...(options.includeStructuralCandidates === false ? [] : authorizationCandidates(snapshot)),
     ...environmentCandidates(snapshot),
   ]
     .slice(0, 300)

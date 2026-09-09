@@ -1,0 +1,6 @@
+{
+  "id": "authorization-ast-missing-controls",
+  "category": "authorization",
+  "scanners": ["ast"],
+  "expectedRuleIds": ["TW-AST001", "TW-AST002", "TW-AST003"]
+}

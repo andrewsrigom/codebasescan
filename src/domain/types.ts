@@ -38,7 +38,7 @@ export interface Snapshot {
 }
 export interface Evidence {
   id: string;
-  kind?: 'source' | 'declared' | 'observed' | 'dependency';
+  kind?: 'source' | 'declared' | 'observed' | 'dependency' | 'inferred';
   file: string;
   startLine: number;
   endLine: number;
@@ -86,7 +86,7 @@ export interface Finding {
   id: string;
   fingerprint: string;
   ruleId: string;
-  source: 'builtin' | 'posture' | 'http-probe' | 'osv' | 'semgrep' | 'gitleaks';
+  source: 'builtin' | 'posture' | 'ast' | 'http-probe' | 'osv' | 'semgrep' | 'gitleaks';
   title: string;
   category: Category;
   severity: Severity;
@@ -115,13 +115,14 @@ export interface Finding {
     advisoryModified?: string;
   };
   provenance?: {
-    detector: 'traceward-heuristic' | 'scanner' | 'runtime-probe' | 'advisory-database';
+    detector:
+      'traceward-heuristic' | 'traceward-ast' | 'scanner' | 'runtime-probe' | 'advisory-database';
     scanner: string;
     ruleId: string;
     scannerVersion?: string;
     originalSeverity: string;
     detectedAt: string;
-    evidenceKinds: ('source' | 'declared' | 'observed' | 'dependency')[];
+    evidenceKinds: ('source' | 'declared' | 'observed' | 'dependency' | 'inferred')[];
   };
   review?: {
     decision: Disposition;
@@ -186,7 +187,8 @@ export type ProjectFactKind =
   | 'redirect'
   | 'cookie'
   | 'response'
-  | 'secret-access';
+  | 'secret-access'
+  | 'resource-scope';
 export interface ProjectFramework {
   id: 'nextjs-app-router' | 'nextjs-pages-router' | 'express' | 'prisma' | 'supabase';
   name: string;

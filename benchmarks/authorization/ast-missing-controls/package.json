@@ -1,0 +1,7 @@
+{
+  "name": "authorization-ast-missing-controls",
+  "private": true,
+  "dependencies": {
+    "next": "16.3.4"
+  }
+}

@@ -12,5 +12,6 @@ These directories are source snippets, not runnable applications. Do not install
 - `dependencies-safe`: resolved lodash 4.17.21 used for the clean OSV path.
 - `profile-nextjs`: structural Next.js, Express, Prisma, and Supabase signals parsed as inert data.
 - `profile-malformed`: syntax-error coverage for the project profiler.
+- `ast-auth-vulnerable`: framework-aware authentication, admin permission, and object-scope gaps.
 
 No real credentials, company source, customer data, or copied vulnerable application is included.

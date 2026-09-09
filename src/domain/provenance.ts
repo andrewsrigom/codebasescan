@@ -3,6 +3,7 @@ import type { Finding, ScannerRun } from './types.ts';
 const scannerBySource: Record<Finding['source'], string> = {
   builtin: 'builtin',
   posture: 'posture',
+  ast: 'ast-security',
   'http-probe': 'http-probe',
   osv: 'osv',
   semgrep: 'semgrep',
@@ -13,6 +14,7 @@ const detectorBySource: Record<Finding['source'], NonNullable<Finding['provenanc
   {
     builtin: 'traceward-heuristic',
     posture: 'traceward-heuristic',
+    ast: 'traceward-ast',
     'http-probe': 'runtime-probe',
     osv: 'advisory-database',
     semgrep: 'scanner',

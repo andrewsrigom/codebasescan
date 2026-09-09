@@ -6,11 +6,13 @@ import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import { scanPosture } from '../src/scanners/posture.ts';
 import { scanOsv } from '../src/scanners/osv.ts';
+import { profileProject } from '../src/scanners/project-profile.ts';
+import { scanAstSecurity } from '../src/scanners/ast-security.ts';
 
 const truthSchema = z.object({
   id: z.string(),
   category: z.string(),
-  scanners: z.array(z.enum(['builtin', 'posture', 'osv'])),
+  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'osv'])),
   expectedRuleIds: z.array(z.string()),
 });
 
@@ -50,6 +52,9 @@ const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-benchmark-'));
 let truePositives = 0;
 let falsePositives = 0;
 let falseNegatives = 0;
+let astTruePositives = 0;
+let astFalsePositives = 0;
+let astFalseNegatives = 0;
 try {
   for (const truthFile of await truthFiles(path.resolve('benchmarks'))) {
     const truth = truthSchema.parse(JSON.parse(await readFile(truthFile, 'utf8')) as unknown);
@@ -57,6 +62,9 @@ try {
     const findings = [
       ...(truth.scanners.includes('builtin') ? scanPatterns(source) : []),
       ...(truth.scanners.includes('posture') ? scanPosture(source) : []),
+      ...(truth.scanners.includes('ast')
+        ? scanAstSecurity(source, profileProject(source).profile).findings
+        : []),
     ];
     if (truth.scanners.includes('osv')) {
       const osv = await scanOsv(
@@ -77,6 +85,11 @@ try {
     truePositives += truePositive;
     falsePositives += falsePositive;
     falseNegatives += falseNegative;
+    if (truth.scanners.length === 1 && truth.scanners[0] === 'ast') {
+      astTruePositives += truePositive;
+      astFalsePositives += falsePositive;
+      astFalseNegatives += falseNegative;
+    }
     console.log(
       JSON.stringify({
         id: truth.id,
@@ -95,6 +108,8 @@ try {
 
 const precision = truePositives / Math.max(1, truePositives + falsePositives);
 const recall = truePositives / Math.max(1, truePositives + falseNegatives);
+const astPrecision = astTruePositives / Math.max(1, astTruePositives + astFalsePositives);
+const astRecall = astTruePositives / Math.max(1, astTruePositives + astFalseNegatives);
 console.log(
   JSON.stringify({
     summary: {
@@ -103,10 +118,18 @@ console.log(
       falseNegatives,
       precision: Number(precision.toFixed(4)),
       recall: Number(recall.toFixed(4)),
+      ast: {
+        truePositives: astTruePositives,
+        falsePositives: astFalsePositives,
+        falseNegatives: astFalseNegatives,
+        precision: Number(astPrecision.toFixed(4)),
+        recall: Number(astRecall.toFixed(4)),
+      },
     },
   }),
 );
 console.log(
   'Benchmark measures Traceward rules on declared ground truth. It is not a security certification or a generic model evaluation.',
 );
-process.exitCode = precision >= 0.85 && recall >= 0.95 ? 0 : 1;
+process.exitCode =
+  precision >= 0.85 && recall >= 0.95 && astPrecision >= 0.9 && astRecall >= 0.85 ? 0 : 1;

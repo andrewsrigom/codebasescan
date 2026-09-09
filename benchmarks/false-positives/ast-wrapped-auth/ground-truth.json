@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-ast-wrapped-auth",
+  "category": "false-positives",
+  "scanners": ["ast"],
+  "expectedRuleIds": []
+}

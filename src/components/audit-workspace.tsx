@@ -651,6 +651,7 @@ export function AuditWorkspace({
             <div className="graph-parallel">
               {[
                 'project_profile',
+                'ast_security',
                 'patterns',
                 'posture',
                 'semgrep',

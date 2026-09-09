@@ -20,6 +20,7 @@ import { scanExternal } from '../scanners/external.ts';
 import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { profileProject } from '../scanners/project-profile.ts';
+import { scanAstSecurity } from '../scanners/ast-security.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -136,10 +137,21 @@ export function buildAuditGraph(options: {
       event(state, 'project_profile', `Project structure profile: ${result.profile.status}.`);
       return { projectProfile: result.profile, scanners: [result.run] };
     })
+    .addNode('ast_security', async (state) => {
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to AST analysis.');
+      const result = scanAstSecurity(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'ast_security',
+        `${result.findings.length} framework-aware structural candidate(s).`,
+      );
+      return { findings: result.findings, scanners: [result.run] };
+    })
     .addNode('posture', async (state) => {
       const started = Date.now();
       const source = await checkedSnapshot(state);
-      const findings = scanPosture(source);
+      const findings = scanPosture(source, { includeStructuralCandidates: false });
       event(
         state,
         'posture',
@@ -362,13 +374,14 @@ export function buildAuditGraph(options: {
     .addEdge(START, 'snapshot')
     .addEdge('snapshot', 'patterns')
     .addEdge('snapshot', 'project_profile')
+    .addEdge('project_profile', 'ast_security')
     .addEdge('snapshot', 'posture')
     .addEdge('snapshot', 'semgrep')
     .addEdge('snapshot', 'gitleaks')
     .addEdge('snapshot', 'http_probe')
     .addEdge('snapshot', 'inventory')
     .addEdge(
-      ['patterns', 'project_profile', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'],
+      ['patterns', 'ast_security', 'posture', 'semgrep', 'gitleaks', 'http_probe', 'inventory'],
       'normalize',
     )
     .addConditionalEdges('normalize', (state) =>

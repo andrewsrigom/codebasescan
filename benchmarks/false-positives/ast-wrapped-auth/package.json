@@ -1,0 +1,7 @@
+{
+  "name": "false-positive-ast-wrapped-auth",
+  "private": true,
+  "dependencies": {
+    "next": "16.3.4"
+  }
+}
