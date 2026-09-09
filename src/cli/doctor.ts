@@ -3,7 +3,9 @@ import { access, mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import type { Configuration } from '../server/config.ts';
 import { scannerCompatibility } from '../scanners/external.ts';
+import type { TrustedScanner } from '../scanners/external.ts';
 import { runScannerProcess } from '../security/process.ts';
+import type { TrustedScannerBinary } from '../security/process.ts';
 
 export type DoctorStatus = 'pass' | 'warn' | 'fail';
 
@@ -78,16 +80,14 @@ async function rulesDirectoryCheck(config: Configuration): Promise<DoctorCheck> 
 }
 
 async function scannerCheck(
-  name: 'semgrep' | 'gitleaks',
+  name: TrustedScanner,
+  binary: TrustedScannerBinary,
+  versionArguments: string[],
   enabled: boolean,
   config: Configuration,
 ): Promise<DoctorCheck> {
   try {
-    const result = await runScannerProcess(
-      name,
-      name === 'semgrep' ? ['--version'] : ['version'],
-      config.dataDirectory,
-    );
+    const result = await runScannerProcess(binary, versionArguments, config.dataDirectory);
     const version = /\d+\.\d+\.\d+/.exec(result.stdout)?.[0];
     if (result.code !== 0 || !version) throw new Error('Version unavailable.');
     const compatibility = scannerCompatibility(name, version);
@@ -129,13 +129,16 @@ async function advisoryDatabaseCheck(config: Configuration): Promise<DoctorCheck
 }
 
 export async function runDoctor(config: Configuration): Promise<DoctorCheck[]> {
-  const [dataDirectory, rulesDirectory, semgrep, gitleaks, advisories] = await Promise.all([
-    dataDirectoryCheck(config),
-    rulesDirectoryCheck(config),
-    scannerCheck('semgrep', config.semgrep, config),
-    scannerCheck('gitleaks', config.gitleaks, config),
-    advisoryDatabaseCheck(config),
-  ]);
+  const [dataDirectory, rulesDirectory, semgrep, gitleaks, dependencyCruiser, jscpd, advisories] =
+    await Promise.all([
+      dataDirectoryCheck(config),
+      rulesDirectoryCheck(config),
+      scannerCheck('semgrep', 'semgrep', ['--version'], config.semgrep, config),
+      scannerCheck('gitleaks', 'gitleaks', ['version'], config.gitleaks, config),
+      scannerCheck('dependency-cruiser', 'depcruise', ['--version'], true, config),
+      scannerCheck('jscpd', 'jscpd', ['--version'], true, config),
+      advisoryDatabaseCheck(config),
+    ]);
   return [
     {
       name: 'Node.js',
@@ -146,6 +149,8 @@ export async function runDoctor(config: Configuration): Promise<DoctorCheck[]> {
     rulesDirectory,
     semgrep,
     gitleaks,
+    dependencyCruiser,
+    jscpd,
     advisories,
     {
       name: 'AI mode',

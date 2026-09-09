@@ -37,6 +37,8 @@ test('coverage keeps zero findings, scanner failure, and unsupported scope disti
   assert.equal(coverage.find((item) => item.id === 'ast-security')?.status, 'NOT RUN');
   assert.equal(coverage.find((item) => item.id === 'next-security')?.status, 'NOT RUN');
   assert.equal(coverage.find((item) => item.id === 'react-security')?.status, 'NOT RUN');
+  assert.equal(coverage.find((item) => item.id === 'dependency-cruiser')?.status, 'NOT RUN');
+  assert.equal(coverage.find((item) => item.id === 'jscpd')?.status, 'NOT RUN');
   assert.equal(coverage.find((item) => item.id === 'semgrep')?.status, 'FAILED');
   assert.equal(coverage.find((item) => item.id === 'gitleaks')?.status, 'DISABLED');
   assert.equal(coverage.find((item) => item.id === 'http-probe')?.status, 'NOT RUN');

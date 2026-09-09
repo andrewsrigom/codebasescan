@@ -1,8 +1,10 @@
 import { Annotation, END, START, StateGraph, interrupt } from '@langchain/langgraph';
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import type {
+  ArchitectureAnalysis,
   AuditReport,
   Dependency,
+  DuplicationAnalysis,
   Finding,
   HttpProbeOptions,
   HttpProbeReport,
@@ -24,6 +26,7 @@ import { profileProject } from '../scanners/project-profile.ts';
 import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
 import { scanReactSecurity } from '../scanners/react-security.ts';
 import { scanNextSecurity } from '../scanners/next-security.ts';
+import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -51,6 +54,14 @@ export const AuditState = Annotation.Root({
   }),
   dependencies: Annotation<Dependency[]>({ reducer: (_, value) => value, default: () => [] }),
   projectProfile: Annotation<ProjectProfile | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  architectureAnalysis: Annotation<ArchitectureAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  duplicationAnalysis: Annotation<DuplicationAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -176,6 +187,31 @@ export function buildAuditGraph(options: {
       const result = scanNextSecurity(await checkedSnapshot(state), state.projectProfile);
       event(state, 'next_security', `${result.findings.length} Next.js security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('architecture', async (state) => {
+      const result = await scanArchitecture(
+        await checkedSnapshot(state),
+        state.projectProfile ?? undefined,
+        config.temporaryDirectory,
+        signal,
+      );
+      event(state, 'architecture', `Dependency structure: ${result.run.status}.`);
+      return {
+        architectureAnalysis: result.analysis ?? null,
+        scanners: [result.run],
+      };
+    })
+    .addNode('duplication', async (state) => {
+      const result = await scanDuplication(
+        await checkedSnapshot(state),
+        config.temporaryDirectory,
+        signal,
+      );
+      event(state, 'duplication', `Code duplication: ${result.run.status}.`);
+      return {
+        duplicationAnalysis: result.analysis ?? null,
+        scanners: [result.run],
+      };
     })
     .addNode('posture', async (state) => {
       const started = performance.now();
@@ -310,8 +346,16 @@ export function buildAuditGraph(options: {
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         dependencies: state.dependencies,
       });
+      const mechanicalAnalysis =
+        state.architectureAnalysis || state.duplicationAnalysis
+          ? {
+              schemaVersion: 1 as const,
+              ...(state.architectureAnalysis ? { architecture: state.architectureAnalysis } : {}),
+              ...(state.duplicationAnalysis ? { duplication: state.duplicationAnalysis } : {}),
+            }
+          : undefined;
       const report: AuditReport = {
-        schemaVersion: 3,
+        schemaVersion: 4,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -325,6 +369,7 @@ export function buildAuditGraph(options: {
         dependencies: state.dependencies,
         ...(scopePreflight ? { scopePreflight } : {}),
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
+        ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         coverage: buildCoverage(state.scanners, findings, config.aiMode),
@@ -377,6 +422,7 @@ export function buildAuditGraph(options: {
             : ['HTTP runtime posture was not run because no target was explicitly approved.']),
           'AI assessments cannot confirm findings, lower scanner severity, or suppress candidates automatically.',
           'Dependency resolution is limited to captured npm, pnpm, and Yarn lockfiles. OSV presence does not establish runtime reachability or exploitability.',
+          'Dependency cycles, orphan modules, coupling, and duplicated blocks are maintainability evidence. They are not security vulnerabilities by themselves.',
           'Secret files, Git history, symlinks, binary files, generated output and unsupported formats are excluded.',
           'Regex patterns can match comments and miss indirect flows; middleware, RLS and runtime policy need human review.',
           ...(reviewer &&
@@ -440,6 +486,8 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'ast_security')
     .addEdge('project_profile', 'next_security')
     .addEdge('project_profile', 'react_security')
+    .addEdge('project_profile', 'architecture')
+    .addEdge('snapshot', 'duplication')
     .addEdge('snapshot', 'posture')
     .addEdge('snapshot', 'semgrep')
     .addEdge('snapshot', 'gitleaks')
@@ -451,6 +499,8 @@ export function buildAuditGraph(options: {
         'ast_security',
         'next_security',
         'react_security',
+        'architecture',
+        'duplication',
         'posture',
         'semgrep',
         'gitleaks',

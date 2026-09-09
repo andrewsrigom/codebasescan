@@ -93,14 +93,50 @@ test('Markdown includes scope and limitations', () => {
     at: '2026-09-09T12:00:00.000Z',
   };
   report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
+  report.mechanicalAnalysis = {
+    schemaVersion: 1,
+    architecture: {
+      schemaVersion: 1,
+      modules: 2,
+      localDependencies: 2,
+      cycles: [{ id: 'cycle-1', files: ['src/a.ts', 'src/b.ts'] }],
+      orphanCandidates: [],
+      hotspots: [{ file: 'src/a.ts', incoming: 1, outgoing: 1, instability: 0.5 }],
+      truncated: false,
+    },
+    duplication: {
+      schemaVersion: 1,
+      files: 2,
+      lines: 100,
+      tokens: 800,
+      clones: 1,
+      duplicatedLines: 12,
+      percentage: 12,
+      blocks: [
+        {
+          id: 'clone-1',
+          kind: 'exact',
+          format: 'typescript',
+          lines: 12,
+          tokens: 80,
+          first: { file: 'src/a.ts', startLine: 1, endLine: 12 },
+          second: { file: 'src/b.ts', startLine: 1, endLine: 12 },
+        },
+      ],
+      truncated: false,
+    },
+  };
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
+  assert.ok(output.includes('## Mechanical analysis'));
+  assert.ok(output.includes('src/a.ts:1-12'));
   assert.ok(output.includes('## Security checklist'));
   assert.ok(output.includes('Human assessment: verified external'));
   assert.ok(toHtml(report).includes('Human assessment: verified external'));
+  assert.ok(toHtml(report).includes('Structure and duplication'));
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });
@@ -138,6 +174,7 @@ test('investigation bundle is bounded, evidence-led, and ready for manual AI rev
     policy: string[];
     findings: { id: string; evidence: { id: string }[] }[];
     projectMap: { entrypoints: unknown[]; securityFacts: unknown[]; callEdges: unknown[] };
+    mechanicalAnalysis: unknown;
   };
   assert.equal(bundle.kind, 'traceward-investigation-bundle');
   assert.ok(bundle.policy.some((item) => item.includes('untrusted evidence')));
@@ -146,5 +183,6 @@ test('investigation bundle is bounded, evidence-led, and ready for manual AI rev
   assert.ok(bundle.projectMap.entrypoints.length <= 500);
   assert.ok(bundle.projectMap.securityFacts.length <= 1_000);
   assert.ok(bundle.projectMap.callEdges.length <= 1_000);
+  assert.equal(bundle.mechanicalAnalysis, null);
   assert.equal('root' in bundle, false);
 });

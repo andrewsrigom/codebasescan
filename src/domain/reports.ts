@@ -105,6 +105,7 @@ export function toInvestigationBundle(report: AuditReport): object {
       truncated: report.truncated,
     },
     coverage: report.coverage ?? report.scanners,
+    mechanicalAnalysis: report.mechanicalAnalysis ?? null,
     projectMap: profile
       ? {
           status: profile.status,
@@ -218,6 +219,33 @@ export function toMarkdown(report: AuditReport): string {
                 ...report.projectProfile.issues.map((issue) => `- ${m(issue)}`),
               ]
             : []),
+        ]
+      : []),
+    ...(report.mechanicalAnalysis
+      ? [
+          '',
+          '## Mechanical analysis',
+          '',
+          ...(report.mechanicalAnalysis.architecture
+            ? [
+                `Dependency structure: ${report.mechanicalAnalysis.architecture.modules} modules, ${report.mechanicalAnalysis.architecture.localDependencies} local dependencies, ${report.mechanicalAnalysis.architecture.cycles.length} cycles, and ${report.mechanicalAnalysis.architecture.orphanCandidates.length} orphan candidates.`,
+                ...report.mechanicalAnalysis.architecture.cycles.map(
+                  (cycle) => `- Cycle: ${cycle.files.map(m).join(' -> ')}`,
+                ),
+              ]
+            : ['Dependency structure analysis was unavailable.']),
+          '',
+          ...(report.mechanicalAnalysis.duplication
+            ? [
+                `Duplication: ${report.mechanicalAnalysis.duplication.clones} clones and ${report.mechanicalAnalysis.duplication.duplicatedLines} duplicated lines (${report.mechanicalAnalysis.duplication.percentage}%).`,
+                ...report.mechanicalAnalysis.duplication.blocks.map(
+                  (block) =>
+                    `- ${m(block.kind)} clone: ${m(block.first.file)}:${block.first.startLine}-${block.first.endLine} and ${m(block.second.file)}:${block.second.startLine}-${block.second.endLine}`,
+                ),
+              ]
+            : ['Code duplication analysis was unavailable.']),
+          '',
+          'These measurements are maintainability evidence, not security vulnerabilities.',
         ]
       : []),
     ...(report.checklist
@@ -480,6 +508,41 @@ export function toHtml(report: AuditReport): string {
         : '') +
       '</section>'
     : '';
+  const mechanical = report.mechanicalAnalysis
+    ? '<section class="report-section"><span class="kicker">MECHANICAL REVIEW</span><h2>Structure and duplication</h2>' +
+      (report.mechanicalAnalysis.architecture
+        ? '<div class="facts"><span><strong>' +
+          report.mechanicalAnalysis.architecture.modules +
+          '</strong> modules</span><span><strong>' +
+          report.mechanicalAnalysis.architecture.localDependencies +
+          '</strong> local dependencies</span><span><strong>' +
+          report.mechanicalAnalysis.architecture.cycles.length +
+          '</strong> cycles</span><span><strong>' +
+          report.mechanicalAnalysis.architecture.orphanCandidates.length +
+          '</strong> orphan candidates</span></div>' +
+          list(
+            'Dependency cycles',
+            report.mechanicalAnalysis.architecture.cycles.map((cycle) => cycle.files.join(' → ')),
+          )
+        : '<p>Dependency structure analysis was unavailable.</p>') +
+      (report.mechanicalAnalysis.duplication
+        ? '<div class="facts"><span><strong>' +
+          report.mechanicalAnalysis.duplication.clones +
+          '</strong> clones</span><span><strong>' +
+          report.mechanicalAnalysis.duplication.duplicatedLines +
+          '</strong> duplicated lines</span><span><strong>' +
+          report.mechanicalAnalysis.duplication.percentage +
+          '%</strong> duplication</span></div>' +
+          list(
+            'Largest duplicate blocks',
+            report.mechanicalAnalysis.duplication.blocks.map(
+              (block) =>
+                `${block.first.file}:${block.first.startLine}-${block.first.endLine} and ${block.second.file}:${block.second.startLine}-${block.second.endLine}`,
+            ),
+          )
+        : '<p>Code duplication analysis was unavailable.</p>') +
+      '<p class="muted">These measurements are maintainability evidence, not security vulnerabilities.</p></section>'
+    : '';
   const checklist = report.checklist
     ? '<section class="report-section"><span class="kicker">CONTROL PACK ' +
       e(report.checklist.packVersion) +
@@ -571,6 +634,7 @@ export function toHtml(report: AuditReport): string {
     coverage +
     '</ul></section>' +
     profile +
+    mechanical +
     checklist +
     '<section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">' +
     report.findings.length +

@@ -65,6 +65,13 @@ export function buildCoverage(
     scannerCapability(runs, 'ast-security', 'Framework-aware authorization', 'NOT RUN'),
     scannerCapability(runs, 'next-security', 'Next.js application security', 'NOT RUN'),
     scannerCapability(runs, 'react-security', 'React client security', 'NOT RUN'),
+    scannerCapability(
+      runs,
+      'dependency-cruiser',
+      'JavaScript/TypeScript dependency structure',
+      'NOT SUPPORTED',
+    ),
+    scannerCapability(runs, 'jscpd', 'JavaScript/TypeScript code duplication', 'NOT SUPPORTED'),
     scannerCapability(runs, 'builtin', 'Built-in static patterns', 'NOT RUN'),
     scannerCapability(runs, 'semgrep', 'Static code analysis', 'DISABLED'),
     scannerCapability(runs, 'gitleaks', 'Secret scanning', 'DISABLED'),
