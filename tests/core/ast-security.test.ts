@@ -104,6 +104,26 @@ test('recognized destination guards and constant sinks avoid direct flow candida
   assert.ok(!ids.includes('TW-AST006'));
 });
 
+test('server-owned URLs may use the request URL only as their same-origin base', () => {
+  const ids = astRuleIds(`
+    export async function GET(request: Request) {
+      await fetch(new URL('/api/auth/session', request.url));
+      return redirect(new URL('/login', request.url));
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+  assert.ok(!ids.includes('TW-AST006'));
+
+  assert.ok(
+    astRuleIds(`
+      export async function GET(request: Request) {
+        const next = new URL(request.url).searchParams.get('next');
+        return redirect(new URL(next, request.url));
+      }
+    `).includes('TW-AST006'),
+  );
+});
+
 test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
   assert.ok(
     astRuleIds(
@@ -165,6 +185,19 @@ test('safe webhook bytes, validated upload, and complete cookies avoid gap candi
   assert.ok(!hardenedIds.includes('TW-AST009'));
 });
 
+test('webhook management APIs and response serialization are not inbound webhook parsing', () => {
+  const ids = astRuleIds(
+    `
+      export default async function handler(req, res) {
+        const endpoint = await createWebhook(req.body);
+        return res.status(200).json({ data: endpoint });
+      }
+    `,
+    'pages/api/teams/[slug]/webhooks/[endpointId].ts',
+  );
+  assert.ok(!ids.includes('TW-AST008'));
+});
+
 test('client modules referencing server environment values are identified', () => {
   const ids = astRuleIds(
     `'use client'; export const api = process.env.INTERNAL_API_SECRET;`,
@@ -174,6 +207,12 @@ test('client modules referencing server environment values are identified', () =
   assert.ok(
     !astRuleIds(
       `'use client'; export const label = process.env.NEXT_PUBLIC_LABEL;`,
+      'src/components/client.tsx',
+    ).includes('TW-AST010'),
+  );
+  assert.ok(
+    !astRuleIds(
+      `'use client'; export const production = process.env.NODE_ENV === 'production';`,
       'src/components/client.tsx',
     ).includes('TW-AST010'),
   );

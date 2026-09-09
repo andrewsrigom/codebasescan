@@ -14,7 +14,10 @@ export function isMutatingEntrypoint(entrypoint: ProjectEntrypoint): boolean {
 }
 
 export function isWebhookEntrypoint(entrypoint: ProjectEntrypoint): boolean {
-  return /\/(?:webhooks?|callbacks?)(?:\/|$)/i.test(entrypoint.route ?? '');
+  const route = entrypoint.route ?? '';
+  if (/\/(?:webhook|callback)(?:\/|$)/i.test(route)) return true;
+  if (/\/api\/(?:webhooks|callbacks)(?:\/|$)/i.test(route)) return true;
+  return /\/(?:webhooks|callbacks)\/(?!\[|:)[^/]+(?:\/|$)/i.test(route);
 }
 
 export function isAdministrativeEntrypoint(entrypoint: ProjectEntrypoint): boolean {

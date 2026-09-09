@@ -141,6 +141,12 @@ function isTainted(node: ts.Node | undefined, tainted: Set<string>): boolean {
   return found;
 }
 
+function isServerOwnedUrl(node: ts.Expression | undefined, tainted: Set<string>): boolean {
+  if (!node || !ts.isNewExpression(node) || node.expression.getText() !== 'URL') return false;
+  const [destination, base] = node.arguments ?? [];
+  return Boolean(destination && base && !isTainted(destination, tainted));
+}
+
 function functionTaint(node: ts.FunctionLikeDeclarationBase): Set<string> {
   const tainted = new Set(node.parameters.flatMap((parameter) => bindingNames(parameter.name)));
   // Bounded local propagation catches common request -> local -> sink flows without typechecking target code.
@@ -327,6 +333,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
         if (
           ts.isPropertyAccessExpression(node) &&
           node.expression.getText(source) === 'process.env' &&
+          node.name.text !== 'NODE_ENV' &&
           !node.name.text.startsWith('NEXT_PUBLIC_')
         ) {
           const candidate = directFinding({
@@ -396,6 +403,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
             isTainted(destination, tainted) &&
+            !isServerOwnedUrl(destination, tainted) &&
             !hasPriorGuard(
               calls,
               call,
@@ -423,6 +431,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             /(?:^|\.)(?:redirect|permanentRedirect)$/i.test(callee) &&
             isTainted(destination, tainted) &&
+            !isServerOwnedUrl(destination, tainted) &&
             !hasPriorGuard(
               calls,
               call,
@@ -449,7 +458,9 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           }
         }
 
-        const bodyParse = calls.find((call) => /\.(?:json|formData)$/i.test(callName(call)));
+        const bodyParse = calls.find(
+          (call) => call.arguments.length === 0 && /\.(?:json|formData)$/i.test(callName(call)),
+        );
         const verification = calls.find((call) =>
           /(?:verifywebhook|verifysignature|constructevent|verifyhmac|checksignature)/i.test(
             callName(call),
