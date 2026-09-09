@@ -8,6 +8,7 @@ import { disableRemoteTracing } from '../security/privacy.ts';
 import { toHtml, toInvestigationBundle, toMarkdown, toSarif } from '../domain/reports.ts';
 import { compareReports } from '../domain/comparison.ts';
 import { ciGate } from '../domain/ci.ts';
+import { evaluateReports } from '../domain/evaluation.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 
@@ -132,9 +133,17 @@ try {
       const current = store.audit(arguments_[2]).report;
       if (!base || !current) throw new Error('Both audits must have reports before comparison.');
       console.log(JSON.stringify(compareReports(base, current), null, 2));
+    } else if (command === 'evaluate' && target) {
+      const ids = arguments_.slice(1).filter((argument) => !argument.startsWith('--'));
+      const reports = ids.map((id) => {
+        const report = store!.audit(id).report;
+        if (!report) throw new Error(`Audit ${id} has no report.`);
+        return report;
+      });
+      console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit /path/to/project --ci [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
+        'Traceward\n\n  npm run cli -- audit /path/to/project --ci [--fail-on high] [--format json|sarif|md|html|bundle] [--output report.json]\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|bundle',
       );
     }
   }
