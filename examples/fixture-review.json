@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "auditId": "00000000-0000-4000-8000-000000000001",
   "projectName": "Review-worthy SaaS — fixture export",
   "createdAt": "2026-09-08T12:00:00.000Z",
@@ -18,12 +18,11 @@
       "sourceSeverity": "high",
       "description": "An object lookup begins with an ID filter. Authorization may exist elsewhere; inspect middleware, service policy, RLS and the complete call path.",
       "remediation": "Verify object-level access for the authenticated tenant. Add a regression test using two tenants and reject cross-tenant access.",
-      "cwe": [
-        "CWE-639"
-      ],
+      "cwe": ["CWE-639"],
       "evidence": [
         {
           "id": "58aab67f20e40b79",
+          "kind": "source",
           "file": "src/app/api/projects/[id]/route.ts",
           "startLine": 5,
           "endLine": 10,
@@ -34,7 +33,16 @@
       ],
       "id": "5bffd93b08bf04fd705d",
       "fingerprint": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-004",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "high",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -45,12 +53,11 @@
       "sourceSeverity": "high",
       "description": "A sensitive-looking setting has a browser-public naming convention. No active credential or actual browser bundle exposure has been verified.",
       "remediation": "Keep privileged credentials in server-only configuration. If exposure is verified, rotate the credential and review its use.",
-      "cwe": [
-        "CWE-200"
-      ],
+      "cwe": ["CWE-200"],
       "evidence": [
         {
           "id": "40b2fc37b7d6cdf6",
+          "kind": "source",
           "file": "src/lib/config.ts",
           "startLine": 1,
           "endLine": 5,
@@ -61,7 +68,16 @@
       ],
       "id": "5d64fe05ea9fd9490138",
       "fingerprint": "5d64fe05ea9fd94901383a35c1489ac862434ba9d70726f4d9593b2e0fcebb97",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-005",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "high",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -72,12 +88,11 @@
       "sourceSeverity": "high",
       "description": "A potentially destructive operation appears in an agent tool list. The pattern cannot determine whether approval and authorization are enforced inside the tool.",
       "remediation": "Apply authorization inside each tool, restrict its capability, and require explicit approval where the operation warrants it.",
-      "cwe": [
-        "CWE-862"
-      ],
+      "cwe": ["CWE-862"],
       "evidence": [
         {
           "id": "2b014502ce370d18",
+          "kind": "source",
           "file": "src/agents/account.ts",
           "startLine": 4,
           "endLine": 8,
@@ -88,7 +103,16 @@
       ],
       "id": "779fa2b80f12cb145091",
       "fingerprint": "779fa2b80f12cb145091bbbe36392b456175611da19e7ac323b56838dfaaf8a5",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-007",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "high",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -99,12 +123,11 @@
       "sourceSeverity": "high",
       "description": "A dynamic execution sink was detected. This is a pattern match, not proof of attacker-controlled execution.",
       "remediation": "Replace dynamic code execution with explicit operations where possible; otherwise document and enforce the trust boundary.",
-      "cwe": [
-        "CWE-95"
-      ],
+      "cwe": ["CWE-95"],
       "evidence": [
         {
           "id": "15ebbc6a233a56c0",
+          "kind": "source",
           "file": "src/lib/expression.ts",
           "startLine": 1,
           "endLine": 4,
@@ -115,7 +138,16 @@
       ],
       "id": "a624c10ee19efc835868",
       "fingerprint": "a624c10ee19efc8358689f335051b39417aa1fe549fd565036d68c139ca0ec2d",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-003",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "high",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -126,12 +158,11 @@
       "sourceSeverity": "high",
       "description": "An unsafe SQL execution API is present. User control of the query and runtime reachability have not been established.",
       "remediation": "Prefer parameterized queries. Trace every value reaching this call before deciding whether an injection vulnerability exists.",
-      "cwe": [
-        "CWE-89"
-      ],
+      "cwe": ["CWE-89"],
       "evidence": [
         {
           "id": "d10b2b1dccfd92f6",
+          "kind": "source",
           "file": "src/app/api/search/route.ts",
           "startLine": 3,
           "endLine": 8,
@@ -142,7 +173,16 @@
       ],
       "id": "c7eebdb7ae0d43ddd1f2",
       "fingerprint": "c7eebdb7ae0d43ddd1f2393ba0410ccf9ca0fb20f730ebfefb8930e8f4e09a5a",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-001",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "high",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -153,12 +193,11 @@
       "sourceSeverity": "medium",
       "description": "Raw HTML reaches a React rendering sink. The scanner does not prove that the value is attacker-controlled or unsanitized.",
       "remediation": "Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering text when rich HTML is unnecessary.",
-      "cwe": [
-        "CWE-79"
-      ],
+      "cwe": ["CWE-79"],
       "evidence": [
         {
           "id": "ada4a9e530c374fa",
+          "kind": "source",
           "file": "src/components/preview.tsx",
           "startLine": 1,
           "endLine": 4,
@@ -169,7 +208,16 @@
       ],
       "id": "8333a67950b076e8a915",
       "fingerprint": "8333a67950b076e8a915d3a67c30077d10449fbee8721eda52bc1d94902a769b",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-002",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "medium",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     },
     {
       "source": "builtin",
@@ -180,12 +228,11 @@
       "sourceSeverity": "medium",
       "description": "A wildcard CORS origin was found. Public endpoints may intentionally permit it; authentication and exposed data determine the risk.",
       "remediation": "Define expected browser origins and validate the credential model. Do not treat CORS as an authorization mechanism.",
-      "cwe": [
-        "CWE-942"
-      ],
+      "cwe": ["CWE-942"],
       "evidence": [
         {
           "id": "08574edb56956038",
+          "kind": "source",
           "file": "src/lib/cors.ts",
           "startLine": 1,
           "endLine": 4,
@@ -196,7 +243,16 @@
       ],
       "id": "c534df31cabaf38e8405",
       "fingerprint": "c534df31cabaf38e8405ef4f5752186720b8038afe7d1d50b2fd6e0967bb2286",
-      "disposition": "needs_review"
+      "disposition": "needs_review",
+      "provenance": {
+        "detector": "traceward-heuristic",
+        "scanner": "Built-in patterns",
+        "ruleId": "TW-006",
+        "scannerVersion": "0.2.0",
+        "originalSeverity": "medium",
+        "detectedAt": "2026-09-08T12:00:00.000Z",
+        "evidenceKinds": ["source"]
+      }
     }
   ],
   "scanners": [
@@ -206,7 +262,17 @@
       "status": "completed",
       "durationMs": 0,
       "findings": 7,
-      "detail": "Seven regex heuristics executed against inert fixtures. Duration not measured in this reproducible export."
+      "detail": "Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.",
+      "version": "0.2.0"
+    },
+    {
+      "id": "posture",
+      "name": "Application posture",
+      "status": "completed",
+      "durationMs": 0,
+      "findings": 0,
+      "detail": "Conservative framework and configuration posture checks executed locally.",
+      "version": "0.2.0"
     },
     {
       "id": "semgrep",
@@ -225,12 +291,12 @@
       "detail": "Not executed for this fixture export."
     },
     {
-      "id": "dependency-matching",
+      "id": "osv",
       "name": "Dependency vulnerabilities",
       "status": "skipped",
       "durationMs": 0,
       "findings": 0,
-      "detail": "Manifest inventory only; vulnerability matching is not implemented."
+      "detail": "OSV lookup was disabled for this reproducible fixture export."
     }
   ],
   "dependencies": [
@@ -238,25 +304,98 @@
       "name": "@prisma/client",
       "requestedVersion": "^6.0.0",
       "manifest": "package.json",
-      "scope": "runtime"
+      "scope": "runtime",
+      "relationship": "direct"
     },
     {
       "name": "next",
       "requestedVersion": "^16.3.4",
       "manifest": "package.json",
-      "scope": "runtime"
+      "scope": "runtime",
+      "relationship": "direct"
     },
     {
       "name": "react",
       "requestedVersion": "^19.2.8",
       "manifest": "package.json",
-      "scope": "runtime"
+      "scope": "runtime",
+      "relationship": "direct"
     },
     {
       "name": "typescript",
       "requestedVersion": "~5.9.3",
       "manifest": "package.json",
-      "scope": "development"
+      "scope": "development",
+      "relationship": "direct"
+    }
+  ],
+  "coverage": [
+    {
+      "id": "builtin",
+      "label": "Built-in static patterns",
+      "status": "COMPLETE",
+      "detail": "Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.",
+      "findings": 7,
+      "version": "0.2.0"
+    },
+    {
+      "id": "semgrep",
+      "label": "Static code analysis",
+      "status": "DISABLED",
+      "detail": "Not executed for this fixture export.",
+      "findings": 0
+    },
+    {
+      "id": "gitleaks",
+      "label": "Secret scanning",
+      "status": "DISABLED",
+      "detail": "Not executed for this fixture export.",
+      "findings": 0
+    },
+    {
+      "id": "osv",
+      "label": "Dependency vulnerabilities",
+      "status": "DISABLED",
+      "detail": "OSV lookup was disabled for this reproducible fixture export.",
+      "findings": 0
+    },
+    {
+      "id": "posture",
+      "label": "Security configuration",
+      "status": "COMPLETE",
+      "detail": "Conservative framework and configuration posture checks executed locally.",
+      "findings": 0,
+      "version": "0.2.0"
+    },
+    {
+      "id": "http-probe",
+      "label": "HTTP runtime posture",
+      "status": "NOT RUN",
+      "detail": "No scanner run was recorded for this capability."
+    },
+    {
+      "id": "ai-context",
+      "label": "AI contextual analysis",
+      "status": "DISABLED",
+      "detail": "Model inference was disabled. Deterministic findings remain available."
+    },
+    {
+      "id": "infrastructure-as-code",
+      "label": "Infrastructure as Code",
+      "status": "NOT SUPPORTED",
+      "detail": "No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented."
+    },
+    {
+      "id": "cloud-iam",
+      "label": "Cloud IAM",
+      "status": "NOT SUPPORTED",
+      "detail": "Cloud account and effective IAM policy analysis are outside this release."
+    },
+    {
+      "id": "dynamic-exploitation",
+      "label": "Dynamic exploitation",
+      "status": "NOT PERFORMED",
+      "detail": "Traceward does not exploit targets, brute-force authentication, or crawl applications."
     }
   ],
   "limitations": [

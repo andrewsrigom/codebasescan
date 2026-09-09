@@ -1,40 +1,42 @@
 # Edge cases and explicit behavior
 
-“Implemented” means code exists. Refer to `VALIDATION.md` for which layers were actually executed.
+“Implemented” means code exists. See `VALIDATION.md` for executed layers.
 
-| Case | Behavior / status |
-| --- | --- |
-| No AI model configured | Deterministic review; clearly labeled AI disabled. No fake generated analysis. |
-| Local model unavailable, timeout, invalid JSON, invented evidence IDs | Candidate retained, assessment inconclusive; no cloud fallback. Real-model execution remains to validate. |
-| AI calls something a false positive | Assessment only. Source severity and human disposition remain unchanged. |
-| Human publishes while candidates are unresolved | Allowed with a rationale. Publication does not confirm them. |
-| External scanner disabled | Visible skipped run, not clean. |
-| Scanner binary missing or incompatible output | Visible failed run; do not claim coverage. |
-| Target uses inline scanner suppressions | Trusted invocation disables Semgrep `nosem` and ignores Gitleaks allow-comments. Validate against pinned real binaries before release. |
-| Scanner nonzero exit | Gitleaks exit 1 may mean findings; other unsupported exit states are errors. Contracts need real-binary validation. |
-| Partial scanner parse / unmappable file location / output cap | Partial or failed result; do not silently treat as clean. |
-| Same file flagged by multiple scanners | Preserve each source finding. No unsafe cross-tool deduplication. |
-| Findings move between lines/scans | No automatic “resolved/new” claim; cross-scan baseline matching is not implemented. |
-| Dependency manifest exists | Inventory declarations only; no CVE, resolved-version, or reachability claims. |
-| Lockfile, IaC, Dockerfile, SQL file captured | Capture does not mean a specialized analysis was performed. Coverage remains scanner-specific. |
-| `.env`, private key, binary, symlink, generated directory | Excluded and counted. This intentionally limits secret scanning coverage. |
-| Target changes during read | Detect some size/race cases; skip/count where detected. Not an atomic snapshot guarantee. |
-| Source changes before a resumed investigation | Fail rather than mix snapshot evidence. Start a new audit. |
-| Model/scanner settings or trusted rules change mid-audit | Do not resume across a configuration or code upgrade. Finish/cancel and start a fresh audit; further enforcement is a hardening task. |
-| Huge repository, deep paths, oversized source/output | Bounded snapshot, iteration, and process output. Report truncation. OS-enforced scanner resource isolation is still future work. |
-| Navigate between audit IDs | Workspace is keyed by audit ID to avoid stale client state from another audit. |
-| Browser closes or refreshes | Worker continues using the persisted queue; reopening reads store/events. |
-| Worker absent | UI indicates offline and queued jobs remain queued. |
-| Two workers start | Single local PID lock rejects the second. Stale PID reuse is conservative and may require operator intervention. |
-| Worker dies during an audit | Dead-worker recovery requeues unfinished jobs, bounded attempts; checkpointer resume needs crash-injection release testing. |
-| User cancels a running audit | Cancellation remains terminal; worker aborts cooperatively and cannot mark it completed later. |
-| Same-origin duplicate publication | Compare-and-set allows one submission; second request is rejected. |
-| Review during analysis | Not allowed. Review only paused/completed reports to avoid overwritten decisions. |
-| Raw scanner staging survives power loss | Files remain private but unencrypted; manual cleanup after worker stop is currently required. |
-| Directory permission error | Read errors/truncation or failure, never a safe result. |
-| Repo root overlaps app storage | Registration rejected to prevent self-ingestion of checkpoints/reports. |
-| Custom model URL / network project / public hosting | Not supported. No arbitrary backend endpoint or URL accepted from UI. |
-| HTML in file/message/note | React and standalone HTML escape it. Markdown consumers must use a safe renderer. |
-| Application DB from an untrusted source | Do not import it. Persisted-report schema validation and migration hardening are pending. |
-| Windows filesystem/native dependencies | WSL2 first; native Windows is not validated. No cross-platform claim from Linux-only tests. |
-| No findings | “No review candidates within this scope,” never “secure.” |
+| Case                                                                                | Behavior                                                                                                                     |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| AI disabled                                                                         | Deterministic audit completes with `DISABLED` AI coverage and zero AI calls                                                  |
+| Ollama/OpenAI unavailable, timeout, malformed output, or invented evidence ID       | Finding is retained; assessment becomes inconclusive; no provider fallback                                                   |
+| AI says false positive                                                              | Assessment only; scanner severity and human disposition stay unchanged                                                       |
+| OpenAI budget/cache                                                                 | Calls reserve persisted budgets; cache hits use the same prompt/model/finding/evidence/context key and do not make a request |
+| Repository asks for secrets/files/policy changes                                    | Text stays untrusted data; only captured safe relative paths are readable; `.env`/key paths remain excluded                  |
+| Human publishes unresolved findings                                                 | Allowed with rationale; publication does not confirm them                                                                    |
+| Scanner disabled/missing/fails                                                      | `DISABLED`/`FAILED`, never “zero findings” coverage                                                                          |
+| Semgrep/Gitleaks nonzero/malformed/oversized output                                 | Known contracts are normalized; unsupported states fail or become partial                                                    |
+| Same code flagged by multiple independent scanners                                  | Sources remain separate unless the narrow static/runtime posture reconciliation applies                                      |
+| Static header missing but approved response contains it                             | Static candidate remains, runtime evidence records `observed_safe`; routes/environments can differ                           |
+| Static and runtime posture both detect the same weakness                            | One candidate contains declared and observed evidence instead of a duplicate                                                 |
+| HTTP target is localhost                                                            | Allowed after explicit per-audit approval                                                                                    |
+| HTTP target is RFC1918/ULA                                                          | Rejected unless private-network approval is explicitly set                                                                   |
+| HTTP target/redirect reaches metadata, link-local, reserved, or mixed forbidden DNS | Rejected before connection; redirect targets are validated again                                                             |
+| Server rejects HEAD                                                                 | One bounded GET fallback is allowed only for 405/501                                                                         |
+| Response hangs, redirects repeatedly, or is too large                               | Probe is `FAILED`; no clean runtime result is implied                                                                        |
+| Lockfile absent                                                                     | Manifest ranges remain inventory; OSV is `NOT RUN`/skipped rather than querying ranges                                       |
+| npm/pnpm/Yarn lockfile malformed                                                    | Dependency coverage is failed/partial, not clean                                                                             |
+| Multiple installed versions                                                         | Each resolved package/version/lockfile entry remains distinct                                                                |
+| Direct vs transitive cannot be proved                                               | Relationship is `unknown`; no reachability claim                                                                             |
+| OSV aliases duplicate an advisory                                                   | Alias-overlapping records are consolidated; withdrawn records are ignored                                                    |
+| OSV stale/unavailable                                                               | Fresh local cache may be used; otherwise coverage is `FAILED`                                                                |
+| OSV has no fixed version/CVSS                                                       | Field stays empty/unspecified; Traceward does not invent it                                                                  |
+| `.env`, key, binary, symlink, generated tree                                        | Excluded and counted; this limits coverage                                                                                   |
+| Source changes before graph resume                                                  | Audit fails instead of mixing snapshots                                                                                      |
+| Huge/deep repository                                                                | Snapshot and finding budgets truncate with explicit partial coverage                                                         |
+| Browser closes                                                                      | Separate worker continues persisted work                                                                                     |
+| Two workers                                                                         | Local PID lock rejects the second                                                                                            |
+| Worker dies                                                                         | Active work is requeued up to the bounded attempt count; abrupt crash testing remains incomplete                             |
+| Cancellation races completion                                                       | Cancelled is terminal and late progress cannot overwrite it                                                                  |
+| Audit comparison says resolved                                                      | Fingerprint disappeared; this is not proof of remediation, and line moves can appear new/resolved                            |
+| CI gate passes                                                                      | Only configured severity threshold passed for observed unresolved findings; not a security assurance                         |
+| HTML/Markdown contains hostile text                                                 | React/HTML escaping is applied; external Markdown renderers remain responsible for safe rendering                            |
+| Imported/tampered application DB                                                    | Unsupported; persisted-report schema validation and migration hardening remain incomplete                                    |
+| Native Windows/macOS                                                                | Not validated; WSL2/Linux is the supported tested path                                                                       |
+| No findings                                                                         | “No candidates in analyzed scope,” never “secure”                                                                            |

@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Traceward",
-          "version": "0.1.0",
+          "version": "0.2.0",
           "rules": [
             {
               "id": "TW-004",

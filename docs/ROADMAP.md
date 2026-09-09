@@ -1,25 +1,32 @@
 # Roadmap
 
-## Milestone 0 — Prove the current vertical slice
+## Completed — serious local audit workflow
 
-Complete the handoff P0 gate. Produce a real lockfile, build, graph persistence tests, actual UI screenshots, and a reproducible demo. Do not expand scanning breadth before this works.
+- Real Next.js/worker/LangGraph/SQLite workflow and browser validation.
+- Semgrep and Gitleaks adapters validated with installed binaries and version reporting.
+- Conservative TypeScript/Node/Next posture rules with paired vulnerable/benign fixtures.
+- Approved single-URL HTTP posture probe with SSRF, metadata, redirect, method, timeout, and size controls.
+- npm/pnpm/Yarn resolved dependency inventory and opt-in cached OSV matching.
+- Explicit coverage, provenance, OpenAI Responses API adapter, cloud redaction, prompt-injection controls, benchmark, audit comparison, and CI mode.
 
-## Milestone 1 — Make results trustworthy
+## Next — detection quality
 
-Add golden schemas from pinned real scanner versions, explicit version reporting, source metadata/ruleset digests, tested crash recovery, append-only review/report revisions, storage migration guards, and better redacted diagnostics. Split the large workspace component when extending its tabs. Run browser accessibility and no-egress checks.
+Replace the highest-value auth/authz regex candidates with narrow AST-aware analysis. Model common Next.js wrappers, middleware/proxy matchers, tenant ownership, and benign RLS/service-policy counterexamples. Measure false positives and false negatives before adding languages.
 
-## Milestone 2 — One valuable detection upgrade
+Extend lockfile workspace fidelity, OSV pagination, withdrawn/advisory freshness tests, and severity-vector presentation. Reachability remains separate work and must not be inferred from presence.
 
-Choose either AST-aware authorization candidate discovery for one narrowly defined Next.js route pattern, or resolved lockfile inventory plus OSV matching with downloaded cache timestamps. Include middleware/RLS counterexamples, stale cache, unsupported lockfiles, no fixed version, multiple installed versions, and indirect dependencies. No unsupported “reachable” flag.
+## Next — operational hardening
 
-## Milestone 3 — Evaluate the optional AI honestly
+Add crash/fault injection, stale scanner staging cleanup, checkpoint/config version compatibility, schema-validated persisted reports/caches, append-only report revisions, and scanner-version compatibility fixtures. Add OS resource containment guidance for hostile repositories.
 
-Define a reviewed dataset with evidence-level labels and benign controls. Compare the deterministic baseline with the same scanner results plus local contextual analysis. Measure false confirmations (target zero by product contract), invalid citations, missed context, abstentions, time, and hardware/model settings. No single broad “security accuracy” score from a handful of fixtures.
+## Next — model validation
 
-## Milestone 4 — Distribute responsibly
+Run one economical and one explicitly configured stronger OpenAI model plus one local Ollama model against the same scanner evidence and adversarial repository text. Record invalid citations, abstentions, latency, tokens, configured-price cost, and whether a stronger model materially improves contextual triage. Do not create a generic model benchmark.
 
-Validate name/licenses, document supported OS and pinned tool versions, add a useful install path, release artifacts, and GitHub Action/SARIF compatibility tests. Avoid publishing a privileged all-in-one image until its isolation and update strategy are reviewed. Add CI policies only after baseline/finding identity semantics are defined.
+## Public release
+
+Capture verified runtime screenshots and a short demo; perform accessibility, license, name/trademark, clean-install, native-platform, and private vulnerability-reporting checks. Publish CI status only from a real public workflow.
 
 ## Deliberately later
 
-Trivy, broad AI/agent threat analysis, MCP integration, a human-approved patch proposal workflow, cloud/team features, and paid services all require independent justification. This portfolio does not need all of them to show useful engineering.
+Trivy, IaC/cloud IAM, dependency reachability, a human-approved patch proposal flow, broader DAST, MCP, generic RAG, multi-agent supervisors, cloud teams, billing, RBAC, compliance frameworks, and exploitation require separate product/security justification.

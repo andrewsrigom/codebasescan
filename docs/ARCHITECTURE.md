@@ -5,85 +5,96 @@
 ```text
 Browser on loopback
         |
-Next.js UI + guarded HTTP routes
+guarded Next.js UI/API <---------- local CLI / CI runner
         |
-Application SQLite store <---------- Local CLI (register, queue, export)
+application SQLite (jobs, reports, budgets, AI cache)
         |
-Single long-running worker
+single long-running worker
         |
-LangGraph parent workflow <---------- Official SQLite checkpointer
+LangGraph audit workflow <-------- separate SQLite checkpointer
         |
-        +-- bounded source snapshot (read-only, raw content in memory)
-        +-- deterministic pattern scanner
-        +-- optional trusted Semgrep/Gitleaks processes
-        +-- manifest inventory
-        +-- contextual review subgraph
+        +-- bounded read-only source snapshot
+        +-- built-in source patterns
+        +-- application posture scanner
+        +-- optional Semgrep / Gitleaks processes
+        +-- lockfile inventory + optional fixed-host OSV API
+        +-- optional approved HTTP response probe
+        +-- bounded contextual review subgraph
                     |
                     +-- snapshot-only source tool
-                    +-- optional Ollama on loopback
+                    +-- disabled / loopback Ollama / opt-in OpenAI Responses API
 ```
 
-Next.js never owns a long-running audit. The worker consumes persisted queued jobs, updates progress events, and handles cancellation independently of page lifecycle. The first version intentionally runs one audit at a time on one machine.
+Next.js never owns a long-running audit. The worker claims persisted jobs and handles cancellation independently of the browser. CI uses the same graph with an ephemeral store and skips only the human publication interrupt.
 
-Application state uses Node's `node:sqlite`; graph checkpoints use the official `@langchain/langgraph-checkpoint-sqlite` adapter. They serve different responsibilities and use separate files. The application does not implement a custom partial checkpoint serializer. `better-sqlite3` is installed for the official adapter; no third-party native artifacts are bundled.
+Application state uses Node `node:sqlite`. Graph checkpoints use `@langchain/langgraph-checkpoint-sqlite` in a separate file. Schema migration adds per-audit options, AI usage, and content-addressed AI cache tables without rewriting old reports.
 
-## Graph responsibilities
+## Audit graph
 
 ```text
 START -> snapshot
-              +-> patterns --+
-              +-> semgrep ---+
-              +-> gitleaks --+-> normalize
-              +-> inventory-+       |
-                              investigate (up to 12 candidates)
-                                    |
-                              prepare_report
-                                    |
-                              human_review [interrupt]
-                                    |
-                              publish -> END
+              +-> patterns ----+
+              +-> posture -----+
+              +-> semgrep -----+
+              +-> gitleaks ----+-> normalize/reconcile
+              +-> OSV inventory+          |
+              +-> HTTP probe --+     investigate (bounded)
+                                            |
+                                      prepare_report
+                                            |
+                         interactive: human_review [interrupt]
+                                            |
+                                         publish -> END
+                         CI: draft report ----------> END
 ```
 
-The four scanner branches publish state updates through reducers. Fan-in waits for all four branches, including explicit skipped or failed results. Investigation is bounded by a deterministic candidate budget. It does not use an invented confidence threshold.
+The six branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
-The nested review graph is:
+The nested review graph remains:
 
 ```text
 collect_context -> assess
        ^             |
-       +-- request additional allowed files (at most 2 rounds)
-                     |
-                    END
+       +-- exact allowed path request (at most 2 rounds)
 ```
 
-The optional model requests exact source paths through structured output. Deterministic routing validates and dispatches snapshot reads; this is deliberately narrower than a free-form autonomous ReAct/shell loop. LangChain supplies the schema-backed tool and Ollama adapter. The graph supplies the repeatable process.
+Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
 
-## State and persistence
+## Deterministic evidence
 
-Raw repository content is retained in a bounded in-process snapshot. It is not placed wholesale in application reports or graph checkpoints. Findings contain small redacted source excerpts and digests; these are still sensitive source-derived data.
+`builtin.ts` retains small broad review patterns. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, route/server-action authentication and authorization, tenant/owner scope, and environment use. It intentionally reports candidates when wrappers, platform behavior, middleware, or runtime policy cannot be proved.
 
-A worker restart rebuilds the snapshot before further source analysis and compares its digest with the checkpoint. Mismatched source causes failure instead of mixing evidence. This is not an atomic Git snapshot; stop mutating the target during collection. A completed draft can be published against its recorded snapshot without re-reading the current repository.
+The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S), strips queries from stored display URLs, rejects credential-shaped query keys, blocks metadata/link-local/reserved destinations, requires explicit approval for non-loopback private networks, validates every DNS answer and redirect, and pins the selected address for the connection. It uses HEAD and only falls back to bounded GET for 405/501. Static and runtime findings are reconciled by attaching observed evidence; static evidence is not silently removed.
 
-`thread_id` is the audit UUID. The pure publication node calls `interrupt()`. Publication submits a rationale and resumes the same thread with `Command`. Nothing dangerous happens before or after the interrupt: publication is a report-state transition, not an exploit, deployment, or code change.
+Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code. OSV is separately opt-in and uses a fixed API host. Only package name/version pairs leave the machine. Full advisory responses are compacted, aliases are consolidated, withdrawn records are ignored, and cache/report data never claim reachability.
 
-Replay is not an exactly-once guarantee. Nodes must be safe to repeat. Progress events have unique keys, normalized findings have deterministic IDs, and publication merges the current human dispositions instead of overwriting them with stale model state. Real crash-injection coverage remains a release gate.
+## AI boundary
 
-## Evidence versus assessment
+`TRACEWARD_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`.
 
-A finding stores original source/rule/severity, relative file locations, evidence digests, source excerpts, and an independent human disposition. An assessment may say likely issue, likely false positive, or inconclusive. It cannot remove or confirm the source finding. Confirmation is an explicit local analyst action with a rationale, not cryptographic proof or dynamic exploit verification.
+Cloud context is limited to at most two already-selected files per round and 16,000 context characters, then redacted again for credentials, emails, and user-home paths. `.env` and key files are excluded. Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, and context digest. Reports record provider, model, prompt version, files sent, redaction result, tokens, cache use, and configured-price cost approximation.
 
-Dependency declarations are a separate inventory type. They are not placed in the vulnerability domain until a real vulnerability matcher exists.
+## Evidence, assessment, disposition, and coverage
 
-## HTTP boundary
+A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. These states are not collapsed into “verified.”
 
-The server wrapper binds to `127.0.0.1`. Proxy and API guards enforce exact loopback hosts. State-changing requests require same Origin, JSON, and the UI header. Bodies are bounded while streaming. Routes accept registered project IDs, never arbitrary source paths or model endpoints. The local OS user is trusted; there is no multi-user authentication. Never bind this application publicly or expose it through a tunnel/reverse proxy.
+Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. Traceward does not compute a global security score.
+
+## Persistence and replay
+
+The in-process snapshot is bounded and raw content is not stored wholesale in the application report. Findings contain small redacted excerpts and digests, which are still sensitive. A resumed graph recaptures source and rejects a changed digest instead of mixing snapshots.
+
+Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. OpenAI budgets are persisted before requests. Publication merges current human dispositions. Abrupt termination and parser processes still require OS-level containment for hostile repositories.
+
+## Local HTTP service
+
+The Traceward UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, same Origin for mutations, JSON, a UI header, and streamed body limits. This control is separate from the optional outbound target probe. The application has no multi-user authentication and must not be exposed publicly.
 
 ## Reading order
 
-1. `src/domain/types.ts`: contracts and trust language.
-2. `src/scanners/builtin.ts`: simple deterministic input/output.
-3. `src/engine/review-graph.ts`: state and bounded conditional loop.
-4. `src/engine/audit-graph.ts`: reducers, branches, fan-in, interrupt.
-5. `src/engine/run.ts`: checkpoint thread lifecycle.
-6. `src/server/store.ts` and `src/worker/main.ts`: application durability.
-7. `src/components/audit-workspace.tsx`: real data and user decisions.
+1. `src/domain/types.ts`, `coverage.ts`, and `provenance.ts`
+2. `src/security/paths.ts`, `url-policy.ts`, and `redact.ts`
+3. `src/scanners/posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
+4. `src/engine/review-graph.ts`, `openai.ts`, and `audit-graph.ts`
+5. `src/server/store.ts`, `src/worker/main.ts`, and `src/cli/main.ts`
+6. `src/components/audit-workspace.tsx` and `finding-details.tsx`

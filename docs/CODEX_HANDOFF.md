@@ -1,49 +1,52 @@
 # Codex handoff
 
-## Context
+## Current release
 
-Build a portfolio-quality open-source local security review tool. The owner is learning LangChain/LangGraph through a useful product, not trying to recreate a full AppSec platform in one iteration. TypeScript and Next.js are deliberate choices. UI and product wording are in English.
+Traceward now has a complete local-first audit slice:
 
-The existing implementation is a substantial starter with a dependency-free core that has been tested. The **first assignment is to validate and stabilize the full application**, not to start over or add unrelated infrastructure.
+- bounded snapshots without target execution;
+- built-in and application-posture rules with positive and benign fixtures;
+- real Semgrep 1.176.1 and Gitleaks 8.30.1 worker integration;
+- opt-in SSRF-hardened single-URL HTTP response observation;
+- npm/pnpm/Yarn resolved inventory and opt-in cached OSV matching;
+- explicit capability coverage and finding provenance;
+- disabled, Ollama, and opt-in OpenAI Responses API providers;
+- OpenAI structured output, `store: false`, redaction, cache, timeout/retry, persisted budgets, token/cost metadata, and no fallback;
+- prompt-injection fixtures and snapshot-only file access;
+- category-organized benchmark with precision/recall;
+- local audit comparison;
+- non-interactive CI with JSON/SARIF/Markdown/HTML and severity exit gates;
+- Next.js UI, worker, SQLite queue, LangGraph checkpoints, review interrupt/resume, and exports.
 
-## P0 — Make the existing vertical slice verifiably work
+Code and UI remain English. Scanner evidence, runtime evidence, advisory presence, model assessment, and human disposition are separate.
 
-1. Read `AGENTS.md`, `docs/VALIDATION.md`, `docs/THREAT_MODEL.md`, and `docs/DECISIONS.md`.
-2. Use Node 22.16+ in the 22/24 lines. Run `npm install` with network access. Check the actual installed Next/React/LangGraph/checkpoint peer dependency graph. Resolve incompatible ranges deliberately and commit the resulting real `package-lock.json`. Never synthesize a lockfile.
-3. Run Prettier, TypeScript, ESLint, and the core tests. Fix implementation issues rather than weakening types, guards, assertions, or rules. Dependencies were unavailable in the authoring environment; no full typecheck/build claim has been made.
-4. Run `npm run test:graph`. Verify SQLiteSaver constructor/lifecycle, Annotation reducers, parallel fan-in, interrupt/resume, source-digest consistency, subgraph loop limits, and cancellation. Check actual persisted state instead of inferring successful recovery from a UI badge.
-5. Run `npm run demo`, then `npm run build`. Start the UI and worker in different processes. Verify that the default demonstration contains seven review candidates, no AI claims, skipped external scanners, and manifest-only dependency inventory.
-6. Install the Playwright browser and run `npm run test:e2e`. Inspect the real UI on desktop and mobile; verify keyboard access, dialog focus, findings filters, review persistence, publish resume, export downloads, malformed bodies, Host/Origin rejection, and no unexpected outbound requests.
-7. With authorized inert fixtures only, manually validate the real Semgrep and Gitleaks binaries. Lock tested CLI versions in developer documentation and confirm their JSON/exit-code contracts. Then test one locally installed Ollama model, including malformed structured output and timeout. These integrations have not been exercised against real binaries/models yet.
-8. Update `docs/VALIDATION.md` with exact versions, executed commands, results, and residual gaps. Only then replace the README's validation warning with an accurate release status.
+## Validated environment
 
-### Acceptance criteria for the first runnable release
+Primary environment: WSL2 Ubuntu 24.04.4, Node 24.19.0, npm 11.17.0. Semgrep 1.176.1 and Gitleaks 8.30.1 are installed outside the repository. OSV live lookup was exercised with the inert lodash 4.17.20 fixture. OpenAI is mocked only because no API key was available. Ollama is not installed.
 
-- A fresh machine can follow the README and see a real persisted demo audit.
-- A registered fixture can be queued from the UI and processed by the separate worker.
-- Every candidate has source, rule, location, snapshot-bound evidence, limitations, and independent human disposition.
-- A disabled or failed scanner remains visible as disabled/failed, never as a clean result.
-- Publication pauses using LangGraph interrupt and resumes after a real review request.
-- Model failure retains the candidate with an inconclusive assessment. No cloud fallback exists.
-- Cancellation cannot resurrect a job. The full core, graph, build, and browser checks pass.
-- No proprietary code, API keys, real tokens, runtime DBs, or model weights enter Git.
+See `docs/VALIDATION.md` for commands and exact counts. Do not repeat scanner installation unless version checks fail.
 
-## P1 — Harden the foundation before detection breadth
+## Next work, in priority order
 
-Prioritize repeatable real-binary contracts, restart/crash tests, settings-change resume policy, raw staging cleanup after hard process termination, explicit storage migration/version checks, schema-validated persisted report loading, and symlink-race isolation. Keep external scanner versions in reports once their version commands are safely integrated.
+1. Add AST-aware TypeScript analysis for authentication/authorization and middleware composition. Keep regex findings as candidates and add real framework counterexamples.
+2. Validate one real OpenAI model and one local Ollama model on the prompt-injection suite. Record model IDs, latency, tokens, cost, invalid citations, and abstention behavior.
+3. Harden storage migration and schema-validate reports and AI cache loaded from disk. The bounded OSV cache is schema-validated.
+4. Add fault injection for SIGKILL/power-loss staging cleanup, worker restart, budget reservation, and checkpoint upgrade behavior.
+5. Add append-only report revisions before claiming immutable audit history.
+6. Expand lockfile workspaces, OSV pagination, severity parsing, and advisory freshness presentation. Do not infer dependency reachability.
+7. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
+8. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
+9. Capture real runtime screenshots, verify name/trademark availability, publish a private vulnerability-reporting route, and review dependency/API licenses before a public release.
 
-Break the workspace into cohesive tab/panel components when adding complexity. Improve accessibility and visual regression coverage without replacing the product's information hierarchy. Add an operator-facing diagnostic channel with redacted error codes, not raw secret-bearing stderr.
+## Guardrails
 
-A report publication is currently mutable through later human finding review; add append-only report revisions before claiming audit-grade immutable history. Same-line fingerprints are only stable within comparable snapshots; define baselines before building “resolved since last scan.”
-
-## P2 — Add useful security coverage
-
-Choose **one** narrow improvement: AST-aware auth-boundary candidate detection with benign middleware/RLS controls, or OSV lockfile-based matching with explicit database timestamp and offline cache policy. Do not ship both plus Trivy/MCP/multi-agent services at once. Preserve the source adapter contract and add golden JSON tests for supported tool versions.
-
-## P3 — Public portfolio release
-
-Complete `docs/PORTFOLIO.md`: real screenshots, a reproducible demonstration, measured narrow evaluation, documented limits, license/dependency review, and a useful README. Validate name availability and set a private vulnerability-reporting route. Do not imply independent security certification or representative detection accuracy.
+- Never execute or install the audited repository.
+- Never add arbitrary shell/model/network tools to repository-driven AI.
+- Never silently suppress a deterministic finding or turn missing coverage into success.
+- Keep OSV and cloud AI opt-in and record what left the machine.
+- Keep the HTTP probe single-target, bounded, non-destructive, and explicitly approved.
+- Do not expand into generic RAG, MCP, multi-agent, billing, compliance, or SaaS team features.
 
 ## Suggested next prompt
 
-> Read AGENTS.md and docs/CODEX_HANDOFF.md. Complete P0 first. Install and resolve the real dependencies, generate package-lock.json, and run typecheck, lint, core tests, graph integration tests, Next production build, and Playwright. Fix problems without weakening the security boundaries or replacing LangGraph with a mock. Preserve the local-first design and the distinction between scanner evidence, AI assessment, and human disposition. Report exactly which checks passed and which integrations still need validation. Do not add billing, cloud inference, auto-remediation, or new scanners yet.
+> Read AGENTS.md, docs/ARCHITECTURE.md, docs/VALIDATION.md, and docs/CODEX_HANDOFF.md. Preserve the local-first evidence model. Implement the first remaining item only: a narrow AST-aware TypeScript authorization analyzer with vulnerable and benign Next.js fixtures. Do not weaken snapshot/path/process/network/model boundaries or add new product scope. Run and report the full validation suite.

@@ -1,147 +1,167 @@
 # Traceward
 
-**A local-first, evidence-led security review workbench for TypeScript SaaS projects.**
+**Local-first security auditing with deterministic evidence and optional contextual AI.**
 
-Scanners produce signals. LangGraph coordinates bounded contextual review. Humans make the final disposition.
+Traceward helps developers find and review security gaps in TypeScript, Node.js, and Next.js projects without executing the target repository. Deterministic scanners discover signals, LangGraph coordinates a bounded investigation, optional AI adds context, and a human records the final disposition.
 
-Traceward combines a Next.js audit UI, a separate TypeScript worker, SQLite persistence, optional local scanners, and optional Ollama inference. It is a portfolio-oriented engineering starter, not a production security product, penetration test, or certification of safety.
+Traceward does not replace a penetration test, prove exploitability, or certify that software is secure. Missing and failed coverage stay visible.
 
-> **Delivery status:** the dependency-free core has been exercised locally. The full Next.js / LangGraph integration is written but still requires installation, typechecking, build, and integration/E2E validation. See [Validation](docs/VALIDATION.md) and start with [Codex handoff](docs/CODEX_HANDOFF.md). There is intentionally no fabricated lockfile or passing CI badge.
+> **Status:** the complete local workflow is validated in WSL2 with Next.js, LangGraph persistence, Semgrep 1.176.1, Gitleaks 8.30.1, the OSV API, report exports, and Chromium tests. OpenAI is covered with mocked Responses API contracts because no API key was supplied. Ollama and native Windows/macOS remain unvalidated. See [Validation](docs/VALIDATION.md).
 
-![Static styling preview, not a validated Next.js runtime screenshot](docs/assets/workspace-styling-preview.png)
+![Traceward audit workspace](docs/assets/workspace-styling-preview.png)
 
-*The image is a static styling inspection of the JSX/CSS with inert fixture data. Full runtime validation remains pending. A working standalone [HTML fixture export](examples/fixture-review.html) is also included.*
+## What it does
 
-## Why this project exists
+| Capability          | Implementation                                                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application posture | 11 conservative rules for headers, sensitive cookies, CORS, route/server-action auth, tenant scope, and environment use                            |
+| Static and secrets  | Built-in rules plus opt-in Semgrep and Gitleaks using a bounded private staging snapshot                                                           |
+| Dependencies        | npm, pnpm, Yarn Classic, and Yarn Berry lockfile resolution; opt-in cached OSV matching                                                            |
+| Runtime posture     | One explicitly approved HTTP URL; SSRF/metadata controls, DNS pinning, redirect/timeout/body limits, HEAD with bounded GET fallback                |
+| Investigation       | LangGraph fan-out/fan-in, evidence accumulation, bounded context loop, SQLite checkpoints, human publication interrupt/resume                      |
+| AI                  | Disabled by default; local Ollama or opt-in OpenAI Responses API with structured output, `store: false`, budgets, cache, redaction, and provenance |
+| Coverage            | Complete, partial, failed, disabled, not run, unsupported, and not performed are distinct; no arbitrary security score                             |
+| Reports             | JSON, Markdown, standalone HTML, SARIF 2.1.0, finding provenance, and local audit comparison                                                       |
+| CI                  | Non-interactive local audit, severity gates, meaningful exit codes, and selectable output format                                                   |
+| Evaluation          | Ground-truth security benchmark reporting TP, FP, FN, precision, and recall                                                                        |
 
-A long list of scanner warnings is not an audit. Developers need to understand what matched, what was inspected, what remains unknown, and whether a human has reviewed the finding. Traceward makes that distinction visible instead of hiding uncertainty behind a security score.
-
-The initial scope is source review for Node.js / TypeScript / Next.js SaaS projects. Framework-level authorization, RLS, deployment configuration, and actual exploitability often require evidence this starter cannot collect. Those gaps remain explicit.
-
-## What is included
-
-| Capability | Initial implementation |
-| --- | --- |
-| Audit workspace | Overview, searchable findings, evidence drawer, dependency inventory, coverage, workflow, history, project registry, settings, methodology |
-| Built-in review | Seven bounded regex heuristics; candidates only, including a deliberate false-positive fixture |
-| External scanners | Optional Semgrep and Gitleaks process adapters and JSON normalizers; disabled by default |
-| Agent workflow | LangGraph fan-out/fan-in, reducers, a bounded contextual review subgraph, checkpoint persistence, publication interrupt/resume |
-| Local inference | Optional Ollama structured assessments; fixed loopback endpoint; source-reading tool limited to the captured snapshot |
-| Human review | Explicit disposition and rationale; publishing does not automatically confirm findings |
-| Persistence | SQLite application store, separate official LangGraph SQLite checkpointer, single worker, durable job queue |
-| Reporting | JSON, Markdown, self-contained HTML, SARIF 2.1.0 |
-| Evaluation | Positive, benign, comment-only, and prompt-injection fixtures; unit, graph integration, and browser test suites |
-
-**Not implemented:** OSV/Trivy vulnerability matching, exact resolved dependency inventory, AST/dataflow analysis, real attack-path verification, auto-remediation, Git history scans, multi-user access, remote scanning, cloud LLMs, MCP servers, authentication, billing, or compliance claims.
+Known limits include regex-based source heuristics instead of whole-program AST/dataflow analysis, no Git-history secret scan, no reachability proof for vulnerable dependencies, no broad crawler or exploitation, and no cloud/IAM/IaC analysis.
 
 ## Start locally
 
-Use Node.js **22.16 or newer in the Node 22/24 release lines**. WSL2/Linux is the primary target; macOS is a secondary target. Native Windows is not yet validated. Run commands from this repository root.
+Use Node.js 22.16+ in the Node 22/24 lines. WSL2/Linux is the primary validated environment.
 
 ```bash
-npm install
+npm ci
 cp .env.example .env.local
 npm run demo
 npm run dev
 ```
 
-Open **http://127.0.0.1:3000**. The demonstration scans the included inert fixture through the actual graph with AI and external scanners disabled. It stops at human review. No API key or model download is needed for this mode.
-
-Start the persistent worker in a second terminal **after** the demonstration is seeded:
+Open **http://127.0.0.1:3000**. In a second terminal:
 
 ```bash
 npm run worker
 ```
 
-The UI queues jobs; the worker executes them. Closing the browser does not remove a queued job. Submitting publication review also requires the worker. `npm run demo` deliberately refuses to run alongside an existing worker.
+The UI queues jobs. The worker runs them independently of the page lifecycle and pauses before publication for a human rationale.
 
-### Review your own repository
+### Audit a repository
 
-Only register repositories you own or have permission to assess. Stop processes that mutate the target while capturing evidence.
-
-```bash
-npm run cli -- register /absolute/path/to/my-saas
-```
-
-The project then appears in **New audit**. Alternatively:
+Only inspect code you own or are authorized to assess.
 
 ```bash
-npm run cli -- scan /absolute/path/to/my-saas
+npm run cli -- register /absolute/path/to/project
+npm run cli -- scan /absolute/path/to/project
 npm run cli -- list
 npm run cli -- export <audit-id> html
 ```
 
-The target is read-only. Traceward does not run `npm install`, execute its scripts, start its app, or test exploits. Audit storage must not overlap the target; set `TRACEWARD_DATA_DIR` to a separate private directory when scanning Traceward itself.
+Traceward reads a bounded snapshot. It never runs the target's package installation, lifecycle scripts, application, arbitrary shell commands, or exploits.
 
-### Optional local AI
+### Optional HTTP observation
 
-Install Ollama and download an appropriate model separately. Pick a model that supports structured output and fits your available memory; a smaller model is not automatically a reliable security reviewer.
+Provide and approve one target in the New audit dialog, or use:
 
-Set these values in `.env.local`:
-
-```dotenv
-TRACEWARD_AI=ollama
-OLLAMA_MODEL=your-already-downloaded-local-model
+```bash
+npm run cli -- scan /absolute/path/to/project \
+  --probe-url http://127.0.0.1:3000/
 ```
 
-Configure the **Ollama server process** with `OLLAMA_NO_CLOUD=1`, then restart it. Traceward uses only `http://127.0.0.1:11434` and rejects obvious cloud model names, but an application-level hostname rule is not an operating-system egress sandbox. Block outbound traffic when a strict offline guarantee is required. The app does not download models, enable tracing, or silently fall back to a cloud model.
+Loopback is allowed. Other private-network targets require `--allow-private-network`. Cloud metadata, link-local, reserved, credential-bearing, and unsafe-scheme URLs remain blocked. Redirect targets are validated again. No crawling, arbitrary body, authentication testing, or exploitation is performed.
 
-### Optional scanners
+### Optional scanners and OSV
 
-Install trusted Semgrep and/or Gitleaks binaries yourself. Do not install them from the target repository. Then opt in:
+Install trusted Semgrep and Gitleaks binaries outside the target repository, then configure:
 
 ```dotenv
 TRACEWARD_SEMGREP=true
 TRACEWARD_GITLEAKS=true
+TRACEWARD_OSV=true
+TRACEWARD_OSV_CACHE_HOURS=24
 ```
 
-Restart the worker after configuration changes. Both scanners use a bounded temporary snapshot and the trusted configurations in `configs/`. Missing binaries, unsupported output, timeouts, and truncated coverage are not reported as clean scans.
+OSV sends only resolved npm ecosystem package names and versions to `api.osv.dev`; no source code is sent. Results are cached locally. When disabled or unavailable, the report shows disabled/failed coverage rather than zero vulnerabilities.
 
-The initial Gitleaks integration scans the current selected source files, **not Git history or excluded `.env` files**. The dependency tab lists declarations in `package.json`; it does **not** prove packages have no known vulnerabilities.
+Gitleaks scans captured current source, not Git history or excluded `.env`/private-key files.
+
+### Optional AI
+
+AI is never required and there is no local-to-cloud fallback.
+
+Local Ollama:
+
+```dotenv
+TRACEWARD_AI=ollama
+OLLAMA_MODEL=your-downloaded-model
+```
+
+Opt-in OpenAI:
+
+```dotenv
+TRACEWARD_AI=openai
+OPENAI_MODEL=your-economical-model
+OPENAI_STRONG_MODEL=
+OPENAI_API_KEY=
+TRACEWARD_AI_MAX_CALLS=12
+TRACEWARD_AI_INPUT_TOKEN_BUDGET=120000
+TRACEWARD_AI_OUTPUT_TOKEN_BUDGET=10000
+OPENAI_INPUT_COST_PER_MTOK=
+OPENAI_OUTPUT_COST_PER_MTOK=
+```
+
+OpenAI requests use the Responses API, structured JSON Schema output, `store: false`, timeouts, bounded retries, per-finding and per-audit budgets, and a seven-day content-addressed cache. Relevant context is minimized and redacted again before cloud transmission. Configure current per-million-token prices if approximate cost reporting is required. API keys are never placed in reports.
+
+### CI
+
+Run a non-interactive draft audit without a worker or cloud service:
+
+```bash
+npm run cli -- audit . --ci --fail-on high --format sarif --output traceward.sarif
+```
+
+Exit code `0` means the configured gate passed, `1` means unresolved findings met the threshold, and `2` means the audit failed operationally. A passing gate is not a security certification.
+
+Compare two stored audits:
+
+```bash
+npm run cli -- compare <base-audit-id> <current-audit-id>
+```
+
+Comparison reports new, resolved, unchanged, and severity-changed fingerprints. Fingerprints are line-sensitive; “resolved” does not prove remediation.
 
 ## Development checks
 
 ```bash
-npm test
-npm run benchmark
+npm run format:check
 npm run typecheck
 npm run lint
+npm test
 npm run test:graph
+npm run benchmark
 npm run build
-npx playwright install chromium
 npm run test:e2e
 ```
 
-`npm test` and `npm run benchmark` need only the selected Node runtime, not third-party packages. All other checks need installation first. Commit the real `package-lock.json` generated after resolving and validating dependencies, then use `npm ci` for repeatable installs.
+The benchmark is Traceward-specific, deterministic where possible, and intentionally includes a known comment false positive. It is not a generic model leaderboard.
 
 ## Project map
 
 ```text
-src/
-  app/          Next.js routes and local HTTP endpoints
-  components/   Audit workspace and review controls
-  domain/       Evidence, findings, validation, report contracts
-  engine/       LangGraph workflow, subgraph, local model adapter
-  scanners/     Deterministic patterns and external scanner adapters
-  security/     Snapshot boundaries, process limits, redaction, HTTP policy
-  server/       SQLite persistence and configuration
-  worker/       Durable job consumer, independent from Next.js
-  cli/          Explicit project registration, queueing, exports
-configs/        Trusted scanner rules; never read from a target repo
-fixtures/       Inert labeled review cases, not deployable apps
-scripts/        Demo seed and narrow fixture benchmark
-tests/          Core, graph integration, and browser suites
-docs/           Architecture, threat model, edge cases, portfolio, handoff
+src/domain/       findings, provenance, coverage, comparison, reports, CI gates
+src/scanners/     built-in posture, HTTP, OSV/lockfiles, Semgrep, Gitleaks
+src/security/     snapshots, URL/SSRF policy, process limits, redaction
+src/engine/       LangGraph workflows and Ollama/OpenAI reviewers
+src/server/       local configuration and SQLite persistence/cache/budgets
+src/app/          guarded Next.js UI and local API routes
+src/worker/       one durable local audit consumer
+src/cli/          queue, export, compare, and non-interactive CI
+fixtures/         inert positive, benign, dependency, and prompt-injection cases
+benchmarks/       category-organized ground truth
 ```
 
-## Portfolio direction
-
-Demonstrate one evidence-led journey: scan a small repo, inspect a signal, show a benign counterexample, explain the limitation, record human review, export the report. Then show how the graph persists state and resumes after an interrupt. Do not replace this with fabricated benchmark scores or fake AI activity.
-
-Read [Portfolio plan](docs/PORTFOLIO.md), [Architecture](docs/ARCHITECTURE.md), [Threat model](docs/THREAT_MODEL.md), and [Roadmap](docs/ROADMAP.md).
+Read [Architecture](docs/ARCHITECTURE.md), [Threat model](docs/THREAT_MODEL.md), [Validation](docs/VALIDATION.md), and [Portfolio plan](docs/PORTFOLIO.md).
 
 ## License and publishing
 
-Apache-2.0 covers this starter's original code. External scanners, models, rules, and dependencies retain their own licenses. No scanner binaries, model weights, font files, or third-party rule packs are bundled. Before redistribution or a commercial release, review the exact components and their licenses.
-
-**Traceward is a working name:** package, domain, and trademark availability have not been checked. Publish a first release only after completing the release gate in the handoff. No hosted service is provisioned by this repository.
+Apache-2.0 covers Traceward's original code. External scanners, APIs, models, rules, and dependencies retain their own licenses and terms. No scanner binary or model weight is bundled. Traceward is a working name; package, domain, and trademark availability have not been checked.

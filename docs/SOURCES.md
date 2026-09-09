@@ -10,6 +10,12 @@ Consulted during starter preparation on 2026-09-08. Package APIs and security gu
 - Official SQLite checkpoint adapter: https://reference.langchain.com/javascript/langchain-langgraph-checkpoint-sqlite/SqliteSaver
 - LangChain ChatOllama: https://docs.langchain.com/oss/javascript/integrations/chat/ollama
 - Ollama local-only configuration: https://docs.ollama.com/faq
+- OpenAI Responses API reference: https://platform.openai.com/docs/api-reference/responses
+- OpenAI Structured Outputs guidance: https://platform.openai.com/docs/guides/structured-outputs
+- OpenAI data controls (`store=false`): https://platform.openai.com/docs/guides/your-data
+- OSV API overview: https://google.github.io/osv.dev/api/
+- OSV `querybatch` API: https://google.github.io/osv.dev/post-v1-querybatch/
+- OSV schema: https://ossf.github.io/osv-schema/
 - Semgrep CLI output, metrics and scan configuration: https://semgrep.dev/docs/cli-reference
 - Gitleaks official CLI documentation: https://github.com/gitleaks/gitleaks
 - Node SQLite: https://nodejs.org/api/sqlite.html

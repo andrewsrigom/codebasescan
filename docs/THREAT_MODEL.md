@@ -2,40 +2,41 @@
 
 ## Protected assets
 
-Source code, credentials accidentally present in source, local files outside registered projects, model context, source-derived reports/checkpoints, and the integrity of the analyst's decision.
+Source code, accidentally embedded credentials, local files outside registered projects, cloud-model context, API keys, source-derived reports/checkpoints/caches, cost budgets, and the integrity of scanner and analyst decisions.
 
 ## Trust assumptions
 
-The local OS user, Traceward's installed dependencies, scanner binaries, local configuration, and the configured Ollama service are trusted. Target repository files, comments, paths, tool reports, and LLM responses are untrusted. A malicious same-user process, compromised scanner runtime, browser extension with local access, or root attacker is outside the current containment guarantee.
+The local OS user, Traceward installation, local configuration, scanner binaries, configured Ollama process, and fixed OpenAI/OSV services are trusted. Target files, filenames, comments, manifests, lockfiles, scanner/API/model output, HTTP targets, redirects, and response headers are untrusted.
 
-This is an application-level boundary, **not a hardened sandbox**. Use an isolated VM/container with OS-enforced limits and blocked egress for truly hostile repositories. A container alone is not a proof of sandbox safety.
+This is an application boundary, not a hardened sandbox. A compromised dependency/scanner, malicious same-user process, browser extension with local access, kernel/root attacker, or parser zero-day is outside the containment guarantee. Use a disposable VM/container with OS CPU/memory/egress limits for truly hostile input; a container alone is not proof of isolation.
 
-## Implemented controls and remaining exposure
+## Controls and residual risk
 
-| Threat | Current control | Residual limitation |
-| --- | --- | --- |
-| Target executes a lifecycle script | No package installation or target code execution | Parser/scanner vulnerabilities are still possible |
-| Model reads arbitrary files | Validated exact paths from the captured snapshot; bounded source tool | Model may misunderstand authorized content |
-| Prompt injection in source/comments | Treat as data, no shell/write/network tools, structured response validation, evidence-ID allowlist | Prompts alone cannot eliminate instruction-following attacks or misclassification |
-| Secret leakage | Excluded sensitive files, best-effort redaction, Gitleaks raw matches discarded, no tracing | Unknown credential formats and sensitive business logic can remain in excerpts |
-| Path traversal / symlinks | Canonical root, relative path checks, containment checks, skipped symlinks, leaf `O_NOFOLLOW` where supported | Concurrent replacement of intermediate directories is not fully isolated |
-| CSRF / DNS rebinding | Loopback bind, exact Host/URL/Origin policy, custom mutation header, JSON requirement | No user authentication; not suitable for LAN/public exposure |
-| Scan resource exhaustion | Snapshot caps, depth/entry limits, subprocess output/time limits, model iteration/deadline budgets | Directory enumeration and trusted parsers are not OS memory/CPU sandboxed |
-| Dirty or stale evidence | Snapshot digests and read-before-resume comparison | Collection is not atomic across files; rules/config/code upgrades require a fresh audit |
-| Report/script injection | React escaping, escaped standalone HTML with no scripts/network and restrictive CSP | Markdown must be treated as untrusted input by any third-party renderer |
-| Accidental remote transmission | No cloud adapter, disabled remote tracing, no remote fonts, scanner metrics/version checks disabled | Trusted binaries/daemon configuration and OS outbound access remain operator responsibilities |
-| Crash with raw scanner staging | Private staging directories, cleanup in normal `finally` path | SIGKILL/power loss can leave plaintext staged source; clean private temp storage after stopping worker |
-| Concurrent jobs/reviews | SQLite transactions, one active audit per project, one worker PID lock, explicit state transitions | No distributed lease, row-level tenant isolation, or multi-host coordination |
-| False certainty | Candidates, assessments, coverage, and human decisions are separate | Human confirmation can also be mistaken; no guarantee of exploitability or safety |
+| Threat                          | Implemented control                                                                                                                                                                  | Residual limitation                                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Target lifecycle/code execution | No target install, script, application, shell, or exploit execution                                                                                                                  | Trusted scanners and parsers still process hostile bytes                                                            |
+| Path traversal/symlink escape   | Canonical root, safe relative paths, containment checks, symlinks skipped, leaf `O_NOFOLLOW` where available                                                                         | Concurrent replacement of intermediate directories is not fully isolated                                            |
+| Prompt injection                | Repository data is explicitly untrusted; no model tools/shell/network; exact snapshot paths; structured output; evidence-ID allowlist                                                | Models can still misunderstand or be influenced by adversarial content                                              |
+| Secret/privacy leakage          | Sensitive files excluded; secret findings bypass AI; Gitleaks raw matches discarded; local and cloud redaction; cloud context minimized                                              | Unknown secret formats and sensitive business logic can remain                                                      |
+| OpenAI retention/cost           | Explicit `TRACEWARD_AI=openai`, fixed endpoint, `store: false`, persisted call/token budgets, timeout/retries, per-finding cap, cache                                                | Provider processing and account policy remain external; token estimation and configured-price cost are approximate  |
+| Hidden cloud fallback           | Exactly one configured mode: disabled, Ollama, or OpenAI                                                                                                                             | Operators must secure environment variables and egress                                                              |
+| OSV source disclosure           | Fixed OSV endpoint; only npm package names/versions; bounded responses; compact private cache                                                                                        | Package inventory can disclose technology choices; advisory freshness depends on OSV/cache                          |
+| Probe SSRF/metadata             | HTTP(S) only, no credentials/fragments/sensitive query keys, metadata/reserved/link-local blocks, private-network opt-in, all-address validation, DNS pinning, redirect revalidation | An approved target can still have side effects on HEAD/GET; proxy/TLS/network-layer behavior is outside app control |
+| Probe resource abuse            | One URL, redirect/method/response/time limits, no body/auth/crawl/exploit                                                                                                            | Per-hop timeout means total duration can exceed one request timeout                                                 |
+| Scanner resource exhaustion     | File/depth/byte caps, subprocess time/output limits, private staging, one worker                                                                                                     | External processes have no OS memory/CPU sandbox                                                                    |
+| Dirty/stale evidence            | Snapshot/file digests, changed-source resume rejection, timestamps, advisory modification metadata                                                                                   | Snapshot collection is not atomic across files                                                                      |
+| Report/script injection         | React escaping; escaped standalone HTML; no report scripts/network; restrictive report CSP                                                                                           | Third-party Markdown renderers must still treat content as untrusted                                                |
+| Traceward CSRF/DNS rebinding    | Loopback bind, exact Host/Origin policy, JSON and UI header for mutation                                                                                                             | No user authentication; never expose to LAN/public internet                                                         |
+| Partial/failed analysis         | Explicit coverage states; failure never becomes zero findings                                                                                                                        | A human can still misread incomplete coverage                                                                       |
+| False certainty                 | Scanner evidence, runtime evidence, AI assessment, human disposition, and coverage stay separate                                                                                     | Human confirmation can be wrong; no assurance or exploitability guarantee                                           |
+| Crash with staged source        | Private mode-0700 staging and normal-path cleanup                                                                                                                                    | SIGKILL/power loss can leave plaintext staging until manual cleanup                                                 |
 
 ## Data lifecycle
 
-`.traceward/application.sqlite` stores projects, reports, queue state, review notes, and progress events. `.traceward/checkpoints.sqlite` stores graph state, including redacted evidence excerpts. WAL/SHM files may be created. Files are local and are **not encrypted at rest** by the application. Use encrypted local storage as appropriate.
+`.traceward/application.sqlite` stores project paths, jobs, reports, review notes, events, AI usage, and structured AI cache entries. `.traceward/checkpoints.sqlite` stores graph state. `.traceward/osv-cache.json` stores compact advisory data. WAL/SHM files may exist. None are encrypted by Traceward; use encrypted local storage when needed.
 
-`.traceward/temporary` can contain raw selected source while external scanners run. Never upload it. Stop the worker before deleting stale staging contents or resetting storage. Remove the entire configured data directory to reset this single-user preview; secure erasure and selective retention are not implemented.
-
-Exports contain source-derived data and are private by default. Check them before sharing. Do not assume redaction is a data-loss-prevention guarantee.
+`.traceward/temporary` contains selected source while external scanners run. Normal completion deletes it. Stop processes before removing stale state after a crash. Exports and caches are private source-derived artifacts; inspect them before sharing. Redaction is not a data-loss-prevention guarantee.
 
 ## Security review scope
 
-The initial product does not test live applications, exploit endpoints, validate credential activity, search Git history, prove tenant isolation, establish compliance, certify software, or scan repositories without authorization. Its UI must never suggest otherwise.
+Traceward checks bounded source/configuration, lockfile advisories, and one approved HTTP response. It does not search Git history, validate credential activity, prove tenant isolation, calculate dependency reachability, crawl an application, brute-force authentication, exploit targets, analyze cloud IAM/IaC, establish compliance, or certify software.

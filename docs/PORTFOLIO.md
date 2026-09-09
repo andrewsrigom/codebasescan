@@ -8,24 +8,26 @@ Only add measured reliability, model performance, or production usage claims onc
 
 ## Demonstration sequence
 
-1. Open the included review-worthy SaaS audit. Show seven candidates and the disabled external scanner badges.
+1. Open the included review-worthy SaaS audit. Show deterministic candidates and explicit capability status.
 2. Inspect the raw-SQL candidate: rule, file, snapshot digest, excerpt, caveats, remediation. Explain why pattern matching is not proof of exploitability.
-3. Open the dependency tab and say exactly what is known: manifest requirements, not resolved vulnerable packages.
+3. Open the dependency tab. Show requested versus resolved versions, direct/transitive relationship, OSV aliases/fixes, and the explicit lack of reachability proof.
 4. Scan the comment-only fixture. Show that a heuristic can flag a comment. Record a human false-positive disposition with a rationale rather than letting AI silently hide it.
 5. Inspect the workflow: scanner fan-out/fan-in, bounded investigation, publication interrupt. Submit publication and let the separate worker resume the same audit.
-6. Export self-contained HTML and SARIF. Show that unresolved findings and coverage caveats travel with the report.
-7. In a later validated demonstration, enable one real scanner and one local model, record versions/hardware, and compare the assessment with the deterministic baseline.
+6. Approve a localhost HTTP target. Show declared versus observed header evidence and explain why one response is not whole-app coverage.
+7. Export self-contained HTML and SARIF, run the CI severity gate, and compare two local audits.
+8. Show the benchmark output: 9 TP, 1 intentional FP, 0 FN, precision 0.9, recall 1.0 on the declared narrow dataset. Explicitly reject general accuracy claims.
+9. In a later demonstration, validate one OpenAI and one Ollama model, record versions/hardware/tokens/cost, and compare contextual assessments with the deterministic baseline.
 
 ## What an interviewer can inspect
 
-| Engineering skill | Evidence in the repository |
-| --- | --- |
-| Frontend product work | Audit navigation, findings filters, readable evidence, keyboard dialogs, responsive UI |
-| Backend architecture | Persistent queue, process isolation from Next, transactions, cancellation, review transitions |
-| Agent engineering | State/reducers, conditional bounded loops, source tool, structured output, durable interrupts |
-| Security judgment | Threat model, limited privileges, real statuses, best-effort redaction, no false certainty |
-| Testing discipline | Positive and benign fixtures, intentional false positive, core and integration suites, explicit validation gaps |
-| Product prioritization | Narrow scope, no premature billing/cloud/multi-agent infrastructure |
+| Engineering skill      | Evidence in the repository                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Frontend product work  | Audit navigation, findings filters, readable evidence, keyboard dialogs, responsive UI                       |
+| Backend architecture   | Persistent queue, process isolation from Next, transactions, cancellation, review transitions                |
+| Agent engineering      | State/reducers, conditional bounded loops, source tool, structured output, durable interrupts                |
+| Security judgment      | Threat model, limited privileges, real statuses, best-effort redaction, no false certainty                   |
+| Testing discipline     | Paired posture fixtures, HTTP/OSV/OpenAI mocks, real scanner tests, prompt injection, ground-truth benchmark |
+| Product prioritization | Narrow scope, no premature billing/cloud/multi-agent infrastructure                                          |
 
 ## Before making the repository public
 
@@ -36,10 +38,10 @@ Only add measured reliability, model performance, or production usage claims onc
 - Keep setup simple. A reviewer should reach a labeled demonstration without providing a paid API key.
 - Use an honest README status badge from real CI only. Stars, downloads, accuracy, and customer counts must never be fabricated.
 
-## Useful first public issue
+## Useful next public issue
 
 “Replace one regex authorization heuristic with a narrow AST-aware detector and prove its behavior against explicit-middleware and RLS counterexamples.” This is more credible than a promise to audit every language or detect every vulnerability.
 
 ## Demo assets
 
-Any bundled static styling preview is labeled as such. It does not establish that Next.js hydration, graph persistence, or E2E behavior passed. The generated HTML report can be previewed independently of the app. Replace preview imagery with verified runtime screenshots after P0.
+The existing image began as a static styling preview and should be replaced with a verified current runtime screenshot before public release. The generated HTML report can be previewed independently of the app; it does not replace browser-flow evidence.
