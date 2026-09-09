@@ -161,7 +161,30 @@ function isServerOwnedUrl(node: ts.Expression | undefined, tainted: Set<string>)
 }
 
 function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
-  return isTainted(node, tainted) && !isServerOwnedUrl(node, tainted);
+  let value = node;
+  while (
+    ts.isAwaitExpression(value) ||
+    ts.isParenthesizedExpression(value) ||
+    ts.isAsExpression(value) ||
+    ts.isTypeAssertionExpression(value) ||
+    ts.isNonNullExpression(value)
+  )
+    value = value.expression;
+  if (isServerOwnedUrl(value, tainted)) return false;
+  if (!ts.isCallExpression(value)) return isTainted(value, tainted);
+
+  if (ts.isPropertyAccessExpression(value.expression)) {
+    const method = value.expression.name.text;
+    if (
+      /^(?:get|json|formData|text|arrayBuffer|toString|toLowerCase|toUpperCase|trim|slice|substring|substr|replace|replaceAll|concat)$/i.test(
+        method,
+      )
+    )
+      return isTainted(value.expression.expression, tainted);
+  }
+  if (/^(?:String|decodeURIComponent|encodeURIComponent|JSON\.parse)$/i.test(callName(value)))
+    return value.arguments.some((argument) => isTainted(argument, tainted));
+  return false;
 }
 
 function functionTaint(node: ts.FunctionLikeDeclarationBase): Set<string> {
@@ -397,7 +420,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           const destination = call.arguments[0];
           if (
             /(?:\$queryRawUnsafe|\$executeRawUnsafe|\.raw|\.queryRaw)$/i.test(callee) &&
-            isTainted(destination, tainted)
+            destination &&
+            isTaintedValue(destination, tainted)
           ) {
             const candidate = directFinding({
               snapshot,
@@ -419,7 +443,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           }
           if (
             /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
-            isTainted(destination, tainted) &&
+            destination &&
+            isTaintedValue(destination, tainted) &&
             !isServerOwnedUrl(destination, tainted) &&
             !hasPriorGuard(
               calls,
@@ -447,7 +472,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           }
           if (
             /(?:^|\.)(?:redirect|permanentRedirect)$/i.test(callee) &&
-            isTainted(destination, tainted) &&
+            destination &&
+            isTaintedValue(destination, tainted) &&
             !isServerOwnedUrl(destination, tainted) &&
             !hasPriorGuard(
               calls,

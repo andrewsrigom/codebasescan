@@ -127,6 +127,18 @@ test('server-owned URLs may use the request URL only as their same-origin base',
   );
 });
 
+test('request data passed into an external client does not taint its response', () => {
+  const ids = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const session = await payment.sessions.create({ customer: body.customer });
+      const destination = session.url as string;
+      return redirect(destination);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST006'));
+});
+
 test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
   assert.ok(
     astRuleIds(
