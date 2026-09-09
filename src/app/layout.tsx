@@ -25,15 +25,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               traceward <span className="brand-sub">SECURITY WORKBENCH</span>
             </span>
           </Link>
-          <div className="workspace-label">YOUR WORKSPACE</div>
-          <div className="workspace-pill">
-            <span className="avatar">L</span>
-            <div>
-              <strong>Local workspace</strong>
-              <small>Single-user · private</small>
-            </div>
-            <span className="live-dot" />
-          </div>
           <Navigation />
           <div className="sidebar-bottom">
             <div className="sidebar-version">v0.2.0</div>
@@ -46,15 +37,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <span>Workspace</span>
               <span>/</span>
               <strong>Security review</strong>
-            </div>
-            <div className="topbar-right">
-              <span className="pill neutral">
-                <span className="live-dot" />
-                LOOPBACK ONLY
-              </span>
-              <span className="top-avatar" aria-hidden="true">
-                L
-              </span>
             </div>
           </header>
           <main id="main" className="main-content">
