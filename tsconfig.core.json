@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "plugins": [],
+    "incremental": false,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/domain/**/*.ts",
+    "src/security/**/*.ts",
+    "src/scanners/**/*.ts",
+    "src/server/config.ts",
+    "src/server/store.ts",
+    "tests/core/**/*.ts",
+    "tests/helpers.ts",
+    "scripts/benchmark.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "fixtures",
+    ".next"
+  ]
+}

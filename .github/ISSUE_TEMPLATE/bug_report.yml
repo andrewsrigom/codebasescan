@@ -1,0 +1,28 @@
+name: Bug report
+description: Report a reproducible behavior problem using inert data.
+body:
+  - type: markdown
+    attributes:
+      value: Do not post secrets, proprietary source, or unredacted exports. Security vulnerabilities should use the private reporting route once available.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal inert reproduction
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: OS, Node, Traceward, and relevant scanner/model versions
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks performed and redacted error details

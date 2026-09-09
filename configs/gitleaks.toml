@@ -1,0 +1,3 @@
+title = "Traceward trusted Gitleaks configuration"
+[extend]
+useDefault = true

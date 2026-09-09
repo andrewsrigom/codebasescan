@@ -1,0 +1,53 @@
+{
+  "name": "traceward",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first, evidence-led security review workbench.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "dev": "node scripts/run-next.mjs dev",
+    "build": "node scripts/run-next.mjs build",
+    "start": "node scripts/run-next.mjs start",
+    "worker": "node --experimental-strip-types --env-file-if-exists=.env.local src/worker/main.ts",
+    "cli": "node --experimental-strip-types --env-file-if-exists=.env.local src/cli/main.ts",
+    "demo": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/seed.ts",
+    "demo:review": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/seed.ts --review",
+    "test": "node --experimental-strip-types --test tests/core/*.test.ts",
+    "test:graph": "node --experimental-strip-types --test tests/integration/*.test.ts",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings 0",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:graph",
+    "benchmark": "node --experimental-strip-types scripts/benchmark.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck:core": "tsc --project tsconfig.core.json --noEmit",
+    "example": "node --experimental-strip-types scripts/export-example.ts"
+  },
+  "dependencies": {
+    "@langchain/core": "^1.0.0",
+    "@langchain/langgraph": "^1.4.10",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.3",
+    "@langchain/ollama": "^1.0.0",
+    "better-sqlite3": "^12.0.0",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.0.0",
+    "@langchain/langgraph-checkpoint": "^1.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.15.30",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "16.3.4",
+    "prettier": "^3.6.0",
+    "typescript": "~5.9.3"
+  }
+}

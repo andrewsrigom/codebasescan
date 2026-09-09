@@ -1,0 +1,29 @@
+import type { ReviewDecision } from './types.ts';
+import { redact } from '../security/redact.ts';
+export function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Expected an object.');
+  return value as Record<string, unknown>;
+}
+export function text(value: unknown, name: string, maximum = 2000): string {
+  if (typeof value !== 'string' || !value.trim() || value.length > maximum)
+    throw new Error(`Invalid ${name}.`);
+  return value.trim();
+}
+export function uuid(value: unknown): string {
+  const id = text(value, 'identifier', 36);
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id))
+    throw new Error('Invalid identifier.');
+  return id;
+}
+export function reviewDecision(value: unknown): ReviewDecision {
+  const input = record(value);
+  const findingId = text(input.findingId, 'finding', 30);
+  const disposition = input.disposition;
+  if (disposition !== 'confirmed' && disposition !== 'false_positive' && disposition !== 'accepted_risk' && disposition !== 'needs_review')
+    throw new Error('Invalid review decision.');
+  const note = redact(text(input.note, 'review note'));
+  if (note.length < 12)
+    throw new Error('Explain the decision and supporting evidence in at least 12 characters.');
+  return { findingId, disposition, note };
+}

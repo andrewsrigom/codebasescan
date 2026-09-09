@@ -1,0 +1,11 @@
+rules:
+  - id: traceward.raw-sql-review
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Raw SQL execution needs input and parameterization review.
+    pattern: $DB.$queryRawUnsafe(...)
+  - id: traceward.dynamic-code-review
+    languages: [typescript, javascript]
+    severity: WARNING
+    message: Dynamic code execution needs a trust-boundary review.
+    pattern: eval(...)
