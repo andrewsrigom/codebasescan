@@ -21,7 +21,7 @@ import { scanExternal } from '../scanners/external.ts';
 import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { profileProject } from '../scanners/project-profile.ts';
-import { scanAstSecurity } from '../scanners/ast-security.ts';
+import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -227,7 +227,9 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('normalize', (state) => {
-      const normalizedFindings = reconcileHttpPosture(state.findings, state.httpProbe ?? undefined);
+      const normalizedFindings = preferStructuralFindings(
+        reconcileHttpPosture(state.findings, state.httpProbe ?? undefined),
+      );
       event(
         state,
         'normalize',

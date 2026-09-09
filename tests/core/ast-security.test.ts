@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { scanAstSecurity } from '../../src/scanners/ast-security.ts';
+import { preferStructuralFindings, scanAstSecurity } from '../../src/scanners/ast-security.ts';
+import { scanPatterns } from '../../src/scanners/builtin.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import { snapshotOf } from '../helpers.ts';
@@ -53,4 +54,142 @@ test('unsupported and partial profiles never imply complete AST coverage', async
   const partialSnapshot = await captureSnapshot(path.resolve('fixtures/profile-malformed'));
   const partial = scanAstSecurity(partialSnapshot, profileProject(partialSnapshot).profile);
   assert.equal(partial.run.status, 'partial');
+});
+
+function astRuleIds(content: string, file = 'src/app/api/test/route.ts'): string[] {
+  const snapshot = snapshotOf(content, file);
+  return scanAstSecurity(snapshot, profileProject(snapshot).profile).findings.map(
+    (finding) => finding.ruleId,
+  );
+}
+
+test('AST traces direct request data into raw SQL, outbound requests, and redirects', () => {
+  assert.ok(
+    astRuleIds(`
+      export async function POST(request: Request) {
+        const body = await request.json();
+        return db.$queryRawUnsafe(\`SELECT * FROM projects WHERE name = '${'${body.name}'}'\`);
+      }
+    `).includes('TW-AST004'),
+  );
+  assert.ok(
+    astRuleIds(`
+      export async function GET(request: Request) {
+        const target = new URL(request.url).searchParams.get('target');
+        return fetch(target);
+      }
+    `).includes('TW-AST005'),
+  );
+  assert.ok(
+    astRuleIds(`
+      export async function GET(request: Request) {
+        const next = new URL(request.url).searchParams.get('next');
+        return redirect(next);
+      }
+    `).includes('TW-AST006'),
+  );
+});
+
+test('recognized destination guards and constant sinks avoid direct flow candidates', () => {
+  const ids = astRuleIds(`
+    export async function GET(request: Request) {
+      const target = new URL(request.url).searchParams.get('target');
+      assertSafeUrl(target);
+      await fetch(target);
+      const next = '/dashboard';
+      return redirect(next);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+  assert.ok(!ids.includes('TW-AST006'));
+});
+
+test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
+  assert.ok(
+    astRuleIds(
+      `
+        export async function POST(request: Request) {
+          const body = await request.json();
+          verifySignature(body);
+          return db.event.create({ data: body });
+        }
+      `,
+      'src/app/api/webhooks/provider/route.ts',
+    ).includes('TW-AST008'),
+  );
+  assert.ok(
+    astRuleIds(`
+      export async function POST(request: Request) {
+        const form = await request.formData();
+        const file = form.get('file');
+        return storage.upload(file.name, file);
+      }
+    `).includes('TW-AST007'),
+  );
+  assert.ok(
+    astRuleIds(`
+      export async function POST(request: Request) {
+        cookies().set('session', request.headers.get('token'));
+        return Response.json({ ok: true });
+      }
+    `).includes('TW-AST009'),
+  );
+});
+
+test('safe webhook bytes, validated upload, and complete cookies avoid gap candidates', () => {
+  const webhookIds = astRuleIds(
+    `
+      export async function POST(request: Request) {
+        const raw = await request.text();
+        verifySignature(raw, request.headers.get('signature'));
+        const body = JSON.parse(raw);
+        return db.event.create({ data: body });
+      }
+    `,
+    'src/app/api/webhooks/provider/route.ts',
+  );
+  assert.ok(!webhookIds.includes('TW-AST008'));
+
+  const hardenedIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const form = await request.formData();
+      const file = form.get('file');
+      validateUpload(file);
+      await storage.upload('generated-name', file);
+      const options = { secure: true, httpOnly: true, sameSite: 'lax' };
+      cookies().set('session', 'opaque', options);
+      return Response.json({ ok: true });
+    }
+  `);
+  assert.ok(!hardenedIds.includes('TW-AST007'));
+  assert.ok(!hardenedIds.includes('TW-AST009'));
+});
+
+test('client modules referencing server environment values are identified', () => {
+  const ids = astRuleIds(
+    `'use client'; export const api = process.env.INTERNAL_API_SECRET;`,
+    'src/components/client.tsx',
+  );
+  assert.ok(ids.includes('TW-AST010'));
+  assert.ok(
+    !astRuleIds(
+      `'use client'; export const label = process.env.NEXT_PUBLIC_LABEL;`,
+      'src/components/client.tsx',
+    ).includes('TW-AST010'),
+  );
+});
+
+test('a decisive AST flow replaces the same-location broad raw SQL pattern', () => {
+  const snapshot = snapshotOf(
+    `export async function POST(request: Request) {
+      requireUser();
+      const body = await request.json();
+      return db.$queryRawUnsafe(\`SELECT * FROM tasks WHERE id = '${'${body.id}'}'\`);
+    }`,
+    'src/app/api/tasks/route.ts',
+  );
+  const ast = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  const reconciled = preferStructuralFindings([...scanPatterns(snapshot), ...ast]);
+  assert.ok(reconciled.some((finding) => finding.ruleId === 'TW-AST004'));
+  assert.ok(!reconciled.some((finding) => finding.ruleId === 'TW-001'));
 });
