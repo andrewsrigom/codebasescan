@@ -86,6 +86,22 @@ test('Knip JSON normalization bounds paths and dead-code symbols', () => {
   assert.ok(!JSON.stringify(analysis).includes('outside'));
 });
 
+test('Knip normalization marks individually bounded result categories as partial', () => {
+  const files = Object.fromEntries(
+    Array.from({ length: 301 }, (_, index) => [`src/unused-${index}.ts`, 'export {};']),
+  );
+  const snapshot = snapshotFromFiles(files);
+  const analysis = normalizeKnip(
+    {
+      issues: Object.keys(files).map((file) => ({ file, files: [{ name: file }] })),
+    },
+    snapshot,
+  );
+
+  assert.equal(analysis.unusedFiles.length, 300);
+  assert.equal(analysis.truncated, true);
+});
+
 test('dead-code scan disables target configuration loaders', async () => {
   const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-test-'));
   const snapshot = snapshotFromFiles({

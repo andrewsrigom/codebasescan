@@ -243,7 +243,6 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
   const unlistedDependencies: DeadCodeSymbol[] = [];
   const unusedExports: DeadCodeSymbol[] = [];
   const unusedTypes: DeadCodeSymbol[] = [];
-  let total = 0;
   for (const raw of envelope.issues) {
     const row = record(raw);
     const file = safeSnapshotPath(snapshot, row.file);
@@ -260,12 +259,6 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
     unusedExports.push(...symbols(row, 'exports', file));
     unusedTypes.push(...symbols(row, 'types', file));
   }
-  total =
-    unusedFiles.size +
-    unusedDependencies.size +
-    unlistedDependencies.length +
-    unusedExports.length +
-    unusedTypes.length;
   return {
     schemaVersion: 1,
     unusedFiles: [...unusedFiles].sort().slice(0, maximumDeadCodeItems),
@@ -273,7 +266,13 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
     unlistedDependencies: unlistedDependencies.slice(0, maximumDeadCodeItems),
     unusedExports: unusedExports.slice(0, maximumDeadCodeItems),
     unusedTypes: unusedTypes.slice(0, maximumDeadCodeItems),
-    truncated: snapshot.truncated || total > maximumDeadCodeItems * 5,
+    truncated:
+      snapshot.truncated ||
+      unusedFiles.size > maximumDeadCodeItems ||
+      unusedDependencies.size > maximumDeadCodeItems ||
+      unlistedDependencies.length > maximumDeadCodeItems ||
+      unusedExports.length > maximumDeadCodeItems ||
+      unusedTypes.length > maximumDeadCodeItems,
   };
 }
 
