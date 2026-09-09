@@ -31,13 +31,13 @@ This is an application boundary, not a hardened sandbox. A compromised dependenc
 | Traceward CSRF/DNS rebinding    | Loopback bind, exact Host/Origin policy, JSON and UI header for mutation                                                                                                             | No user authentication; never expose to LAN/public internet                                                          |
 | Partial/failed analysis         | Explicit coverage states; failure never becomes zero findings                                                                                                                        | A human can still misread incomplete coverage                                                                        |
 | False certainty                 | Scanner evidence, runtime evidence, AI assessment, human disposition, and coverage stay separate                                                                                     | Human confirmation can be wrong; no assurance or exploitability guarantee                                            |
-| Crash with staged source        | Private mode-0700 staging and normal-path cleanup                                                                                                                                    | SIGKILL/power loss can leave plaintext staging until manual cleanup                                                  |
+| Crash with staged source        | Private mode-0700 staging, normal-path cleanup, exclusive worker lock, and next-start removal limited to recognized staging names                                                    | Plaintext staging remains until the next worker starts; actual power-loss behavior is not yet fault-injected         |
 
 ## Data lifecycle
 
 `.traceward/application.sqlite` stores project paths, jobs, reports, review notes, events, AI usage, and structured AI cache entries. `.traceward/checkpoints.sqlite` stores graph state. `.traceward/osv-cache.json` stores compact advisory data. WAL/SHM files may exist. None are encrypted by Traceward; use encrypted local storage when needed.
 
-`.traceward/temporary` contains selected source while external scanners run. Normal completion deletes it. Stop processes before removing stale state after a crash. Exports and caches are private source-derived artifacts; inspect them before sharing. Redaction is not a data-loss-prevention guarantee.
+`.traceward/temporary` contains selected source while external scanners run. Normal completion deletes it; an exclusive worker removes only recognized Semgrep/Gitleaks staging directories at its next start. Exports and caches are private source-derived artifacts; inspect them before sharing. Redaction is not a data-loss-prevention guarantee.
 
 ## Security review scope
 

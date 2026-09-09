@@ -22,7 +22,7 @@ Extend lockfile workspace fidelity, OSV pagination, withdrawn/advisory freshness
 
 ## Next — operational hardening
 
-Add crash/fault injection, stale scanner staging cleanup, checkpoint/config version compatibility, deeper AI-cache validation, and scanner-version compatibility fixtures. Add OS resource containment guidance for hostile repositories.
+Add actual crash/fault injection, checkpoint/config version compatibility, deeper AI-cache validation, and scanner-version compatibility fixtures. Dead-worker requeue and narrow stale scanner staging cleanup are implemented. Add OS resource containment guidance for hostile repositories.
 
 ## Next — model validation
 

@@ -4,21 +4,22 @@
 
 Validation was repeated on **2026-09-09 BRT** in WSL2 Ubuntu **24.04.4 LTS**, Node.js **24.19.0**, npm **11.17.0**, Next.js **16.3.4**, Semgrep **1.176.1**, and Gitleaks **8.30.1**.
 
-| Check                         | Result                                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`        | Passed                                                                                                         |
-| `npm run typecheck`           | Passed                                                                                                         |
-| `npm run lint`                | Passed with zero warnings                                                                                      |
-| `npm test`                    | **100 passed**, 0 failed, 0 skipped                                                                            |
-| `npm run test:graph`          | **6 passed**, including real Semgrep/Gitleaks adapters and SQLite interrupt/resume reconstruction              |
-| Interrupt/resume repetition   | **50 consecutive passes** using exact persisted checkpoint and interrupt IDs                                   |
-| `npm run benchmark`           | TP 19, FP 1, FN 0, precision 0.95, recall 1.00; AST subset TP 10, FP 0, FN 0, precision 1.00, recall 1.00      |
-| `npm run build`               | Passed; all application and API routes compiled                                                                |
-| `npm run test:e2e`            | **4 passed** in Chromium                                                                                       |
-| `npm audit --audit-level=low` | 0 known vulnerabilities                                                                                        |
-| Browser verification          | Fresh audit rendered Project Map, 17 checklist controls and bounded-investigation state; no framework error UI |
-| Browser console               | No page errors; only expected Next.js development messages                                                     |
-| Local HTTP response           | HTTP 200 with CSP, frame, MIME, referrer, permissions and cache-control headers                                |
+| Check                         | Result                                                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`        | Passed                                                                                                               |
+| `npm run typecheck`           | Passed                                                                                                               |
+| `npm run lint`                | Passed with zero warnings                                                                                            |
+| `npm test`                    | **102 passed**, 0 failed, 0 skipped                                                                                  |
+| `npm run test:graph`          | **6 passed**, including real Semgrep/Gitleaks adapters and SQLite interrupt/resume reconstruction                    |
+| Interrupt/resume repetition   | **50 consecutive passes** using exact persisted checkpoint and interrupt IDs                                         |
+| Worker crash recovery         | Dead-process lock requeues active work; startup cleanup removes only recognized staging and does not follow symlinks |
+| `npm run benchmark`           | TP 19, FP 1, FN 0, precision 0.95, recall 1.00; AST subset TP 10, FP 0, FN 0, precision 1.00, recall 1.00            |
+| `npm run build`               | Passed; all application and API routes compiled                                                                      |
+| `npm run test:e2e`            | **4 passed** in Chromium                                                                                             |
+| `npm audit --audit-level=low` | 0 known vulnerabilities                                                                                              |
+| Browser verification          | Fresh audit rendered Project Map, 17 checklist controls and bounded-investigation state; no framework error UI       |
+| Browser console               | No page errors; only expected Next.js development messages                                                           |
+| Local HTTP response           | HTTP 200 with CSP, frame, MIME, referrer, permissions and cache-control headers                                      |
 
 The benchmark uses declared fixtures and is not a general accuracy claim. Deterministic profiling, ten AST rules, checklist mapping, evidence-ID context brokerage, bounded investigation output, persisted schema validation, report revisions, Codex bundle export, and anonymized outcome aggregation are covered without enabling a model provider.
 

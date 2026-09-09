@@ -39,7 +39,7 @@ The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md
 1. Run Traceward on 10 authorized real TypeScript/Next.js repositories, review every candidate, use `npm run cli -- evaluate ...`, and record anonymized metrics. This requires repository paths and owner authorization.
 2. Fix only rule/profile/checklist failures demonstrated by that evaluation: aliases, wrappers, middleware, ORM shapes, uploads, cookies, or framework guards.
 3. Validate one economical and one stronger OpenAI model only with an explicit key/spend approval; validate Ollama only if local-model disk/RAM cost is accepted. Measure whether either improves human triage.
-4. Add fault injection for SIGKILL/power-loss staging cleanup, worker restart, budget reservation, and checkpoint upgrade behavior.
+4. Add actual SIGKILL/power-loss fault injection for budget reservation and checkpoint upgrade behavior. Dead-worker requeue and narrow stale-staging cleanup are covered.
 5. Expand lockfile workspaces, OSV pagination, severity parsing, and advisory freshness presentation. Do not infer dependency reachability.
 6. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
 7. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
