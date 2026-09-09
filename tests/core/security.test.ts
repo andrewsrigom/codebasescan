@@ -186,11 +186,13 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'node_modules'));
   await mkdir(path.join(root, '.next-dev'));
+  await mkdir(path.join(root, 'out'));
   await mkdir(path.join(root, 'output'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
   await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, 'out', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');
   if (process.platform !== 'win32') await symlink('/etc/passwd', path.join(root, 'outside.ts'));
   const snapshot = await captureSnapshot(root);

@@ -12,6 +12,7 @@ const ignoredDirectories = new Set([
   '.next-dev',
   'dist',
   'build',
+  'out',
   'output',
   'coverage',
   '.traceward',

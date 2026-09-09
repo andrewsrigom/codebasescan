@@ -219,6 +219,8 @@ export async function scanExternal(
             '--disable-version-check',
             '--disable-nosem',
             '--no-git-ignore',
+            '--timeout',
+            '15',
             '--json',
             '--quiet',
             sourceRoot,
