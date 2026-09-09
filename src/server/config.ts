@@ -101,6 +101,7 @@ export function configuration(): Configuration {
     osv: process.env.TRACEWARD_OSV === 'true',
     osvCacheHours: boundedInteger(process.env.TRACEWARD_OSV_CACHE_HOURS, 24, 1, 720),
     advisoryDatabasePath: path.resolve(
+      /* turbopackIgnore: true */
       process.env.TRACEWARD_ADVISORY_DB || path.join(dataDirectory, 'advisory-database.json'),
     ),
   };
