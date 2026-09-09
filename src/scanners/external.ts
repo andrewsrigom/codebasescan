@@ -20,6 +20,28 @@ export interface ScanResult {
   findings: Finding[];
   run: ScannerRun;
 }
+type ExternalScanner = 'semgrep' | 'gitleaks';
+export const testedScannerVersions: Record<ExternalScanner, readonly string[]> = {
+  semgrep: ['1.176.1'],
+  gitleaks: ['8.30.1'],
+};
+export function scannerCompatibility(name: ExternalScanner, version?: string) {
+  const tested = testedScannerVersions[name];
+  if (!version)
+    return {
+      status: 'unknown' as const,
+      detail: `Compatibility warning: the ${name} version could not be identified. Parsed output is retained, but coverage is partial.`,
+    };
+  if (tested.includes(version))
+    return {
+      status: 'tested' as const,
+      detail: `${name} ${version} is covered by the Traceward scanner compatibility fixtures.`,
+    };
+  return {
+    status: 'untested' as const,
+    detail: `Compatibility warning: ${name} ${version} is outside the tested version set (${tested.join(', ')}). Parsed output is retained, but coverage is partial.`,
+  };
+}
 const stagingName = /^(?:semgrep|gitleaks)-[A-Za-z0-9._-]+$/;
 export async function cleanupStaleScannerStaging(temporaryDirectory: string): Promise<number> {
   await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
@@ -142,7 +164,7 @@ export function normalizeGitleaks(
   return findings;
 }
 export async function scanExternal(
-  name: 'semgrep' | 'gitleaks',
+  name: ExternalScanner,
   snapshot: Snapshot,
   enabled: boolean,
   temporaryDirectory: string,
@@ -234,10 +256,15 @@ export async function scanExternal(
         : Array.isArray(parsed)
           ? parsed.length
           : 0;
+    const compatibility = scannerCompatibility(name, version);
     if (result.code === 1 && rawCount === 0)
       throw new Error('Scanner signaled findings but supplied no valid report entries.');
     const partial =
-      findings.length >= 300 || errors > 0 || snapshot.truncated || rawCount !== findings.length;
+      findings.length >= 300 ||
+      errors > 0 ||
+      snapshot.truncated ||
+      rawCount !== findings.length ||
+      compatibility.status !== 'tested';
     return {
       findings,
       run: {
@@ -246,7 +273,7 @@ export async function scanExternal(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: findings.length,
-        detail: `${name} analyzed the bounded staging snapshot with trusted local configuration.${errors ? ' Some files could not be analyzed.' : ''}`,
+        detail: `${name} analyzed the bounded staging snapshot with trusted local configuration.${errors ? ' Some files could not be analyzed.' : ''} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

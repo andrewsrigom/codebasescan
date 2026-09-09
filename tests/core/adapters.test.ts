@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeGitleaks, normalizeSemgrep } from '../../src/scanners/external.ts';
+import {
+  normalizeGitleaks,
+  normalizeSemgrep,
+  scannerCompatibility,
+} from '../../src/scanners/external.ts';
 import { snapshotOf } from '../helpers.ts';
 test('Semgrep normalization preserves source severity without inventing CVSS', () => {
   const findings = normalizeSemgrep(
@@ -49,6 +53,15 @@ test('Gitleaks normalization discards raw secrets and matched lines', () => {
   const output = JSON.stringify(findings);
   assert.ok(!output.includes('sensitive-fixture-value'));
   assert.equal(findings[0]?.evidence[0]?.excerpt, '[Source excerpt withheld for secret findings]');
+});
+
+test('external scanner versions distinguish tested, unknown, and untested compatibility', () => {
+  assert.equal(scannerCompatibility('semgrep', '1.176.1').status, 'tested');
+  assert.equal(scannerCompatibility('gitleaks', '8.30.1').status, 'tested');
+  assert.equal(scannerCompatibility('semgrep').status, 'unknown');
+  const future = scannerCompatibility('gitleaks', '9.0.0');
+  assert.equal(future.status, 'untested');
+  assert.match(future.detail, /coverage is partial/);
 });
 
 test('out-of-bounds scanner locations cannot fabricate source evidence', () => {
