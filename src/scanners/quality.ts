@@ -322,6 +322,82 @@ function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
   return [...entries].sort();
 }
 
+function externalPackageName(specifier: string): string | undefined {
+  if (/^(?:\.|\/|#|node:|bun:|file:)/.test(specifier)) return undefined;
+  if (specifier.startsWith('@')) {
+    const [scope, name] = specifier.split('/');
+    return scope && name ? `${scope}/${name}` : undefined;
+  }
+  return specifier.split('/')[0] || undefined;
+}
+
+function importedPackages(snapshot: Snapshot, profile?: ProjectProfile): Set<string> {
+  const packages = new Set<string>();
+  const add = (specifier: string) => {
+    const name = externalPackageName(specifier);
+    if (name) packages.add(name);
+  };
+  for (const item of profile?.imports ?? []) add(item.specifier);
+  for (const file of snapshot.files.filter(supportedSource)) {
+    const source = ts.createSourceFile(
+      file.path,
+      file.content,
+      ts.ScriptTarget.Latest,
+      true,
+      scriptKind(file.path),
+    );
+    const visit = (node: ts.Node): void => {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+        node.moduleSpecifier &&
+        ts.isStringLiteralLike(node.moduleSpecifier)
+      )
+        add(node.moduleSpecifier.text);
+      else if (ts.isCallExpression(node) && node.arguments.length) {
+        const argument = node.arguments[0];
+        const dynamicImport = node.expression.kind === ts.SyntaxKind.ImportKeyword;
+        const commonJs = ts.isIdentifier(node.expression) && node.expression.text === 'require';
+        const requireResolve =
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === 'require' &&
+          node.expression.name.text === 'resolve';
+        if (
+          (dynamicImport || commonJs || requireResolve) &&
+          argument &&
+          ts.isStringLiteralLike(argument)
+        )
+          add(argument.text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return packages;
+}
+
+function unusedRuntimeDependencies(snapshot: Snapshot, profile?: ProjectProfile): string[] {
+  const imported = importedPackages(snapshot, profile);
+  const implicit = new Set<string>();
+  if (profile?.frameworks.some((framework) => framework.id.startsWith('nextjs-')))
+    for (const name of ['next', 'react', 'react-dom', 'sharp']) implicit.add(name);
+  else if (snapshot.files.some((file) => supportedSource(file) && /\.[jt]sx$/i.test(file.path)))
+    for (const name of ['react', 'react-dom']) implicit.add(name);
+  const unused = new Set<string>();
+  for (const file of snapshot.files) {
+    if (!isRuntimeSource(file) || file.path.split('/').at(-1) !== 'package.json') continue;
+    try {
+      const dependencies = record(record(JSON.parse(file.content)).dependencies);
+      for (const name of Object.keys(dependencies))
+        if (!name.startsWith('@types/') && !imported.has(name) && !implicit.has(name))
+          unused.add(name);
+    } catch {
+      // The inventory scanner reports malformed manifests separately.
+    }
+  }
+  return [...unused].sort();
+}
+
 async function knipVersion(cwd: string, signal?: AbortSignal): Promise<string | undefined> {
   try {
     const result = await runScannerProcess('knip', ['--version'], cwd, signal);
@@ -378,7 +454,6 @@ async function scanDeadCode(
       [
         '--config',
         configName,
-        '--strict',
         '--reporter',
         'json',
         '--no-progress',
@@ -394,7 +469,16 @@ async function scanDeadCode(
       throw new Error(
         `Knip returned an error: ${redact(result.stderr).replaceAll(sourceRoot, '[stage]').slice(0, 500)}`,
       );
-    const analysis = normalizeKnip(JSON.parse(result.stdout) as unknown, snapshot);
+    const normalized = normalizeKnip(JSON.parse(result.stdout) as unknown, snapshot);
+    const dependencyCandidates = new Set([
+      ...normalized.unusedDependencies,
+      ...unusedRuntimeDependencies(snapshot, profile),
+    ]);
+    const analysis: DeadCodeAnalysis = {
+      ...normalized,
+      unusedDependencies: [...dependencyCandidates].sort().slice(0, maximumDeadCodeItems),
+      truncated: normalized.truncated || dependencyCandidates.size > maximumDeadCodeItems,
+    };
     const compatibility = scannerCompatibility('knip', version);
     const partial = analysis.truncated || compatibility.status !== 'tested';
     return {
@@ -405,7 +489,7 @@ async function scanDeadCode(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} unused dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and configuration loaders were disabled. ${compatibility.detail}`,
+        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and configuration loaders were disabled. ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

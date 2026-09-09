@@ -90,7 +90,7 @@ test('dead-code scan disables target configuration loaders', async () => {
   const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-test-'));
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({ dependencies: { next: '16.3.4', unused: '1.0.0' } }),
-    'src/app/page.tsx': `import { used } from '../used'; export default function Page() { return <main>{used}</main>; }`,
+    'src/app/page.tsx': `import { used } from './used'; export default function Page() { return <main>{used}</main>; }`,
     'src/app/used.ts': `export const used = 'used'; export const notUsed = 'unused';`,
     'next.config.ts': `throw new Error('target configuration must not execute');`,
   });
@@ -99,6 +99,15 @@ test('dead-code scan disables target configuration loaders', async () => {
     const knip = result.runs.find((run) => run.id === 'knip');
     assert.notEqual(knip?.status, 'failed', knip?.detail);
     assert.ok(result.analysis.deadCode);
+    assert.ok(
+      result.analysis.deadCode.unusedDependencies.includes('unused'),
+      JSON.stringify(result.analysis.deadCode),
+    );
+    assert.ok(
+      result.analysis.deadCode.unusedExports.some(
+        (item) => item.file === 'src/app/used.ts' && item.name === 'notUsed',
+      ),
+    );
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
