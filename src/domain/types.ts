@@ -23,8 +23,10 @@ export interface CoverageCapability {
   findings?: number;
   version?: string;
 }
+export type SourceScope = 'runtime' | 'test' | 'example';
 export interface SourceFile {
   path: string;
+  scope: SourceScope;
   content: string;
   digest: string;
   bytes: number;
@@ -39,6 +41,7 @@ export interface Snapshot {
 export interface Evidence {
   id: string;
   kind?: 'source' | 'declared' | 'observed' | 'dependency' | 'inferred';
+  scope?: SourceScope;
   file: string;
   startLine: number;
   endLine: number;

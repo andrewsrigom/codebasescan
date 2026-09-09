@@ -1,5 +1,6 @@
 import type { Category, Finding, Severity, Snapshot } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 interface Rule {
   id: string;
   title: string;
@@ -99,7 +100,7 @@ export const rules: Rule[] = [
 export function scanPatterns(snapshot: Snapshot): Finding[] {
   const findings: Finding[] = [];
   for (const file of snapshot.files) {
-    if (!/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
+    if (!isRuntimeSource(file) || !/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
     for (const rule of rules) {
       const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
       for (const match of file.content.matchAll(expression)) {

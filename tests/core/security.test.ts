@@ -6,6 +6,7 @@ import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises';
 import {
   safeRelative,
   isWithin,
+  classifySourceScope,
   captureSnapshot,
   estimateProjectScope,
   validateProjectRoot,
@@ -32,6 +33,14 @@ test('allows contained source paths but not sibling prefix tricks', () => {
   assert.equal(safeRelative('src/app/page.tsx'), 'src/app/page.tsx');
   assert.equal(isWithin('/work/repo', '/work/repository/file.ts'), false);
   assert.equal(isWithin('/work/repo', '/work/repo/src/file.ts'), true);
+});
+test('classifies runtime, test, and example source scopes', () => {
+  assert.equal(classifySourceScope('src/app/api/users/route.ts'), 'runtime');
+  assert.equal(classifySourceScope('src/users.spec.ts'), 'test');
+  assert.equal(classifySourceScope('fixtures/express/package.json'), 'test');
+  assert.equal(classifySourceScope('e2e/workspace.spec.ts'), 'test');
+  assert.equal(classifySourceScope('.storybook/preview.ts'), 'example');
+  assert.equal(classifySourceScope('examples/insecure.ts'), 'example');
 });
 test('redacts credential assignments and connection-string passwords', () => {
   const input =
@@ -158,6 +167,24 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   );
   assert.equal(snapshot.skipped['sensitive-file'], 1);
   if (process.platform !== 'win32') assert.equal(snapshot.skipped['symbolic-link'], 1);
+});
+test('snapshot records source scope without excluding secret-bearing test code', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-scope-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'tests'));
+  await mkdir(path.join(root, 'examples'));
+  await writeFile(path.join(root, 'app.ts'), 'export const app = true;');
+  await writeFile(path.join(root, 'tests', 'app.test.ts'), 'export const test = true;');
+  await writeFile(path.join(root, 'examples', 'demo.ts'), 'export const demo = true;');
+  const snapshot = await captureSnapshot(root);
+  assert.deepEqual(
+    Object.fromEntries(snapshot.files.map((file) => [file.path, file.scope])),
+    {
+      'app.ts': 'runtime',
+      'examples/demo.ts': 'example',
+      'tests/app.test.ts': 'test',
+    },
+  );
 });
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-'));

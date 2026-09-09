@@ -179,6 +179,16 @@ test('client modules referencing server environment values are identified', () =
   );
 });
 
+test('direct AST rules do not treat test code as deployed runtime code', () => {
+  const snapshot = snapshotOf(
+    `'use client'; export const api = process.env.INTERNAL_API_SECRET;`,
+    'tests/client.test.tsx',
+  );
+  const profile = profileProject(snapshot).profile;
+  snapshot.files[0]!.scope = 'test';
+  assert.deepEqual(scanAstSecurity(snapshot, profile).findings, []);
+});
+
 test('a decisive AST flow replaces the same-location broad raw SQL pattern', () => {
   const snapshot = snapshotOf(
     `export async function POST(request: Request) {

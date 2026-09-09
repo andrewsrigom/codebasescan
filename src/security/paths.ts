@@ -3,7 +3,7 @@ import os from 'node:os';
 import { constants } from 'node:fs';
 import { lstat, open, realpath, readdir } from 'node:fs/promises';
 import { digest } from '../domain/findings.ts';
-import type { ProjectScopeEstimate, Snapshot, SourceFile } from '../domain/types.ts';
+import type { ProjectScopeEstimate, Snapshot, SourceFile, SourceScope } from '../domain/types.ts';
 import { redact } from './redact.ts';
 const ignoredDirectories = new Set([
   '.git',
@@ -36,6 +36,24 @@ const excludedFiles = new Set([
   '.semgrep.yml',
   '.semgrep.yaml',
 ]);
+const testSegments = new Set([
+  'test',
+  'tests',
+  '__tests__',
+  'fixture',
+  'fixtures',
+  'e2e',
+  'cypress',
+  'playwright',
+  'spec',
+  'specs',
+  'testdata',
+  '__mocks__',
+  'mocks',
+  'benchmark',
+  'benchmarks',
+]);
+const exampleSegments = new Set(['example', 'examples', 'storybook', '.storybook', 'stories']);
 export const snapshotLimits = {
   files: 1500,
   bytesPerFile: 256 * 1024,
@@ -49,6 +67,30 @@ function fileExclusion(name: string): 'sensitive-file' | 'unsupported-file' | nu
   )
     return 'unsupported-file';
   return null;
+}
+export function classifySourceScope(relativePath: string): SourceScope {
+  const normalized = relativePath.replaceAll('\\', '/').toLowerCase();
+  const segments = normalized.split('/');
+  const file = segments.at(-1) ?? '';
+  if (
+    segments.some((segment) => testSegments.has(segment)) ||
+    /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file)
+  )
+    return 'test';
+  if (
+    segments.some((segment) => exampleSegments.has(segment)) ||
+    /\.stories\.[cm]?[jt]sx?$/.test(file)
+  )
+    return 'example';
+  return 'runtime';
+}
+export function isRuntimeSource(file: { scope?: SourceScope }): boolean {
+  return !file.scope || file.scope === 'runtime';
+}
+function scopeOrder(directory: string, entryName: string, root: string): number {
+  return classifySourceScope(path.relative(root, path.join(directory, entryName))) === 'runtime'
+    ? 0
+    : 1;
 }
 export function isWithin(root: string, target: string): boolean {
   const relative = path.relative(root, target);
@@ -105,7 +147,11 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
       reasons.add('unreadable-entry');
       return;
     }
-    entries.sort((a, b) => a.name.localeCompare(b.name));
+    entries.sort(
+      (a, b) =>
+        scopeOrder(directory, a.name, canonicalRoot) -
+          scopeOrder(directory, b.name, canonicalRoot) || a.name.localeCompare(b.name),
+    );
     for (const entry of entries) {
       if (++visitedEntries > 12_000) {
         reasons.add('entry-limit');
@@ -169,7 +215,11 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
       return;
     }
     const entries = await readdir(directory, { withFileTypes: true });
-    entries.sort((a, b) => a.name.localeCompare(b.name));
+    entries.sort(
+      (a, b) =>
+        scopeOrder(directory, a.name, root) - scopeOrder(directory, b.name, root) ||
+        a.name.localeCompare(b.name),
+    );
     for (const entry of entries) {
       if (
         ++visited > 12000 ||
@@ -239,6 +289,7 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
           }
           files.push({
             path: safeRelative(path.relative(root, absolute)),
+            scope: classifySourceScope(path.relative(root, absolute)),
             content,
             digest: digest(content),
             bytes: bytesRead,

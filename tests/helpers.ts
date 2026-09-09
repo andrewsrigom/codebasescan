@@ -4,7 +4,15 @@ import type { AuditReport, Snapshot } from '../src/domain/types.ts';
 export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
   return {
     digest: digest(content),
-    files: [{ path: file, content, digest: digest(content), bytes: Buffer.byteLength(content) }],
+    files: [
+      {
+        path: file,
+        scope: 'runtime',
+        content,
+        digest: digest(content),
+        bytes: Buffer.byteLength(content),
+      },
+    ],
     totalBytes: Buffer.byteLength(content),
     skipped: {},
     truncated: false,

@@ -12,6 +12,7 @@ import type { Snapshot } from '../../src/domain/types.ts';
 function snapshot(files: Record<string, string>): Snapshot {
   const entries = Object.entries(files).map(([file, content]) => ({
     path: file,
+    scope: 'runtime' as const,
     content,
     digest: digest(content),
     bytes: Buffer.byteLength(content),

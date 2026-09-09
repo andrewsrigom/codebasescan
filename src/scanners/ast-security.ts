@@ -9,6 +9,7 @@ import type {
   Snapshot,
 } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 import {
   entrypointRoots,
   isAdministrativeEntrypoint,
@@ -305,7 +306,9 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
     for (const symbolId of entrypoint.symbolIds)
       entrypointsBySymbol.set(symbolId, [...(entrypointsBySymbol.get(symbolId) ?? []), entrypoint]);
 
-  for (const file of snapshot.files.filter((item) => /\.[cm]?[jt]sx?$/.test(item.path))) {
+  for (const file of snapshot.files.filter(
+    (item) => isRuntimeSource(item) && /\.[cm]?[jt]sx?$/.test(item.path),
+  )) {
     const source = ts.createSourceFile(
       file.path,
       file.content,

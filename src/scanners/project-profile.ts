@@ -15,6 +15,7 @@ import type {
   Snapshot,
   SourceFile,
 } from '../domain/types.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/i;
 const declarationPattern = /\.d\.[cm]?ts$/i;
@@ -197,7 +198,9 @@ function factKind(callee: string): ProjectFactKind | null {
 
 function packageDependencies(snapshot: Snapshot): Map<string, SourceFile> {
   const dependencies = new Map<string, SourceFile>();
-  for (const file of snapshot.files.filter((item) => item.path.endsWith('package.json'))) {
+  for (const file of snapshot.files.filter(
+    (item) => isRuntimeSource(item) && item.path.endsWith('package.json'),
+  )) {
     try {
       const parsed = JSON.parse(file.content) as {
         dependencies?: Record<string, unknown>;
@@ -407,7 +410,10 @@ function resolveCallTargets(
 export function profileProject(snapshot: Snapshot): ProjectProfileResult {
   const started = performance.now();
   const candidates = snapshot.files.filter(
-    (file) => sourcePattern.test(file.path) && !declarationPattern.test(file.path),
+    (file) =>
+      isRuntimeSource(file) &&
+      sourcePattern.test(file.path) &&
+      !declarationPattern.test(file.path),
   );
   const issues: string[] = [];
   let truncated = snapshot.truncated || candidates.length > maximumFiles;

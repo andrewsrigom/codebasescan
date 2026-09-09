@@ -32,6 +32,30 @@ test('scanner paths cannot escape the snapshot', () => {
   );
   assert.equal(result.length, 0);
 });
+test('Semgrep ignores non-runtime code while Gitleaks still inspects it', () => {
+  const snapshot = snapshotOf('eval(input)', 'tests/example.ts');
+  snapshot.files[0]!.scope = 'test';
+  const semgrep = normalizeSemgrep(
+    {
+      results: [
+        {
+          check_id: 'example.rule',
+          path: 'tests/example.ts',
+          start: { line: 1 },
+          extra: { severity: 'ERROR', message: 'Review this sink.' },
+        },
+      ],
+    },
+    snapshot,
+  );
+  const gitleaks = normalizeGitleaks(
+    [{ Description: 'Example secret', RuleID: 'example', File: 'tests/example.ts', StartLine: 1 }],
+    snapshot,
+  );
+  assert.equal(semgrep.length, 0);
+  assert.equal(gitleaks.length, 1);
+  assert.equal(gitleaks[0]?.evidence[0]?.scope, 'test');
+});
 test('malformed scanner schemas fail explicitly', () => {
   assert.throws(() => normalizeSemgrep({ results: 'not-an-array' }, snapshotOf('')));
   assert.throws(() => normalizeGitleaks({}, snapshotOf('')));

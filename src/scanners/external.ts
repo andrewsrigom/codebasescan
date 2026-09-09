@@ -13,7 +13,7 @@ import {
 import type { Finding, ScannerRun, Snapshot } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { record } from '../domain/validation.ts';
-import { safeRelative } from '../security/paths.ts';
+import { isRuntimeSource, safeRelative } from '../security/paths.ts';
 import { redact } from '../security/redact.ts';
 import { runScannerProcess } from '../security/process.ts';
 export interface ScanResult {
@@ -83,10 +83,10 @@ export function normalizeSemgrep(
   const envelope = record(value);
   if (!Array.isArray(envelope.results)) throw new Error('Unsupported Semgrep JSON schema.');
   const findings: Finding[] = [];
-  for (const raw of envelope.results.slice(0, 300)) {
+  for (const raw of envelope.results) {
     const item = record(raw);
     const file = locate(snapshot, item.path, stagingRoot);
-    if (!file) continue;
+    if (!file || !isRuntimeSource(file)) continue;
     const start = record(item.start);
     const extra = record(item.extra);
     const line = start.line;
@@ -116,6 +116,7 @@ export function normalizeSemgrep(
         evidence: [sourceEvidence(file, line, `Semgrep rule: ${ruleId}`)],
       }),
     );
+    if (findings.length >= 300) break;
   }
   return findings;
 }
@@ -256,6 +257,14 @@ export async function scanExternal(
         : Array.isArray(parsed)
           ? parsed.length
           : 0;
+    const applicableRawCount =
+      name === 'semgrep' && Array.isArray(envelope?.results)
+        ? envelope.results.filter((raw) => {
+            const item = record(raw);
+            const file = locate(snapshot, item.path, sourceRoot);
+            return Boolean(file && isRuntimeSource(file));
+          }).length
+        : rawCount;
     const compatibility = scannerCompatibility(name, version);
     if (result.code === 1 && rawCount === 0)
       throw new Error('Scanner signaled findings but supplied no valid report entries.');
@@ -263,7 +272,7 @@ export async function scanExternal(
       findings.length >= 300 ||
       errors > 0 ||
       snapshot.truncated ||
-      rawCount !== findings.length ||
+      applicableRawCount !== findings.length ||
       compatibility.status !== 'tested';
     return {
       findings,

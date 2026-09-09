@@ -24,6 +24,7 @@ export function severityRank(severity: Severity): number {
 export function sourceEvidence(
   file: {
     path: string;
+    scope?: Evidence['scope'];
     content: string;
     digest: string;
   },
@@ -38,6 +39,7 @@ export function sourceEvidence(
   return {
     id: digest(`${file.path}:${line}:${observation}`).slice(0, 16),
     kind: 'source',
+    ...(file.scope ? { scope: file.scope } : {}),
     file: file.path,
     startLine,
     endLine,

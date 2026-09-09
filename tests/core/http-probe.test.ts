@@ -134,6 +134,7 @@ test('runtime evidence is reconciled with a related static posture candidate', a
   );
   source.files.push({
     path: 'package.json',
+    scope: 'runtime',
     content: '{"dependencies":{"next":"16.3.4"}}',
     digest: 'manifest',
     bytes: 34,

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { parseDocument } from 'yaml';
 import type { Dependency, Snapshot, SourceFile } from '../domain/types.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 
 type Scope = Dependency['scope'];
 interface Declaration {
@@ -17,7 +18,7 @@ function object(value: unknown): Record<string, unknown> | null {
 
 function declarations(snapshot: Snapshot): Map<string, Declaration> {
   const result = new Map<string, Declaration>();
-  for (const file of snapshot.files) {
+  for (const file of snapshot.files.filter(isRuntimeSource)) {
     if (file.path.split('/').at(-1) !== 'package.json') continue;
     try {
       const manifest = object(JSON.parse(file.content));
@@ -207,7 +208,7 @@ export function resolvedInventory(snapshot: Snapshot): DependencyInventory {
   const dependencies: Dependency[] = [];
   const lockfiles: string[] = [];
   const errors: string[] = [];
-  for (const file of snapshot.files) {
+  for (const file of snapshot.files.filter(isRuntimeSource)) {
     const name = file.path.split('/').at(-1);
     if (
       !['package-lock.json', 'npm-shrinkwrap.json', 'pnpm-lock.yaml', 'yarn.lock'].includes(

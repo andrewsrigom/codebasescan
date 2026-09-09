@@ -77,7 +77,7 @@ export function FindingDetails({
                 <span>
                   {evidence.file}: {evidence.startLine} – {evidence.endLine}
                 </span>
-                <Badge>{evidence.kind ?? 'source'}</Badge>
+                <Badge>{evidence.scope ?? evidence.kind ?? 'source'}</Badge>
               </div>
               <pre className="code-block">{evidence.excerpt}</pre>
               <p className="small">{evidence.observation}</p>

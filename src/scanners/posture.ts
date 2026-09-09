@@ -1,5 +1,6 @@
 import type { Category, Finding, Severity, Snapshot, SourceFile } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
+import { isRuntimeSource } from '../security/paths.ts';
 
 interface Candidate {
   ruleId: string;
@@ -364,12 +365,18 @@ export function scanPosture(
   snapshot: Snapshot,
   options: { includeStructuralCandidates?: boolean } = {},
 ): Finding[] {
+  const runtimeSnapshot = {
+    ...snapshot,
+    files: snapshot.files.filter(isRuntimeSource),
+  };
   return [
-    ...headerCandidates(snapshot),
-    ...cookieCandidates(snapshot),
-    ...corsCandidates(snapshot),
-    ...(options.includeStructuralCandidates === false ? [] : authorizationCandidates(snapshot)),
-    ...environmentCandidates(snapshot),
+    ...headerCandidates(runtimeSnapshot),
+    ...cookieCandidates(runtimeSnapshot),
+    ...corsCandidates(runtimeSnapshot),
+    ...(options.includeStructuralCandidates === false
+      ? []
+      : authorizationCandidates(runtimeSnapshot)),
+    ...environmentCandidates(runtimeSnapshot),
   ]
     .slice(0, 300)
     .map(finding);

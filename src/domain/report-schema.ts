@@ -6,6 +6,7 @@ const shortText = z.string().max(10_000);
 const evidence = z.looseObject({
   id: shortText,
   kind: z.enum(['source', 'declared', 'observed', 'dependency', 'inferred']).optional(),
+  scope: z.enum(['runtime', 'test', 'example']).optional(),
   file: shortText,
   startLine: z.number().int().positive(),
   endLine: z.number().int().positive(),
