@@ -1,19 +1,112 @@
 import path from 'node:path';
+import os from 'node:os';
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { z } from 'zod';
 import { captureSnapshot } from '../src/security/paths.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
-const cases = [
-  { directory: 'review-worthy-saas', expected: 7, candidateLabels: 7 },
-  { directory: 'hardened-saas', expected: 0, candidateLabels: 0 },
-  { directory: 'comment-only', expected: 1, candidateLabels: 0 },
-  { directory: 'prompt-injection', expected: 0, candidateLabels: 0 },
-];
-let failed = false;
-for (const fixture of cases) {
-  const source = await captureSnapshot(path.resolve('fixtures', fixture.directory));
-  const findings = scanPatterns(source);
-  const passed = findings.length === fixture.expected;
-  failed ||= !passed;
-  console.log(JSON.stringify({ fixture: fixture.directory, detected: findings.length, expectedPatternMatches: fixture.expected, intendedReviewCandidates: fixture.candidateLabels, pass: passed }));
+import { scanPosture } from '../src/scanners/posture.ts';
+import { scanOsv } from '../src/scanners/osv.ts';
+
+const truthSchema = z.object({
+  id: z.string(),
+  category: z.string(),
+  scanners: z.array(z.enum(['builtin', 'posture', 'osv'])),
+  expectedRuleIds: z.array(z.string()),
+});
+
+async function truthFiles(directory: string): Promise<string[]> {
+  const output: string[] = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const target = path.join(directory, entry.name);
+    if (entry.isDirectory()) output.push(...(await truthFiles(target)));
+    else if (entry.name === 'ground-truth.json') output.push(target);
+  }
+  return output.sort();
 }
-console.log('This is a four-case regression harness, not a representative security benchmark. The comment-only case is an intentional false positive.');
-process.exitCode = failed ? 1 : 0;
+
+const osvFixtureFetch: typeof fetch = async (input, init) => {
+  const url = String(input);
+  if (url.endsWith('/querybatch')) {
+    const body = JSON.parse(String(init?.body ?? '{}')) as { queries?: unknown[] };
+    return Response.json({
+      results: (body.queries ?? []).map(() => ({ vulns: [{ id: 'GHSA-benchmark-fixture' }] })),
+    });
+  }
+  return Response.json({
+    id: 'GHSA-benchmark-fixture',
+    summary: 'Deterministic benchmark advisory',
+    modified: '2026-01-01T00:00:00Z',
+    affected: [
+      {
+        package: { name: 'fixture-package' },
+        ecosystem_specific: { severity: 'HIGH' },
+        ranges: [{ events: [{ introduced: '0' }, { fixed: '1.0.1' }] }],
+      },
+    ],
+  });
+};
+
+const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-benchmark-'));
+let truePositives = 0;
+let falsePositives = 0;
+let falseNegatives = 0;
+try {
+  for (const truthFile of await truthFiles(path.resolve('benchmarks'))) {
+    const truth = truthSchema.parse(JSON.parse(await readFile(truthFile, 'utf8')) as unknown);
+    const source = await captureSnapshot(path.dirname(truthFile));
+    const findings = [
+      ...(truth.scanners.includes('builtin') ? scanPatterns(source) : []),
+      ...(truth.scanners.includes('posture') ? scanPosture(source) : []),
+    ];
+    if (truth.scanners.includes('osv')) {
+      const osv = await scanOsv(
+        source,
+        true,
+        path.join(temporary, `${truth.id}.json`),
+        24,
+        undefined,
+        { fetch: osvFixtureFetch, now: () => Date.parse('2026-01-02T00:00:00Z') },
+      );
+      findings.push(...osv.findings);
+    }
+    const actual = [...new Set(findings.map((finding) => finding.ruleId))].sort();
+    const expected = [...new Set(truth.expectedRuleIds)].sort();
+    const truePositive = actual.filter((rule) => expected.includes(rule)).length;
+    const falsePositive = actual.filter((rule) => !expected.includes(rule)).length;
+    const falseNegative = expected.filter((rule) => !actual.includes(rule)).length;
+    truePositives += truePositive;
+    falsePositives += falsePositive;
+    falseNegatives += falseNegative;
+    console.log(
+      JSON.stringify({
+        id: truth.id,
+        category: truth.category,
+        expected,
+        actual,
+        truePositives: truePositive,
+        falsePositives: falsePositive,
+        falseNegatives: falseNegative,
+      }),
+    );
+  }
+} finally {
+  await rm(temporary, { recursive: true, force: true });
+}
+
+const precision = truePositives / Math.max(1, truePositives + falsePositives);
+const recall = truePositives / Math.max(1, truePositives + falseNegatives);
+console.log(
+  JSON.stringify({
+    summary: {
+      truePositives,
+      falsePositives,
+      falseNegatives,
+      precision: Number(precision.toFixed(4)),
+      recall: Number(recall.toFixed(4)),
+    },
+  }),
+);
+console.log(
+  'Benchmark measures Traceward rules on declared ground truth. It is not a security certification or a generic model evaluation.',
+);
+process.exitCode = precision >= 0.85 && recall >= 0.95 ? 0 : 1;

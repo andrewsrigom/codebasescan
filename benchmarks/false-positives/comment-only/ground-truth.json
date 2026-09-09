@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-comment",
+  "category": "false-positives",
+  "scanners": ["builtin"],
+  "expectedRuleIds": []
+}

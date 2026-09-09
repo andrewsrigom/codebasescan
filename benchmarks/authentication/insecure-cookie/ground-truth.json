@@ -1,0 +1,6 @@
+{
+  "id": "authentication-insecure-cookie",
+  "category": "authentication",
+  "scanners": ["posture"],
+  "expectedRuleIds": ["TW-P003"]
+}

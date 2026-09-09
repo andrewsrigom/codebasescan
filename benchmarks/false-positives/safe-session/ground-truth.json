@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-safe-session",
+  "category": "false-positives",
+  "scanners": ["posture"],
+  "expectedRuleIds": []
+}

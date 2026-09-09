@@ -1,0 +1,6 @@
+{
+  "id": "headers-incomplete",
+  "category": "security-headers",
+  "scanners": ["posture"],
+  "expectedRuleIds": ["TW-P001"]
+}

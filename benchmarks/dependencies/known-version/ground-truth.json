@@ -1,0 +1,6 @@
+{
+  "id": "dependencies-known-version",
+  "category": "dependencies",
+  "scanners": ["osv"],
+  "expectedRuleIds": ["GHSA-benchmark-fixture"]
+}

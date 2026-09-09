@@ -1,7 +1,11 @@
-const credentialAssignment = /((?:["']?)[\w.-]*(?:secret|password|passwd|token|api[_-]?key|private[_-]?key|service[_-]?role)[\w.-]*(?:["']?)\s*[:=]\s*)(["'`])([^\r\n]*?)\2/gi;
+const credentialAssignment =
+  /((?:["']?)[\w.-]*(?:secret|password|passwd|token|api[_-]?key|private[_-]?key|service[_-]?role)[\w.-]*(?:["']?)\s*[:=]\s*)(["'`])([^\r\n]*?)\2/gi;
 export function redact(value: string): string {
   return value
-    .replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/g, '[REDACTED PRIVATE KEY]')
+    .replace(
+      /-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/g,
+      '[REDACTED PRIVATE KEY]',
+    )
     .replace(credentialAssignment, '$1"[REDACTED]"')
     .replace(/\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{8,}\b/g, '[REDACTED TOKEN]')
     .replace(/\b(?:ghp_|gho_|github_pat_)[A-Za-z0-9_]{12,}\b/g, '[REDACTED TOKEN]')
@@ -10,4 +14,13 @@ export function redact(value: string): string {
     .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, '$1[REDACTED]@')
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '[REDACTED JWT]')
     .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '');
+}
+
+export function redactForCloud(value: string): { value: string; changed: boolean } {
+  const redacted = redact(value)
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, '[REDACTED EMAIL]')
+    .replace(/\b(?:\/home\/|C:\\Users\\)[^/\\\s"']+/gi, (match) =>
+      match.startsWith('/home/') ? '/home/[REDACTED_USER]' : 'C:\\Users\\[REDACTED_USER]',
+    );
+  return { value: redacted, changed: redacted !== value || redacted.includes('[REDACTED') };
 }

@@ -1,0 +1,6 @@
+{
+  "id": "ai-security-destructive-tool",
+  "category": "ai-security",
+  "scanners": ["builtin"],
+  "expectedRuleIds": ["TW-007"]
+}

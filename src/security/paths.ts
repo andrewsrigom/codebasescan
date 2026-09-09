@@ -5,17 +5,58 @@ import { lstat, open, realpath, readdir } from 'node:fs/promises';
 import { digest } from '../domain/findings.ts';
 import type { Snapshot, SourceFile } from '../domain/types.ts';
 import { redact } from './redact.ts';
-const ignoredDirectories = new Set(['.git', 'node_modules', '.next', 'dist', 'build', 'coverage', '.traceward', '.turbo', '.venv', 'vendor']);
-const extensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.yaml', '.yml', '.toml', '.sql']);
-const excludedFiles = new Set(['.gitleaks.toml', '.semgrepignore', '.semgrep.yml', '.semgrep.yaml']);
-export const snapshotLimits = { files: 1500, bytesPerFile: 256 * 1024, totalBytes: 8 * 1024 * 1024 };
+const ignoredDirectories = new Set([
+  '.git',
+  'node_modules',
+  '.next',
+  'dist',
+  'build',
+  'coverage',
+  '.traceward',
+  '.turbo',
+  '.venv',
+  'vendor',
+]);
+const extensions = new Set([
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.mjs',
+  '.cjs',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.toml',
+  '.sql',
+]);
+const excludedFiles = new Set([
+  '.gitleaks.toml',
+  '.semgrepignore',
+  '.semgrep.yml',
+  '.semgrep.yaml',
+]);
+export const snapshotLimits = {
+  files: 1500,
+  bytesPerFile: 256 * 1024,
+  totalBytes: 8 * 1024 * 1024,
+};
 export function isWithin(root: string, target: string): boolean {
   const relative = path.relative(root, target);
-  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+  return (
+    relative === '' ||
+    (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+  );
 }
 export function safeRelative(value: string): string {
   const normalized = value.replaceAll('\\', '/');
-  if (!normalized || normalized.includes('\0') || /^[a-z]:/i.test(normalized) || normalized.startsWith('/') || normalized.split('/').some((part) => part === '..' || part === '.')) {
+  if (
+    !normalized ||
+    normalized.includes('\0') ||
+    /^[a-z]:/i.test(normalized) ||
+    normalized.startsWith('/') ||
+    normalized.split('/').some((part) => part === '..' || part === '.')
+  ) {
     throw new Error('Unsafe relative path.');
   }
   return normalized;
@@ -23,14 +64,15 @@ export function safeRelative(value: string): string {
 export async function validateProjectRoot(input: string, dataDirectory: string): Promise<string> {
   const root = await realpath(path.resolve(input));
   const metadata = await lstat(root);
-  if (!metadata.isDirectory())
-    throw new Error('The project must be a directory.');
+  if (!metadata.isDirectory()) throw new Error('The project must be a directory.');
   const home = await realpath(os.homedir());
   if (root === path.parse(root).root || root === home)
     throw new Error('Register a project, not the filesystem root or home directory.');
   const data = path.resolve(dataDirectory);
   if (isWithin(root, data) || isWithin(data, root))
-    throw new Error('Project and audit storage must not overlap. Move TRACEWARD_DATA_DIR outside the repository.');
+    throw new Error(
+      'Project and audit storage must not overlap. Move TRACEWARD_DATA_DIR outside the repository.',
+    );
   return root;
 }
 export async function captureSnapshot(root: string): Promise<Snapshot> {
@@ -39,7 +81,9 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
   let totalBytes = 0;
   let truncated = false;
   let visited = 0;
-  const skip = (reason: string) => { skipped[reason] = (skipped[reason] ?? 0) + 1; };
+  const skip = (reason: string) => {
+    skipped[reason] = (skipped[reason] ?? 0) + 1;
+  };
   async function walk(directory: string, depth: number): Promise<void> {
     if (depth > 24) {
       skip('depth-limit');
@@ -49,7 +93,11 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
     const entries = await readdir(directory, { withFileTypes: true });
     entries.sort((a, b) => a.name.localeCompare(b.name));
     for (const entry of entries) {
-      if (++visited > 12000 || files.length >= snapshotLimits.files || totalBytes >= snapshotLimits.totalBytes) {
+      if (
+        ++visited > 12000 ||
+        files.length >= snapshotLimits.files ||
+        totalBytes >= snapshotLimits.totalBytes
+      ) {
         truncated = true;
         skip('budget-limit');
         return;
@@ -80,7 +128,12 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         skip('sensitive-file');
         continue;
       }
-      if (excludedFiles.has(entry.name) || (!extensions.has(path.extname(entry.name)) && entry.name !== 'Dockerfile')) {
+      if (
+        excludedFiles.has(entry.name) ||
+        (!extensions.has(path.extname(entry.name)) &&
+          entry.name !== 'Dockerfile' &&
+          entry.name !== 'yarn.lock')
+      ) {
         skip('unsupported-file');
         continue;
       }
@@ -93,7 +146,11 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         const handle = await open(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
         try {
           const stat = await handle.stat();
-          if (!stat.isFile() || stat.size > snapshotLimits.bytesPerFile || totalBytes + stat.size > snapshotLimits.totalBytes) {
+          if (
+            !stat.isFile() ||
+            stat.size > snapshotLimits.bytesPerFile ||
+            totalBytes + stat.size > snapshotLimits.totalBytes
+          ) {
             skip('file-size-limit');
             truncated = true;
             continue;
@@ -110,22 +167,34 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
             skip('binary-file');
             continue;
           }
-          files.push({ path: safeRelative(path.relative(root, absolute)), content, digest: digest(content), bytes: bytesRead });
+          files.push({
+            path: safeRelative(path.relative(root, absolute)),
+            content,
+            digest: digest(content),
+            bytes: bytesRead,
+          });
           totalBytes += bytesRead;
-        }
-        finally {
+        } finally {
           await handle.close();
         }
-      }
-      catch {
+      } catch {
         skip('unreadable-file');
         truncated = true;
       }
     }
   }
   await walk(root, 0);
-  return { files, totalBytes, skipped, truncated, digest: digest(files.map((file) => `${file.path}:${file.digest}`).join('\n')) };
+  return {
+    files,
+    totalBytes,
+    skipped,
+    truncated,
+    digest: digest(files.map((file) => `${file.path}:${file.digest}`).join('\n')),
+  };
 }
 export function redactedSnapshot(snapshot: Snapshot): Snapshot {
-  return { ...snapshot, files: snapshot.files.map((file) => ({ ...file, content: redact(file.content) })) };
+  return {
+    ...snapshot,
+    files: snapshot.files.map((file) => ({ ...file, content: redact(file.content) })),
+  };
 }

@@ -1,0 +1,7 @@
+{
+  "name": "dependency-benchmark",
+  "private": true,
+  "dependencies": {
+    "fixture-package": "1.0.0"
+  }
+}

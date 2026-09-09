@@ -1,0 +1,7 @@
+{
+  "name": "posture-safe-fixture",
+  "private": true,
+  "dependencies": {
+    "next": "16.3.4"
+  }
+}

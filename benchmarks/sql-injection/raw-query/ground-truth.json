@@ -1,0 +1,6 @@
+{
+  "id": "sql-injection-raw-query",
+  "category": "sql-injection",
+  "scanners": ["builtin"],
+  "expectedRuleIds": ["TW-001"]
+}

@@ -1,4 +1,4 @@
-import type { ReviewDecision } from './types.ts';
+import type { AuditOptions, ReviewDecision } from './types.ts';
 import { redact } from '../security/redact.ts';
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -20,10 +20,32 @@ export function reviewDecision(value: unknown): ReviewDecision {
   const input = record(value);
   const findingId = text(input.findingId, 'finding', 30);
   const disposition = input.disposition;
-  if (disposition !== 'confirmed' && disposition !== 'false_positive' && disposition !== 'accepted_risk' && disposition !== 'needs_review')
+  if (
+    disposition !== 'confirmed' &&
+    disposition !== 'false_positive' &&
+    disposition !== 'accepted_risk' &&
+    disposition !== 'needs_review'
+  )
     throw new Error('Invalid review decision.');
   const note = redact(text(input.note, 'review note'));
   if (note.length < 12)
     throw new Error('Explain the decision and supporting evidence in at least 12 characters.');
   return { findingId, disposition, note };
+}
+
+export function auditOptions(value: unknown): AuditOptions {
+  const input = record(value);
+  if (input.httpProbe === undefined) return {};
+  const probe = record(input.httpProbe);
+  if (probe.approved !== true)
+    throw new Error('The HTTP target must be explicitly approved for this audit.');
+  const url = text(probe.url, 'HTTP probe URL', 2048);
+  if (probe.allowPrivateNetwork !== undefined && typeof probe.allowPrivateNetwork !== 'boolean')
+    throw new Error('allowPrivateNetwork must be a boolean.');
+  return {
+    httpProbe: {
+      url,
+      allowPrivateNetwork: probe.allowPrivateNetwork === true,
+    },
+  };
 }

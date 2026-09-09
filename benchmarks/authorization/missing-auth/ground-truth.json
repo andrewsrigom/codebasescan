@@ -1,0 +1,6 @@
+{
+  "id": "authorization-missing-auth",
+  "category": "authorization",
+  "scanners": ["posture"],
+  "expectedRuleIds": ["TW-P006"]
+}

@@ -1,0 +1,6 @@
+{
+  "id": "cors-credentialed-wildcard",
+  "category": "cors",
+  "scanners": ["builtin", "posture"],
+  "expectedRuleIds": ["TW-006", "TW-P004"]
+}

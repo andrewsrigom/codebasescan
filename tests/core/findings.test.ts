@@ -28,7 +28,12 @@ test('retains stable IDs within an identical snapshot', () => {
   assert.equal(mergeFindings(first, second).length, 1);
 });
 test('does not flag a paired tenant-scoped alternative', () => {
-  assert.equal(scanPatterns(snapshotOf('database.project.findFirst({ where: { id, tenantId: session.tenantId } })')).length, 0);
+  assert.equal(
+    scanPatterns(
+      snapshotOf('database.project.findFirst({ where: { id, tenantId: session.tenantId } })'),
+    ).length,
+    0,
+  );
 });
 test('documents a deliberate comment false positive', () => {
   const findings = scanPatterns(snapshotOf('// Do not use eval(input) anymore.'));
@@ -39,7 +44,12 @@ test('caps findings to prevent unbounded output', () => {
   assert.equal(scanPatterns(snapshotOf('eval(input);\n'.repeat(500))).length, 300);
 });
 test('package inventory preserves requested ranges rather than inventing resolved versions', () => {
-  const dependencies = inventory(snapshotOf('{"dependencies":{"next":"^16.3.4"},"devDependencies":{"typescript":"~5.9.3"}}', 'package.json'));
+  const dependencies = inventory(
+    snapshotOf(
+      '{"dependencies":{"next":"^16.3.4"},"devDependencies":{"typescript":"~5.9.3"}}',
+      'package.json',
+    ),
+  );
   assert.equal(dependencies[0]?.requestedVersion, '^16.3.4');
   assert.equal(dependencies[0]?.scope, 'runtime');
   assert.equal(dependencies[1]?.scope, 'development');
