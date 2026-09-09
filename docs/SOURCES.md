@@ -13,6 +13,7 @@ Consulted during starter preparation on 2026-09-08. Package APIs and security gu
 - OpenAI Responses API reference: https://platform.openai.com/docs/api-reference/responses
 - OpenAI Structured Outputs guidance: https://platform.openai.com/docs/guides/structured-outputs
 - OpenAI data controls (`store=false`): https://platform.openai.com/docs/guides/your-data
+- Codex non-interactive mode (`codex exec`): https://learn.chatgpt.com/docs/non-interactive-mode
 - OSV API overview: https://google.github.io/osv.dev/api/
 - OSV `querybatch` API: https://google.github.io/osv.dev/post-v1-querybatch/
 - OSV schema: https://ossf.github.io/osv-schema/

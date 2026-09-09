@@ -12,20 +12,21 @@ Traceward does not replace a penetration test, prove exploitability, or certify 
 
 ## What it does
 
-| Capability          | Implementation                                                                                                                                     |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application posture | 11 conservative rules for headers, sensitive cookies, CORS, route/server-action auth, tenant scope, and environment use                            |
-| Static and secrets  | Built-in rules plus opt-in Semgrep and Gitleaks using a bounded private staging snapshot                                                           |
-| Dependencies        | npm, pnpm, Yarn Classic, and Yarn Berry lockfile resolution; opt-in cached OSV matching                                                            |
-| Runtime posture     | One explicitly approved HTTP URL; SSRF/metadata controls, DNS pinning, redirect/timeout/body limits, HEAD with bounded GET fallback                |
-| Investigation       | LangGraph fan-out/fan-in, evidence accumulation, bounded context loop, SQLite checkpoints, human publication interrupt/resume                      |
-| AI                  | Disabled by default; local Ollama or opt-in OpenAI Responses API with structured output, `store: false`, budgets, cache, redaction, and provenance |
-| Coverage            | Complete, partial, failed, disabled, not run, unsupported, and not performed are distinct; no arbitrary security score                             |
-| Reports             | JSON, Markdown, standalone HTML, SARIF 2.1.0, finding provenance, and local audit comparison                                                       |
-| CI                  | Non-interactive local audit, severity gates, meaningful exit codes, and selectable output format                                                   |
-| Evaluation          | Ground-truth security benchmark reporting TP, FP, FN, precision, and recall                                                                        |
+| Capability         | Implementation                                                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Project profiling  | TypeScript-owned AST parser maps supported frameworks, routes, actions, symbols, explicit local calls, and security facts without executing target code      |
+| Code-first rules   | Framework-aware auth/authz plus direct request flows into raw SQL, outbound requests, redirects, uploads, webhooks, cookies, and client configuration        |
+| Security checklist | Versioned controls keep evidenced facts, gap candidates, unknowns, partial coverage, failures, and non-applicability distinct                                |
+| Static and secrets | Built-in/posture rules plus opt-in Semgrep and Gitleaks using a bounded private staging snapshot                                                             |
+| Dependencies       | npm, pnpm, Yarn Classic, and Yarn Berry lockfile resolution; opt-in cached OSV matching                                                                      |
+| Runtime posture    | One explicitly approved HTTP URL; SSRF/metadata controls, DNS pinning, redirect/timeout/body limits, HEAD with bounded GET fallback                          |
+| Investigation      | LangGraph fan-out/fan-in, evidence-ID context broker, SQLite checkpoints, append-only report revisions, and human publication interrupt/resume               |
+| AI                 | Disabled by default; local Ollama or opt-in OpenAI with structured findings, opaque context IDs, hard budgets, cache, redaction, usage, cost, and provenance |
+| Coverage           | Complete, partial, failed, disabled, not run, unsupported, and not performed are distinct; no arbitrary security score                                       |
+| Reports            | JSON, Markdown, standalone HTML, SARIF 2.1.0, bounded Codex bundle, finding provenance, and local audit comparison                                           |
+| CI and evaluation  | Non-interactive severity gates, TP/FP/FN benchmark, and anonymized aggregation of human dispositions and AI cost                                             |
 
-Known limits include regex-based source heuristics instead of whole-program AST/dataflow analysis, no Git-history secret scan, no reachability proof for vulnerable dependencies, no broad crawler or exploitation, and no cloud/IAM/IaC analysis.
+Known limits include bounded syntax-only AST analysis rather than target typechecking or whole-program taint analysis, no Git-history secret scan, no reachability proof for vulnerable dependencies, no broad crawler or exploitation, and no cloud/IAM/IaC analysis. Fixture precision is not evidence of real-project accuracy.
 
 ## Start locally
 
@@ -110,7 +111,23 @@ OPENAI_INPUT_COST_PER_MTOK=
 OPENAI_OUTPUT_COST_PER_MTOK=
 ```
 
-OpenAI requests use the Responses API, structured JSON Schema output, `store: false`, timeouts, bounded retries, per-finding and per-audit budgets, and a seven-day content-addressed cache. Relevant context is minimized and redacted again before cloud transmission. Configure current per-million-token prices if approximate cost reporting is required. API keys are never placed in reports.
+OpenAI requests use the Responses API, structured JSON Schema output, `store: false`, timeouts, bounded retries, per-finding and per-audit budgets, and a seven-day content-addressed cache. Models can request only opaque evidence/profile IDs from a fixed snapshot catalog, never arbitrary paths. Relevant context is capped at 16,000 characters and redacted again before cloud transmission. Configure current per-million-token prices if approximate cost reporting is required. API keys are never placed in reports.
+
+### Investigate with Codex without enabling OpenAI in Traceward
+
+Download **Codex bundle** from an audit or export it locally:
+
+```bash
+npm run cli -- export <audit-id> bundle
+```
+
+The bundle contains bounded evidence, profile/checklist IDs, coverage, and review instructions, but not the registered project root. Attach it to a Codex task that can already access the authorized repository, or use the documented non-interactive workflow:
+
+```bash
+codex exec --ephemeral "Read the Traceward *.bundle.json in this repository. Investigate unresolved candidates, cite its IDs, preserve unknown coverage, and do not modify files."
+```
+
+This spends Codex usage only when you intentionally run the investigation; Traceward itself stays in disabled-AI mode. See the [official Codex non-interactive mode documentation](https://learn.chatgpt.com/docs/non-interactive-mode).
 
 ### CI
 
@@ -130,6 +147,14 @@ npm run cli -- compare <base-audit-id> <current-audit-id>
 
 Comparison reports new, resolved, unchanged, and severity-changed fingerprints. Fingerprints are line-sensitive; “resolved” does not prove remediation.
 
+Aggregate reviewed outcomes across stored audits without exporting project names or evidence:
+
+```bash
+npm run cli -- evaluate <audit-id> <another-audit-id>
+```
+
+This reports human dispositions, per-rule outcomes, unresolved candidates, coverage states, and configured AI cost per confirmed finding. It cannot measure undiscovered false negatives.
+
 ## Development checks
 
 ```bash
@@ -148,11 +173,11 @@ The benchmark is Traceward-specific, deterministic where possible, and intention
 ## Project map
 
 ```text
-src/domain/       findings, provenance, coverage, comparison, reports, CI gates
-src/scanners/     built-in posture, HTTP, OSV/lockfiles, Semgrep, Gitleaks
+src/domain/       findings, profile/checklist/report schemas, evaluation, comparison, CI gates
+src/scanners/     AST/project profile, built-in posture, HTTP, OSV/lockfiles, Semgrep, Gitleaks
 src/security/     snapshots, URL/SSRF policy, process limits, redaction
-src/engine/       LangGraph workflows and Ollama/OpenAI reviewers
-src/server/       local configuration and SQLite persistence/cache/budgets
+src/engine/       LangGraph workflows, evidence-ID broker, and Ollama/OpenAI reviewers
+src/server/       SQLite queue, report revisions, validated persistence, cache, and budgets
 src/app/          guarded Next.js UI and local API routes
 src/worker/       one durable local audit consumer
 src/cli/          queue, export, compare, and non-interactive CI

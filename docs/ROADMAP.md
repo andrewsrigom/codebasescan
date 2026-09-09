@@ -8,20 +8,25 @@
 - Approved single-URL HTTP posture probe with SSRF, metadata, redirect, method, timeout, and size controls.
 - npm/pnpm/Yarn resolved dependency inventory and opt-in cached OSV matching.
 - Explicit coverage, provenance, OpenAI Responses API adapter, cloud redaction, prompt-injection controls, benchmark, audit comparison, and CI mode.
+- Deterministic TypeScript/JavaScript project profiling, framework-aware AST auth/authz, bounded direct request flows, and paired benign fixtures.
+- Versioned security checklist, evidence-ID context broker, structured AI investigation, Project Map/Investigations UI, and bounded Codex bundle.
+- Runtime-validated report persistence, append-only revisions, and anonymized human-outcome/AI-cost aggregation.
 
-## Next — detection quality
+## Next — real-project detection quality
 
-Replace the highest-value auth/authz regex candidates with narrow AST-aware analysis. Model common Next.js wrappers, middleware/proxy matchers, tenant ownership, and benign RLS/service-policy counterexamples. Measure false positives and false negatives before adding languages.
+Evaluate at least 10 authorized TypeScript/Next.js projects with human review. Record false positives, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and AI cost per confirmed finding. Disable or narrow rules that fail outside fixtures. Do not publish generic accuracy claims from the fixture benchmark.
+
+Extend structural analysis only from observed real-project failures: path aliases, wrapper composition, middleware/proxy matchers, more ORM/query-builder shapes, streaming uploads, cookie overloads, and framework-specific safe destination guards. Keep unsupported relationships explicit.
 
 Extend lockfile workspace fidelity, OSV pagination, withdrawn/advisory freshness tests, and severity-vector presentation. Reachability remains separate work and must not be inferred from presence.
 
 ## Next — operational hardening
 
-Add crash/fault injection, stale scanner staging cleanup, checkpoint/config version compatibility, schema-validated persisted reports/caches, append-only report revisions, and scanner-version compatibility fixtures. Add OS resource containment guidance for hostile repositories.
+Add crash/fault injection, stale scanner staging cleanup, checkpoint/config version compatibility, deeper AI-cache validation, and scanner-version compatibility fixtures. Add OS resource containment guidance for hostile repositories.
 
 ## Next — model validation
 
-Run one economical and one explicitly configured stronger OpenAI model plus one local Ollama model against the same scanner evidence and adversarial repository text. Record invalid citations, abstentions, latency, tokens, configured-price cost, and whether a stronger model materially improves contextual triage. Do not create a generic model benchmark.
+Run one economical and one explicitly configured stronger OpenAI model plus one local Ollama model against the same scanner evidence and adversarial repository text. Record invalid citations, abstentions, latency, tokens, configured-price cost, and whether a stronger model materially improves contextual triage. Add opt-in checklist-gap investigation only if finding investigation demonstrates measurable review value. Do not create a generic model benchmark.
 
 ## Public release
 

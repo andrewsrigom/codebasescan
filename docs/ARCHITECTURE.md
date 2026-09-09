@@ -14,6 +14,7 @@ single long-running worker
 LangGraph audit workflow <-------- separate SQLite checkpointer
         |
         +-- bounded read-only source snapshot
+        +-- deterministic project profile + AST security rules
         +-- built-in source patterns
         +-- application posture scanner
         +-- optional Semgrep / Gitleaks processes
@@ -21,19 +22,21 @@ LangGraph audit workflow <-------- separate SQLite checkpointer
         +-- optional approved HTTP response probe
         +-- bounded contextual review subgraph
                     |
-                    +-- snapshot-only source tool
+                    +-- snapshot-only opaque-ID context broker
                     +-- disabled / loopback Ollama / opt-in OpenAI Responses API
 ```
 
 Next.js never owns a long-running audit. The worker claims persisted jobs and handles cancellation independently of the browser. CI uses the same graph with an ephemeral store and skips only the human publication interrupt.
 
-Application state uses Node `node:sqlite`. Graph checkpoints use `@langchain/langgraph-checkpoint-sqlite` in a separate file. Schema migration adds per-audit options, AI usage, and content-addressed AI cache tables without rewriting old reports.
+Application state uses Node `node:sqlite`. Graph checkpoints use `@langchain/langgraph-checkpoint-sqlite` in a separate file. Schema migration adds per-audit options, AI usage, content-addressed AI cache, and append-only report-revision tables without rewriting old reports. Reports and stored options are runtime-schema validated on write/read.
 
 ## Audit graph
 
 ```text
 START -> snapshot
               +-> patterns ----+
+              +-> project map -+
+              +-> AST security +
               +-> posture -----+
               +-> semgrep -----+
               +-> gitleaks ----+-> normalize/reconcile
@@ -48,21 +51,23 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The six branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The eight branches publish results through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
 The nested review graph remains:
 
 ```text
 collect_context -> assess
        ^             |
-       +-- exact allowed path request (at most 2 rounds)
+       +-- allowed evidence/profile ID request (at most 2 rounds)
 ```
 
 Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
 
 ## Deterministic evidence
 
-`builtin.ts` retains small broad review patterns. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, route/server-action authentication and authorization, tenant/owner scope, and environment use. It intentionally reports candidates when wrappers, platform behavior, middleware, or runtime policy cannot be proved.
+`project-profile.ts` parses captured TypeScript/JavaScript as data and maps supported frameworks, entry points, symbols, imports, direct local call edges, and security facts under fixed limits. `ast-security.ts` uses those relationships for authentication, permission, and tenant/owner scope, then performs bounded same-function request-flow checks for raw SQL, SSRF, redirects, uploads, webhook ordering, cookie attributes, and client/server configuration. It never loads target configuration, plugins, types, or dependencies.
+
+`builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, and environment use. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
 
 The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S), strips queries from stored display URLs, rejects credential-shaped query keys, blocks metadata/link-local/reserved destinations, requires explicit approval for non-loopback private networks, validates every DNS answer and redirect, and pins the selected address for the connection. It uses HEAD and only falls back to bounded GET for 405/501. Static and runtime findings are reconciled by attaching observed evidence; static evidence is not silently removed.
 
@@ -72,7 +77,9 @@ Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without runn
 
 `TRACEWARD_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`.
 
-Cloud context is limited to at most two already-selected files per round and 16,000 context characters, then redacted again for credentials, emails, and user-home paths. `.env` and key files are excluded. Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, and context digest. Reports record provider, model, prompt version, files sent, redaction result, tokens, cache use, and configured-price cost approximation.
+The context broker exposes a finding-specific catalog of opaque evidence, entry-point, symbol, fact, and resolved-call IDs. Models cannot name arbitrary repository paths. Delivery is checked against the immutable captured snapshot, rejects unknown/repeated IDs, permits at most two requested items per round, and caps accumulated source context at 16,000 characters. Context is redacted again for credentials, emails, and user-home paths; `.env` and key files never enter the snapshot.
+
+Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, and context digest. Reports record provider, model, prompt version, delivered IDs/files, truncation, redaction result, tokens, cache use, and configured-price cost approximation. Model output includes controls found, missing evidence, impact, preconditions, remediation choices, and safe verification steps; it remains an assessment only.
 
 ## Evidence, assessment, disposition, and coverage
 
@@ -84,7 +91,7 @@ Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISA
 
 The in-process snapshot is bounded and raw content is not stored wholesale in the application report. Findings contain small redacted excerpts and digests, which are still sensitive. A resumed graph recaptures source and rejects a changed digest instead of mixing snapshots.
 
-Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. OpenAI budgets are persisted before requests. Publication merges current human dispositions. Abrupt termination and parser processes still require OS-level containment for hostile repositories.
+Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. OpenAI budgets are persisted before requests. Workflow and human-review report states are appended to immutable revision rows while the audit points to the latest validated report. Publication merges current human dispositions. Abrupt termination and parser processes still require OS-level containment for hostile repositories.
 
 ## Local HTTP service
 
@@ -92,9 +99,9 @@ The Traceward UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, s
 
 ## Reading order
 
-1. `src/domain/types.ts`, `coverage.ts`, and `provenance.ts`
+1. `src/domain/types.ts`, `checklist.ts`, `report-schema.ts`, `coverage.ts`, and `provenance.ts`
 2. `src/security/paths.ts`, `url-policy.ts`, and `redact.ts`
-3. `src/scanners/posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
-4. `src/engine/review-graph.ts`, `openai.ts`, and `audit-graph.ts`
+3. `src/scanners/project-profile.ts`, `ast-security.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
+4. `src/engine/context-broker.ts`, `review-graph.ts`, `openai.ts`, and `audit-graph.ts`
 5. `src/server/store.ts`, `src/worker/main.ts`, and `src/cli/main.ts`
 6. `src/components/audit-workspace.tsx` and `finding-details.tsx`

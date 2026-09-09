@@ -1,4 +1,4 @@
-name: Validate starter
+name: Validate Traceward
 on:
   push:
   pull_request:
@@ -24,6 +24,7 @@ jobs:
         shell: bash
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
@@ -32,3 +33,4 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - run: npm audit --audit-level=low

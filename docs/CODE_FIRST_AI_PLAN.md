@@ -1,5 +1,15 @@
 # Code-first audit and AI investigation plan
 
+## Implementation status — 2026-09-09
+
+- Phases 1-4 are implemented: deterministic profiler, bounded relationships, framework-aware AST rules, versioned checklist, and opaque evidence-ID context broker.
+- Phase 5 workflow A is implemented for Ollama/OpenAI contracts; structured results include controls, missing evidence, impact, preconditions, remediation choices, and safe tests. Disabled mode remains complete. Checklist-gap calls and AI report synthesis are intentionally deferred until real-project evidence justifies their cost.
+- Phase 6 tooling is implemented through the anonymized `evaluate` command, but the real-project dataset requires user-supplied authorized repositories and human dispositions.
+- Phase 7 now includes runtime report validation and append-only report revisions. Abrupt-crash/staging/checkpoint compatibility tests remain.
+- Phase 8 includes Project Map, Checklist, Findings, Coverage, Investigations, Workflow, and a bounded Codex bundle export.
+
+The next product gate is not more fixture code. It is evaluation on authorized real projects, followed by targeted rule corrections and optional live-model validation.
+
 ## Goal
 
 Make Traceward useful on real TypeScript, Node.js, and Next.js repositories when source code and configuration are the main evidence. Logs, traces, deployment access, and telemetry remain optional corroboration. Missing runtime evidence must never be reported as a clean result.

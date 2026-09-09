@@ -14,8 +14,14 @@ Traceward now has a complete local-first audit slice:
 - OpenAI structured output, `store: false`, redaction, cache, timeout/retry, persisted budgets, token/cost metadata, and no fallback;
 - prompt-injection fixtures and snapshot-only file access;
 - category-organized benchmark with precision/recall;
+- deterministic project profile with stable route/symbol/import/call/fact IDs;
+- framework-aware auth/authz and direct raw-SQL, SSRF, redirect, upload, webhook, cookie, and client-secret AST candidates;
+- versioned control checklist with gap/evidenced/unverified/partial/failed/not-applicable states;
+- opaque evidence-ID context broker with two rounds, repeated/unknown-ID rejection, redaction, and 16,000-character cap;
+- structured model impact, precondition, remediation, safe-test, missing-evidence, and control output;
 - local audit comparison;
-- non-interactive CI with JSON/SARIF/Markdown/HTML and severity exit gates;
+- non-interactive CI with JSON/SARIF/Markdown/HTML/bounded-Codex-bundle output and severity exit gates;
+- runtime-validated reports/options, append-only workflow/human-review revisions, and anonymized evaluation aggregation;
 - Next.js UI, worker, SQLite queue, LangGraph checkpoints, review interrupt/resume, and exports.
 
 Code and UI remain English. Scanner evidence, runtime evidence, advisory presence, model assessment, and human disposition are separate.
@@ -30,15 +36,14 @@ The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md
 
 ## Next work, in priority order
 
-1. Add AST-aware TypeScript analysis for authentication/authorization and middleware composition. Keep regex findings as candidates and add real framework counterexamples.
-2. Validate one real OpenAI model and one local Ollama model on the prompt-injection suite. Record model IDs, latency, tokens, cost, invalid citations, and abstention behavior.
-3. Harden storage migration and schema-validate reports and AI cache loaded from disk. The bounded OSV cache is schema-validated.
+1. Run Traceward on 10 authorized real TypeScript/Next.js repositories, review every candidate, use `npm run cli -- evaluate ...`, and record anonymized metrics. This requires repository paths and owner authorization.
+2. Fix only rule/profile/checklist failures demonstrated by that evaluation: aliases, wrappers, middleware, ORM shapes, uploads, cookies, or framework guards.
+3. Validate one economical and one stronger OpenAI model only with an explicit key/spend approval; validate Ollama only if local-model disk/RAM cost is accepted. Measure whether either improves human triage.
 4. Add fault injection for SIGKILL/power-loss staging cleanup, worker restart, budget reservation, and checkpoint upgrade behavior.
-5. Add append-only report revisions before claiming immutable audit history.
-6. Expand lockfile workspaces, OSV pagination, severity parsing, and advisory freshness presentation. Do not infer dependency reachability.
-7. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
-8. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
-9. Capture real runtime screenshots, verify name/trademark availability, publish a private vulnerability-reporting route, and review dependency/API licenses before a public release.
+5. Expand lockfile workspaces, OSV pagination, severity parsing, and advisory freshness presentation. Do not infer dependency reachability.
+6. Split the large workspace component into cohesive tab components and complete a fresh accessibility/visual regression pass.
+7. Validate native macOS/Windows only if those platforms will be supported; WSL2 remains the tested path.
+8. Capture real runtime screenshots, verify name/trademark availability, publish a private vulnerability-reporting route, and review dependency/API licenses before a public release.
 
 ## Guardrails
 
@@ -51,4 +56,4 @@ The ordered implementation and validation plan is in `docs/CODE_FIRST_AI_PLAN.md
 
 ## Suggested next prompt
 
-> Read AGENTS.md, docs/ARCHITECTURE.md, docs/VALIDATION.md, and docs/CODEX_HANDOFF.md. Preserve the local-first evidence model. Implement the first remaining item only: a narrow AST-aware TypeScript authorization analyzer with vulnerable and benign Next.js fixtures. Do not weaken snapshot/path/process/network/model boundaries or add new product scope. Run and report the full validation suite.
+> Read AGENTS.md, docs/ARCHITECTURE.md, docs/VALIDATION.md, docs/CODE_FIRST_AI_PLAN.md, and docs/CODEX_HANDOFF.md. Preserve the local-first evidence model. Audit only an explicitly authorized real repository. Review candidates with evidence, record dispositions, export the anonymized evaluation, and make no generic accuracy claim. Do not enable cloud AI, probe a runtime target, or modify the audited repository without separate authorization.
