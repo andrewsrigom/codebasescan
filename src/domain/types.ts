@@ -205,6 +205,12 @@ export interface HttpProbeReport {
   method: 'HEAD' | 'GET';
   statusCode: number;
   redirects: number;
+  redirectChain?: {
+    statusCode: number;
+    from: string;
+    to: string;
+  }[];
+  probeOrigin?: string;
   observedAt: string;
   durationMs: number;
   headers: Record<string, string>;

@@ -995,9 +995,26 @@ export function AuditWorkspace({
                   <span>Redirects</span>
                   <strong>{report.httpProbe.redirects}</strong>
                 </div>
+                <div className="detail-row">
+                  <span>Retained headers / cookie metadata</span>
+                  <strong>
+                    {Object.keys(report.httpProbe.headers).length} /{' '}
+                    {report.httpProbe.cookies.length}
+                  </strong>
+                </div>
+                {report.httpProbe.redirectChain?.map((redirect, index) => (
+                  <p
+                    className="small muted"
+                    key={`${redirect.statusCode}:${redirect.from}:${redirect.to}`}
+                  >
+                    Redirect {index + 1}: HTTP {redirect.statusCode} · {redirect.from} →{' '}
+                    {redirect.to}
+                  </p>
+                ))}
                 <p className="small muted">
-                  One bounded observation at {utcDate(report.httpProbe.observedAt)} UTC. No crawl or
-                  exploit was performed.
+                  One bounded observation at {utcDate(report.httpProbe.observedAt)} UTC. A synthetic
+                  external Origin tests passive CORS behavior. No crawl, mutation, or exploit was
+                  performed.
                 </p>
               </div>
             </section>

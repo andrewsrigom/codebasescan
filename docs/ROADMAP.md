@@ -17,6 +17,7 @@
 - Initial ten-project source-only evaluation: 1,010 files, complete profiles, lockfile/alias/entrypoint/upload hardening, and documented manual triage without a broad accuracy claim.
 - Dedicated React client-boundary rules cover dynamic HTML, navigation, Web Storage, postMessage, new-tab isolation, async Client Components, and sensitive server-to-client props.
 - Dedicated Next.js rules cover sensitive reads, tenant/owner scope, mutation validation, user-specific caching, public secret-shaped configuration, shared authenticated caching, and sensitive response fields.
+- The approved passive HTTP probe now covers effective headers, CSP, CORS reflection and variation, sensitive cookie metadata, shared caching, and redirect downgrades without crawling or mutation.
 
 ## Next — independent real-project ground truth
 

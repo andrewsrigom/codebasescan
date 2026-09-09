@@ -478,7 +478,13 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
-  const headerGaps = findingsByRule(findings, ['TW-P001', 'TW-P002', 'TW-H001', 'TW-H002']);
+  const headerGaps = findingsByRule(findings, [
+    'TW-P001',
+    'TW-P002',
+    'TW-H001',
+    'TW-H002',
+    'TW-H008',
+  ]);
   const nextApplicable = Boolean(
     profile?.frameworks.some((framework) => framework.id.startsWith('nextjs')),
   );
@@ -570,7 +576,13 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
-  const corsGaps = findingsByRule(findings, ['TW-P004', 'TW-P005', 'TW-H003']);
+  const corsGaps = findingsByRule(findings, [
+    'TW-P004',
+    'TW-P005',
+    'TW-H003',
+    'TW-H006',
+    'TW-H007',
+  ]);
   const apiApplicable = contexts.some((context) =>
     ['next-route', 'next-pages-api', 'express-route'].includes(context.entrypoint.kind),
   );
@@ -770,7 +782,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
-  const nextCacheGaps = findingsByRule(findings, ['TW-NEXT003', 'TW-NEXT005']);
+  const nextCacheGaps = findingsByRule(findings, ['TW-NEXT003', 'TW-NEXT005', 'TW-H005']);
   controls.push(
     control({
       id: 'TW-CTRL-NEXT-001',

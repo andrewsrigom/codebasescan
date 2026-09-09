@@ -185,7 +185,7 @@ export function NewAudit({ projects }: { projects: Pick<Project, 'id' | 'name'>[
                     checked={probeApproved}
                     onChange={(event) => setProbeApproved(event.target.checked)}
                   />
-                  I approve one bounded HEAD/GET request to this target.
+                  I approve one bounded HEAD/GET request with a synthetic external Origin.
                 </label>
                 <label className="row gap">
                   <input

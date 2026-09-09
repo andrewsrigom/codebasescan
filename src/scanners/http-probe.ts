@@ -29,7 +29,11 @@ const retainedHeaders = [
   'access-control-allow-origin',
   'access-control-allow-credentials',
   'cross-origin-opener-policy',
+  'cache-control',
+  'vary',
 ] as const;
+
+const passiveProbeOrigin = 'https://traceward.invalid';
 
 interface ProbeResponse {
   statusCode: number;
@@ -85,6 +89,7 @@ async function requestOnce(
         family: address.family,
         headers: {
           Accept: '*/*',
+          Origin: passiveProbeOrigin,
           'User-Agent': 'Traceward-Security-Probe/0.2',
           Connection: 'close',
         },
@@ -248,6 +253,133 @@ function normalizeFindings(report: HttpProbeReport): Finding[] {
         ],
       }),
     );
+  if (
+    headers['access-control-allow-origin'] === report.probeOrigin &&
+    headers['access-control-allow-credentials']?.toLowerCase() === 'true'
+  )
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H006',
+        title: 'Effective CORS policy reflects an untrusted origin with credentials',
+        category: 'configuration',
+        severity: 'high',
+        sourceSeverity: 'high',
+        description:
+          'The approved target reflected Traceward’s synthetic external Origin and allowed credentials. Endpoint sensitivity and browser behavior still require contextual review.',
+        remediation:
+          'Compare the Origin against an exact maintained allowlist before returning it, and enforce server-side authorization independently.',
+        cwe: ['CWE-942'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `The response reflected ${report.probeOrigin} and allowed credentials.`,
+          ),
+        ],
+      }),
+    );
+  if (
+    headers['access-control-allow-origin'] === report.probeOrigin &&
+    !headers.vary
+      ?.split(',')
+      .map((value) => value.trim().toLowerCase())
+      .includes('origin')
+  )
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H007',
+        title: 'Reflected CORS response does not vary on Origin',
+        category: 'configuration',
+        severity: 'medium',
+        sourceSeverity: 'medium',
+        description:
+          'The approved target reflected Traceward’s synthetic external Origin without an observed Vary: Origin header. Shared caches can reuse an origin-specific response incorrectly.',
+        remediation:
+          'Return Vary: Origin whenever Access-Control-Allow-Origin changes by request, and verify intermediary cache behavior.',
+        cwe: ['CWE-942', 'CWE-524'],
+        evidence: [runtimeEvidence(report, 'The reflected CORS response omitted Vary: Origin.')],
+      }),
+    );
+  const sensitiveCookies = report.cookies.filter((cookie) =>
+    /(?:session|auth|token|jwt|sid)/i.test(cookie.name),
+  );
+  if (
+    sensitiveCookies.length &&
+    /(?:^|,)\s*public\b|\bs-maxage\s*=/i.test(headers['cache-control'] ?? '')
+  )
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H005',
+        title: 'Response setting a sensitive cookie permits shared caching',
+        category: 'authorization',
+        severity: 'high',
+        sourceSeverity: 'high',
+        description:
+          'The approved response set a session- or token-shaped cookie while declaring public or shared cache semantics. Personalized response reuse remains a candidate until cache behavior is tested.',
+        remediation:
+          'Use private/no-store for personalized responses and verify CDN or reverse-proxy cache keys and bypass rules.',
+        cwe: ['CWE-524'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `Shared cache policy was observed with sensitive cookie metadata: ${sensitiveCookies.map((cookie) => cookie.name).join(', ')}.`,
+          ),
+        ],
+      }),
+    );
+  const contentSecurityPolicy = headers['content-security-policy'] ?? '';
+  const scriptPolicy =
+    /(?:^|;)\s*script-src\s+([^;]+)/i.exec(contentSecurityPolicy)?.[1] ??
+    /(?:^|;)\s*default-src\s+([^;]+)/i.exec(contentSecurityPolicy)?.[1];
+  if (
+    scriptPolicy &&
+    (/(?:^|\s)'unsafe-inline'(?:\s|$)/i.test(scriptPolicy) ||
+      /(?:^|\s)\*(?:\s|$)/.test(scriptPolicy))
+  )
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H008',
+        title: 'Effective script policy allows broad inline or wildcard sources',
+        category: 'configuration',
+        severity: 'medium',
+        sourceSeverity: 'medium',
+        description:
+          'The effective script/default CSP directive permits unsafe inline script or a wildcard source. This weakens mitigation but does not establish an injection path.',
+        remediation:
+          'Prefer nonces or hashes for necessary inline scripts and enumerate trusted script origins narrowly.',
+        cwe: ['CWE-693'],
+        evidence: [
+          runtimeEvidence(report, `Effective script policy: ${scriptPolicy.slice(0, 500)}.`),
+        ],
+      }),
+    );
+  const downgrade = report.redirectChain?.find(
+    (item) => item.from.startsWith('https:') && item.to.startsWith('http:'),
+  );
+  if (downgrade)
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H009',
+        title: 'Observed redirect downgrades HTTPS to HTTP',
+        category: 'configuration',
+        severity: 'high',
+        sourceSeverity: 'high',
+        description:
+          'The approved passive request crossed from HTTPS to cleartext HTTP during its redirect chain.',
+        remediation: 'Keep every redirect hop on HTTPS and remove cleartext canonical targets.',
+        cwe: ['CWE-319'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `Redirect downgrade observed from ${downgrade.from} to ${downgrade.to}.`,
+          ),
+        ],
+      }),
+    );
   for (const cookie of report.cookies) {
     if (!/(?:session|auth|token|jwt|sid)/i.test(cookie.name)) continue;
     if (cookie.secure && cookie.httpOnly && ['lax', 'strict'].includes(cookie.sameSite)) continue;
@@ -293,6 +425,7 @@ export async function probeHttp(
     let target = await validateProbeUrl(options.url, options.allowPrivateNetwork, resolver);
     const requestedUrl = target.displayUrl;
     let redirects = 0;
+    const redirectChain: NonNullable<HttpProbeReport['redirectChain']> = [];
     let method: 'HEAD' | 'GET' = 'HEAD';
     let response: ProbeResponse;
     for (;;) {
@@ -306,7 +439,17 @@ export async function probeHttp(
       if (![301, 302, 303, 307, 308].includes(response.statusCode) || !location) break;
       if (redirects >= redirectLimit) throw new Error('HTTP probe exceeded its redirect limit.');
       const redirected = new URL(Array.isArray(location) ? location[0] : location, target.url);
-      target = await validateProbeUrl(redirected.toString(), options.allowPrivateNetwork, resolver);
+      const nextTarget = await validateProbeUrl(
+        redirected.toString(),
+        options.allowPrivateNetwork,
+        resolver,
+      );
+      redirectChain.push({
+        statusCode: response.statusCode,
+        from: target.displayUrl,
+        to: nextTarget.displayUrl,
+      });
+      target = nextTarget;
       redirects++;
     }
     const observedAt = new Date().toISOString();
@@ -316,6 +459,8 @@ export async function probeHttp(
       method,
       statusCode: response.statusCode,
       redirects,
+      redirectChain,
+      probeOrigin: passiveProbeOrigin,
       observedAt,
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       headers: headerRecord(response.headers),
@@ -332,7 +477,7 @@ export async function probeHttp(
         durationMs: report.durationMs,
         findings: findings.length,
         detail: `Observed one explicitly approved URL using ${method}, ${redirects} redirect(s), pinned validated DNS addresses, and bounded response handling. No crawl or exploit was attempted.`,
-        version: '0.2.0',
+        version: '0.3.0',
       },
     };
   } catch (error) {
@@ -345,7 +490,7 @@ export async function probeHttp(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `Probe did not complete: ${redact(error instanceof Error ? error.message : 'unknown failure')}`,
-        version: '0.2.0',
+        version: '0.3.0',
       },
     };
   }
@@ -361,7 +506,7 @@ export function skippedHttpProbe(): HttpProbeResult {
       durationMs: 0,
       findings: 0,
       detail: 'Not run. No HTTP target was explicitly approved for this audit.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }
@@ -373,6 +518,10 @@ export function reconcileHttpPosture(findings: Finding[], report?: HttpProbeRepo
     'TW-H002': 'TW-P002',
     'TW-H003': 'TW-P004',
     'TW-H004': 'TW-P003',
+    'TW-H005': 'TW-NEXT005',
+    'TW-H006': 'TW-P005',
+    'TW-H007': 'TW-P005',
+    'TW-H008': 'TW-P002',
   };
   const runtime = findings.filter((item) => item.source === 'http-probe');
   const consumed = new Set<string>();

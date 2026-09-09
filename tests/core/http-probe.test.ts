@@ -51,8 +51,10 @@ test('URL policy blocks metadata, credentials, unsafe schemes, and private DNS b
 
 test('probe uses a bounded HEAD request and discards cookie values', async (context) => {
   const methods: string[] = [];
+  const origins: (string | undefined)[] = [];
   const { server, url } = await localServer((request, response) => {
     methods.push(request.method ?? '');
+    origins.push(request.headers.origin);
     response.writeHead(200, {
       'Content-Security-Policy': "default-src 'self'; script-src 'unsafe-eval'",
       'Access-Control-Allow-Origin': '*',
@@ -65,10 +67,58 @@ test('probe uses a bounded HEAD request and discards cookie values', async (cont
   const result = await probeHttp({ url, allowPrivateNetwork: false });
   assert.equal(result.run.status, 'completed');
   assert.deepEqual(methods, ['HEAD']);
+  assert.deepEqual(origins, ['https://traceward.invalid']);
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H002'));
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H003'));
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H004'));
   assert.ok(!JSON.stringify(result).includes('never-store-this-value'));
+});
+
+test('passive observation covers reflected CORS, shared cache, and broad script CSP', async (context) => {
+  const { server, url } = await localServer((request, response) => {
+    response.writeHead(200, {
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'",
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'camera=()',
+      'Access-Control-Allow-Origin': request.headers.origin ?? '',
+      'Access-Control-Allow-Credentials': 'true',
+      'Cache-Control': 'public, s-maxage=300',
+      'Set-Cookie': 'session=discarded; Secure; HttpOnly; SameSite=Lax',
+    });
+    response.end();
+  });
+  context.after(() => server.close());
+  const result = await probeHttp({ url, allowPrivateNetwork: false });
+  const ids = new Set(result.findings.map((finding) => finding.ruleId));
+  assert.ok(ids.has('TW-H005'));
+  assert.ok(ids.has('TW-H006'));
+  assert.ok(ids.has('TW-H007'));
+  assert.ok(ids.has('TW-H008'));
+  assert.ok(!ids.has('TW-H004'));
+  assert.equal(result.report?.headers['cache-control'], 'public, s-maxage=300');
+});
+
+test('redirect chain is retained as bounded passive evidence', async (context) => {
+  const { server, url } = await localServer((request, response) => {
+    if (request.url === '/') {
+      response.writeHead(302, { Location: '/final' });
+      response.end();
+      return;
+    }
+    response.writeHead(204, {
+      'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+      'Permissions-Policy': 'camera=()',
+    });
+    response.end();
+  });
+  context.after(() => server.close());
+  const result = await probeHttp({ url, allowPrivateNetwork: false });
+  assert.equal(result.report?.redirectChain?.length, 1);
+  assert.equal(result.report?.redirectChain?.[0]?.statusCode, 302);
+  assert.match(result.report?.finalUrl ?? '', /\/final$/);
 });
 
 test('probe accepts a complete response without inventing a security result', async (context) => {
