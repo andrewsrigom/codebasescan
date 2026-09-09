@@ -14,32 +14,34 @@ Environment:
 
 ## Current results
 
-| Check                         | Result                                                                     |
-| ----------------------------- | -------------------------------------------------------------------------- |
-| npm run format:check          | Passed                                                                     |
-| npm run typecheck             | Passed                                                                     |
-| npm run lint                  | Passed, zero warnings                                                      |
-| npm test                      | 175 passed                                                                 |
-| npm run test:graph            | 11 passed, including real scanners and worker recovery                     |
-| npm run benchmark             | TP 35, FP 1, FN 0; precision 0.9722, recall 1.00                           |
-| AST benchmark subset          | TP 10, FP 0, FN 0; precision 1.00, recall 1.00                             |
-| Next.js benchmark subset      | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                              |
-| React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                              |
-| npm run build                 | Passed                                                                     |
-| npm run test:e2e              | 7 passed in Chromium                                                       |
-| npm audit --audit-level=low   | 0 known vulnerabilities                                                    |
-| npm run cli -- doctor         | 9 checks passed                                                            |
-| Browser workspace             | Mechanical tab rendered real data with no framework overlay                |
-| Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags     |
-| Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates               |
-| Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak      |
-| Full offline real-project run | 2 profiles, 2,239 files, 0 snapshot truncations, 25–34 s, 484–606 MiB peak |
+| Check                         | Result                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| npm run format:check          | Passed                                                                      |
+| npm run typecheck             | Passed                                                                      |
+| npm run lint                  | Passed, zero warnings                                                       |
+| npm test                      | 195 passed                                                                  |
+| npm run test:graph            | 11 passed, including real scanners and worker recovery                      |
+| npm run benchmark             | TP 36, FP 1, FN 0; precision 0.9730, recall 1.00                            |
+| AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                              |
+| Next.js benchmark subset      | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                               |
+| React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                               |
+| npm run build                 | Passed                                                                      |
+| npm run test:e2e              | 7 passed in Chromium                                                        |
+| npm audit --audit-level=low   | 0 known vulnerabilities                                                     |
+| npm run cli -- doctor         | 9 checks passed                                                             |
+| Browser workspace             | Source analysis rendered real data with no overlay or console error         |
+| Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags      |
+| Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates                |
+| Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak       |
+| Latest `robs-web` offline run | 1,045 files, 0 snapshot truncations, 38.03 s, 13 candidates, 8 visible gaps |
 
-The full offline run included Semgrep, Gitleaks, OSV, dependency-cruiser, jscpd,
-the TypeScript project profile, and the built-in AST/Next.js/React rules. `robs-web`
-mapped 503 modules and 25 duplicate blocks (1.5816%); `seusaas-platform` mapped 739
-modules, one cycle, and 54 duplicate blocks (2.7026%). Architecture lists reached
-their bounded display limit and were explicitly marked partial rather than clean.
+The latest full offline `robs-web` run included Semgrep, Gitleaks, OSV,
+dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
+the project profile, and the built-in AST/Next.js/React rules. It mapped 503 modules,
+25 duplicate blocks (1.5816%), 1,479 pnpm lock entries, 3,434 functions, 114 quality
+hotspots, and two existing coverage summaries. Dead-code output reached its 300-file
+display limit and was explicitly marked partial rather than clean. The 13 security
+candidates were 4 medium and 9 low; no target code or package lifecycle script ran.
 
 The benchmark measures declared inert fixtures. It is not a generic accuracy claim. The public-project pass has manual triage but not owner-confirmed ground truth; see [Real-project evaluation](REAL_PROJECT_EVALUATION.md).
 
@@ -48,10 +50,13 @@ The benchmark measures declared inert fixtures. It is not a generic accuracy cla
 - bounded snapshot and path protections;
 - runtime/test/example scope separation;
 - project profiling and code-first security rules;
+- Node.js manifest and npm/pnpm/Yarn lockfile integrity checks;
 - explicit coverage, checklist, provenance, and report validation;
 - LangGraph interrupt/resume and SQLite persistence;
 - Semgrep and Gitleaks local adapters;
 - bounded dependency structure and duplication reports without loading target configuration;
+- isolated Knip candidates, source-only runtime dependency references, complexity, size, and
+  existing coverage summaries;
 - OSV, HTTP, and OpenAI contracts with bounded failure behavior;
 - human finding/control review, publication, exports, comparison, and CI gates;
 - desktop/mobile navigation and the main review flow.
@@ -85,4 +90,5 @@ npm audit --audit-level=low
 ```
 
 External security scanner tests require the trusted Semgrep and Gitleaks binaries on PATH.
-dependency-cruiser and jscpd are pinned project dependencies. Default AI mode remains disabled.
+dependency-cruiser, jscpd, and Knip are pinned project dependencies. Default AI mode remains
+disabled.
