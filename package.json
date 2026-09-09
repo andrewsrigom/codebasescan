@@ -1,6 +1,6 @@
 {
   "name": "traceward",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A local-first, evidence-led security review workbench.",
@@ -31,14 +31,15 @@
   "dependencies": {
     "@langchain/core": "^1.0.0",
     "@langchain/langgraph": "^1.4.10",
+    "@langchain/langgraph-checkpoint": "^1.0.0",
     "@langchain/langgraph-checkpoint-sqlite": "^1.0.3",
     "@langchain/ollama": "^1.0.0",
     "better-sqlite3": "^12.0.0",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "zod": "^4.0.0",
-    "@langchain/langgraph-checkpoint": "^1.0.0"
+    "yaml": "^2.9.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

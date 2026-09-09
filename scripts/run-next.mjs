@@ -15,4 +15,7 @@ const child = spawn(process.execPath, [require.resolve('next/dist/bin/next'), ..
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 child.on('exit', (code) => process.exit(code ?? 1));
-child.on('error', () => { console.error('Next.js could not start. Run npm install first.'); process.exit(1); });
+child.on('error', () => {
+  console.error('Next.js could not start. Run npm install first.');
+  process.exit(1);
+});

@@ -3,9 +3,7 @@
   "compilerOptions": {
     "plugins": [],
     "incremental": false,
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "include": [
     "src/domain/**/*.ts",
@@ -17,9 +15,5 @@
     "tests/helpers.ts",
     "scripts/benchmark.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "fixtures",
-    ".next"
-  ]
+  "exclude": ["node_modules", "fixtures", ".next"]
 }

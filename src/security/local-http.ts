@@ -5,8 +5,7 @@ export function localRequestError(request: Request, port = '3000'): string | nul
   if (!allowedHosts.has(host) || !allowedHosts.has(url.host))
     return 'Only loopback requests are accepted.';
   const origin = request.headers.get('origin');
-  if (origin && origin !== `http://${host}`)
-    return 'Cross-origin requests are not accepted.';
+  if (origin && origin !== `http://${host}`) return 'Cross-origin requests are not accepted.';
   if (request.headers.get('sec-fetch-site') === 'cross-site')
     return 'Cross-site requests are not accepted.';
   if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
@@ -18,16 +17,14 @@ export function localRequestError(request: Request, port = '3000'): string | nul
   return null;
 }
 export async function boundedJson(request: Request, maximumBytes = 16384): Promise<unknown> {
-  if (!request.body)
-    throw new Error('A request body is required.');
+  if (!request.body) throw new Error('A request body is required.');
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
   let length = 0;
   try {
     while (true) {
       const chunk = await reader.read();
-      if (chunk.done)
-        break;
+      if (chunk.done) break;
       length += chunk.value.byteLength;
       if (length > maximumBytes) {
         await reader.cancel();
@@ -35,8 +32,7 @@ export async function boundedJson(request: Request, maximumBytes = 16384): Promi
       }
       chunks.push(chunk.value);
     }
-  }
-  finally {
+  } finally {
     reader.releaseLock();
   }
   const bytes = new Uint8Array(length);
