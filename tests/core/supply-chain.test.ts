@@ -118,3 +118,53 @@ test('supply-chain scanner records non-default HTTPS registries as review candid
   assert.equal(finding?.severity, 'low');
   assert.equal(finding?.confidence, 'medium');
 });
+
+test('supply-chain scanner inspects pnpm package integrity entries', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({ dependencies: { alpha: '1.0.0', beta: '2.0.0' } }),
+    'pnpm-lock.yaml': `lockfileVersion: '9.0'
+packages:
+  alpha@1.0.0:
+    resolution: {integrity: sha512-aGVsbG8=}
+  beta@2.0.0:
+    resolution: {tarball: http://packages.example.test/beta.tgz}
+`,
+  });
+
+  const result = scanSupplyChain(snapshot);
+  assert.equal(result.analysis.lockEntries, 2);
+  assert.deepEqual(
+    new Set(result.findings.map((finding) => finding.ruleId)),
+    new Set(['TW-SC003', 'TW-SC005']),
+  );
+});
+
+test('supply-chain scanner inspects Yarn classic and Berry integrity entries', () => {
+  const classic = scanSupplyChain(
+    snapshotFromFiles({
+      'package.json': JSON.stringify({ dependencies: { alpha: '^1.0.0' } }),
+      'yarn.lock': `alpha@^1.0.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/alpha/-/alpha-1.2.0.tgz"
+  integrity sha1-aGVsbG8=
+`,
+    }),
+  );
+  const berry = scanSupplyChain(
+    snapshotFromFiles({
+      'package.json': JSON.stringify({ dependencies: { alpha: '^1.0.0' } }),
+      'yarn.lock': `__metadata:
+  version: 8
+"alpha@npm:^1.0.0":
+  version: 1.2.0
+  resolution: "alpha@npm:1.2.0"
+  checksum: 10c0/aGVsbG8=
+`,
+    }),
+  );
+
+  assert.equal(classic.analysis.lockEntries, 1);
+  assert.ok(classic.findings.some((finding) => finding.ruleId === 'TW-SC005'));
+  assert.equal(berry.analysis.lockEntries, 1);
+  assert.deepEqual(berry.findings, []);
+});

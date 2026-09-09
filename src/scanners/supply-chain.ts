@@ -165,14 +165,28 @@ function lockEntryCandidates(file: SourceFile): { candidates: Candidate[]; entri
   let entries = 0;
   const inspect = (label: string, entry: Record<string, unknown>) => {
     if (entry.link === true || entry.inBundle === true) return;
-    if (typeof entry.version !== 'string' && typeof entry.resolution !== 'string') return;
-    entries++;
     const resolved =
       typeof entry.resolved === 'string'
         ? entry.resolved
         : typeof entry.tarball === 'string'
           ? entry.tarball
           : '';
+    const integrity =
+      typeof entry.integrity === 'string'
+        ? entry.integrity
+        : typeof entry.checksum === 'string'
+          ? entry.checksum
+          : '';
+    const pinnedCommit = typeof entry.commit === 'string' && commitHash.test(entry.commit);
+    if (
+      typeof entry.version !== 'string' &&
+      typeof entry.resolution !== 'string' &&
+      !resolved &&
+      !integrity &&
+      !pinnedCommit
+    )
+      return;
+    entries++;
     if (resolved && /^http:\/\//i.test(resolved)) {
       candidates.push({
         count: 'insecureLockfileUrls',
@@ -208,13 +222,11 @@ function lockEntryCandidates(file: SourceFile): { candidates: Candidate[]; entri
         // Invalid URLs are ignored here; package managers will reject them separately.
       }
     }
-    const integrity =
-      typeof entry.integrity === 'string'
-        ? entry.integrity
-        : typeof entry.checksum === 'string'
-          ? entry.checksum
-          : '';
-    if ((!integrity || /^sha1-/i.test(integrity)) && !/^(?:file|link|workspace):/i.test(resolved))
+    if (
+      (!integrity || /^sha1-/i.test(integrity)) &&
+      !pinnedCommit &&
+      !/^(?:file|link|workspace):/i.test(resolved)
+    )
       candidates.push({
         count: 'weakLockfileIntegrity',
         ruleId: 'TW-SC005',
@@ -257,19 +269,45 @@ function lockEntryCandidates(file: SourceFile): { candidates: Candidate[]; entri
         const dependencies = object(root?.dependencies);
         if (dependencies) walk(dependencies);
       }
-    } else {
+    } else if (file.path.endsWith('pnpm-lock.yaml')) {
       const document = parseDocument(file.content, { schema: 'core' });
       if (document.errors.length) return { candidates, entries };
       const root = object(document.toJS({ maxAliasCount: 20 }));
-      const packages = file.path.endsWith('pnpm-lock.yaml') ? object(root?.packages) : root;
+      const packages = object(root?.packages);
       if (packages)
         for (const [label, raw] of Object.entries(packages)) {
-          if (label === '__metadata') continue;
           const entry = object(raw);
           if (!entry) continue;
           const resolution = object(entry.resolution);
           inspect(label, resolution ? { ...entry, ...resolution } : entry);
         }
+    } else if (file.content.trimStart().startsWith('__metadata:')) {
+      const document = parseDocument(file.content, { schema: 'core' });
+      if (document.errors.length) return { candidates, entries };
+      const root = object(document.toJS({ maxAliasCount: 20 }));
+      if (root)
+        for (const [label, raw] of Object.entries(root)) {
+          if (label === '__metadata') continue;
+          const entry = object(raw);
+          if (entry) inspect(label, entry);
+        }
+    } else {
+      let label = '';
+      let entry: Record<string, unknown> = {};
+      const flush = () => {
+        if (label) inspect(label, entry);
+      };
+      for (const line of file.content.split(/\r?\n/)) {
+        if (/^\S.*:\s*$/.test(line) && !line.startsWith('#')) {
+          flush();
+          label = line.slice(0, line.lastIndexOf(':')).replace(/^"|"$/g, '');
+          entry = {};
+          continue;
+        }
+        const field = /^\s+(version|resolved|integrity)\s+["']?([^"']+)["']?\s*$/.exec(line);
+        if (field?.[1] && field[2]) entry[field[1]] = field[2];
+      }
+      flush();
     }
   } catch {
     // Parse failures are exposed by the dependency inventory scanner.
