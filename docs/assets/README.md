@@ -1,7 +1,7 @@
-# Preview assets
+# Screenshots
 
-`workspace-styling-preview.png` is a static inspection of the authored JSX/CSS with inert example data. It carries a visible styling-preview banner. A small temporary serializer replaced framework hooks solely to inspect layout; this was not a Next.js runtime, React hydration, live audit, or integration test. That serializer is not part of the shipped application.
+workspace.png is the current Next.js application running in Chromium with the inert review-worthy fixture. It is used by the main README.
 
-`html-report-preview.png` shows the real self-contained HTML emitted by `npm run example`, rendered in Chromium. The example is produced by the deterministic core only. No graph, external scanner, or LLM execution is implied.
+The files ending in preview.png are earlier historical previews. They use inert fixture data and make no claim about a real audited application.
 
-Replace the workspace preview with real application screenshots after the complete release validation gate. Never remove the distinction between simulated presentation and observed runtime behavior.
+Never commit screenshots containing proprietary source, credentials, personal paths, or unredacted reports.

@@ -34,7 +34,9 @@ Run one economical and one explicitly configured stronger OpenAI model plus one 
 
 ## Public release
 
-Capture verified runtime screenshots and a short demo; perform accessibility, license, name/trademark, clean-install, native-platform, and private vulnerability-reporting checks. Publish CI status only from a real public workflow.
+The README now uses a verified runtime screenshot and the repository includes Apache-2.0, contribution/security policies, issue templates, CI, and dependency updates.
+
+Before publishing: record a short demo, run a fresh comprehensive accessibility audit, verify the Traceward name/trademark, test a clean clone, choose any native-platform support, and enable a private vulnerability-reporting route. Publish CI status only from a real public workflow.
 
 ## Deliberately later
 
