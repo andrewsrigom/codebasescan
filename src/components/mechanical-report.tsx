@@ -25,7 +25,16 @@ export function MechanicalReportPanel({
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
-  const complete = Boolean(architecture && duplication && supplyChain && quality?.deadCode);
+  const complete = Boolean(
+    architecture &&
+    !architecture.truncated &&
+    duplication &&
+    !duplication.truncated &&
+    supplyChain &&
+    !supplyChain.truncated &&
+    quality?.deadCode &&
+    !quality.truncated,
+  );
   return (
     <section
       className="panel"
@@ -365,8 +374,8 @@ export function MechanicalReportPanel({
             supplyChain?.truncated ||
             quality?.truncated) && (
             <div className="panel-footer">
-              This mechanical report was truncated or filtered. Review Coverage before relying on
-              the totals.
+              This source analysis was truncated or filtered. Review Coverage before relying on the
+              totals.
             </div>
           )}
         </>
