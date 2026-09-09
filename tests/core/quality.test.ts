@@ -154,10 +154,13 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
     }),
     'src/app/page.tsx': `import value from 'used'; import { component } from '@/component'; export default function Page() { return <main>{value}{component}</main>; }`,
     'src/component.ts': `export const component = 'component';`,
+    'src/tested.ts': `export const testedOnly = 'tested';`,
+    '__tests__/tested.test.ts': `import { testedOnly } from '../src/tested'; void testedOnly;`,
     'src/intentionally-unused.ts': `export const fixture = true;`,
     'scripts/task.ts': `export const task = true;`,
     'postcss.config.mjs': `export default { plugins: { '@tailwindcss/postcss': {} } };`,
   });
+  snapshot.files.find((file) => file.path === '__tests__/tested.test.ts')!.scope = 'test';
   try {
     const result = await scanCodeQuality(snapshot, undefined, temporaryDirectory);
     const knip = result.runs.find((run) => run.id === 'knip');
@@ -165,6 +168,12 @@ test('dead-code scan applies safe declarative Knip exclusions', async () => {
     assert.ok(knip?.detail.includes('knip.json'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/intentionally-unused.ts'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('src/component.ts'));
+    assert.ok(!result.analysis.deadCode?.unusedFiles.includes('__tests__/tested.test.ts'));
+    assert.ok(
+      !result.analysis.deadCode?.unusedExports.some(
+        (item) => item.file === 'src/tested.ts' && item.name === 'testedOnly',
+      ),
+    );
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('scripts/task.ts'));
     assert.ok(!result.analysis.deadCode?.unusedFiles.includes('postcss.config.mjs'));
     assert.ok(!result.analysis.deadCode?.unusedDependencies.includes('ignored'));

@@ -46,6 +46,10 @@ function supportedSource(file: SourceFile): boolean {
   );
 }
 
+function knipSource(file: SourceFile): boolean {
+  return sourceExtension.test(file.path) && !/\.d\.[cm]?ts$/i.test(file.path);
+}
+
 function scriptKind(file: string): ts.ScriptKind {
   if (file.endsWith('.tsx')) return ts.ScriptKind.TSX;
   if (file.endsWith('.jsx')) return ts.ScriptKind.JSX;
@@ -287,7 +291,8 @@ function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
   const entries = new Set(profile?.entrypoints.map((entrypoint) => entrypoint.file) ?? []);
   const manifestEntries = declarativeManifestHints(snapshot).entries;
   for (const entry of manifestEntries) entries.add(entry);
-  for (const file of snapshot.files.filter(supportedSource))
+  for (const file of snapshot.files.filter(knipSource)) {
+    if (!isRuntimeSource(file)) entries.add(file.path);
     if (
       /(?:^|\/)(?:page|layout|route|middleware|proxy|instrumentation|index|main|server)\.[cm]?[jt]sx?$/.test(
         file.path,
@@ -297,6 +302,7 @@ function knipEntries(snapshot: Snapshot, profile?: ProjectProfile): string[] {
       /(?:^|\/)pages\/.+\.[cm]?[jt]sx?$/.test(file.path)
     )
       entries.add(file.path);
+  }
   return [...entries].sort();
 }
 
@@ -317,7 +323,7 @@ function nestedStrings(value: unknown, output: string[], depth = 0): void {
 function declarativeManifestHints(snapshot: Snapshot): { entries: string[]; commands: string[] } {
   const entries = new Set<string>();
   const commands: string[] = [];
-  const sourcePaths = new Set(snapshot.files.filter(supportedSource).map((file) => file.path));
+  const sourcePaths = new Set(snapshot.files.filter(knipSource).map((file) => file.path));
   for (const file of snapshot.files) {
     if (!isRuntimeSource(file) || file.path.split('/').at(-1) !== 'package.json') continue;
     try {
@@ -673,7 +679,7 @@ async function scanDeadCode(
   const sourceRoot = path.join(stage, 'source');
   const configName = 'traceward.knip.json';
   try {
-    await writeSnapshotStage(snapshot, sourceRoot, supportedSource);
+    await writeSnapshotStage(snapshot, sourceRoot, knipSource);
     await writeSanitizedManifests(snapshot, sourceRoot);
     const importedConfig = declarativeKnipConfiguration(snapshot);
     const aliasConfiguration = typeScriptPathAliases(snapshot);
