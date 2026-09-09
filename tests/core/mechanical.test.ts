@@ -45,10 +45,34 @@ test('dependency structure normalization keeps bounded local evidence', () => {
   );
   assert.equal(analysis.modules, 3);
   assert.equal(analysis.localDependencies, 2);
+  assert.equal(analysis.cycleCount, 1);
   assert.deepEqual(analysis.cycles[0]?.files, ['src/a.ts', 'src/b.ts']);
+  assert.equal(analysis.orphanCount, 0);
   assert.deepEqual(analysis.orphanCandidates, []);
+  assert.equal(analysis.hotspotCount, 2);
   assert.equal(analysis.hotspots[0]?.incoming, 1);
   assert.ok(!JSON.stringify(analysis).includes('outside.ts'));
+});
+
+test('dependency structure keeps exact totals when hotspot details are bounded', () => {
+  const files = Object.fromEntries(
+    Array.from({ length: 101 }, (_, index) => [
+      `src/module-${index}.ts`,
+      'export const value = 1;',
+    ]),
+  );
+  const modules = Object.keys(files).map((file, index, allFiles) => ({
+    source: file,
+    orphan: false,
+    dependents: [allFiles[(index + allFiles.length - 1) % allFiles.length]],
+    dependencies: [{ resolved: allFiles[(index + 1) % allFiles.length], circular: false }],
+  }));
+
+  const analysis = normalizeArchitecture({ modules }, snapshotFromFiles(files));
+
+  assert.equal(analysis.hotspotCount, 101);
+  assert.equal(analysis.hotspots.length, 100);
+  assert.equal(analysis.truncated, true);
 });
 
 test('duplication normalization discards source fragments and unsafe paths', () => {

@@ -356,8 +356,11 @@ export interface ArchitectureAnalysis {
   schemaVersion: 1;
   modules: number;
   localDependencies: number;
+  cycleCount?: number;
   cycles: ArchitectureCycle[];
+  orphanCount?: number;
   orphanCandidates: string[];
+  hotspotCount?: number;
   hotspots: ArchitectureHotspot[];
   truncated: boolean;
 }
@@ -423,10 +426,15 @@ export interface DeadCodeSymbol {
 }
 export interface DeadCodeAnalysis {
   schemaVersion: 1;
+  unusedFileCount?: number;
   unusedFiles: string[];
+  unusedDependencyCount?: number;
   unusedDependencies: string[];
+  unlistedDependencyCount?: number;
   unlistedDependencies: DeadCodeSymbol[];
+  unusedExportCount?: number;
   unusedExports: DeadCodeSymbol[];
+  unusedTypeCount?: number;
   unusedTypes: DeadCodeSymbol[];
   truncated: boolean;
 }
@@ -441,6 +449,7 @@ export interface CodeQualityAnalysis {
   schemaVersion: 1;
   filesAnalyzed: number;
   functionsAnalyzed: number;
+  hotspotCount?: number;
   hotspots: FunctionHotspot[];
   deadCode?: DeadCodeAnalysis;
   coverageArtifacts: CoverageArtifactSummary[];

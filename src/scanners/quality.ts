@@ -105,6 +105,7 @@ function functionComplexity(node: ts.FunctionLikeDeclaration): number {
 export function measureCodeQuality(snapshot: Snapshot): {
   filesAnalyzed: number;
   functionsAnalyzed: number;
+  hotspotCount: number;
   hotspots: FunctionHotspot[];
   truncated: boolean;
 } {
@@ -158,6 +159,7 @@ export function measureCodeQuality(snapshot: Snapshot): {
   return {
     filesAnalyzed: files.length,
     functionsAnalyzed,
+    hotspotCount: hotspots.length,
     hotspots: hotspots.slice(0, maximumHotspots),
     truncated: truncated || hotspots.length > maximumHotspots,
   };
@@ -272,10 +274,15 @@ export function normalizeKnip(value: unknown, snapshot: Snapshot): DeadCodeAnaly
   }
   return {
     schemaVersion: 1,
+    unusedFileCount: unusedFiles.size,
     unusedFiles: [...unusedFiles].sort().slice(0, maximumDeadCodeItems),
+    unusedDependencyCount: unusedDependencies.size,
     unusedDependencies: [...unusedDependencies].sort().slice(0, maximumDeadCodeItems),
+    unlistedDependencyCount: unlistedDependencies.length,
     unlistedDependencies: unlistedDependencies.slice(0, maximumDeadCodeItems),
+    unusedExportCount: unusedExports.length,
     unusedExports: unusedExports.slice(0, maximumDeadCodeItems),
+    unusedTypeCount: unusedTypes.length,
     unusedTypes: unusedTypes.slice(0, maximumDeadCodeItems),
     truncated:
       snapshot.truncated ||
@@ -730,6 +737,7 @@ async function scanDeadCode(
     );
     const analysis: DeadCodeAnalysis = {
       ...normalized,
+      unusedDependencyCount: dependencyCandidates.size,
       unusedDependencies: [...dependencyCandidates].sort().slice(0, maximumDeadCodeItems),
       truncated: normalized.truncated || dependencyCandidates.size > maximumDeadCodeItems,
     };
@@ -743,6 +751,12 @@ async function scanDeadCode(
     const configurationIssueDetail = configurationIssues.length
       ? ` ${configurationIssues.join(' ')}`
       : '';
+    const unusedFileCount = analysis.unusedFileCount ?? analysis.unusedFiles.length;
+    const unusedDependencyCount =
+      analysis.unusedDependencyCount ?? analysis.unusedDependencies.length;
+    const unusedSymbolCount =
+      (analysis.unusedExportCount ?? analysis.unusedExports.length) +
+      (analysis.unusedTypeCount ?? analysis.unusedTypes.length);
     return {
       analysis,
       run: {
@@ -751,7 +765,7 @@ async function scanDeadCode(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${analysis.unusedFiles.length} unused file candidate(s), ${analysis.unusedDependencies.length} source-unreferenced runtime dependency candidate(s), and ${analysis.unusedExports.length + analysis.unusedTypes.length} unused export candidate(s). All target plugins and executable configuration loaders were disabled.${configurationDetail}${configurationIssueDetail} ${compatibility.detail}`,
+        detail: `${unusedFileCount} unused file candidate(s) found (${analysis.unusedFiles.length} retained), ${unusedDependencyCount} source-unreferenced runtime dependency candidate(s) found (${analysis.unusedDependencies.length} retained), and ${unusedSymbolCount} unused export/type candidate(s) found (${analysis.unusedExports.length + analysis.unusedTypes.length} retained). All target plugins and executable configuration loaders were disabled.${configurationDetail}${configurationIssueDetail} ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };
@@ -786,6 +800,7 @@ export async function scanCodeQuality(
       schemaVersion: 1,
       filesAnalyzed: measured.filesAnalyzed,
       functionsAnalyzed: measured.functionsAnalyzed,
+      hotspotCount: measured.hotspotCount,
       hotspots: measured.hotspots,
       ...(deadCode.analysis ? { deadCode: deadCode.analysis } : {}),
       coverageArtifacts: artifacts,
@@ -798,8 +813,8 @@ export async function scanCodeQuality(
         status: measured.truncated ? 'partial' : measured.filesAnalyzed ? 'completed' : 'skipped',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${measured.functionsAnalyzed} function(s) measured; ${measured.hotspots.length} complexity, size, or parameter hotspot(s). ${artifacts.length} existing coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.`,
-        version: '0.1.0',
+        detail: `${measured.functionsAnalyzed} function(s) measured; ${measured.hotspotCount} complexity, size, or parameter hotspot(s) found (${measured.hotspots.length} retained). ${artifacts.length} existing coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.`,
+        version: '0.2.0',
       },
       deadCode.run,
     ],

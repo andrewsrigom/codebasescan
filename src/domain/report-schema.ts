@@ -243,6 +243,7 @@ const mechanicalAnalysis = z.looseObject({
       schemaVersion: z.literal(1),
       modules: z.number().int().nonnegative(),
       localDependencies: z.number().int().nonnegative(),
+      cycleCount: z.number().int().nonnegative().optional(),
       cycles: z
         .array(
           z.looseObject({
@@ -251,7 +252,9 @@ const mechanicalAnalysis = z.looseObject({
           }),
         )
         .max(100),
+      orphanCount: z.number().int().nonnegative().optional(),
       orphanCandidates: z.array(shortText).max(200),
+      hotspotCount: z.number().int().nonnegative().optional(),
       hotspots: z
         .array(
           z.looseObject({
@@ -322,6 +325,7 @@ const codeQualityAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   filesAnalyzed: z.number().int().nonnegative(),
   functionsAnalyzed: z.number().int().nonnegative(),
+  hotspotCount: z.number().int().nonnegative().optional(),
   hotspots: z
     .array(
       z.looseObject({
@@ -337,18 +341,23 @@ const codeQualityAnalysis = z.looseObject({
   deadCode: z
     .looseObject({
       schemaVersion: z.literal(1),
+      unusedFileCount: z.number().int().nonnegative().optional(),
       unusedFiles: z.array(shortText).max(300),
+      unusedDependencyCount: z.number().int().nonnegative().optional(),
       unusedDependencies: z.array(shortText).max(300),
+      unlistedDependencyCount: z.number().int().nonnegative().optional(),
       unlistedDependencies: z
         .array(
           z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),
         )
         .max(300),
+      unusedExportCount: z.number().int().nonnegative().optional(),
       unusedExports: z
         .array(
           z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),
         )
         .max(300),
+      unusedTypeCount: z.number().int().nonnegative().optional(),
       unusedTypes: z
         .array(
           z.looseObject({ file: shortText, line: z.number().int().positive(), name: shortText }),

@@ -179,8 +179,11 @@ export function normalizeArchitecture(
     schemaVersion: 1,
     modules: modules.length,
     localDependencies: modules.reduce((total, sourceModule) => total + sourceModule.outgoing, 0),
+    cycleCount: cycles.size,
     cycles: [...cycles.values()].slice(0, maximumCycles),
+    orphanCount: orphanCandidates.length,
     orphanCandidates: orphanCandidates.slice(0, maximumOrphans),
+    hotspotCount: hotspots.length,
     hotspots: hotspots.slice(0, maximumHotspots),
     truncated:
       snapshot.truncated ||
@@ -337,6 +340,9 @@ export async function scanArchitecture(
     );
     const compatibility = scannerCompatibility('dependency-cruiser', version);
     const partial = analysis.truncated || compatibility.status !== 'tested';
+    const cycleCount = analysis.cycleCount ?? analysis.cycles.length;
+    const orphanCount = analysis.orphanCount ?? analysis.orphanCandidates.length;
+    const hotspotCount = analysis.hotspotCount ?? analysis.hotspots.length;
     return {
       analysis,
       run: {
@@ -345,7 +351,7 @@ export async function scanArchitecture(
         status: partial ? 'partial' : 'completed',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: `${analysis.modules} modules and ${analysis.localDependencies} local dependencies were mapped; ${analysis.cycles.length} cycle(s) and ${analysis.orphanCandidates.length} orphan candidate(s) are mechanical review data, not vulnerabilities. Target configuration was not loaded. ${compatibility.detail}`,
+        detail: `${analysis.modules} modules and ${analysis.localDependencies} local dependencies were mapped; ${cycleCount} cycle(s) found (${analysis.cycles.length} retained), ${orphanCount} orphan candidate(s) found (${analysis.orphanCandidates.length} retained), and ${hotspotCount} coupling hotspot(s) found (${analysis.hotspots.length} retained). These are mechanical review data, not vulnerabilities. Target configuration was not loaded. ${compatibility.detail}`,
         ...(version ? { version } : {}),
       },
     };

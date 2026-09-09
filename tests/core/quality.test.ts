@@ -9,7 +9,7 @@ import {
   normalizeKnip,
   scanCodeQuality,
 } from '../../src/scanners/quality.ts';
-import { snapshotFromFiles } from '../helpers.ts';
+import { snapshotFromFiles, snapshotOf } from '../helpers.ts';
 
 test('quality metrics retain only oversized, complex, or wide functions', () => {
   const branches = Array.from(
@@ -29,11 +29,29 @@ test('quality metrics retain only oversized, complex, or wide functions', () => 
 
   const result = measureCodeQuality(snapshot);
   assert.equal(result.functionsAnalyzed, 3);
+  assert.equal(result.hotspotCount, 2);
   assert.deepEqual(
     new Set(result.hotspots.map((hotspot) => hotspot.name)),
     new Set(['complex', 'wide']),
   );
   assert.equal(result.hotspots.find((hotspot) => hotspot.name === 'complex')?.complexity, 16);
+});
+
+test('quality metrics keep an exact hotspot total when detail rows are bounded', () => {
+  const branches = Array.from(
+    { length: 15 },
+    (_, index) => `if (value === ${index}) value++;`,
+  ).join('\n');
+  const functions = Array.from(
+    { length: 205 },
+    (_, index) => `export function hotspot${index}(value: number) { ${branches} return value; }`,
+  ).join('\n');
+
+  const result = measureCodeQuality(snapshotOf(functions));
+
+  assert.equal(result.hotspotCount, 205);
+  assert.equal(result.hotspots.length, 200);
+  assert.equal(result.truncated, true);
 });
 
 test('coverage artifacts import summary percentages without source coverage payloads', () => {
@@ -81,8 +99,11 @@ test('Knip JSON normalization bounds paths and dead-code symbols', () => {
     snapshot,
   );
   assert.deepEqual(analysis.unusedFiles, ['src/unused.ts']);
+  assert.equal(analysis.unusedFileCount, 1);
   assert.deepEqual(analysis.unusedDependencies, ['alpha']);
+  assert.equal(analysis.unusedDependencyCount, 1);
   assert.deepEqual(analysis.unusedExports, [{ file: 'src/unused.ts', line: 1, name: 'unused' }]);
+  assert.equal(analysis.unusedExportCount, 1);
   assert.ok(!JSON.stringify(analysis).includes('outside'));
 });
 
@@ -99,6 +120,7 @@ test('Knip normalization marks individually bounded result categories as partial
   );
 
   assert.equal(analysis.unusedFiles.length, 300);
+  assert.equal(analysis.unusedFileCount, 301);
   assert.equal(analysis.truncated, true);
 });
 
