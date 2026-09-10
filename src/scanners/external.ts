@@ -155,9 +155,11 @@ export function summarizeSemgrepErrors(
     if (locations.length >= 10) break;
     const item = recordOrEmpty(rawError);
     const kind = semgrepErrorKind(item.type);
+    let fallbackFile: string | undefined;
     for (const candidate of semgrepErrorCandidates(item)) {
       const file = locate(snapshot, candidate.path, stagingRoot);
       if (!file) continue;
+      fallbackFile ??= file.path;
       const line = candidate.line;
       const validLine =
         typeof line === 'number' &&
@@ -166,9 +168,13 @@ export function summarizeSemgrepErrors(
         line <= file.content.split('\n').length
           ? line
           : undefined;
-      locations.push({ file: file.path, ...(validLine ? { line: validLine } : {}), kind });
-      break;
+      if (validLine) {
+        locations.push({ file: file.path, line: validLine, kind });
+        fallbackFile = undefined;
+        break;
+      }
     }
+    if (fallbackFile) locations.push({ file: fallbackFile, kind });
   }
   return { count: errors.length, locations, omitted: errors.length - locations.length };
 }

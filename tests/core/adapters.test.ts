@@ -67,6 +67,7 @@ test('Semgrep diagnostics retain only safe snapshot locations', () => {
     {
       errors: [
         {
+          path: '/stage/source/src/example.ts',
           type: ['PartialParsing', [{ path: '/stage/source/src/example.ts', start: { line: 2 } }]],
           message: 'raw parser text must not be retained',
         },
