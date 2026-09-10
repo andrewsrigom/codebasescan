@@ -84,7 +84,29 @@ abandonment signals backed by captured metadata, duplicate versions, scope, and 
 Gate: priority is reproducible, grouping loses no source finding, and standards mapping makes no
 compliance or exploitability claim.
 
-## Phase 5 — real-project evaluation corpus
+## Phase 5 — correlated risk and contract consistency
+
+Turn isolated observations into bounded, explainable source paths such as public entry point to
+request-derived value to privileged operation to sensitive response. Correlation never invents
+reachability: every edge cites an existing profile fact, call edge, or finding, and unsupported
+edges remain explicit.
+
+Add deterministic consistency checks for environment variables versus declarative examples,
+route handlers versus captured OpenAPI declarations, source models versus captured schema and
+migration declarations, webhook producers versus consumers, feature flags versus guarded code,
+and framework security configuration versus the routes it is expected to protect. A mismatch is a
+review candidate, not proof of a runtime vulnerability.
+
+Treat monorepo applications and packages as separately owned components with explicit trust
+boundaries. Add a baseline/diff mode that reports introduced, resolved, changed, and reappearing
+work by component. Publish the detected framework and major-version support level for every
+version-sensitive rule; unsupported versions stay unverified rather than clean.
+
+Gate: correlated paths retain every underlying evidence ID, contract checks have paired fixtures,
+component ownership never relies on directory names alone, and a changed-file audit cannot hide
+unchanged high-priority work from the complete report.
+
+## Phase 6 — real-project evaluation corpus
 
 Use authorized repositories with different structures. Start with `seusaas`, `robs-web`,
 `capta-core`, `fengsoft-commerce`, and `severyn` when their roots are available. Profile before
@@ -101,7 +123,7 @@ after removing project-specific identifiers and sensitive content.
 Gate: different projects produce useful, different results; repeated false positives are fixed or
 downgraded; no broad accuracy claim relies only on synthetic fixtures.
 
-## Phase 6 — bounded correction loop
+## Phase 7 — bounded correction loop
 
 The audit stays read-only. A separate, authorized coding-agent flow consumes one task at a time:
 
@@ -126,7 +148,7 @@ finding stops automatic correction.
 Gate: a `seusaas` correction pass produces small commits, command provenance, fresh audit evidence,
 and an honest remaining-work list.
 
-## Phase 7 — human report
+## Phase 8 — human report
 
 Lead with confirmed candidates, important unknowns, and failed/partial coverage; grouped root
 causes; applicable checklist and data map; separated dependency/maintenance sections; before/after
@@ -135,7 +157,7 @@ progress; verification provenance; and links to JSON, SARIF, SBOM, agent plan, b
 Keep raw detail lazy and bounded. Accessibility, mobile layout, script-free static output, and
 truthful empty/error states are release gates.
 
-## Phase 8 — optional structured AI
+## Phase 9 — optional structured AI
 
 AI consumes only opaque evidence IDs and bounded related context. Its versioned workflows are:
 
@@ -151,13 +173,16 @@ verified finding or completion state by itself.
 Gate: disabled mode makes zero calls; mocks cover failures and budgets; live economical/strong/local
 comparisons require explicit credential, spend, or download approval and measure accepted value.
 
-## Phase 9 — release hardening
+## Phase 10 — release hardening
 
 - clean-clone installation and package-content checks on supported platforms;
 - incremental/cache behavior keyed by snapshot and scanner versions;
 - abrupt-failure and resource-limit matrix for external scanners;
 - CLI reference, JSON Schemas, rule-pack changelog, and correction-flow guide;
 - reviewer identity/signature policy above the current unauthenticated portable ledger;
+- explicit finding lifecycle for new, confirmed, accepted, fixed, stale, and reappearing work;
+- parser fuzzing, malformed-repository tests, deterministic replay, and hostile-input containment;
+- signed release artifacts, checksums, a Traceward SBOM, and pinned scanner compatibility data;
 - comprehensive UI and static-report accessibility pass;
 - name/trademark review, private vulnerability route, and support policy.
 
@@ -170,11 +195,12 @@ outside this roadmap until local package and evidence-quality gates are complete
 2. Project context and data map.
 3. Offline modes and paired rules.
 4. Root-cause grouping, prioritization, and rule-quality metadata.
-5. Corpus audits and calibration.
-6. Authorized `seusaas` correction loop.
-7. Human report refinement.
-8. Optional AI validation.
-9. Release hardening.
+5. Correlated risk paths, contract consistency, monorepo ownership, and diff mode.
+6. Corpus audits and calibration.
+7. Authorized `seusaas` correction loop.
+8. Human report refinement.
+9. Optional AI validation.
+10. Release hardening.
 
 Every phase ends with formatting, typecheck, lint, unit tests, graph tests, benchmark, build, package
 test, and relevant browser tests. Commit each independently reviewable behavior change.

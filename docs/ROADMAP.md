@@ -56,6 +56,17 @@ Continue calibrating the generic SaaS pack on structurally different owner-autho
 
 Extend npm/Yarn parent-path fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 
+## Next — correlated mechanical value
+
+Correlate existing entry points, request flows, sensitive operations, responses, and findings into
+bounded evidence paths without claiming runtime exploitability. Add captured contract-consistency
+checks for environment declarations, OpenAPI routes, schema/migration declarations, webhooks, and
+feature flags. Preserve component ownership and trust boundaries in monorepos.
+
+Add a component-aware change view for introduced, resolved, changed, and reappearing work while
+keeping the full unresolved inventory visible. Version-sensitive rules must publish whether the
+detected framework major is supported, partially supported, or unverified.
+
 ## Next — operational hardening
 
 Expand fault injection beyond the tested worker `SIGKILL`, budget reservation, and checkpoint/config mismatch paths. Add deeper AI-cache migration validation and OS resource containment guidance for hostile repositories.
