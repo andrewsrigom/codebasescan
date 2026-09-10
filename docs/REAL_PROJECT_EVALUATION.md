@@ -69,3 +69,44 @@ Two owner-authorized private Next.js repositories were scanned locally after the
 The pass found two actionable detector-quality problems. Broad React prop taint produced 74 and 34 candidates; browser-source tracking and real navigation sinks reduced those sets to 2 and 9 without losing benchmark recall. Generic `.exec()` handling treated a regular-expression parser as command execution and produced 14 derived Next.js candidates; it now produces 0 for that path. Both regressions have benign tests. These are tuning results, not project security conclusions or generic accuracy claims.
 
 Current snapshot limits are 1,500 supported files, 8 MiB total source, 512 KiB per source file, 4 MiB per dependency lockfile, depth 24, and 12,000 visited entries. Preflight reports predicted truncation and requires explicit approval before a partial audit.
+
+## 2026-09-10 five-project calibration pass
+
+Traceward was then run against five owner-authorized applications with different sizes and
+structures. They remain labeled A-E; the private mapping, source snapshots, and raw reports are not
+committed. Target code and configuration were parsed only as data. No target dependency, script,
+test, build, or module was executed. AI and OSV network access were disabled. Installed Semgrep and
+Gitleaks adapters plus the local advisory database were enabled.
+
+The initial pass exposed repeated accessibility, privacy, reliability, SaaS error-response, and
+generic object-lookup noise. Paired fixtures and structural changes were added before the final
+pass. The final agent-plan contract also grouped findings sharing one rule and primary file without
+dropping finding, fingerprint, or evidence references.
+
+| Measure                  |       A |       B |                C |       D |       E |
+| ------------------------ | ------: | ------: | ---------------: | ------: | ------: |
+| Supported files analyzed |   1,196 |   1,070 |            1,500 |     425 |     192 |
+| Snapshot                 |    full |    full | partial of 2,573 |    full |    full |
+| Initial candidates       |     166 |      62 |              351 |       4 |       1 |
+| Final candidates         |     130 |      13 |              201 |       4 |       0 |
+| Initial agent tasks      |     112 |      74 |              383 |       9 |       3 |
+| Final root-cause tasks   |      70 |      20 |              159 |       7 |       2 |
+| Explicit coverage gaps   |       8 |       7 |               23 |       9 |       7 |
+| Wall time                | 27.86 s | 18.36 s |          26.39 s |  9.01 s | 10.38 s |
+| Peak resident memory     | 721 MiB | 596 MiB |          855 MiB | 353 MiB | 340 MiB |
+
+Different repositories produced materially different outputs: A was dominated by local dependency
+advisories and SaaS review candidates; B retained a small privacy-focused set; C exposed broad
+authorization, Next.js, secret, accessibility, and maintainability review work but remained
+explicitly partial; D retained four focused Semgrep candidates; E had no source finding while still
+showing seven coverage gaps and two control-verification tasks. Zero findings therefore did not
+render as a clean or certified result.
+
+The reductions are detector-calibration and queue-compression results, not evidence that the
+removed candidates were vulnerabilities or that the remaining candidates are confirmed. There are
+still no durable owner dispositions or exhaustive independent false-negative reviews for this
+five-project set. Synthetic fixture results remain separate from real-project quality claims.
+
+Process wall time and peak resident memory are now captured externally for this pass. Review time,
+time to first accepted result, manual misses, and accepted-finding cost remain unmeasured until
+human disposition and optional AI evaluation begin.
