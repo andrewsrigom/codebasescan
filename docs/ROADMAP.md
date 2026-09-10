@@ -1,5 +1,8 @@
 # Roadmap
 
+The full execution sequence and release gates are maintained in
+[Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md).
+
 ## Completed — serious local audit workflow
 
 - Real Next.js/worker/LangGraph/SQLite workflow and browser validation.
