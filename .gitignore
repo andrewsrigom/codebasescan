@@ -2,6 +2,7 @@ node_modules/
 .next/
 out/
 .traceward/
+traceward-report/
 .env*
 !.env.example
 coverage/
