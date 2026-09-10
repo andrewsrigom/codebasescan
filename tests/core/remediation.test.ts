@@ -8,6 +8,7 @@ import {
 import {
   parseRemediationPlan,
   parseRemediationResult,
+  remediationPlanJsonSchema,
 } from '../../src/domain/remediation-schema.ts';
 import { sampleReport } from '../helpers.ts';
 
@@ -50,14 +51,35 @@ test('remediation plan is deterministic, bounded, and contains references instea
   const first = buildRemediationPlan(report);
   const second = buildRemediationPlan(report);
   assert.deepEqual(first, second);
-  assert.equal(first.schemaVersion, 1);
+  assert.equal(first.schemaVersion, 2);
   assert.equal(first.tasks.length, 1);
   assert.equal(first.tasks[0]?.kind, 'upgrade_dependency');
   assert.equal(first.tasks[0]?.target.fixCandidate, '1.2.5');
   assert.equal(first.tasks[0]?.constraints.execution, 'plan_only');
   assert.equal(first.tasks[0]?.constraints.network, 'requires_approval');
+  assert.match(first.tasks[0]?.rootCause.id ?? '', /^cause-[a-f0-9]{16}$/);
+  assert.equal(first.tasks[0]?.priorityFactors.length, 4);
+  assert.deepEqual(first.tasks[0]?.verificationCommands[0]?.argv, [
+    'traceward',
+    'audit',
+    '.',
+    '--format',
+    'json',
+  ]);
+  assert.equal(first.tasks[0]?.verificationCommands[0]?.requiresApproval, true);
+  assert.equal(first.tasks[0]?.autoFixable, true);
+  assert.equal(first.summary.rootCauseGroups, 1);
   assert.equal(JSON.stringify(first).includes('export const result'), false);
   assert.deepEqual(parseRemediationPlan(first), first);
+});
+
+test('agent plan JSON Schema describes the current required contract', () => {
+  const schema = remediationPlanJsonSchema() as {
+    properties?: { schemaVersion?: { const?: number }; tasks?: unknown };
+    required?: string[];
+  };
+  assert.equal(schema.properties?.schemaVersion?.const, 2);
+  assert.ok(schema.required?.includes('tasks'));
 });
 
 test('unconfirmed source candidates become analysis tasks rather than automatic patches', () => {
@@ -66,6 +88,8 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
   assert.equal(plan.tasks[0]?.status, 'ready');
   assert.equal(plan.tasks[0]?.constraints.execution, 'plan_only');
   assert.equal(plan.tasks[0]?.constraints.network, 'denied');
+  assert.equal(plan.tasks[0]?.autoFixable, false);
+  assert.equal(plan.tasks[0]?.requiresHuman, true);
 });
 
 test('remediation result separates resolved, remaining, and unexecuted checks', () => {

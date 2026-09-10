@@ -10,7 +10,11 @@ import {
   toSarif,
 } from '../domain/reports.ts';
 import { buildRemediationPlan, buildRemediationResult } from '../domain/remediation.ts';
-import { parseRemediationPlan, parseRemediationResult } from '../domain/remediation-schema.ts';
+import {
+  parseRemediationPlan,
+  parseRemediationResult,
+  remediationPlanJsonSchema,
+} from '../domain/remediation-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -75,9 +79,19 @@ export async function writeStaticReport(
       content: json(report),
     },
     {
+      path: 'agent-plan.json',
+      mediaType: 'application/json',
+      content: json(plan),
+    },
+    {
       path: 'remediation-plan.json',
       mediaType: 'application/json',
       content: json(plan),
+    },
+    {
+      path: 'agent-plan.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(remediationPlanJsonSchema()),
     },
     {
       path: 'codex-bundle.json',

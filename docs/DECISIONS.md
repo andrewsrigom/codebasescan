@@ -29,3 +29,12 @@
 | Optional report schema v5 data                       | New audits add supply-chain and code-quality analysis. Stored v1-v4 reports remain readable, are not rewritten, and omit optional fields. Workflow v5 prevents old in-progress checkpoints from resuming into changed deterministic analysis.                                                                                   |
 
 Changes to these decisions should be deliberate. Add a dated decision with the problem, alternatives, trade-offs, and migration impact. Do not create endless documentation for ordinary implementation details.
+
+## 2026-09-10 — agent plan contract v2
+
+The remediation plan is now also emitted as the primary `agent-plan.json`, with a generated JSON
+Schema. Version 2 adds cause grouping, explainable priority factors, confidence, exposure, change
+risk, automatic-fix eligibility, human-authorization flags, expected changes, and structured
+verification-command allowlists. `remediation-plan.json` remains a byte-identical filename alias so
+existing report consumers can move deliberately; its payload also carries schema version 2. Version
+1 plans were external generated artifacts rather than stored audit state and are not rewritten.

@@ -48,8 +48,8 @@ const commandAuditOptions = (): AuditOptions => {
   };
 };
 function render(report: AuditReport, format: string): string {
-  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle', 'plan'].includes(format))
-    throw new Error('Use json, md, html, sarif, sbom, bundle, or plan.');
+  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle', 'plan', 'agent-plan'].includes(format))
+    throw new Error('Use json, md, html, sarif, sbom, bundle, plan, or agent-plan.');
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
@@ -61,7 +61,7 @@ function render(report: AuditReport, format: string): string {
               ? toCycloneDx(report)
               : format === 'bundle'
                 ? toInvestigationBundle(report)
-                : format === 'plan'
+                : format === 'plan' || format === 'agent-plan'
                   ? buildRemediationPlan(report)
                   : report,
           null,
@@ -237,7 +237,9 @@ try {
       const report = store.audit(target).report;
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
-      const extension = ['bundle', 'sbom', 'plan'].includes(format) ? `${format}.json` : format;
+      const extension = ['bundle', 'sbom', 'plan', 'agent-plan'].includes(format)
+        ? `${format}.json`
+        : format;
       const destination = path.resolve(`traceward-${report.auditId}.${extension}`);
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
@@ -256,7 +258,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|plan',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan',
       );
     }
   }

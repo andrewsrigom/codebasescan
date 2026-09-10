@@ -19,6 +19,33 @@ const checkKind = z.enum([
   'project_build',
   'traceward_rescan',
 ]);
+const confidence = z.enum(['low', 'medium', 'high']);
+const exposure = z.enum(['potentially_public', 'authenticated', 'local', 'unknown']);
+const changeRisk = z.enum(['low', 'medium', 'high']);
+
+const priorityFactor = z.object({
+  kind: z.enum(['severity', 'exposure', 'confidence', 'reachability', 'control_status']),
+  score: z.number().int().min(0).max(100),
+  rationale: shortText,
+});
+
+const rootCause = z.object({
+  id: shortText.regex(/^cause-[a-f0-9]{16}$/),
+  kind: z.enum(['dependency', 'rule_location', 'control']),
+  key: shortText,
+  summary: shortText,
+});
+
+const verificationCommand = z.object({
+  id: shortText,
+  kind: z.enum(['traceward_rescan', 'project_test', 'project_build']),
+  argv: z.array(shortText).min(1).max(32),
+  workingDirectory: z.literal('project_root'),
+  timeoutSeconds: z.number().int().min(1).max(3_600),
+  network: z.enum(['denied', 'requires_approval']),
+  requiresApproval: z.boolean(),
+  source: z.enum(['traceward', 'project_context']),
+});
 
 const findingRef = z.object({
   id: shortText,
@@ -39,9 +66,13 @@ const task = z.object({
   kind: taskKind,
   status: z.enum(['ready', 'blocked', 'needs_human']),
   priority: z.number().int().min(0).max(100),
+  priorityFactors: z.array(priorityFactor).min(3).max(8),
   severity,
+  confidence,
+  exposure,
   title: shortText,
   rationale: shortText,
+  rootCause,
   findings: z.array(findingRef).max(10_000),
   controlIds: stringList,
   evidenceIds: stringList,
@@ -56,7 +87,12 @@ const task = z.object({
     parentChains: z.array(z.array(shortText).min(2).max(14)).max(3).optional(),
   }),
   instructions: stringList,
+  expectedChanges: stringList,
   acceptanceChecks: z.array(acceptanceCheck).max(100),
+  verificationCommands: z.array(verificationCommand).max(20),
+  changeRisk,
+  autoFixable: z.boolean(),
+  requiresHuman: z.boolean(),
   constraints: z.object({
     execution: z.literal('plan_only'),
     network: z.enum(['denied', 'requires_approval']),
@@ -68,7 +104,7 @@ const task = z.object({
 });
 
 const planSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   kind: z.literal('traceward-remediation-plan'),
   createdAt: shortText,
   audit: z.object({
@@ -86,9 +122,12 @@ const planSchema = z.object({
   policy: stringList,
   summary: z.object({
     tasks: z.number().int().nonnegative().max(2_000),
+    rootCauseGroups: z.number().int().nonnegative().max(2_000),
     ready: z.number().int().nonnegative().max(2_000),
     blocked: z.number().int().nonnegative().max(2_000),
     needsHuman: z.number().int().nonnegative().max(2_000),
+    autoFixable: z.number().int().nonnegative().max(2_000),
+    requiresHuman: z.number().int().nonnegative().max(2_000),
     byKind: z.record(taskKind, z.number().int().nonnegative().max(2_000)),
     omittedReviewedFindings: z.number().int().nonnegative(),
     truncated: z.boolean(),
@@ -138,6 +177,13 @@ const resultSchema = z.object({
 
 export function parseRemediationPlan(value: unknown): RemediationPlan {
   return planSchema.parse(value) as RemediationPlan;
+}
+
+export function remediationPlanJsonSchema(): unknown {
+  return z.toJSONSchema(planSchema, {
+    target: 'draft-07',
+    unrepresentable: 'throw',
+  });
 }
 
 export function parseRemediationResult(value: unknown): RemediationResult {

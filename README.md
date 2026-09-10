@@ -60,8 +60,9 @@ traceward audit .
 ```
 
 Open the printed `traceward-report/<audit-id>/index.html`. The directory also contains the full
-audit JSON, a prioritized remediation plan, a bounded Codex bundle, Markdown, SARIF, CycloneDX,
-and a hash manifest. It does not need the Traceward server to be viewed.
+audit JSON, a prioritized `agent-plan.json` and its JSON Schema, a compatibility
+`remediation-plan.json`, a bounded Codex bundle, Markdown, SARIF, CycloneDX, and a hash manifest.
+It does not need the Traceward server to be viewed.
 
 Traceward is not published to npm yet. To test the installable package from this checkout:
 
@@ -86,6 +87,8 @@ traceward task traceward-report/<audit-id> <task-id> --output traceward-task.jso
 
 The generated task is analysis input, not permission to edit files, run project commands, access
 the network, suppress findings, or publish a report.
+
+Use `traceward audit . --format agent-plan` when only the machine work queue is needed.
 
 For the persistent local review UI:
 

@@ -19,7 +19,9 @@ test('static report writes a self-contained versioned artifact directory', async
     [
       'index.html',
       'audit-report.json',
+      'agent-plan.json',
       'remediation-plan.json',
+      'agent-plan.schema.json',
       'codex-bundle.json',
       'report.md',
       'report.sarif',
@@ -28,13 +30,21 @@ test('static report writes a self-contained versioned artifact directory', async
   );
   const html = await readFile(path.join(result.directory, 'index.html'), 'utf8');
   assert.ok(html.includes("default-src 'none'"));
-  assert.ok(html.includes('href="remediation-plan.json"'));
+  assert.ok(html.includes('href="agent-plan.json"'));
+  assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
-  const plan = parseRemediationPlan(
-    JSON.parse(await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8')),
+  const agentPlan = await readFile(path.join(result.directory, 'agent-plan.json'), 'utf8');
+  assert.equal(
+    agentPlan,
+    await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8'),
   );
+  const plan = parseRemediationPlan(JSON.parse(agentPlan));
   assert.equal(plan.audit.id, report.auditId);
+  const schema = JSON.parse(
+    await readFile(path.join(result.directory, 'agent-plan.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(schema.properties?.schemaVersion?.const, 2);
   const manifest = JSON.parse(
     await readFile(path.join(result.directory, 'manifest.json'), 'utf8'),
   ) as { kind: string; files: { sha256: string }[] };
