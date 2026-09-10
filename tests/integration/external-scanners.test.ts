@@ -51,7 +51,7 @@ test(
       path.join(rules, 'gitleaks.toml'),
       `title = "CodebaseScan history integration fixture"\n[[rules]]\nid = "history-fixture"\ndescription = "History fixture"\nregex = '''codebasescan-secret-[A-Za-z0-9]{20}'''\n`,
     );
-    const secret = ['codebasescan', 'secret', '1234567890abcdefghij'].join('-');
+    const secret = ['codebasescan', 'secret', '1234567890' + 'abcdefghij'].join('-');
     await writeFile(path.join(project, 'removed.ts'), `export const token = '${secret}';\n`);
     git('add', 'removed.ts');
     git('commit', '--quiet', '-m', 'add fixture');
