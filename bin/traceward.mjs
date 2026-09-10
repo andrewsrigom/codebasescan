@@ -5,12 +5,11 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const cli = fileURLToPath(new URL('../src/cli/main.ts', import.meta.url));
+const cli = fileURLToPath(new URL('../dist/cli/main.js', import.meta.url));
 const environment = path.resolve('.env.local');
 const child = spawn(
   process.execPath,
   [
-    '--experimental-strip-types',
     ...(existsSync(environment) ? [`--env-file=${environment}`] : []),
     cli,
     ...process.argv.slice(2),

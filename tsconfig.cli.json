@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "declaration": false,
+    "incremental": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "outDir": "dist",
+    "plugins": [],
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": "src",
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": [
+    "src/cli/**/*.ts",
+    "src/domain/**/*.ts",
+    "src/engine/**/*.ts",
+    "src/reporting/**/*.ts",
+    "src/scanners/**/*.ts",
+    "src/security/**/*.ts",
+    "src/server/config.ts",
+    "src/server/store.ts"
+  ],
+  "exclude": ["node_modules", "src/app", "src/components", "src/proxy.ts"]
+}

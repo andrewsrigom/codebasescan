@@ -3,6 +3,7 @@ node_modules/
 out/
 .traceward/
 traceward-report/
+dist/
 .env*
 !.env.example
 coverage/
