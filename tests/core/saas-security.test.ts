@@ -28,6 +28,25 @@ test('SaaS billing rule distinguishes client prices from a server catalog lookup
   assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS001'));
 });
 
+test('SaaS request-flow rules ignore similarly named internal parameters and scripts', () => {
+  const snapshot = snapshotFromFiles({
+    'src/billing.ts': `
+      export async function createProviderPrice(input) {
+        logger.info({ email: input.email }, 'catalog import');
+        return stripe.prices.create({ unit_amount: input.amount });
+      }
+    `,
+    'scripts/import-products.mjs': `
+      async function importProducts(body) {
+        return stripe.prices.create({ unit_amount: body.amount });
+      }
+    `,
+  });
+  const findings = scanSaasSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-SAAS001'));
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-SAAS005'));
+});
+
 test('SaaS assignment rule distinguishes request ownership from session ownership', () => {
   const vulnerable = findingsFor(`
     export async function PATCH(request: Request) {

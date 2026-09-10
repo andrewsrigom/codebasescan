@@ -52,6 +52,31 @@ function bindingNames(name: ts.BindingName): string[] {
   );
 }
 
+function executableFunction(node: ts.Node): node is ts.FunctionLikeDeclaration {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node)
+  );
+}
+
+function functionName(node: ts.FunctionLikeDeclaration): string | null {
+  if (ts.isFunctionDeclaration(node)) return node.name?.text ?? null;
+  if (ts.isMethodDeclaration(node)) return propertyName(node.name);
+  if (
+    (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+    ts.isVariableDeclaration(node.parent)
+  )
+    return propertyName(node.parent.name);
+  if (
+    (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+    ts.isCallExpression(node.parent)
+  )
+    return `callback@${lineOf(node.getSourceFile(), node)}`;
+  return null;
+}
+
 function callName(call: ts.CallExpression): string {
   return call.expression.getText(call.getSourceFile()).replace(/\s+/g, '').slice(-220);
 }
@@ -91,7 +116,7 @@ function expressionIsTainted(node: ts.Node, tainted: Set<string>): boolean {
   return found;
 }
 
-function collectTaintedNames(source: ts.SourceFile): Set<string> {
+function collectTaintedNames(source: ts.Node): Set<string> {
   const tainted = new Set<string>();
   const seedParameters = (node: ts.Node): void => {
     if (
@@ -125,6 +150,43 @@ function collectTaintedNames(source: ts.SourceFile): Set<string> {
     visit(source);
   }
   return tainted;
+}
+
+function boundaryTaints(
+  parsed: ParsedSource,
+  profile: ProjectProfile,
+): Map<ts.FunctionLikeDeclaration, Set<string>> {
+  const entrypointSymbols = new Set(
+    profile.entrypoints.flatMap((entrypoint) => entrypoint.symbolIds),
+  );
+  const locations = new Set(
+    profile.symbols
+      .filter((symbol) => entrypointSymbols.has(symbol.id) && symbol.file === parsed.file.path)
+      .map((symbol) => `${symbol.line}:${symbol.name}`),
+  );
+  const taints = new Map<ts.FunctionLikeDeclaration, Set<string>>();
+  const visit = (node: ts.Node): void => {
+    if (executableFunction(node)) {
+      const name = functionName(node);
+      if (name && locations.has(`${lineOf(parsed.source, node)}:${name}`))
+        taints.set(node, collectTaintedNames(node));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed.source);
+  return taints;
+}
+
+function taintForNode(
+  node: ts.Node,
+  taints: Map<ts.FunctionLikeDeclaration, Set<string>>,
+): Set<string> | null {
+  let current: ts.Node | undefined = node;
+  while (current) {
+    if (executableFunction(current) && taints.has(current)) return taints.get(current)!;
+    current = current.parent;
+  }
+  return null;
 }
 
 function finding(input: {
@@ -329,7 +391,7 @@ function caughtErrorExposure(catchClause: ts.CatchClause): ts.CallExpression[] {
 
 function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
   const findings: Finding[] = [];
-  const tainted = collectTaintedNames(parsed.source);
+  const taints = boundaryTaints(parsed, profile);
   const vocabulary = profile.saasSemantics?.vocabulary ?? defaultSaasConfiguration.vocabulary;
   const billingKeys = new Set(vocabulary.billingKeys.map((key) => key.toLowerCase()));
   const assignmentKeys = new Set(
@@ -369,9 +431,10 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
   };
   const visit = (node: ts.Node): void => {
     if (nodes++ > maximumNodesPerFile || findings.length >= maximumFindings) return;
+    const tainted = taintForNode(node, taints);
     if (ts.isCallExpression(node)) {
       const name = callName(node);
-      if (isBillingSink(name)) {
+      if (tainted && isBillingSink(name)) {
         for (const property of sensitiveProperties(node, billingKeys, tainted)) {
           if (ts.isPropertyAssignment(property) && isServerOwnedLookup(property.initializer))
             continue;
@@ -393,7 +456,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
           );
         }
       }
-      if (isDatabaseMutation(name)) {
+      if (tainted && isDatabaseMutation(name)) {
         for (const property of sensitiveProperties(node, assignmentKeys, tainted))
           add(
             finding({
@@ -462,7 +525,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
         }
       }
 
-      if (isLoggingSink(name)) {
+      if (tainted && isLoggingSink(name)) {
         const sensitiveArgument = node.arguments.find(
           (argument) =>
             containsSensitiveValue(argument, sensitiveDataKeys) ||
@@ -489,7 +552,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
           );
       }
 
-      if (urlLeak(node, sensitiveDataKeys))
+      if (tainted && urlLeak(node, sensitiveDataKeys))
         add(
           finding({
             parsed,
@@ -507,7 +570,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
           }),
         );
 
-      if (isOauthSink(name))
+      if (tainted && isOauthSink(name))
         for (const property of sensitiveProperties(node, oauthRedirectKeys, tainted))
           add(
             finding({
@@ -569,7 +632,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
         );
     }
 
-    if (ts.isCatchClause(node))
+    if (tainted && ts.isCatchClause(node))
       for (const call of caughtErrorExposure(node))
         add(
           finding({

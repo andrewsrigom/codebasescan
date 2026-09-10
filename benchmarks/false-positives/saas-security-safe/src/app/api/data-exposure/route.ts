@@ -1,4 +1,4 @@
-export async function recordCallback(request: Request) {
+export async function POST(request: Request) {
   const body = await request.json();
   logger.info({ emailHash: hash(body.email) }, 'callback');
   return fetch('https://example.test/callback', {

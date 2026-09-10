@@ -1,4 +1,4 @@
-export async function updateMembership(request: Request) {
+export async function PATCH(request: Request) {
   const body = await request.json();
   return database.member.update({
     where: { tenantId: body.tenantId },
