@@ -777,6 +777,65 @@ export interface WebhookContractAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+export type FeatureFlagValueKind = 'boolean' | 'string' | 'number' | 'null';
+export interface FeatureFlagLiteral {
+  kind: FeatureFlagValueKind;
+  fingerprint: string;
+  display?: string;
+}
+export interface FeatureFlagDeclaration {
+  id: string;
+  key: string;
+  normalizedKey: string;
+  file: string;
+  line: number;
+  source: 'json-feature-flags' | 'typescript-definition';
+  default?: FeatureFlagLiteral;
+}
+export interface FeatureFlagUsage {
+  id: string;
+  file: string;
+  line: number;
+  callee: string;
+  context: 'guard' | 'read';
+  key?: string;
+  normalizedKey?: string;
+  componentId?: string;
+  default?: FeatureFlagLiteral;
+  declarationIds: string[];
+  status: 'matched' | 'usage-only' | 'dynamic';
+}
+export interface FeatureFlagContract {
+  id: string;
+  key: string;
+  normalizedKey: string;
+  declarationIds: string[];
+  usageIds: string[];
+  status: 'matched' | 'declaration-only' | 'usage-only' | 'default-conflict';
+}
+export interface FeatureFlagAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  providers: string[];
+  declarations: FeatureFlagDeclaration[];
+  usages: FeatureFlagUsage[];
+  flags: FeatureFlagContract[];
+  summary: {
+    providers: number;
+    declarationFiles: number;
+    declaredFlags: number;
+    staticUsages: number;
+    dynamicUsages: number;
+    matchedFlags: number;
+    declarationOnly: number;
+    usageOnly: number;
+    defaultConflicts: number;
+  };
+  parseFailures: number;
+  truncated: boolean;
+  limitations: string[];
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;
@@ -967,6 +1026,7 @@ export interface AuditReport {
   apiContract?: ApiContractAnalysis;
   databaseContract?: DatabaseContractAnalysis;
   webhookContract?: WebhookContractAnalysis;
+  featureFlags?: FeatureFlagAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;
