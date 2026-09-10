@@ -112,9 +112,10 @@ function functionSymbol(file: string, source: ts.SourceFile, node: ts.Node): Pro
 }
 
 function resourceScopeSignal(node: ts.CallExpression): string | null {
-  const helperScope = /(?:for|by)(tenant|owner|user|account|organization|org|workspace)(?:id)?$/i.exec(
-    callName(node.expression).split('.').at(-1) ?? '',
-  );
+  const helperScope =
+    /(?:for|by)(tenant|owner|user|account|organization|org|workspace)(?:id)?$/i.exec(
+      callName(node.expression).split('.').at(-1) ?? '',
+    );
   if (helperScope) return helperScope[1]!.toLowerCase();
   let found: string | null = null;
   let inspected = 0;

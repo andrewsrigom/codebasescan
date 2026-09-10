@@ -129,8 +129,7 @@ function isExpectedUnauthenticatedFlow(entrypoint: ProjectEntrypoint): boolean {
   return (
     /\/auth\/(?:forgot-password|reset-password|join|unlock-account|register|signup|sign-up|login|signin|sign-in|verify|callback)(?:\/|$)/i.test(
       route,
-    ) ||
-    /^\/api\/(?:waitlist|contact|newsletter|subscribe)(?:\/submit)?\/?$/i.test(route)
+    ) || /^\/api\/(?:waitlist|contact|newsletter|subscribe)(?:\/submit)?\/?$/i.test(route)
   );
 }
 
