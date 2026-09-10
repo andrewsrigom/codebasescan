@@ -41,6 +41,11 @@ interface ParsedFile {
   ast: ts.SourceFile;
 }
 
+interface DependencyDeclaration {
+  file: SourceFile;
+  requested?: string;
+}
+
 export interface ProjectProfileResult {
   profile: ProjectProfile;
   run: ScannerRun;
@@ -248,8 +253,8 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
   return null;
 }
 
-function packageDependencies(snapshot: Snapshot): Map<string, SourceFile> {
-  const dependencies = new Map<string, SourceFile>();
+function packageDependencies(snapshot: Snapshot): Map<string, DependencyDeclaration> {
+  const dependencies = new Map<string, DependencyDeclaration>();
   for (const file of snapshot.files.filter(
     (item) => isRuntimeSource(item) && item.path.endsWith('package.json'),
   )) {
@@ -258,8 +263,15 @@ function packageDependencies(snapshot: Snapshot): Map<string, SourceFile> {
         dependencies?: Record<string, unknown>;
         devDependencies?: Record<string, unknown>;
       };
-      for (const name of Object.keys({ ...parsed.dependencies, ...parsed.devDependencies }))
-        if (!dependencies.has(name)) dependencies.set(name, file);
+      for (const [name, requested] of Object.entries({
+        ...parsed.dependencies,
+        ...parsed.devDependencies,
+      }))
+        if (!dependencies.has(name))
+          dependencies.set(name, {
+            file,
+            ...(typeof requested === 'string' ? { requested: requested.slice(0, 100) } : {}),
+          });
     } catch {
       // Inventory reports malformed package manifests separately.
     }
@@ -267,13 +279,77 @@ function packageDependencies(snapshot: Snapshot): Map<string, SourceFile> {
   return dependencies;
 }
 
+const supportedFrameworkMajors: Partial<Record<ProjectFramework['id'], readonly number[]>> = {
+  'nextjs-app-router': [13, 14, 15, 16],
+  'nextjs-pages-router': [12, 13, 14, 15, 16],
+  react: [17, 18, 19],
+  express: [4, 5],
+};
+
+function requestedMajor(requested: string | undefined): number | undefined {
+  if (!requested || requested.includes('||')) return undefined;
+  const match = /^(?:workspace:)?[~^]?v?(\d+)(?:\.(?:\d+|x|\*)){0,2}(?:-[0-9A-Za-z.-]+)?$/.exec(
+    requested.trim(),
+  );
+  return match?.[1] ? Number.parseInt(match[1], 10) : undefined;
+}
+
+function frameworkVersionCoverage(
+  id: ProjectFramework['id'],
+  declaration?: DependencyDeclaration,
+): NonNullable<ProjectFramework['versionCoverage']> {
+  const supportedMajors = supportedFrameworkMajors[id];
+  const requested = declaration?.requested;
+  const detectedMajor = requestedMajor(requested);
+  if (!supportedMajors)
+    return {
+      ...(requested ? { requested } : {}),
+      ...(detectedMajor !== undefined ? { detectedMajor } : {}),
+      status: 'unverified',
+      detail: 'Traceward has no version-specific rule coverage declaration for this framework.',
+    };
+  if (detectedMajor === undefined)
+    return {
+      ...(requested ? { requested } : {}),
+      status: 'unverified',
+      supportedMajors: [...supportedMajors],
+      detail: requested
+        ? 'The declared range does not identify one framework major, so compatibility remains unverified.'
+        : 'No captured package declaration identified a framework major.',
+    };
+  const supported = supportedMajors.includes(detectedMajor);
+  return {
+    ...(requested ? { requested } : {}),
+    detectedMajor,
+    status: supported ? 'supported' : 'partial',
+    supportedMajors: [...supportedMajors],
+    detail: supported
+      ? `Framework major ${detectedMajor} is inside Traceward's declared static-rule support matrix.`
+      : `Framework major ${detectedMajor} is outside Traceward's declared static-rule support matrix; generic syntax checks may still apply.`,
+  };
+}
+
 function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramework[] {
   const frameworks = new Map<ProjectFramework['id'], ProjectFramework>();
-  const add = (id: ProjectFramework['id'], name: string, file: string, line = 1) => {
-    if (!frameworks.has(id)) frameworks.set(id, { id, name, file, line });
+  const add = (
+    id: ProjectFramework['id'],
+    name: string,
+    file: string,
+    line = 1,
+    declaration?: DependencyDeclaration,
+  ) => {
+    if (!frameworks.has(id))
+      frameworks.set(id, {
+        id,
+        name,
+        file,
+        line,
+        versionCoverage: frameworkVersionCoverage(id, declaration),
+      });
   };
   const dependencies = packageDependencies(snapshot);
   const nextManifest = dependencies.get('next');
+  const reactManifest = dependencies.get('react');
   const expressManifest = dependencies.get('express');
   const prismaManifest = dependencies.get('@prisma/client') ?? dependencies.get('prisma');
   const drizzleManifest = dependencies.get('drizzle-orm');
@@ -296,18 +372,27 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
     /(?:^|\/)pages\/api\/.+\.[cm]?[jt]sx?$/.test(item.source.path),
   );
   if (appRoute || nextManifest)
-    add('nextjs-app-router', 'Next.js App Router', appRoute?.source.path ?? nextManifest!.path);
-  if (pagesRoute) add('nextjs-pages-router', 'Next.js Pages Router', pagesRoute.source.path);
-  if (expressManifest) add('express', 'Express', expressManifest.path);
-  if (prismaManifest) add('prisma', 'Prisma', prismaManifest.path);
-  if (drizzleManifest) add('drizzle', 'Drizzle ORM', drizzleManifest.path);
-  if (supabaseManifest) add('supabase', 'Supabase', supabaseManifest.path);
-  if (authManifest) add('authjs', 'Auth.js', authManifest.path);
-  if (trpcManifest) add('trpc', 'tRPC', trpcManifest.path);
-  if (graphqlManifest) add('graphql', 'GraphQL', graphqlManifest.path);
-  if (zodManifest) add('zod', 'Zod', zodManifest.path);
-  if (joiManifest) add('joi', 'Joi', joiManifest.path);
-  if (valibotManifest) add('valibot', 'Valibot', valibotManifest.path);
+    add(
+      'nextjs-app-router',
+      'Next.js App Router',
+      appRoute?.source.path ?? nextManifest!.file.path,
+      1,
+      nextManifest,
+    );
+  if (pagesRoute)
+    add('nextjs-pages-router', 'Next.js Pages Router', pagesRoute.source.path, 1, nextManifest);
+  if (reactManifest) add('react', 'React', reactManifest.file.path, 1, reactManifest);
+  if (expressManifest) add('express', 'Express', expressManifest.file.path, 1, expressManifest);
+  if (prismaManifest) add('prisma', 'Prisma', prismaManifest.file.path, 1, prismaManifest);
+  if (drizzleManifest) add('drizzle', 'Drizzle ORM', drizzleManifest.file.path, 1, drizzleManifest);
+  if (supabaseManifest)
+    add('supabase', 'Supabase', supabaseManifest.file.path, 1, supabaseManifest);
+  if (authManifest) add('authjs', 'Auth.js', authManifest.file.path, 1, authManifest);
+  if (trpcManifest) add('trpc', 'tRPC', trpcManifest.file.path, 1, trpcManifest);
+  if (graphqlManifest) add('graphql', 'GraphQL', graphqlManifest.file.path, 1, graphqlManifest);
+  if (zodManifest) add('zod', 'Zod', zodManifest.file.path, 1, zodManifest);
+  if (joiManifest) add('joi', 'Joi', joiManifest.file.path, 1, joiManifest);
+  if (valibotManifest) add('valibot', 'Valibot', valibotManifest.file.path, 1, valibotManifest);
   for (const item of parsed) {
     const text = item.source.content;
     if (
@@ -315,6 +400,8 @@ function frameworkFacts(snapshot: Snapshot, parsed: ParsedFile[]): ProjectFramew
       /from\s+['"]express['"]|require\(['"]express['"]\)/.test(text)
     )
       add('express', 'Express', item.source.path);
+    if (!frameworks.has('react') && /from\s+['"]react(?:\/[^'"]+)?['"]/.test(text))
+      add('react', 'React', item.source.path);
     if (!frameworks.has('prisma') && /from\s+['"]@prisma\/client['"]/.test(text))
       add('prisma', 'Prisma', item.source.path);
     if (!frameworks.has('drizzle') && /from\s+['"]drizzle-orm(?:\/[^'"]+)?['"]/.test(text))
@@ -1015,7 +1102,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.7.0',
+      version: '0.8.0',
     },
   };
 }

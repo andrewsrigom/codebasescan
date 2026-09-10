@@ -13,8 +13,16 @@ test('project profile maps frameworks, entry points, symbols, calls, and securit
   assert.equal(run.status, 'completed');
   assert.deepEqual(
     new Set(profile.frameworks.map((framework) => framework.id)),
-    new Set(['nextjs-app-router', 'express', 'prisma', 'supabase']),
+    new Set(['nextjs-app-router', 'react', 'express', 'prisma', 'supabase']),
   );
+  const next = profile.frameworks.find((framework) => framework.id === 'nextjs-app-router');
+  assert.deepEqual(next?.versionCoverage, {
+    requested: '16.3.4',
+    detectedMajor: 16,
+    status: 'supported',
+    supportedMajors: [13, 14, 15, 16],
+    detail: "Framework major 16 is inside Traceward's declared static-rule support matrix.",
+  });
   assert.ok(
     profile.entrypoints.some(
       (entrypoint) =>
@@ -277,6 +285,30 @@ test('profile recognizes focused Node frameworks and tRPC procedure boundaries',
   assert.ok(facts.some((fact) => fact.kind === 'authentication'));
   assert.ok(facts.some((fact) => fact.kind === 'validation'));
   assert.ok(facts.some((fact) => fact.kind === 'database'));
+});
+
+test('framework version coverage distinguishes ambiguous and unsupported majors', () => {
+  const profile = profileProject(
+    snapshotFromFiles({
+      'package.json': JSON.stringify({
+        dependencies: { next: '>=15 <17', react: '20.0.0', express: '^5.1.0' },
+      }),
+      'src/app/page.tsx': `export default function Page() { return <main />; }`,
+    }),
+  ).profile;
+  assert.equal(
+    profile.frameworks.find((framework) => framework.id === 'nextjs-app-router')?.versionCoverage
+      ?.status,
+    'unverified',
+  );
+  assert.equal(
+    profile.frameworks.find((framework) => framework.id === 'react')?.versionCoverage?.status,
+    'partial',
+  );
+  assert.equal(
+    profile.frameworks.find((framework) => framework.id === 'express')?.versionCoverage?.status,
+    'supported',
+  );
 });
 
 test('catch clauses are recorded as error-handling facts', () => {

@@ -8,6 +8,7 @@ import type {
   AuditEvent,
   Finding,
   Project,
+  ProjectFramework,
   ProjectProfilePresentation,
   SecurityControlReviewDecision,
 } from '../domain/types.ts';
@@ -34,6 +35,16 @@ const tabs = [
 ] as const;
 type Tab = (typeof tabs)[number];
 const tabId = (label: Tab) => label.toLowerCase().replaceAll(' ', '-');
+const frameworkLabel = (framework: ProjectFramework) => {
+  const coverage = framework.versionCoverage;
+  if (!coverage) return framework.name;
+  const version = coverage.detectedMajor
+    ? ` ${coverage.detectedMajor}`
+    : coverage.requested
+      ? ` ${coverage.requested}`
+      : '';
+  return `${framework.name}${version} · ${coverage.status}`;
+};
 export function AuditWorkspace({
   initialAudit,
   initialProjectProfile,
@@ -668,7 +679,7 @@ export function AuditWorkspace({
                 <div className="detail-row">
                   <span>Frameworks</span>
                   <strong>
-                    {projectProfile.frameworks.map((item) => item.name).join(', ') ||
+                    {projectProfile.frameworks.map(frameworkLabel).join(', ') ||
                       'No recognized framework'}
                   </strong>
                 </div>
@@ -1132,8 +1143,7 @@ export function AuditWorkspace({
                 <div className="detail-row">
                   <span>Frameworks</span>
                   <strong>
-                    {projectProfile.frameworks.map((item) => item.name).join(', ') ||
-                      'None detected'}
+                    {projectProfile.frameworks.map(frameworkLabel).join(', ') || 'None detected'}
                   </strong>
                 </div>
                 <div className="detail-row">

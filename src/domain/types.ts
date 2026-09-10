@@ -297,6 +297,7 @@ export interface ProjectFramework {
   id:
     | 'nextjs-app-router'
     | 'nextjs-pages-router'
+    | 'react'
     | 'express'
     | 'prisma'
     | 'drizzle'
@@ -310,6 +311,13 @@ export interface ProjectFramework {
   name: string;
   file: string;
   line: number;
+  versionCoverage?: {
+    requested?: string;
+    detectedMajor?: number;
+    status: 'supported' | 'partial' | 'unverified';
+    supportedMajors?: number[];
+    detail: string;
+  };
 }
 export interface ProjectEntrypoint {
   id: string;

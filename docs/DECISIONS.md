@@ -30,6 +30,14 @@
 
 Changes to these decisions should be deliberate. Add a dated decision with the problem, alternatives, trade-offs, and migration impact. Do not create endless documentation for ordinary implementation details.
 
+## 2026-09-10 — explicit framework-major rule coverage
+
+Captured package manifests provide requested versions as data; Traceward never imports them. The
+project profile reports a supported, partial, or unverified static-rule coverage state for detected
+Next.js, React, and Express majors. Ambiguous ranges and source-only detections remain unverified,
+and frameworks without a declared version matrix never inherit a compatibility claim. Workflow v21
+prevents older checkpoints from being resumed as if they contained this metadata.
+
 ## 2026-09-10 — agent plan contract v2
 
 The remediation plan is now also emitted as the primary `agent-plan.json`, with a generated JSON

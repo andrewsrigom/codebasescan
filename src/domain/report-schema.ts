@@ -286,6 +286,7 @@ const projectProfile = z.looseObject({
         id: z.enum([
           'nextjs-app-router',
           'nextjs-pages-router',
+          'react',
           'express',
           'prisma',
           'drizzle',
@@ -300,6 +301,15 @@ const projectProfile = z.looseObject({
         name: shortText,
         file: shortText,
         line: z.number().int().positive(),
+        versionCoverage: z
+          .object({
+            requested: shortText.optional(),
+            detectedMajor: z.number().int().nonnegative().optional(),
+            status: z.enum(['supported', 'partial', 'unverified']),
+            supportedMajors: z.array(z.number().int().nonnegative()).max(20).optional(),
+            detail: shortText,
+          })
+          .optional(),
       }),
     )
     .max(100),

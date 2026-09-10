@@ -1,4 +1,4 @@
-import type { AuditReport } from './types.ts';
+import type { AuditReport, ProjectFramework } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 import type { RemediationPlan, RemediationResult } from './remediation.ts';
@@ -198,6 +198,18 @@ export function escapeMarkdown(value: string): string {
     .replaceAll('\\', '\\\\')
     .replace(/([`*_{}\[\]()#+!|>-])/g, '\\$1');
 }
+
+function frameworkLabel(framework: ProjectFramework): string {
+  const coverage = framework.versionCoverage;
+  if (!coverage) return framework.name;
+  const version = coverage.detectedMajor
+    ? ` ${coverage.detectedMajor}`
+    : coverage.requested
+      ? ` ${coverage.requested}`
+      : '';
+  return `${framework.name}${version} [${coverage.status}]`;
+}
+
 export function toMarkdown(report: AuditReport): string {
   const m = escapeMarkdown;
   const dependencyRemediation = groupDependencyAdvisories(report.findings, report.dependencies);
@@ -240,7 +252,7 @@ export function toMarkdown(report: AuditReport): string {
           '## Project structure',
           '',
           `Status: ${m(report.projectProfile.status)}. ${report.projectProfile.filesAnalyzed} source files and ${report.projectProfile.nodesAnalyzed} AST nodes parsed as data.`,
-          `Frameworks: ${report.projectProfile.frameworks.map((item) => m(item.name)).join(', ') || 'none detected'}.`,
+          `Framework rule coverage: ${report.projectProfile.frameworks.map((item) => m(frameworkLabel(item))).join(', ') || 'none detected'}.`,
           `Entry points: ${report.projectProfile.entrypoints.length}. Symbols: ${report.projectProfile.symbols.length}. Call edges: ${report.projectProfile.calls.length}. Security facts: ${report.projectProfile.facts.length}.`,
           ...(report.projectProfile.issues.length
             ? [
@@ -709,7 +721,8 @@ export function toHtml(
       '</strong> call edges</span><span><strong>' +
       report.projectProfile.facts.length +
       '</strong> security facts</span></div><p class="muted">Frameworks: ' +
-      (report.projectProfile.frameworks.map((item) => e(item.name)).join(', ') || 'none detected') +
+      (report.projectProfile.frameworks.map((item) => e(frameworkLabel(item))).join(', ') ||
+        'none detected') +
       '.</p>' +
       (report.projectProfile.issues.length
         ? '<h3>Profile issues</h3><ul>' +

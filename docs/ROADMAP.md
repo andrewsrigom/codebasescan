@@ -46,6 +46,7 @@ The full execution sequence and release gates are maintained in
 - Captured workspace package exports and imported reexport bridges now participate in the bounded project graph without loading package code or build configuration.
 - Static accessibility, privacy, and reliability scanners add nine paired source rules for JSX semantics, sensitive URL/log/browser storage, request timeouts, and swallowed errors.
 - Bounded source-risk paths now connect eligible findings to proven entrypoint/call/sensitive-operation chains, and sanitized environment templates are compared with named source usage without retaining values.
+- Detected Next.js, React, and Express majors now publish supported, partial, or unverified static-rule coverage instead of silently applying a generic compatibility assumption.
 
 ## Next — independent real-project ground truth
 
@@ -65,8 +66,11 @@ checks for environment declarations, OpenAPI routes, schema/migration declaratio
 feature flags. Preserve component ownership and trust boundaries in monorepos.
 
 Add a component-aware change view for introduced, resolved, changed, and reappearing work while
-keeping the full unresolved inventory visible. Version-sensitive rules must publish whether the
-detected framework major is supported, partially supported, or unverified.
+keeping the full unresolved inventory visible.
+
+Add security-critical code without related test evidence, dependency license/policy inventory, and
+report provenance suitable for later signing. Source-reference test evidence is not proof that a
+test asserts the relevant control.
 
 ## Next — operational hardening
 
