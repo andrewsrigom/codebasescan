@@ -114,6 +114,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.apiContract
+      ? [
+          {
+            path: 'api-contract.json',
+            mediaType: 'application/json',
+            content: json(report.apiContract),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

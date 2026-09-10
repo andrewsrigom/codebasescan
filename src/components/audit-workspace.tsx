@@ -178,7 +178,9 @@ export function AuditWorkspace({
         (total, count) => total + count,
         0,
       ) +
-      (report.testEvidence?.withoutRelatedTests ?? 0)
+      (report.testEvidence?.withoutRelatedTests ?? 0) +
+      (report.apiContract?.summary.declaredOnly ?? 0) +
+      (report.apiContract?.summary.sourceOnly ?? 0)
     : 0;
   const reviewSummary = active
     ? 'Audit in progress. Results update as scanners finish.'
@@ -851,6 +853,7 @@ export function AuditWorkspace({
           supplyChain={report?.supplyChainAnalysis}
           quality={report?.codeQualityAnalysis}
           testEvidence={report?.testEvidence}
+          apiContract={report?.apiContract}
         />
       )}
       {tab === 'Checklist' && (

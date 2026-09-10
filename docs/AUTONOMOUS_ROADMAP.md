@@ -14,8 +14,9 @@ changes, but cannot overwrite scanner evidence, invent coverage, or verify its o
 
 Phases 1–4 are implemented. Phase 5 currently includes bounded source-risk paths, sanitized
 environment-contract consistency, framework-major rule coverage, declared monorepo component
-ownership, cross-component import evidence, and security-critical test relationships. OpenAPI,
-schema/migration, webhook, feature-flag, and component-aware lifecycle comparison remain next.
+ownership, cross-component import evidence, security-critical test relationships, and captured
+OpenAPI/source route consistency. Schema/migration, webhook, feature-flag, and component-aware
+lifecycle comparison remain next.
 Phase 6 has reproducible `seusaas` and `robs-web` pressure runs but still needs the full named corpus
 and independent dispositions. Later phases remain gated as described below.
 
@@ -118,7 +119,8 @@ component ownership never relies on directory names alone, and a changed-file au
 unchanged high-priority work from the complete report.
 
 Security-critical test relationships follow the documented bounded method in
-[Security-critical test evidence](TEST_EVIDENCE.md). AI review and future correction must follow
+[Security-critical test evidence](TEST_EVIDENCE.md). API route matching follows
+[API contract consistency](API_CONTRACT.md). AI review and future correction must follow
 [Structured AI review standard](AI_REVIEW_STANDARD.md).
 
 ## Phase 6 — real-project evaluation corpus

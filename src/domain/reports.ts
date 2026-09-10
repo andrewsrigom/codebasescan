@@ -111,6 +111,7 @@ export function toInvestigationBundle(report: AuditReport): object {
     coverage: report.coverage ?? report.scanners,
     environmentContract: report.environmentContract ?? null,
     testEvidence: report.testEvidence ?? null,
+    apiContract: report.apiContract ?? null,
     mechanicalAnalysis: report.mechanicalAnalysis ?? null,
     supplyChainAnalysis: report.supplyChainAnalysis ?? null,
     codeQualityAnalysis: report.codeQualityAnalysis ?? null,
@@ -371,6 +372,35 @@ export function toMarkdown(report: AuditReport): string {
           'Machine-readable detail: test-evidence.json.',
           '',
           ...report.testEvidence.limitations.map((limitation) => `- ${m(limitation)}`),
+        ]
+      : []),
+    ...(report.apiContract
+      ? [
+          '',
+          '## API contract consistency',
+          '',
+          report.apiContract.status === 'unsupported'
+            ? 'No captured OpenAPI or Swagger specification was available.'
+            : `Status: ${m(report.apiContract.status)}. ${report.apiContract.summary.declaredOperations} declared operation(s), ${report.apiContract.summary.sourceOperations} source operation(s), ${report.apiContract.summary.matchedOperations} matched, ${report.apiContract.summary.declaredOnly} declared only, ${report.apiContract.summary.sourceOnly} source only inside contract scope, and ${report.apiContract.summary.outsideContractScope} outside contract scope.`,
+          '',
+          ...report.apiContract.declaredOperations
+            .filter((operation) => operation.status === 'declared-only')
+            .slice(0, 50)
+            .map(
+              (operation) =>
+                `- Declared only: ${m(operation.method)} ${m(operation.path)} at ${m(`${operation.file}:${operation.line}`)}`,
+            ),
+          ...report.apiContract.sourceOperations
+            .filter((operation) => operation.status === 'source-only')
+            .slice(0, 50)
+            .map(
+              (operation) =>
+                `- Source only: ${m(operation.method)} ${m(operation.path)} at ${m(`${operation.file}:${operation.line}`)}`,
+            ),
+          '',
+          'Machine-readable detail: api-contract.json.',
+          '',
+          ...report.apiContract.limitations.map((limitation) => `- ${m(limitation)}`),
         ]
       : []),
     ...(report.mechanicalAnalysis
@@ -997,6 +1027,49 @@ export function toHtml(
       list('Test evidence limitations', report.testEvidence.limitations) +
       '<p><a href="test-evidence.json">Open the complete test evidence map</a></p></section>'
     : '';
+  const apiContract = report.apiContract
+    ? '<section class="report-section"><div class="section-head"><div><span class="kicker">API CONTRACT</span><h2>OpenAPI and source consistency</h2></div><span class="status ' +
+      (report.apiContract.status === 'complete' ? 'complete' : 'gap') +
+      '">' +
+      e(report.apiContract.status) +
+      '</span></div>' +
+      (report.apiContract.status === 'unsupported'
+        ? '<p>No captured OpenAPI or Swagger specification was available. No clean contract result is implied.</p>'
+        : '<p>Captured declarations are compared with statically mapped Next.js and Express route operations.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+          report.apiContract.summary.declaredOperations +
+          '</strong><span>Declared operations</span></div><div class="summary-card"><strong>' +
+          report.apiContract.summary.sourceOperations +
+          '</strong><span>Source operations</span></div><div class="summary-card"><strong>' +
+          report.apiContract.summary.matchedOperations +
+          '</strong><span>Matched</span></div><div class="summary-card"><strong>' +
+          (report.apiContract.summary.declaredOnly + report.apiContract.summary.sourceOnly) +
+          '</strong><span>Consistency candidates</span></div></div>' +
+          '<p class="muted">' +
+          report.apiContract.summary.outsideContractScope +
+          ' unmatched source operation(s) were outside the inferred contract path scope and are not counted as differences.</p>' +
+          list(
+            'Declared operations without a source match',
+            report.apiContract.declaredOperations
+              .filter((operation) => operation.status === 'declared-only')
+              .slice(0, 50)
+              .map(
+                (operation) =>
+                  `${operation.method} ${operation.path} — ${operation.file}:${operation.line}`,
+              ),
+          ) +
+          list(
+            'Source operations without a declaration match',
+            report.apiContract.sourceOperations
+              .filter((operation) => operation.status === 'source-only')
+              .slice(0, 50)
+              .map(
+                (operation) =>
+                  `${operation.method} ${operation.path} — ${operation.file}:${operation.line}`,
+              ),
+          )) +
+      list('API contract limitations', report.apiContract.limitations) +
+      '<p><a href="api-contract.json">Open the complete API contract map</a></p></section>'
+    : '';
   const mechanical =
     report.mechanicalAnalysis || report.supplyChainAnalysis || report.codeQualityAnalysis
       ? '<section class="report-section"><span class="kicker">SOURCE REVIEW</span><h2>Supply chain, quality, structure, and duplication</h2>' +
@@ -1345,6 +1418,9 @@ export function toHtml(
       (report.testEvidence
         ? '<li><a href="test-evidence.json">Security-critical test evidence</a></li>'
         : '') +
+      (report.apiContract
+        ? '<li><a href="api-contract.json">API contract consistency</a></li>'
+        : '') +
       '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
     : '';
   const css =
@@ -1409,6 +1485,7 @@ export function toHtml(
     riskPaths +
     environmentContract +
     testEvidence +
+    apiContract +
     dataMap +
     mechanical +
     dependencyRemediation +

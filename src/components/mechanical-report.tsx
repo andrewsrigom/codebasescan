@@ -1,4 +1,5 @@
 import type {
+  ApiContractAnalysis,
   CodeQualityAnalysis,
   MechanicalAnalysis,
   SupplyChainAnalysis,
@@ -20,11 +21,13 @@ export function MechanicalReportPanel({
   supplyChain,
   quality,
   testEvidence,
+  apiContract,
 }: {
   analysis?: MechanicalAnalysis;
   supplyChain?: SupplyChainAnalysis;
   quality?: CodeQualityAnalysis;
   testEvidence?: TestEvidenceAnalysis;
+  apiContract?: ApiContractAnalysis;
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
@@ -44,6 +47,11 @@ export function MechanicalReportPanel({
     : undefined;
   const targetsWithoutRelatedTests =
     testEvidence?.targets.filter((target) => target.status === 'not-observed') ?? [];
+  const declaredOnlyOperations =
+    apiContract?.declaredOperations.filter((operation) => operation.status === 'declared-only') ??
+    [];
+  const sourceOnlyOperations =
+    apiContract?.sourceOperations.filter((operation) => operation.status === 'source-only') ?? [];
   const complete = Boolean(
     architecture &&
     !architecture.truncated &&
@@ -54,7 +62,9 @@ export function MechanicalReportPanel({
     quality?.deadCode &&
     !quality.truncated &&
     testEvidence?.status === 'complete' &&
-    !testEvidence.truncated,
+    !testEvidence.truncated &&
+    apiContract?.status === 'complete' &&
+    !apiContract.truncated,
   );
   return (
     <section
@@ -66,13 +76,18 @@ export function MechanicalReportPanel({
       <div className="panel-header">
         <div>
           <h2>Source analysis</h2>
-          <p>Supply chain, code quality, tests, dependency structure, and duplication.</p>
+          <p>Supply chain, API contracts, code quality, tests, structure, and duplication.</p>
         </div>
         <Badge tone={complete ? 'success' : 'medium'}>
           {complete ? 'COMPLETE DATA' : 'PARTIAL DATA'}
         </Badge>
       </div>
-      {!architecture && !duplication && !supplyChain && !quality && !testEvidence ? (
+      {!architecture &&
+      !duplication &&
+      !supplyChain &&
+      !quality &&
+      !testEvidence &&
+      !apiContract ? (
         <EmptyState title="Source analysis unavailable">
           <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
@@ -282,6 +297,100 @@ export function MechanicalReportPanel({
             </>
           )}
 
+          {apiContract && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>API contract consistency</h2>
+                  <p>Captured OpenAPI/Swagger declarations compared with mapped source routes.</p>
+                </div>
+                <Badge
+                  tone={
+                    apiContract.summary.declaredOnly + apiContract.summary.sourceOnly
+                      ? 'medium'
+                      : apiContract.status === 'complete'
+                        ? 'success'
+                        : 'neutral'
+                  }
+                >
+                  {apiContract.summary.declaredOnly + apiContract.summary.sourceOnly} differences
+                </Badge>
+              </div>
+              <div className="panel-body">
+                {apiContract.status === 'unsupported' ? (
+                  <p className="small muted">
+                    No captured OpenAPI or Swagger specification was found. No clean result is
+                    implied.
+                  </p>
+                ) : (
+                  <div className="stat-grid">
+                    <div className="stat-card">
+                      <div className="stat-label">Declared operations</div>
+                      <div className="stat-number">{apiContract.summary.declaredOperations}</div>
+                      <div className="stat-foot">
+                        {apiContract.summary.declaredOnly} without source match
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Source operations</div>
+                      <div className="stat-number">{apiContract.summary.sourceOperations}</div>
+                      <div className="stat-foot">
+                        {apiContract.summary.sourceOnly} in-scope differences;{' '}
+                        {apiContract.summary.outsideContractScope} outside scope
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Matched operations</div>
+                      <div className="stat-number">{apiContract.summary.matchedOperations}</div>
+                      <div className="stat-foot">Method and normalized path</div>
+                    </div>
+                  </div>
+                )}
+                <p className="small muted">
+                  Differences are documentation consistency candidates, not proof that an endpoint
+                  is missing or exposed.
+                </p>
+              </div>
+              {(declaredOnlyOperations.length > 0 || sourceOnlyOperations.length > 0) && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Difference</th>
+                        <th>Operation</th>
+                        <th>Evidence</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {declaredOnlyOperations.slice(0, 50).map((operation) => (
+                        <tr key={operation.id}>
+                          <td>Declared only</td>
+                          <td className="strong mono">
+                            {operation.method} {operation.path}
+                          </td>
+                          <td className="mono small">
+                            {operation.file}:{operation.line}
+                          </td>
+                        </tr>
+                      ))}
+                      {sourceOnlyOperations.slice(0, 50).map((operation) => (
+                        <tr key={operation.id}>
+                          <td>Source only</td>
+                          <td className="strong mono">
+                            {operation.method} {operation.path}
+                          </td>
+                          <td className="mono small">
+                            {operation.file}:{operation.line}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
           {testEvidence && (
             <>
               <div className="panel-header">
@@ -447,7 +556,8 @@ export function MechanicalReportPanel({
             duplication?.truncated ||
             supplyChain?.truncated ||
             quality?.truncated ||
-            testEvidence?.truncated) && (
+            testEvidence?.truncated ||
+            apiContract?.truncated) && (
             <div className="panel-footer">
               Totals are exact where shown; detailed rows are bounded. Review Coverage for the
               specific scanner limitation.

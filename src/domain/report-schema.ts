@@ -521,6 +521,68 @@ const testEvidence = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const apiContract = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  specifications: z
+    .array(
+      z.object({
+        file: shortText,
+        version: shortText,
+        operations: z.number().int().nonnegative().max(1_000),
+        pathScope: shortText.optional(),
+      }),
+    )
+    .max(20),
+  declaredOperations: z
+    .array(
+      z.object({
+        id: shortText,
+        file: shortText,
+        line: z.number().int().positive(),
+        path: shortText,
+        normalizedPath: shortText,
+        method: shortText,
+        operationId: shortText.optional(),
+        entrypointIds: z.array(shortText).max(100),
+        status: z.enum(['matched', 'declared-only']),
+      }),
+    )
+    .max(1_000),
+  sourceOperations: z
+    .array(
+      z.object({
+        id: shortText,
+        entrypointId: shortText,
+        componentId: shortText.optional(),
+        file: shortText,
+        line: z.number().int().positive(),
+        path: shortText,
+        normalizedPath: shortText,
+        method: shortText,
+        contractOperationIds: z.array(shortText).max(100),
+        status: z.enum(['matched', 'source-only', 'outside-contract-scope']),
+      }),
+    )
+    .max(2_000),
+  sourceRoutesWithoutMethods: z.array(shortText).max(500),
+  summary: z.object({
+    specifications: z.number().int().nonnegative().max(20),
+    declaredOperations: z.number().int().nonnegative().max(1_000),
+    matchedOperations: z.number().int().nonnegative().max(1_000),
+    declaredOnly: z.number().int().nonnegative().max(1_000),
+    sourceOperations: z.number().int().nonnegative().max(2_000),
+    sourceOnly: z.number().int().nonnegative().max(2_000),
+    outsideContractScope: z.number().int().nonnegative().max(2_000),
+    sourceRoutesWithoutMethods: z.number().int().nonnegative().max(500),
+  }),
+  parseFailures: z.number().int().nonnegative().max(20),
+  unresolvedPathReferences: z.number().int().nonnegative().max(1_000),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -718,6 +780,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(7),
     z.literal(8),
     z.literal(9),
+    z.literal(10),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -754,6 +817,7 @@ export const auditReportSchema = z.looseObject({
   riskCorrelation: riskCorrelation.optional(),
   environmentContract: environmentContract.optional(),
   testEvidence: testEvidence.optional(),
+  apiContract: apiContract.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

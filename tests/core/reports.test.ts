@@ -10,6 +10,7 @@ import {
   toSarif,
 } from '../../src/domain/reports.ts';
 import {
+  sampleApiContract,
   sampleEnvironmentContract,
   sampleReport,
   sampleRiskCorrelation,
@@ -55,7 +56,9 @@ test('HTML export escapes source and titles rather than executing them', () => {
   report.riskCorrelation.paths[0]!.steps[0]!.label = '<unsafe-path>';
   report.environmentContract = sampleEnvironmentContract();
   report.testEvidence = sampleTestEvidence();
+  report.apiContract = sampleApiContract();
   report.testEvidence.targets[0]!.file = '<unsafe-test-target>';
+  report.apiContract.declaredOperations[0]!.path = '<unsafe-contract-path>';
   report.environmentContract.variables[0]!.name = '<unsafe-env-name>';
   const output = toHtml(report);
   assert.ok(!output.includes('<script>'));
@@ -83,6 +86,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(!output.includes('<unsafe-env-name>'));
   assert.ok(output.includes('&lt;unsafe-test-target&gt;'));
   assert.ok(!output.includes('<unsafe-test-target>'));
+  assert.ok(output.includes('&lt;unsafe-contract-path&gt;'));
+  assert.ok(!output.includes('<unsafe-contract-path>'));
 });
 test('SARIF export retains unresolved status and valid local locations', () => {
   const result = toSarif(sampleReport()) as {

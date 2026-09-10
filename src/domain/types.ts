@@ -617,6 +617,58 @@ export interface TestEvidenceAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+export interface ApiContractSpecification {
+  file: string;
+  version: string;
+  operations: number;
+  pathScope?: string;
+}
+export interface ApiContractOperation {
+  id: string;
+  file: string;
+  line: number;
+  path: string;
+  normalizedPath: string;
+  method: string;
+  operationId?: string;
+  entrypointIds: string[];
+  status: 'matched' | 'declared-only';
+}
+export interface ApiSourceOperation {
+  id: string;
+  entrypointId: string;
+  componentId?: string;
+  file: string;
+  line: number;
+  path: string;
+  normalizedPath: string;
+  method: string;
+  contractOperationIds: string[];
+  status: 'matched' | 'source-only' | 'outside-contract-scope';
+}
+export interface ApiContractAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  specifications: ApiContractSpecification[];
+  declaredOperations: ApiContractOperation[];
+  sourceOperations: ApiSourceOperation[];
+  sourceRoutesWithoutMethods: string[];
+  summary: {
+    specifications: number;
+    declaredOperations: number;
+    matchedOperations: number;
+    declaredOnly: number;
+    sourceOperations: number;
+    sourceOnly: number;
+    outsideContractScope: number;
+    sourceRoutesWithoutMethods: number;
+  };
+  parseFailures: number;
+  unresolvedPathReferences: number;
+  truncated: boolean;
+  limitations: string[];
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;
@@ -786,7 +838,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -804,6 +856,7 @@ export interface AuditReport {
   riskCorrelation?: RiskCorrelation;
   environmentContract?: EnvironmentContractAnalysis;
   testEvidence?: TestEvidenceAnalysis;
+  apiContract?: ApiContractAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;

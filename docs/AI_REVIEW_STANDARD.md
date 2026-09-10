@@ -75,6 +75,10 @@ edges, and any matching security-critical test-reference target. These records h
 agent select local context and focused tests; they do not claim that a test executed or asserted the
 reported behavior.
 
+API contract differences may be used as bounded supporting context, but remain mechanical
+documentation candidates. AI must not relabel a declared-only or source-only record as a deployed
+security vulnerability without separately cited source and runtime evidence.
+
 ## Expansion gate
 
 Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled

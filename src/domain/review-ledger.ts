@@ -112,7 +112,7 @@ export function applyReviewLedger(
   ].sort();
   return {
     ...report,
-    schemaVersion: 9,
+    schemaVersion: 10,
     findings: report.findings.map((finding) => {
       const entry = applicable.get(finding.fingerprint);
       return entry

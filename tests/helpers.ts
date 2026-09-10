@@ -1,6 +1,7 @@
 import { digest } from '../src/domain/findings.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import type {
+  ApiContractAnalysis,
   AuditReport,
   EnvironmentContractAnalysis,
   RiskCorrelation,
@@ -141,6 +142,63 @@ export function sampleTestEvidence(): TestEvidenceAnalysis {
     unresolvedImports: 0,
     truncated: false,
     limitations: ['Source-reference evidence does not prove a security assertion.'],
+  };
+}
+
+export function sampleApiContract(): ApiContractAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    specifications: [
+      {
+        file: 'openapi.yaml',
+        version: '3.1.0',
+        operations: 1,
+        pathScope: '/api',
+      },
+    ],
+    declaredOperations: [
+      {
+        id: 'contract-op-1',
+        file: 'openapi.yaml',
+        line: 3,
+        path: '/api/example',
+        normalizedPath: '/api/example',
+        method: 'POST',
+        operationId: 'createExample',
+        entrypointIds: [],
+        status: 'declared-only',
+      },
+    ],
+    sourceOperations: [
+      {
+        id: 'source-op-1',
+        entrypointId: 'entrypoint-1',
+        file: 'src/app/api/example/route.ts',
+        line: 1,
+        path: '/api/example',
+        normalizedPath: '/api/example',
+        method: 'GET',
+        contractOperationIds: [],
+        status: 'source-only',
+      },
+    ],
+    sourceRoutesWithoutMethods: [],
+    summary: {
+      specifications: 1,
+      declaredOperations: 1,
+      matchedOperations: 0,
+      declaredOnly: 1,
+      sourceOperations: 1,
+      sourceOnly: 1,
+      outsideContractScope: 0,
+      sourceRoutesWithoutMethods: 0,
+    },
+    parseFailures: 0,
+    unresolvedPathReferences: 0,
+    truncated: false,
+    limitations: ['A difference is not proof that an endpoint is missing or exposed.'],
   };
 }
 

@@ -146,3 +146,13 @@ that have captured test-reference evidence. Task-bundle version 3 adds only thos
 selected components and their immediate cross-component edges. Neighbor component metadata is
 included so an edge never points at an unknown package. Static import relationships remain
 navigation evidence rather than proof of executed assertions or behavioral coverage.
+
+## 2026-09-10 — inert OpenAPI/source consistency
+
+Captured OpenAPI and Swagger JSON/YAML are parsed as data and compared with statically mapped
+Next.js and Express operations by HTTP method and normalized parameterized path. External
+references and generators are never loaded. Declared-only and source-only records stay
+documentation-consistency candidates rather than vulnerability findings. Unmatched source routes
+count only inside the common static path scope of a captured specification; all others remain
+visible but unassessed. Report schema v10, workflow v24, and audit-mode pack 0.6.0 make the new
+persisted output explicit.

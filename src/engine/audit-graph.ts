@@ -2,6 +2,7 @@ import { Annotation, END, START, StateGraph, interrupt } from '@langchain/langgr
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import type {
   ArchitectureAnalysis,
+  ApiContractAnalysis,
   AuditMode,
   AuditReport,
   CodeQualityAnalysis,
@@ -42,6 +43,7 @@ import { scanPrivacyStatic } from '../scanners/privacy-static.ts';
 import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
 import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
 import { scanTestEvidence } from '../scanners/test-evidence.ts';
+import { scanApiContract } from '../scanners/api-contract.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -103,6 +105,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   testEvidence: Annotation<TestEvidenceAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  apiContract: Annotation<ApiContractAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -355,6 +361,26 @@ export function buildAuditGraph(options: {
       );
       return { testEvidence: result.analysis, scanners: [result.run] };
     })
+    .addNode('api_contract', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          apiContract: null,
+          scanners: [
+            skippedByMode('api-contract', 'API contract consistency', 'release-readiness'),
+          ],
+        };
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to API contract analysis.');
+      const result = scanApiContract(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'api_contract',
+        result.analysis.status === 'unsupported'
+          ? 'No captured OpenAPI or Swagger specification was available.'
+          : `${result.analysis.summary.matchedOperations} declared operation(s) matched source; ${result.analysis.summary.declaredOnly} declared-only and ${result.analysis.summary.sourceOnly} source-only candidate(s).`,
+      );
+      return { apiContract: result.analysis, scanners: [result.run] };
+    })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
         return {
@@ -605,7 +631,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 9,
+        schemaVersion: 10,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -623,6 +649,7 @@ export function buildAuditGraph(options: {
         ...(riskCorrelation ? { riskCorrelation } : {}),
         ...(state.environmentContract ? { environmentContract: state.environmentContract } : {}),
         ...(state.testEvidence ? { testEvidence: state.testEvidence } : {}),
+        ...(state.apiContract ? { apiContract: state.apiContract } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -751,6 +778,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'reliability_static')
     .addEdge('snapshot', 'environment_contract')
     .addEdge('project_profile', 'test_evidence')
+    .addEdge('project_profile', 'api_contract')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -772,6 +800,7 @@ export function buildAuditGraph(options: {
         'reliability_static',
         'environment_contract',
         'test_evidence',
+        'api_contract',
         'architecture',
         'duplication',
         'supply_chain',
