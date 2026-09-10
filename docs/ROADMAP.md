@@ -36,12 +36,18 @@
 - The installable terminal command now generates self-contained static report directories with human HTML, audit JSON, prioritized remediation tasks, bounded Codex evidence, SARIF, CycloneDX, and artifact hashes by default.
 - Baseline runs now emit deterministic before/after remediation results, and focused task bundles let an authorized agent consume one work item without sending the complete report.
 - pnpm dependency inventory now retains bounded lockfile parent paths, so direct owners are visible for transitive remediation without loading project configuration.
+- Generic declarative SaaS semantics now support bounded tenant/owner/role/billing/token vocabulary, security wrapper aliases, and constrained public routes without executable project configuration.
+- A dedicated SaaS graph node now reviews client-controlled billing, ownership/privilege assignment, token entropy/storage/expiry, internal error responses, sensitive logs/URLs, and OAuth redirect trust with paired vulnerable and benign benchmarks.
+- The checklist now exposes mechanical SaaS controls for tenant scope, rate limiting, webhook replay, CSRF, billing trust, recovery-token lifecycle, and OAuth uncertainty without converting missing evidence into a confirmed vulnerability.
+- Next.js posture review now flags explicit wildcard Server Action origins and broad or insecure remote image declarations.
 
 ## Next — independent real-project ground truth
 
 Repeat evaluation on owner-authorized applications with production context and independent human review. Record durable dispositions, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and later AI cost per accepted finding. Do not publish generic accuracy claims from fixtures or the initial public source pass.
 
 Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
+
+Calibrate the generic SaaS pack on structurally different owner-authorized applications. Add new provider/ORM adapters only after recording missed source shapes or reproducible false positives; do not encode one reference project's names or directory layout into rules.
 
 Extend npm/Yarn parent-path fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 

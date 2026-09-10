@@ -15,6 +15,7 @@ LangGraph audit workflow <-------- separate SQLite checkpointer
         |
         +-- bounded read-only source snapshot
         +-- deterministic project profile + AST security rules
+        +-- generic SaaS semantics + focused SaaS rules
         +-- Node.js supply-chain integrity checks
         +-- isolated dead-code + source quality reports
         +-- dependency structure + duplicate-code reports
@@ -40,6 +41,7 @@ START -> snapshot
               +-> patterns ----+
               +-> project map -+
               +-> AST security +
+              +-> SaaS security+
               +-> Next security+
               +-> React security+
               +-> dependencies -+
@@ -60,7 +62,7 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The fifteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The sixteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
 The nested review graph remains:
 
@@ -74,7 +76,9 @@ Repository text is untrusted. It cannot select tools, endpoints, headers, reques
 
 ## Deterministic evidence
 
-`project-profile.ts` parses captured TypeScript/JavaScript as data and maps Next.js, Express, tRPC, Prisma, Drizzle, Supabase, Auth.js, GraphQL, Zod, Joi, and Valibot signals plus entry points, symbols, imports, direct local call edges, and security facts under fixed limits. It resolves bounded TypeScript path aliases from declarative JSON/JSONC without loading the target compiler. `ast-security.ts` uses those relationships for authentication, permission, and tenant/owner scope. It performs bounded local and selected five-hop request-flow checks for SQL/NoSQL, SSRF, redirects, process execution, filesystem paths, unsafe deserialization, dynamic regular expressions, property writes, mass assignment, uploads, webhook ordering, cookie attributes, and client/server configuration. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target executable configuration, plugins, types, and dependencies are never loaded or executed.
+`project-profile.ts` parses captured TypeScript/JavaScript as data and maps Next.js, Express, tRPC, Prisma, Drizzle, Supabase, Auth.js, GraphQL, Zod, Joi, Valibot, and billing signals plus entry points, symbols, imports, direct local call edges, and security facts under fixed limits. It resolves bounded TypeScript path aliases from declarative JSON/JSONC without loading the target compiler. A root `traceward.config.json`/JSONC may extend fixed tenant/owner/role/billing/token vocabulary, security helper names, and constrained public-route patterns. It cannot add code, regex, scanner plugins, suppressions, or arbitrary paths; executable Traceward configuration is ignored.
+
+`ast-security.ts` uses profile relationships for authentication, permission, and tenant/owner scope. It performs bounded local and selected five-hop request-flow checks for SQL/NoSQL, SSRF, redirects, process execution, filesystem paths, unsafe deserialization, dynamic regular expressions, property writes, mass assignment, uploads, webhook ordering, cookie attributes, and client/server configuration. `saas-security.ts` adds focused source-to-sink rules for billing trust, ownership/privilege assignment, token entropy/lifecycle, error responses, sensitive logs/URLs, and OAuth redirects. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target executable configuration, plugins, types, and dependencies are never loaded or executed.
 
 `supply-chain.ts` parses package manifests and npm/pnpm/Yarn lockfiles as data. It reports high-risk lifecycle declarations, plaintext or unpinned dependency sources, missing/weak integrity, non-default registry hosts, and npm manifest/lock drift. Private registries and intentional local sources remain review candidates rather than automatic compromise claims.
 
@@ -82,7 +86,7 @@ Repository text is untrusted. It cannot select tools, endpoints, headers, reques
 
 `mechanical.ts` stages runtime JavaScript/TypeScript only and invokes pinned dependency-cruiser and jscpd entry points with fixed arguments. It does not load target tool configuration. Reports retain exact aggregate totals plus bounded cycles, orphan candidates, coupling hotspots, and duplicate locations. Raw duplicate fragments are discarded. Semgrep parser diagnostics likewise retain only a validated snapshot path, optional line, and diagnostic kind. These observations never become security findings automatically.
 
-`builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, and environment use. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
+`builtin.ts` retains small broad review patterns when structural analysis cannot decide. `posture.ts` adds conservative TypeScript/Node/Next checks for declared browser policies, sensitive cookies, CORS, environment use, wildcard Server Action origins, and broad/insecure remote image policy. A decisive AST candidate replaces the same-location broad raw-SQL/cookie pattern to reduce duplicates. Every automatic control result is also mapped into a versioned checklist; missing runtime or infrastructure evidence remains unverified.
 
 Snapshot files are classified as runtime, test, or example. Project profiling, AST, posture, dependency inventory, and Semgrep use runtime scope; Gitleaks retains all captured scopes because credentials in test/fixture code can still be exposed. Runtime files are prioritized during traversal, and the preflight UI reports the split before queuing. Only bounded aggregate `coverage/coverage-summary.json` and `coverage/lcov.info` files are admitted from the otherwise excluded generated coverage tree.
 

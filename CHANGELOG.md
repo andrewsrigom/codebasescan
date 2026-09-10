@@ -39,3 +39,6 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added an installable compiled `traceward` command whose default audit output is a self-contained static report directory.
 - Added versioned remediation plans, a human task queue, baseline before/after results, and focused per-task bundles for bounded Codex handoff.
 - Added bounded pnpm importer/snapshot parent paths to dependency inventory, remediation plans, HTML, Markdown, and the local workspace.
+- Added safe declarative SaaS vocabulary/wrapper configuration and a dedicated LangGraph scanner node with nine focused source rules.
+- Added SaaS checklist controls for tenant scope, abuse rate limiting, webhook replay, CSRF, billing, recovery, and OAuth uncertainty.
+- Added explicit Next.js posture candidates for wildcard Server Action origins and broad/insecure remote image policy.

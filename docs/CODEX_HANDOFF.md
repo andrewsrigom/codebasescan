@@ -1,0 +1,37 @@
+# Current handoff
+
+## Product state
+
+Traceward is a local-first source audit tool for authorized Node.js, JavaScript, TypeScript,
+React, and Next.js repositories. The default path is offline and AI-disabled. It captures a
+bounded snapshot, parses target code/configuration as untrusted data, runs deterministic scanners,
+and exports a human report plus machine-readable remediation artifacts. It never installs or runs
+the target project.
+
+The audit workflow is `traceward-audit-v10`. Sixteen scanner/profile results fan into
+normalization. The security checklist pack is `0.5.0`. The generic SaaS layer consists of:
+
+- safe root `traceward.config.json`/JSONC semantics;
+- project vocabulary and wrapper aliases visible in the project profile;
+- a dedicated `saas-security` scanner with nine source rules;
+- tenant, rate-limit, webhook-idempotency, CSRF, billing, recovery, and OAuth controls;
+- paired vulnerable and benign unit/benchmark cases.
+
+No production scanner or configuration default contains reference-project names or paths.
+
+## Continuation rules
+
+- Read `VALIDATION.md` and `ARCHITECTURE.md` before changing behavior.
+- Keep scanner evidence, missing evidence, AI assessment, and human disposition separate.
+- Never execute target JS/TS configuration, plugins, lifecycle scripts, tests, or application code.
+- Every new source rule needs a vulnerable case and a benign control before integration.
+- Prefer small commits and update workflow/checklist versions when persisted behavior changes.
+- Calibrate new adapters from reproducible failures across structurally different authorized apps.
+
+## Next evidence needed
+
+The generic SaaS pack still needs independent owner-confirmed real-project ground truth. The
+`seusaas` repository is a pressure/false-positive reference only. A different SaaS should be used
+to validate portability before adding more provider, ORM, job, WebSocket, upload, or framework
+shapes. Runtime business authorization, RLS, provider dashboard settings, token one-time use, and
+deployment controls remain outside source-only proof.

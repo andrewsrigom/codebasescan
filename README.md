@@ -97,6 +97,38 @@ Traceward captures a bounded snapshot. It never installs dependencies, runs life
 
 Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned Traceward-owned tools. Knip receives script-free sanitized manifests and a generated configuration with every target plugin disabled. Traceward safely imports bounded JSON/JSONC Knip settings, workspace declarations, package-script entry hints, and TypeScript path aliases as data. Executable target configuration and lifecycle scripts are never loaded or run. Mechanical results are review evidence, not vulnerabilities.
 
+Projects may declare their own SaaS vocabulary and wrapper names in a root
+`traceward.config.json` (or JSONC) file:
+
+```json
+{
+  "schemaVersion": 1,
+  "vocabulary": {
+    "tenantKeys": ["customerWorkspaceKey"],
+    "roleKeys": ["membershipLevel"]
+  },
+  "helpers": {
+    "authorization": ["requireMembership"],
+    "resourceScope": ["scopeToCustomerWorkspace"],
+    "rateLimit": ["consumeQuota"],
+    "idempotency": ["claimDelivery"]
+  },
+  "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"]
+}
+```
+
+Configured names extend generic defaults and are used only when the named call or field is present
+in captured source. Lists, identifiers, route patterns, keys, and file size are bounded. Unknown or
+unsafe settings keep profile coverage partial and are ignored. `traceward.config.ts/js` is never
+loaded. Public-route declarations prevent a project-specific login warning but do not turn the
+authentication checklist into a clean result.
+
+The dedicated SaaS scanner covers request-controlled billing values, tenant/owner/role assignment,
+predictable tokens, recovery-token storage and expiry, internal error responses, sensitive logging
+and URL parameters, and OAuth redirect trust. The checklist separately exposes tenant scope, abuse
+rate limiting, webhook replay, CSRF, billing, recovery, and OAuth review. These are bounded source
+candidates and control gaps, not proof of exploitability or business-logic correctness.
+
 Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Reviewers can mark findings confirmed, fixed, false positive, accepted risk, or still needing review. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
 
 ## Optional depth

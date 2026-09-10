@@ -5,6 +5,7 @@ Start here:
 - [Architecture](ARCHITECTURE.md) — components, data flow, and trust boundaries.
 - [Threat model](THREAT_MODEL.md) — supported deployment and security assumptions.
 - [Validation](VALIDATION.md) — current checks, environment, and known gaps.
+- [Current handoff](CODEX_HANDOFF.md) — verified repository state and continuation notes.
 - [Roadmap](ROADMAP.md) — completed work and next priorities.
 
 Deeper references:
