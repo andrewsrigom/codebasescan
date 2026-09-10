@@ -67,6 +67,11 @@ START -> snapshot
 
 The nineteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
+All eight offline modes are enabled when an audit has no explicit selection. A focused selection
+keeps the same graph topology but short-circuits unrelated nodes before scanner execution. Those
+nodes emit explicit mode-disabled runs, preserving fan-in and preventing omitted analysis from
+appearing clean. The selected mode list participates in the checkpoint execution fingerprint.
+
 The nested review graph remains:
 
 ```text

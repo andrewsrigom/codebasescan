@@ -213,6 +213,14 @@ test('Git history secret scanning requires an explicit boolean option', () => {
   assert.equal(auditOptions({ gitHistorySecrets: true }).gitHistorySecrets, true);
   assert.equal(auditOptions({}).gitHistorySecrets, undefined);
 });
+test('audit modes are bounded, known, and deduplicated', () => {
+  assert.deepEqual(auditOptions({ modes: ['security', 'privacy', 'privacy'] }).modes, [
+    'security',
+    'privacy',
+  ]);
+  assert.throws(() => auditOptions({ modes: [] }), /non-empty bounded list/);
+  assert.throws(() => auditOptions({ modes: ['unknown'] }), /Unknown audit mode/);
+});
 test('project exceptions require rationale and a future expiry', () => {
   assert.throws(
     () => suppressionDecision({ findingId: 'finding', reason: 'too short' }),

@@ -112,6 +112,49 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   );
   assert.equal(store.events(audit.id).filter((item) => item.stage === 'investigate').length, 0);
 });
+test('a focused audit mode skips unrelated scanners without reporting them clean', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-modes-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const store = new AuditStore(':memory:');
+  context.after(() => store.close());
+  const root = path.resolve('fixtures/hardened-saas');
+  const project = store.registerProject('Focused mode fixture', root);
+  const audit = store.enqueue(project.id, { modes: ['accessibility-static'] });
+  store.claim();
+  const graph = buildAuditGraph({
+    root,
+    projectName: project.name,
+    config: {
+      ...configuration(),
+      dataDirectory: directory,
+      temporaryDirectory: path.join(directory, 'temporary'),
+      aiMode: 'disabled',
+      semgrep: false,
+      gitleaks: false,
+    },
+    store,
+    checkpointer: new MemorySaver(),
+    reviewer: null,
+    modes: audit.options.modes,
+    humanReview: false,
+  });
+  await graph.invoke(
+    { auditId: audit.id },
+    { configurable: { thread_id: audit.id }, recursionLimit: 100 },
+  );
+  const report = store.audit(audit.id).report;
+  assert.equal(
+    report?.auditModes?.find((mode) => mode.id === 'accessibility-static')?.enabled,
+    true,
+  );
+  assert.equal(report?.auditModes?.find((mode) => mode.id === 'security')?.enabled, false);
+  assert.equal(report?.coverage?.find((item) => item.id === 'builtin')?.status, 'DISABLED');
+  assert.equal(
+    report?.coverage?.find((item) => item.id === 'accessibility-static')?.status,
+    'COMPLETE',
+  );
+  assert.equal(report?.mechanicalAnalysis, undefined);
+});
 test('the context loop terminates after two rounds with an injected reviewer', async () => {
   const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
   const finding = scanPatterns(source).find((candidate) => candidate.category === 'injection')!;

@@ -520,6 +520,25 @@ export const auditReportSchema = z.looseObject({
   skipped: z.record(z.string(), z.number().int().nonnegative()),
   truncated: z.boolean(),
   aiMode: z.enum(['disabled', 'ollama', 'openai']),
+  auditModes: z
+    .array(
+      z.object({
+        id: z.enum([
+          'security',
+          'saas',
+          'accessibility-static',
+          'privacy',
+          'reliability',
+          'next-react',
+          'maintainability',
+          'release-readiness',
+        ]),
+        version: shortText,
+        enabled: z.boolean(),
+      }),
+    )
+    .max(8)
+    .optional(),
   findings: z.array(finding).max(10_000),
   scanners: z.array(scanner).max(1_000),
   dependencies: z.array(dependency).max(100_000),
@@ -560,6 +579,21 @@ const storedOptionsSchema = z.looseObject({
     })
     .optional(),
   gitHistorySecrets: z.boolean().optional(),
+  modes: z
+    .array(
+      z.enum([
+        'security',
+        'saas',
+        'accessibility-static',
+        'privacy',
+        'reliability',
+        'next-react',
+        'maintainability',
+        'release-readiness',
+      ]),
+    )
+    .max(8)
+    .optional(),
   scopePreflight: scopePreflight.optional(),
 });
 

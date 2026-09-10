@@ -217,9 +217,26 @@ export interface ProjectScopeEstimate {
 export interface AuditScopePreflight extends ProjectScopeEstimate {
   truncationApproved: boolean;
 }
+export const auditModes = [
+  'security',
+  'saas',
+  'accessibility-static',
+  'privacy',
+  'reliability',
+  'next-react',
+  'maintainability',
+  'release-readiness',
+] as const;
+export type AuditMode = (typeof auditModes)[number];
+export interface AuditModeSelection {
+  id: AuditMode;
+  version: string;
+  enabled: boolean;
+}
 export interface AuditOptions {
   httpProbe?: HttpProbeOptions;
   gitHistorySecrets?: boolean;
+  modes?: AuditMode[];
   scopePreflight?: AuditScopePreflight;
 }
 export interface HttpProbeReport {
@@ -633,6 +650,7 @@ export interface AuditReport {
   skipped: Record<string, number>;
   truncated: boolean;
   aiMode: 'disabled' | 'ollama' | 'openai';
+  auditModes?: AuditModeSelection[];
   findings: Finding[];
   scanners: ScannerRun[];
   dependencies: Dependency[];

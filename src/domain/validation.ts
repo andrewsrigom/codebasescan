@@ -4,6 +4,7 @@ import type {
   ReviewDecision,
   SuppressionDecision,
 } from './types.ts';
+import { auditModes, type AuditMode } from './types.ts';
 import { redact } from '../security/redact.ts';
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -78,6 +79,18 @@ export function auditOptions(value: unknown): AuditOptions {
   const result: AuditOptions = {
     ...(input.gitHistorySecrets === true ? { gitHistorySecrets: true } : {}),
   };
+  if (input.modes !== undefined) {
+    if (
+      !Array.isArray(input.modes) ||
+      input.modes.length < 1 ||
+      input.modes.length > auditModes.length
+    )
+      throw new Error('modes must be a non-empty bounded list.');
+    const allowed = new Set<string>(auditModes);
+    if (input.modes.some((mode) => typeof mode !== 'string' || !allowed.has(mode)))
+      throw new Error('Unknown audit mode.');
+    result.modes = [...new Set(input.modes)] as AuditMode[];
+  }
   if (input.httpProbe !== undefined) {
     const probe = record(input.httpProbe);
     if (probe.approved !== true)

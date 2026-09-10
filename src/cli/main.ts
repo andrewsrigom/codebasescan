@@ -17,7 +17,14 @@ import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
 import { buildRemediationPlan, buildRemediationTaskBundle } from '../domain/remediation.ts';
-import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
+import {
+  auditModes,
+  severities,
+  type AuditMode,
+  type AuditOptions,
+  type AuditReport,
+  type Severity,
+} from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
@@ -33,8 +40,18 @@ const option = (name: string) => {
   const value = index >= 0 ? arguments_[index + 1] : undefined;
   return value && !value.startsWith('--') ? value : undefined;
 };
+const commandModes = (): AuditMode[] | undefined => {
+  const value = option('--modes');
+  if (!value) return undefined;
+  const selected = [...new Set(value.split(',').filter(Boolean))];
+  const allowed = new Set<string>(auditModes);
+  if (!selected.length || selected.some((mode) => !allowed.has(mode)))
+    throw new Error(`Use --modes with: ${auditModes.join(', ')}.`);
+  return selected as AuditMode[];
+};
 const commandAuditOptions = (): AuditOptions => {
   const url = option('--probe-url');
+  const modes = commandModes();
   return {
     ...(url
       ? {
@@ -45,6 +62,7 @@ const commandAuditOptions = (): AuditOptions => {
         }
       : {}),
     ...(arguments_.includes('--secret-history') ? { gitHistorySecrets: true } : {}),
+    ...(modes ? { modes } : {}),
   };
 };
 function render(report: AuditReport, format: string): string {
@@ -258,7 +276,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan',
       );
     }
   }

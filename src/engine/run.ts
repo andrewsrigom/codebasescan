@@ -33,6 +33,7 @@ function executionFingerprint(
       advisoryDatabasePath: config.advisoryDatabasePath,
       httpProbe: options.httpProbe ?? null,
       gitHistorySecrets: options.gitHistorySecrets ?? false,
+      modes: options.modes ?? null,
     }),
   );
 }
@@ -65,6 +66,7 @@ export async function executeAudit(
             : null,
       httpProbe: audit.options.httpProbe,
       gitHistorySecrets: audit.options.gitHistorySecrets,
+      modes: audit.options.modes,
       humanReview: options.humanReview,
       signal,
     });

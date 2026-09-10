@@ -53,3 +53,10 @@ Accessibility, privacy, and reliability start as small Traceward-owned AST scann
 third-party engines. Their nine rules have declared vulnerable and benign benchmark cases and retain
 source-only limitations. They add optional findings to report schema v5 without rewriting existing
 reports. Workflow v12 prevents old in-progress checkpoints from resuming into the expanded fan-out.
+
+## 2026-09-10 — explicit mode selection
+
+All eight offline modes run when no selection is supplied. CLI/API callers may choose a bounded
+subset; unrelated graph nodes still publish explicit skipped runs so coverage becomes `DISABLED`
+rather than clean. Reports store the versioned selection. Stored options and reports gain optional
+fields only, while workflow v13 protects in-progress checkpoint compatibility.

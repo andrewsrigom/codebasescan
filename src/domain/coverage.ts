@@ -10,6 +10,8 @@ function runStatus(run: ScannerRun, skipped: CoverageStatus): CoverageStatus {
   if (run.status === 'completed') return 'COMPLETE';
   if (run.status === 'partial') return 'PARTIAL';
   if (run.status === 'failed') return 'FAILED';
+  if (run.status === 'skipped' && run.detail.startsWith('Disabled by audit mode selection.'))
+    return 'DISABLED';
   return skipped;
 }
 

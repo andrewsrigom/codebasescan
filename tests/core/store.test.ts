@@ -27,6 +27,7 @@ test('audit options are persisted with the queued run', (context) => {
   const audit = store.enqueue(project.id, {
     httpProbe: { url: 'http://127.0.0.1:3000/', allowPrivateNetwork: false },
     gitHistorySecrets: true,
+    modes: ['security', 'privacy'],
     scopePreflight: {
       schemaVersion: 1,
       estimatedAt: '2026-09-09T00:00:00.000Z',
@@ -42,6 +43,7 @@ test('audit options are persisted with the queued run', (context) => {
   });
   assert.equal(store.audit(audit.id).options.httpProbe?.url, 'http://127.0.0.1:3000/');
   assert.equal(store.audit(audit.id).options.gitHistorySecrets, true);
+  assert.deepEqual(store.audit(audit.id).options.modes, ['security', 'privacy']);
   assert.equal(store.audit(audit.id).options.scopePreflight?.supportedFiles, 12);
 });
 test('cancellation cannot be overwritten by a late worker completion', (context) => {

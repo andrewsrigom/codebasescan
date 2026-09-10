@@ -56,3 +56,21 @@ test('coverage keeps zero findings, scanner failure, and unsupported scope disti
   );
   assert.equal(coverage.find((item) => item.id === 'ai-context')?.status, 'DISABLED');
 });
+
+test('coverage shows a mode-disabled scanner as disabled instead of clean', () => {
+  const coverage = buildCoverage(
+    [
+      {
+        id: 'privacy-static',
+        name: 'Static privacy review',
+        status: 'skipped',
+        durationMs: 0,
+        findings: 0,
+        detail: 'Disabled by audit mode selection. Enable privacy to run this capability.',
+      },
+    ],
+    [],
+    'disabled',
+  );
+  assert.equal(coverage.find((item) => item.id === 'privacy-static')?.status, 'DISABLED');
+});

@@ -2,6 +2,7 @@ import { Annotation, END, START, StateGraph, interrupt } from '@langchain/langgr
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import type {
   ArchitectureAnalysis,
+  AuditMode,
   AuditReport,
   CodeQualityAnalysis,
   Dependency,
@@ -18,6 +19,7 @@ import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
 import { attachProvenance } from '../domain/provenance.ts';
 import { buildSecurityChecklist } from '../domain/checklist.ts';
+import { auditModeSelections, modeEnabled, resolveAuditModes } from '../domain/audit-modes.ts';
 import { enrichFindingQuality } from '../domain/finding-quality.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
@@ -43,6 +45,16 @@ import { buildReviewGraph } from './review-graph.ts';
 const mergeRuns = (left: ScannerRun[], right: ScannerRun[]) => [
   ...new Map([...left, ...right].map((run) => [run.id, run])).values(),
 ];
+function skippedByMode(id: string, name: string, mode: AuditMode): ScannerRun {
+  return {
+    id,
+    name,
+    status: 'skipped',
+    durationMs: 0,
+    findings: 0,
+    detail: `Disabled by audit mode selection. Enable ${mode} to run this capability.`,
+  };
+}
 export const AuditState = Annotation.Root({
   auditId: Annotation<string>(),
   executionFingerprint: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
@@ -106,6 +118,7 @@ export function buildAuditGraph(options: {
   reviewer: Reviewer | null;
   httpProbe?: HttpProbeOptions;
   gitHistorySecrets?: boolean;
+  modes?: AuditMode[];
   humanReview?: boolean;
   signal?: AbortSignal;
 }) {
@@ -118,9 +131,11 @@ export function buildAuditGraph(options: {
     reviewer,
     httpProbe,
     gitHistorySecrets = false,
+    modes,
     humanReview = true,
     signal,
   } = options;
+  const enabledModes = new Set(resolveAuditModes(modes));
   let captured: Promise<Snapshot> | null = null;
   const snapshot = () => (captured ??= captureSnapshot(root));
   const event = (state: State, stage: string, message: string) =>
@@ -150,6 +165,11 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('patterns', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('builtin', 'Built-in patterns', 'security')],
+        };
       const started = performance.now();
       const source = await checkedSnapshot(state);
       const findings = scanPatterns(source);
@@ -180,6 +200,11 @@ export function buildAuditGraph(options: {
       return { projectProfile: result.profile, scanners: [result.run] };
     })
     .addNode('ast_security', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('ast-security', 'Framework-aware authorization', 'security')],
+        };
       if (!state.projectProfile)
         throw new Error('Project profile was not available to AST analysis.');
       const result = scanAstSecurity(await checkedSnapshot(state), state.projectProfile);
@@ -191,6 +216,11 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('saas_security', async (state) => {
+      if (!modeEnabled(enabledModes, 'saas'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('saas-security', 'SaaS application security', 'saas')],
+        };
       if (!state.projectProfile)
         throw new Error('Project profile was not available to SaaS security analysis.');
       const result = scanSaasSecurity(await checkedSnapshot(state), state.projectProfile);
@@ -198,6 +228,11 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('react_security', async (state) => {
+      if (!modeEnabled(enabledModes, 'security', 'next-react'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('react-security', 'React client security', 'next-react')],
+        };
       if (!state.projectProfile)
         throw new Error('Project profile was not available to React security analysis.');
       const result = scanReactSecurity(await checkedSnapshot(state), state.projectProfile);
@@ -205,6 +240,11 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('next_security', async (state) => {
+      if (!modeEnabled(enabledModes, 'security', 'next-react'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('next-security', 'Next.js application security', 'next-react')],
+        };
       if (!state.projectProfile)
         throw new Error('Project profile was not available to Next.js security analysis.');
       const result = scanNextSecurity(await checkedSnapshot(state), state.projectProfile);
@@ -212,6 +252,17 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('accessibility_static', async (state) => {
+      if (!modeEnabled(enabledModes, 'accessibility-static'))
+        return {
+          findings: [],
+          scanners: [
+            skippedByMode(
+              'accessibility-static',
+              'Static accessibility review',
+              'accessibility-static',
+            ),
+          ],
+        };
       const result = scanAccessibilityStatic(await checkedSnapshot(state));
       event(
         state,
@@ -221,11 +272,23 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('privacy_static', async (state) => {
+      if (!modeEnabled(enabledModes, 'privacy'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('privacy-static', 'Static privacy review', 'privacy')],
+        };
       const result = scanPrivacyStatic(await checkedSnapshot(state));
       event(state, 'privacy_static', `${result.findings.length} static privacy candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('reliability_static', async (state) => {
+      if (!modeEnabled(enabledModes, 'reliability'))
+        return {
+          findings: [],
+          scanners: [
+            skippedByMode('reliability-static', 'Static reliability review', 'reliability'),
+          ],
+        };
       if (!state.projectProfile)
         throw new Error('Project profile was not available to reliability analysis.');
       const result = scanReliabilityStatic(await checkedSnapshot(state), state.projectProfile);
@@ -237,6 +300,17 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('architecture', async (state) => {
+      if (!modeEnabled(enabledModes, 'maintainability'))
+        return {
+          architectureAnalysis: null,
+          scanners: [
+            skippedByMode(
+              'dependency-cruiser',
+              'JavaScript/TypeScript dependency structure',
+              'maintainability',
+            ),
+          ],
+        };
       const result = await scanArchitecture(
         await checkedSnapshot(state),
         state.projectProfile ?? undefined,
@@ -250,6 +324,13 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('duplication', async (state) => {
+      if (!modeEnabled(enabledModes, 'maintainability'))
+        return {
+          duplicationAnalysis: null,
+          scanners: [
+            skippedByMode('jscpd', 'JavaScript/TypeScript code duplication', 'maintainability'),
+          ],
+        };
       const result = await scanDuplication(
         await checkedSnapshot(state),
         config.temporaryDirectory,
@@ -262,6 +343,14 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('supply_chain', async (state) => {
+      if (!modeEnabled(enabledModes, 'security', 'release-readiness'))
+        return {
+          findings: [],
+          supplyChainAnalysis: null,
+          scanners: [
+            skippedByMode('supply-chain', 'Node.js supply-chain integrity', 'release-readiness'),
+          ],
+        };
       const result = scanSupplyChain(await checkedSnapshot(state));
       event(state, 'supply_chain', `Node.js supply-chain integrity: ${result.run.status}.`);
       return {
@@ -271,6 +360,14 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('code_quality', async (state) => {
+      if (!modeEnabled(enabledModes, 'maintainability'))
+        return {
+          codeQualityAnalysis: null,
+          scanners: [
+            skippedByMode('quality-metrics', 'Code quality metrics', 'maintainability'),
+            skippedByMode('knip', 'Dead code and dependency usage', 'maintainability'),
+          ],
+        };
       const result = await scanCodeQuality(
         await checkedSnapshot(state),
         state.projectProfile ?? undefined,
@@ -281,6 +378,11 @@ export function buildAuditGraph(options: {
       return { codeQualityAnalysis: result.analysis, scanners: result.runs };
     })
     .addNode('posture', async (state) => {
+      if (!modeEnabled(enabledModes, 'security', 'release-readiness'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('posture', 'Application security posture', 'release-readiness')],
+        };
       const started = performance.now();
       const source = await checkedSnapshot(state);
       const findings = scanPosture(source, { includeStructuralCandidates: false });
@@ -306,6 +408,11 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('semgrep', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('semgrep', 'Semgrep', 'security')],
+        };
       const result = await scanExternal(
         'semgrep',
         await checkedSnapshot(state),
@@ -318,6 +425,11 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('gitleaks', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('gitleaks', 'Gitleaks', 'security')],
+        };
       const result = await scanExternal(
         'gitleaks',
         await checkedSnapshot(state),
@@ -331,6 +443,12 @@ export function buildAuditGraph(options: {
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('http_probe', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('http-probe', 'HTTP runtime posture', 'security')],
+          httpProbe: null,
+        };
       const result = httpProbe ? await probeHttp(httpProbe, signal) : skippedHttpProbe();
       event(state, 'http_probe', `HTTP runtime posture: ${result.run.status}.`);
       return {
@@ -340,6 +458,12 @@ export function buildAuditGraph(options: {
       };
     })
     .addNode('inventory', async (state) => {
+      if (!modeEnabled(enabledModes, 'security'))
+        return {
+          dependencies: [],
+          findings: [],
+          scanners: [skippedByMode('osv', 'Dependency vulnerabilities', 'security')],
+        };
       const result = await scanOsv(
         await checkedSnapshot(state),
         config.osv,
@@ -431,6 +555,7 @@ export function buildAuditGraph(options: {
         skipped: state.skipped,
         truncated: state.truncated,
         aiMode: config.aiMode,
+        auditModes: auditModeSelections(modes),
         findings,
         scanners: state.scanners,
         dependencies: state.dependencies,

@@ -59,6 +59,15 @@ cd /absolute/path/to/project
 traceward audit .
 ```
 
+All offline modes run by default. A focused pass can select a comma-separated subset:
+
+```bash
+traceward audit . --modes security,saas,next-react
+traceward audit . --modes accessibility-static,privacy,reliability
+```
+
+The report records all eight modes and marks omitted capabilities `DISABLED`, never clean.
+
 Open the printed `traceward-report/<audit-id>/index.html`. The directory also contains the full
 audit JSON, a prioritized `agent-plan.json` and its JSON Schema, a compatibility
 `remediation-plan.json`, a bounded Codex bundle, Markdown, SARIF, CycloneDX, and a hash manifest.
