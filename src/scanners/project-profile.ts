@@ -1,6 +1,7 @@
 import path from 'node:path';
 import ts from 'typescript';
 import { digest } from '../domain/findings.ts';
+import { buildProjectDataMap } from '../domain/data-map.ts';
 import type {
   ProjectCallEdge,
   ProjectEntrypoint,
@@ -228,6 +229,8 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
   if (/(?:^|\.)(?:redirect|permanentredirect)$/.test(value)) return 'redirect';
   if (/(?:cookies(?:\(\))?|\.cookies)\.(?:get|set|delete)$|(?:^|\.)cookie$/.test(value))
     return 'cookie';
+  if (/(?:^|\.)(?:localstorage|sessionstorage)\.(?:getitem|setitem|removeitem)$/.test(value))
+    return 'browser-storage';
   if (/(?:^|\.)(?:json|send|nextresponse\.json|response\.json)$/.test(value)) return 'response';
   if (
     /(?:^|\.)(?:verifywebhook|verifysignature|constructevent|verifyhmac|checksignature)$/.test(
@@ -989,7 +992,12 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       vocabulary: saasConfiguration.config.vocabulary,
       helpers: saasConfiguration.config.helpers,
       expectedUnauthenticatedRoutes: saasConfiguration.config.expectedUnauthenticatedRoutes,
+      ...(saasConfiguration.config.context ? { context: saasConfiguration.config.context } : {}),
+      ...(saasConfiguration.config.verification
+        ? { verification: saasConfiguration.config.verification }
+        : {}),
     },
+    dataMap: buildProjectDataMap(facts, saasConfiguration.config.context),
     filesAnalyzed: parsed.length,
     nodesAnalyzed,
     issues: issues.slice(0, 200),
@@ -1006,7 +1014,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.5.0',
+      version: '0.6.0',
     },
   };
 }

@@ -43,6 +43,7 @@ test('executable Knip configuration is detected but never imported', () => {
 
 test('declarative SaaS configuration extends bounded generic semantics', () => {
   const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({ scripts: { test: 'node --test', build: 'next build' } }),
     'traceward.config.jsonc': `{
       // Project terms extend the generic defaults.
       "schemaVersion": 1,
@@ -54,7 +55,21 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
         "authorization": ["requireMembership"],
         "resourceScope": ["scopeToCustomerWorkspace"]
       },
-      "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"]
+      "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"],
+      "context": {
+        "features": ["authentication", "tenancy", "billing"],
+        "roles": ["admin", "member"],
+        "sensitiveData": ["personal", "financial"],
+        "storageBoundaries": ["postgres"],
+        "externalServices": ["stripe"],
+        "priorityPaths": ["src/app/api/*"],
+        "outOfScopePaths": ["legacy/*"]
+      },
+      "verification": {
+        "packageManager": "npm",
+        "testScripts": ["test", "missing"],
+        "buildScripts": ["build"]
+      }
     }`,
   });
 
@@ -64,7 +79,15 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
   assert.ok(result.config.vocabulary.tenantKeys.includes('customerWorkspaceKey'));
   assert.ok(result.config.helpers.authorization.includes('requireMembership'));
   assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health', '/api/public/*']);
-  assert.deepEqual(result.issues, []);
+  assert.deepEqual(result.config.context?.features, ['authentication', 'tenancy', 'billing']);
+  assert.deepEqual(result.config.context?.sensitiveData, ['personal', 'financial']);
+  assert.deepEqual(result.config.verification, {
+    packageManager: 'npm',
+    testScripts: ['test'],
+    buildScripts: ['build'],
+  });
+  assert.equal(result.issues.length, 1);
+  assert.ok(result.issues[0]?.includes('root package.json'));
 });
 
 test('unsafe SaaS settings are reported and removed without executing code', () => {
@@ -74,6 +97,8 @@ test('unsafe SaaS settings are reported and removed without executing code', () 
       vocabulary: { tenantKeys: ['workspaceId', 'bad.name'] },
       helpers: { authorization: ['requireRole'], execute: ['targetCode'] },
       expectedUnauthenticatedRoutes: ['/api/health', '../outside', '/api/(.*)'],
+      context: { features: ['unknown-feature'], priorityPaths: ['../outside'] },
+      verification: { packageManager: 'shell', testScripts: ['test; remove-all'] },
       plugins: ['./target-code.ts'],
     }),
   });
@@ -83,6 +108,8 @@ test('unsafe SaaS settings are reported and removed without executing code', () 
   assert.ok(result.config.vocabulary.tenantKeys.includes('workspaceId'));
   assert.ok(!result.config.vocabulary.tenantKeys.includes('bad.name'));
   assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health']);
+  assert.deepEqual(result.config.context?.features, []);
+  assert.equal(result.config.verification, undefined);
   assert.equal((result.config.helpers as unknown as Record<string, unknown>).execute, undefined);
 });
 

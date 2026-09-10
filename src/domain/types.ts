@@ -258,6 +258,7 @@ export type ProjectFactKind =
   | 'file-access'
   | 'redirect'
   | 'cookie'
+  | 'browser-storage'
   | 'response'
   | 'secret-access'
   | 'resource-scope'
@@ -354,6 +355,64 @@ export interface ProjectSaasSemantics {
     auditLog: string[];
   };
   expectedUnauthenticatedRoutes: string[];
+  context?: ProjectDeclaredContext;
+  verification?: ProjectVerificationContext;
+}
+export type ProjectFeature =
+  'authentication' | 'tenancy' | 'billing' | 'webhooks' | 'administration' | 'uploads';
+export type ProjectSensitiveDataClass =
+  | 'credentials'
+  | 'personal'
+  | 'financial'
+  | 'health'
+  | 'location'
+  | 'communications'
+  | 'files'
+  | 'analytics';
+export interface ProjectDeclaredContext {
+  features: ProjectFeature[];
+  roles: string[];
+  sensitiveData: ProjectSensitiveDataClass[];
+  storageBoundaries: string[];
+  externalServices: string[];
+  priorityPaths: string[];
+  outOfScopePaths: string[];
+}
+export interface ProjectVerificationContext {
+  packageManager: 'npm' | 'pnpm' | 'yarn';
+  testScripts: string[];
+  buildScripts: string[];
+}
+export type ProjectDataOperation =
+  | 'sensitive-read'
+  | 'persistent-storage'
+  | 'browser-storage'
+  | 'cookie'
+  | 'response'
+  | 'log'
+  | 'url-or-redirect'
+  | 'outbound-transfer'
+  | 'financial-operation';
+export interface ProjectDataMapEntry {
+  id: string;
+  operation: ProjectDataOperation;
+  file: string;
+  line: number;
+  signal: string;
+  sourceFactId: string;
+  provenance: 'observed';
+  dataClasses: (ProjectSensitiveDataClass | 'unknown')[];
+}
+export interface ProjectDataMap {
+  schemaVersion: 1;
+  entries: ProjectDataMapEntry[];
+  summary: Partial<Record<ProjectDataOperation, number>>;
+  declaredData: ProjectSensitiveDataClass[];
+  declaredBoundaries: {
+    storage: string[];
+    externalServices: string[];
+  };
+  truncated: boolean;
 }
 export interface ProjectProfile {
   schemaVersion: 1;
@@ -366,6 +425,7 @@ export interface ProjectProfile {
   calls: ProjectCallEdge[];
   facts: ProjectFact[];
   saasSemantics?: ProjectSaasSemantics;
+  dataMap?: ProjectDataMap;
   filesAnalyzed: number;
   nodesAnalyzed: number;
   issues: string[];

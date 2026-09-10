@@ -1,13 +1,21 @@
 import path from 'node:path';
 import ts from 'typescript';
 import { parseDocument } from 'yaml';
-import type { Snapshot, SourceFile } from '../domain/types.ts';
+import type {
+  ProjectDeclaredContext,
+  ProjectFeature,
+  ProjectSensitiveDataClass,
+  ProjectVerificationContext,
+  Snapshot,
+  SourceFile,
+} from '../domain/types.ts';
 import { isRuntimeSource } from '../security/paths.ts';
 
 const maximumPatterns = 200;
 const maximumWorkspaces = 50;
 const maximumSaasAliases = 100;
 const maximumWorkspacePackages = 200;
+const maximumContextValues = 50;
 const workspaceKeys = new Set([
   'entry',
   'project',
@@ -49,6 +57,34 @@ const saasHelperKeys = [
   'csrf',
   'auditLog',
 ] as const;
+const projectFeatures = new Set<ProjectFeature>([
+  'authentication',
+  'tenancy',
+  'billing',
+  'webhooks',
+  'administration',
+  'uploads',
+]);
+const sensitiveDataClasses = new Set<ProjectSensitiveDataClass>([
+  'credentials',
+  'personal',
+  'financial',
+  'health',
+  'location',
+  'communications',
+  'files',
+  'analytics',
+]);
+const contextKeys = new Set([
+  'features',
+  'roles',
+  'sensitiveData',
+  'storageBoundaries',
+  'externalServices',
+  'priorityPaths',
+  'outOfScopePaths',
+]);
+const verificationKeys = new Set(['packageManager', 'testScripts', 'buildScripts']);
 
 export interface SaasVocabulary {
   tenantKeys: string[];
@@ -74,6 +110,8 @@ export interface TrustedSaasConfiguration {
   vocabulary: SaasVocabulary;
   helpers: SaasHelpers;
   expectedUnauthenticatedRoutes: string[];
+  context?: ProjectDeclaredContext;
+  verification?: ProjectVerificationContext;
 }
 
 export interface TrustedSaasConfigurationResult {
@@ -201,6 +239,42 @@ function safeIdentifier(value: unknown): string | undefined {
     : undefined;
 }
 
+function safeContextLabel(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const label = value.trim();
+  return label.length > 0 && label.length <= 80 && /^[A-Za-z0-9@._ /-]+$/.test(label)
+    ? label
+    : undefined;
+}
+
+function safeScriptName(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 80 &&
+    /^[A-Za-z0-9:_-]+$/.test(value)
+    ? value
+    : undefined;
+}
+
+function boundedContextValues<T>(
+  value: unknown,
+  sanitize: (item: unknown) => T | undefined,
+): T[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return [...new Set(value.slice(0, maximumContextValues).map(sanitize).filter(Boolean))] as T[];
+}
+
+function rejectedContextValues(
+  value: unknown,
+  sanitize: (item: unknown) => unknown | undefined,
+): boolean {
+  return (
+    !Array.isArray(value) ||
+    value.length > maximumContextValues ||
+    value.some((item) => sanitize(item) === undefined)
+  );
+}
+
 function safeRoutePattern(value: unknown): string | undefined {
   if (
     typeof value !== 'string' ||
@@ -234,6 +308,38 @@ function mergeAliases(defaults: string[], configured: string[] | undefined): str
   return [...new Set([...defaults, ...(configured ?? [])])];
 }
 
+function sanitizeProjectContext(value: unknown): ProjectDeclaredContext | undefined {
+  const input = object(value);
+  if (!input) return undefined;
+  const feature = (item: unknown) =>
+    typeof item === 'string' && projectFeatures.has(item as ProjectFeature)
+      ? (item as ProjectFeature)
+      : undefined;
+  const dataClass = (item: unknown) =>
+    typeof item === 'string' && sensitiveDataClasses.has(item as ProjectSensitiveDataClass)
+      ? (item as ProjectSensitiveDataClass)
+      : undefined;
+  return {
+    features: boundedContextValues(input.features, feature) ?? [],
+    roles: boundedContextValues(input.roles, safeIdentifier) ?? [],
+    sensitiveData: boundedContextValues(input.sensitiveData, dataClass) ?? [],
+    storageBoundaries: boundedContextValues(input.storageBoundaries, safeContextLabel) ?? [],
+    externalServices: boundedContextValues(input.externalServices, safeContextLabel) ?? [],
+    priorityPaths: boundedContextValues(input.priorityPaths, safePathPattern) ?? [],
+    outOfScopePaths: boundedContextValues(input.outOfScopePaths, safePathPattern) ?? [],
+  };
+}
+
+function sanitizeVerification(value: unknown): ProjectVerificationContext | undefined {
+  const input = object(value);
+  if (!input || !['npm', 'pnpm', 'yarn'].includes(String(input.packageManager))) return undefined;
+  return {
+    packageManager: input.packageManager as ProjectVerificationContext['packageManager'],
+    testScripts: boundedContextValues(input.testScripts, safeScriptName) ?? [],
+    buildScripts: boundedContextValues(input.buildScripts, safeScriptName) ?? [],
+  };
+}
+
 function saasHasRejectedSettings(value: unknown): boolean {
   const input = object(value);
   if (!input) return true;
@@ -244,7 +350,9 @@ function saasHasRejectedSettings(value: unknown): boolean {
         key !== 'schemaVersion' &&
         key !== 'vocabulary' &&
         key !== 'helpers' &&
-        key !== 'expectedUnauthenticatedRoutes',
+        key !== 'expectedUnauthenticatedRoutes' &&
+        key !== 'context' &&
+        key !== 'verification',
     )
   )
     return true;
@@ -276,6 +384,48 @@ function saasHasRejectedSettings(value: unknown): boolean {
       input.expectedUnauthenticatedRoutes.some((route) => safeRoutePattern(route) === undefined))
   )
     return true;
+  const context = object(input.context);
+  if (input.context !== undefined) {
+    if (!context || Object.keys(context).some((key) => !contextKeys.has(key))) return true;
+    if (
+      context.features !== undefined &&
+      rejectedContextValues(context.features, (item) =>
+        typeof item === 'string' && projectFeatures.has(item as ProjectFeature)
+          ? (item as ProjectFeature)
+          : undefined,
+      )
+    )
+      return true;
+    if (context.roles !== undefined && rejectedContextValues(context.roles, safeIdentifier))
+      return true;
+    if (
+      context.sensitiveData !== undefined &&
+      rejectedContextValues(context.sensitiveData, (item) =>
+        typeof item === 'string' && sensitiveDataClasses.has(item as ProjectSensitiveDataClass)
+          ? (item as ProjectSensitiveDataClass)
+          : undefined,
+      )
+    )
+      return true;
+    for (const key of ['storageBoundaries', 'externalServices'] as const)
+      if (context[key] !== undefined && rejectedContextValues(context[key], safeContextLabel))
+        return true;
+    for (const key of ['priorityPaths', 'outOfScopePaths'] as const)
+      if (context[key] !== undefined && rejectedContextValues(context[key], safePathPattern))
+        return true;
+  }
+  const verification = object(input.verification);
+  if (input.verification !== undefined) {
+    if (!verification || Object.keys(verification).some((key) => !verificationKeys.has(key)))
+      return true;
+    if (!['npm', 'pnpm', 'yarn'].includes(String(verification.packageManager))) return true;
+    for (const key of ['testScripts', 'buildScripts'] as const)
+      if (
+        verification[key] !== undefined &&
+        rejectedContextValues(verification[key], safeScriptName)
+      )
+        return true;
+  }
   return false;
 }
 
@@ -283,6 +433,8 @@ function sanitizeSaasConfiguration(value: unknown): TrustedSaasConfiguration {
   const input = object(value) ?? {};
   const vocabulary = object(input.vocabulary) ?? {};
   const helpers = object(input.helpers) ?? {};
+  const context = sanitizeProjectContext(input.context);
+  const verification = sanitizeVerification(input.verification);
   return {
     schemaVersion: 1,
     vocabulary: Object.fromEntries(
@@ -307,6 +459,8 @@ function sanitizeSaasConfiguration(value: unknown): TrustedSaasConfiguration {
           .filter(Boolean),
       ),
     ] as string[],
+    ...(context ? { context } : {}),
+    ...(verification ? { verification } : {}),
   };
 }
 
@@ -503,6 +657,34 @@ export function declarativeKnipConfiguration(snapshot: Snapshot): TrustedKnipCon
   return { config: {}, sources, issues };
 }
 
+function retainDeclaredVerificationScripts(
+  snapshot: Snapshot,
+  config: TrustedSaasConfiguration,
+  issues: string[],
+): TrustedSaasConfiguration {
+  if (!config.verification) return config;
+  const manifest = snapshot.files.find(
+    (file) => file.path === 'package.json' && isRuntimeSource(file),
+  );
+  const scripts = object(manifest ? parseJsonc(manifest)?.scripts : undefined) ?? {};
+  const retain = (names: string[]) => names.filter((name) => typeof scripts[name] === 'string');
+  const testScripts = retain(config.verification.testScripts);
+  const buildScripts = retain(config.verification.buildScripts);
+  const omitted =
+    config.verification.testScripts.length +
+    config.verification.buildScripts.length -
+    testScripts.length -
+    buildScripts.length;
+  if (omitted)
+    issues.push(
+      `${omitted} verification script name(s) were ignored because the root package.json does not declare them.`,
+    );
+  return {
+    ...config,
+    verification: { ...config.verification, testScripts, buildScripts },
+  };
+}
+
 export function declarativeSaasConfiguration(snapshot: Snapshot): TrustedSaasConfigurationResult {
   const sources: string[] = [];
   const issues: string[] = [];
@@ -518,7 +700,12 @@ export function declarativeSaasConfiguration(snapshot: Snapshot): TrustedSaasCon
     sources.push(name);
     if (saasHasRejectedSettings(parsed))
       issues.push(`${name} contains unsupported or unsafe settings that were ignored.`);
-    return { config: sanitizeSaasConfiguration(parsed), sources, issues };
+    const config = retainDeclaredVerificationScripts(
+      snapshot,
+      sanitizeSaasConfiguration(parsed),
+      issues,
+    );
+    return { config, sources, issues };
   }
   if (
     snapshot.files.some(

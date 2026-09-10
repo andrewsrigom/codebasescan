@@ -119,7 +119,21 @@ Projects may declare their own SaaS vocabulary and wrapper names in a root
     "rateLimit": ["consumeQuota"],
     "idempotency": ["claimDelivery"]
   },
-  "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"]
+  "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"],
+  "context": {
+    "features": ["authentication", "tenancy", "billing"],
+    "roles": ["admin", "member"],
+    "sensitiveData": ["personal", "financial"],
+    "storageBoundaries": ["postgres"],
+    "externalServices": ["stripe"],
+    "priorityPaths": ["src/app/api/*"],
+    "outOfScopePaths": ["legacy/*"]
+  },
+  "verification": {
+    "packageManager": "pnpm",
+    "testScripts": ["test"],
+    "buildScripts": ["build"]
+  }
 }
 ```
 
@@ -128,6 +142,12 @@ in captured source. Lists, identifiers, route patterns, keys, and file size are 
 unsafe settings keep profile coverage partial and are ignored. `traceward.config.ts/js` is never
 loaded. Public-route declarations prevent a project-specific login warning but do not turn the
 authentication checklist into a clean result.
+
+Context is declared evidence, not observed proof. Out-of-scope paths remain visible and never hide
+captured findings. Verification names are retained only when the root `package.json` declares the
+script. They become approval-required agent-plan commands; the audit never runs them. The profile
+also emits a bounded data map from observed database, browser-storage, cookie, response, logging,
+redirect, outbound, secret-access, and billing facts.
 
 The dedicated SaaS scanner covers request-controlled billing values, tenant/owner/role assignment,
 predictable tokens, recovery-token storage and expiry, internal error responses, sensitive logging

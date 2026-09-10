@@ -200,6 +200,74 @@ const scopePreflight = z.looseObject({
   truncationApproved: z.boolean(),
 });
 
+const projectFeature = z.enum([
+  'authentication',
+  'tenancy',
+  'billing',
+  'webhooks',
+  'administration',
+  'uploads',
+]);
+const projectDataClass = z.enum([
+  'credentials',
+  'personal',
+  'financial',
+  'health',
+  'location',
+  'communications',
+  'files',
+  'analytics',
+]);
+const projectDataOperation = z.enum([
+  'sensitive-read',
+  'persistent-storage',
+  'browser-storage',
+  'cookie',
+  'response',
+  'log',
+  'url-or-redirect',
+  'outbound-transfer',
+  'financial-operation',
+]);
+const projectContext = z.object({
+  features: z.array(projectFeature).max(50),
+  roles: z.array(shortText).max(50),
+  sensitiveData: z.array(projectDataClass).max(50),
+  storageBoundaries: z.array(shortText).max(50),
+  externalServices: z.array(shortText).max(50),
+  priorityPaths: z.array(shortText).max(50),
+  outOfScopePaths: z.array(shortText).max(50),
+});
+const projectVerification = z.object({
+  packageManager: z.enum(['npm', 'pnpm', 'yarn']),
+  testScripts: z.array(shortText).max(50),
+  buildScripts: z.array(shortText).max(50),
+});
+const projectDataMap = z.object({
+  schemaVersion: z.literal(1),
+  entries: z
+    .array(
+      z.object({
+        id: shortText,
+        operation: projectDataOperation,
+        file: shortText,
+        line: z.number().int().positive(),
+        signal: shortText,
+        sourceFactId: shortText,
+        provenance: z.literal('observed'),
+        dataClasses: z.array(z.union([projectDataClass, z.literal('unknown')])).max(20),
+      }),
+    )
+    .max(2_000),
+  summary: z.partialRecord(projectDataOperation, z.number().int().nonnegative()),
+  declaredData: z.array(projectDataClass).max(50),
+  declaredBoundaries: z.object({
+    storage: z.array(shortText).max(50),
+    externalServices: z.array(shortText).max(50),
+  }),
+  truncated: z.boolean(),
+});
+
 const projectProfile = z.looseObject({
   schemaVersion: z.literal(1),
   status: z.enum(['complete', 'partial', 'unsupported']),
@@ -239,8 +307,11 @@ const projectProfile = z.looseObject({
       vocabulary: z.record(shortText, z.array(shortText).max(100)),
       helpers: z.record(shortText, z.array(shortText).max(100)),
       expectedUnauthenticatedRoutes: z.array(shortText).max(100),
+      context: projectContext.optional(),
+      verification: projectVerification.optional(),
     })
     .optional(),
+  dataMap: projectDataMap.optional(),
   filesAnalyzed: z.number().int().nonnegative(),
   nodesAnalyzed: z.number().int().nonnegative(),
   issues: z.array(shortText).max(10_000),

@@ -155,6 +155,7 @@ test('captured workspace package exports resolve without loading package code', 
 
 test('declarative SaaS semantics recognize project vocabulary and helpers', () => {
   const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({ scripts: { test: 'node --test', build: 'next build' } }),
     'traceward.config.json': JSON.stringify({
       schemaVersion: 1,
       vocabulary: { tenantKeys: ['customerWorkspaceKey'] },
@@ -166,6 +167,16 @@ test('declarative SaaS semantics recognize project vocabulary and helpers', () =
         csrf: ['assertSameOrigin'],
       },
       expectedUnauthenticatedRoutes: ['/api/status'],
+      context: {
+        features: ['authentication', 'tenancy', 'billing'],
+        roles: ['admin', 'member'],
+        sensitiveData: ['personal', 'financial'],
+        storageBoundaries: ['postgres'],
+        externalServices: ['stripe'],
+        priorityPaths: ['src/app/api/*'],
+        outOfScopePaths: [],
+      },
+      verification: { packageManager: 'npm', testScripts: ['test'], buildScripts: ['build'] },
     }),
     'src/app/api/workspaces/[id]/route.ts': `
       export async function PATCH() {
@@ -179,6 +190,11 @@ test('declarative SaaS semantics recognize project vocabulary and helpers', () =
         });
       }
     `,
+    'src/components/preferences.ts': `
+      export function savePreferences(value: string) {
+        localStorage.setItem('preferences', value);
+      }
+    `,
   });
 
   const profile = profileProject(snapshot).profile;
@@ -190,6 +206,12 @@ test('declarative SaaS semantics recognize project vocabulary and helpers', () =
   assert.ok(profile.saasSemantics);
   assert.deepEqual(profile.saasSemantics.sources, ['traceward.config.json']);
   assert.deepEqual(profile.saasSemantics.expectedUnauthenticatedRoutes, ['/api/status']);
+  assert.deepEqual(profile.saasSemantics.context?.roles, ['admin', 'member']);
+  assert.deepEqual(profile.saasSemantics.verification?.testScripts, ['test']);
+  assert.equal(profile.dataMap?.declaredData.includes('financial'), true);
+  assert.equal(profile.dataMap?.declaredBoundaries.storage[0], 'postgres');
+  assert.equal(profile.dataMap?.summary['persistent-storage'], 1);
+  assert.equal(profile.dataMap?.summary['browser-storage'], 1);
 });
 
 test('profiling parses target code as data without executing it', () => {

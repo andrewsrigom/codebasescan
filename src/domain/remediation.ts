@@ -4,6 +4,8 @@ import type {
   Dependency,
   Finding,
   ProjectCallEdge,
+  ProjectDataMap,
+  ProjectDeclaredContext,
   ProjectEntrypoint,
   ProjectFact,
   ProjectFramework,
@@ -187,6 +189,8 @@ export interface RemediationTaskBundle {
     symbols: ProjectSymbol[];
     callEdges: ProjectCallEdge[];
     securityFacts: ProjectFact[];
+    declaredContext: ProjectDeclaredContext | null;
+    dataMap: ProjectDataMap | null;
     truncated: boolean;
   } | null;
   limitations: string[];
@@ -261,6 +265,47 @@ function tracewardRescan(taskId: string): RemediationVerificationCommand {
     requiresApproval: true,
     source: 'traceward',
   };
+}
+
+function projectVerificationCommands(
+  report: AuditReport,
+  taskId: string,
+): RemediationVerificationCommand[] {
+  const verification = report.projectProfile?.saasSemantics?.verification;
+  if (!verification) return [];
+  const command = (script: string) =>
+    verification.packageManager === 'yarn'
+      ? ['yarn', 'run', script]
+      : [verification.packageManager, 'run', script];
+  return [
+    ...verification.testScripts.map((script): RemediationVerificationCommand => ({
+      id: `${taskId}:project-test:${script}`,
+      kind: 'project_test',
+      argv: command(script),
+      workingDirectory: 'project_root',
+      timeoutSeconds: 900,
+      network: 'denied',
+      requiresApproval: true,
+      source: 'project_context',
+    })),
+    ...verification.buildScripts.map((script): RemediationVerificationCommand => ({
+      id: `${taskId}:project-build:${script}`,
+      kind: 'project_build',
+      argv: command(script),
+      workingDirectory: 'project_root',
+      timeoutSeconds: 1_800,
+      network: 'denied',
+      requiresApproval: true,
+      source: 'project_context',
+    })),
+  ];
+}
+
+function taskVerificationCommands(
+  report: AuditReport,
+  taskId: string,
+): RemediationVerificationCommand[] {
+  return [...projectVerificationCommands(report, taskId), tracewardRescan(taskId)];
 }
 
 function highestExposure(findings: Finding[]): RemediationExposure {
@@ -414,7 +459,7 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
         ? [`Update ${group.package} and only the lockfile entries required by its safe fix.`]
         : [`Resolve the supported upgrade path for ${group.package} before changing versions.`],
       acceptanceChecks: standardChecks(id, 'finding'),
-      verificationCommands: [tracewardRescan(id)],
+      verificationCommands: taskVerificationCommands(report, id),
       changeRisk: allComplete ? 'medium' : 'high',
       autoFixable,
       requiresHuman: !autoFixable,
@@ -440,7 +485,7 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
   });
 }
 
-function findingTask(finding: Finding): RemediationTask {
+function findingTask(report: AuditReport, finding: Finding): RemediationTask {
   const isConfiguration = finding.category === 'configuration' || finding.source === 'posture';
   const kind: RemediationTaskKind =
     finding.disposition === 'confirmed'
@@ -493,7 +538,7 @@ function findingTask(finding: Finding): RemediationTask {
     ],
     expectedChanges: [finding.remediation],
     acceptanceChecks: standardChecks(id, 'finding'),
-    verificationCommands: [tracewardRescan(id)],
+    verificationCommands: taskVerificationCommands(report, id),
     changeRisk,
     autoFixable: false,
     requiresHuman: kind === 'investigate_finding' || changeRisk === 'high',
@@ -577,7 +622,7 @@ function controlTasks(report: AuditReport, tasksByFinding: Map<string, string>):
           'Capture deterministic source evidence or an explicit authorized human/runtime decision.',
         ],
         acceptanceChecks: standardChecks(id, 'control'),
-        verificationCommands: [tracewardRescan(id)],
+        verificationCommands: taskVerificationCommands(report, id),
         changeRisk: 'high',
         autoFixable: false,
         requiresHuman: true,
@@ -608,7 +653,7 @@ export function buildRemediationPlan(report: AuditReport): RemediationPlan {
   const dependency = dependencyTasks(report);
   const source = report.findings
     .filter((finding) => !finding.vulnerability && unresolvedFinding(finding))
-    .map(findingTask);
+    .map((finding) => findingTask(report, finding));
   const tasksByFinding = new Map(
     [...dependency, ...source].flatMap((task) =>
       task.findings.map((finding) => [finding.id, task.id]),
@@ -789,7 +834,11 @@ export function buildRemediationTaskBundle(
   const relevantCalls = profile?.calls.filter(matchesFile);
   const relevantSymbols = profile?.symbols.filter(matchesFile);
   const relevantEntrypoints = profile?.entrypoints.filter(matchesFile);
+  const relevantDataEntries = profile?.dataMap?.entries.filter(matchesFile);
   const contextLimit = 200;
+  const dataMapSummary: ProjectDataMap['summary'] = {};
+  for (const entry of relevantDataEntries ?? [])
+    dataMapSummary[entry.operation] = (dataMapSummary[entry.operation] ?? 0) + 1;
   return {
     schemaVersion: 1,
     kind: 'traceward-remediation-task-bundle',
@@ -808,9 +857,23 @@ export function buildRemediationTaskBundle(
           symbols: (relevantSymbols ?? []).slice(0, contextLimit),
           callEdges: (relevantCalls ?? []).slice(0, contextLimit),
           securityFacts: (relevantFacts ?? []).slice(0, contextLimit),
-          truncated: [relevantEntrypoints, relevantSymbols, relevantCalls, relevantFacts].some(
-            (items) => (items?.length ?? 0) > contextLimit,
-          ),
+          declaredContext: profile.saasSemantics?.context ?? null,
+          dataMap: profile.dataMap
+            ? {
+                ...profile.dataMap,
+                entries: (relevantDataEntries ?? []).slice(0, contextLimit),
+                summary: dataMapSummary,
+                truncated:
+                  profile.dataMap.truncated || (relevantDataEntries?.length ?? 0) > contextLimit,
+              }
+            : null,
+          truncated: [
+            relevantEntrypoints,
+            relevantSymbols,
+            relevantCalls,
+            relevantFacts,
+            relevantDataEntries,
+          ].some((items) => (items?.length ?? 0) > contextLimit),
         }
       : null,
     limitations: [

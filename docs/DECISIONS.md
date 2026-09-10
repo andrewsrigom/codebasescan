@@ -38,3 +38,11 @@ risk, automatic-fix eligibility, human-authorization flags, expected changes, an
 verification-command allowlists. `remediation-plan.json` remains a byte-identical filename alias so
 existing report consumers can move deliberately; its payload also carries schema version 2. Version
 1 plans were external generated artifacts rather than stored audit state and are not rewritten.
+
+## 2026-09-10 — declared context and observed data map
+
+Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script
+names. The audit still executes neither configuration nor scripts. Declared context keeps separate
+provenance from an observed, source-derived data map. Both fields are optional additions to report
+schema v5, so stored earlier reports remain readable and are not rewritten. Workflow v11 prevents an
+in-progress older graph from resuming into the changed profiler behavior.

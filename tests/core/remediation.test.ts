@@ -83,13 +83,64 @@ test('agent plan JSON Schema describes the current required contract', () => {
 });
 
 test('unconfirmed source candidates become analysis tasks rather than automatic patches', () => {
-  const plan = buildRemediationPlan(sampleReport());
+  const report = sampleReport();
+  report.projectProfile = {
+    schemaVersion: 1,
+    status: 'complete',
+    languages: ['typescript'],
+    frameworks: [],
+    entrypoints: [],
+    symbols: [],
+    imports: [],
+    calls: [],
+    facts: [],
+    filesAnalyzed: 1,
+    nodesAnalyzed: 1,
+    issues: [],
+    truncated: false,
+    saasSemantics: {
+      schemaVersion: 1,
+      sources: ['traceward.config.json'],
+      vocabulary: {
+        tenantKeys: [],
+        ownerKeys: [],
+        roleKeys: [],
+        billingKeys: [],
+        tokenKeys: [],
+      },
+      helpers: {
+        authentication: [],
+        authorization: [],
+        validation: [],
+        resourceScope: [],
+        rateLimit: [],
+        idempotency: [],
+        csrf: [],
+        auditLog: [],
+      },
+      expectedUnauthenticatedRoutes: [],
+      verification: {
+        packageManager: 'pnpm',
+        testScripts: ['test:unit'],
+        buildScripts: ['build'],
+      },
+    },
+  };
+  const plan = buildRemediationPlan(report);
   assert.equal(plan.tasks[0]?.kind, 'investigate_finding');
   assert.equal(plan.tasks[0]?.status, 'ready');
   assert.equal(plan.tasks[0]?.constraints.execution, 'plan_only');
   assert.equal(plan.tasks[0]?.constraints.network, 'denied');
   assert.equal(plan.tasks[0]?.autoFixable, false);
   assert.equal(plan.tasks[0]?.requiresHuman, true);
+  assert.deepEqual(
+    plan.tasks[0]?.verificationCommands.map((command) => command.argv),
+    [
+      ['pnpm', 'run', 'test:unit'],
+      ['pnpm', 'run', 'build'],
+      ['traceward', 'audit', '.', '--format', 'json'],
+    ],
+  );
 });
 
 test('remediation result separates resolved, remaining, and unexecuted checks', () => {
