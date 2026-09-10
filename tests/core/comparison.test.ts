@@ -18,6 +18,8 @@ test('report comparison separates new, resolved, unchanged, and severity changes
   current.auditId = '00000000-0000-4000-8000-000000000002';
   current.findings = [unchanged, added];
   const comparison = compareReports(base, current);
+  assert.equal(comparison.schemaVersion, 2);
+  assert.equal(comparison.historyReports, 0);
   assert.equal(comparison.newFindings.length, 1);
   assert.equal(comparison.resolvedFindings.length, 0);
   assert.equal(comparison.unchangedFindings.length, 1);
@@ -32,9 +34,117 @@ test('report comparison separates new, resolved, unchanged, and severity changes
     before: 'high',
     after: 'critical',
   });
+  assert.deepEqual(comparison.reappearedFindings, []);
+  assert.equal(comparison.components[0]?.name, 'Unassigned');
 
   current.findings = [added];
   assert.equal(compareReports(base, current).resolvedFindings.length, 1);
+});
+
+test('comparison attributes lifecycle to components and identifies reappearing fingerprints', () => {
+  const historical = sampleReport();
+  historical.auditId = '00000000-0000-4000-8000-000000000000';
+  const base = sampleReport();
+  base.auditId = '00000000-0000-4000-8000-000000000001';
+  base.findings = [];
+  const current = sampleReport();
+  current.auditId = '00000000-0000-4000-8000-000000000002';
+  current.projectProfile = {
+    schemaVersion: 1,
+    status: 'complete',
+    languages: ['typescript'],
+    frameworks: [],
+    components: [
+      {
+        id: 'component-api',
+        name: 'api',
+        root: 'src',
+        manifest: 'package.json',
+        kind: 'package',
+        sourceFiles: 1,
+      },
+    ],
+    componentEdges: [],
+    entrypoints: [],
+    symbols: [],
+    imports: [],
+    calls: [],
+    facts: [],
+    filesAnalyzed: 1,
+    nodesAnalyzed: 1,
+    issues: [],
+    truncated: false,
+  };
+  const comparison = compareReports(base, current, [historical, historical]);
+  assert.equal(comparison.historyReports, 1);
+  assert.deepEqual(
+    comparison.reappearedFindings.map((finding) => finding.fingerprint),
+    [current.findings[0]!.fingerprint],
+  );
+  assert.deepEqual(comparison.newFindings[0]?.componentIds, ['component-api']);
+  assert.deepEqual(comparison.components, [
+    {
+      componentId: 'component-api',
+      name: 'api',
+      newFindings: 1,
+      resolvedFindings: 0,
+      unchangedFindings: 0,
+      reappearedFindings: 1,
+      severityChanges: 0,
+      dispositionChanges: 0,
+    },
+  ]);
+});
+
+test('comparison records disposition and component ownership changes separately', () => {
+  const base = sampleReport();
+  const current = structuredClone(base);
+  current.auditId = '00000000-0000-4000-8000-000000000002';
+  current.findings[0]!.disposition = 'confirmed';
+  base.projectProfile = {
+    schemaVersion: 1,
+    status: 'complete',
+    languages: ['typescript'],
+    frameworks: [],
+    components: [
+      {
+        id: 'old-component',
+        name: 'old',
+        root: 'src',
+        manifest: 'package.json',
+        kind: 'package',
+        sourceFiles: 1,
+      },
+    ],
+    componentEdges: [],
+    entrypoints: [],
+    symbols: [],
+    imports: [],
+    calls: [],
+    facts: [],
+    filesAnalyzed: 1,
+    nodesAnalyzed: 1,
+    issues: [],
+    truncated: false,
+  };
+  current.projectProfile = structuredClone(base.projectProfile);
+  current.projectProfile.components![0]!.id = 'new-component';
+  current.projectProfile.components![0]!.name = 'new';
+  const comparison = compareReports(base, current);
+  assert.deepEqual(comparison.dispositionChanges[0], {
+    finding: {
+      id: current.findings[0]!.id,
+      fingerprint: current.findings[0]!.fingerprint,
+      ruleId: current.findings[0]!.ruleId,
+      title: current.findings[0]!.title,
+      severity: current.findings[0]!.severity,
+      componentIds: ['new-component'],
+    },
+    before: 'needs_review',
+    after: 'confirmed',
+  });
+  assert.deepEqual(comparison.componentChanges[0]?.before, ['old-component']);
+  assert.deepEqual(comparison.componentChanges[0]?.after, ['new-component']);
 });
 
 test('CI severity gates use meaningful exit codes', () => {

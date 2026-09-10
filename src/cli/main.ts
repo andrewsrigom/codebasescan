@@ -351,10 +351,23 @@ try {
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
     } else if (command === 'compare' && target && arguments_[2]) {
-      const base = store.audit(target).report;
-      const current = store.audit(arguments_[2]).report;
+      const baseAudit = store.audit(target);
+      const currentAudit = store.audit(arguments_[2]);
+      const base = baseAudit.report;
+      const current = currentAudit.report;
       if (!base || !current) throw new Error('Both audits must have reports before comparison.');
-      console.log(JSON.stringify(compareReports(base, current), null, 2));
+      const history = store
+        .audits()
+        .filter(
+          (candidate) =>
+            candidate.projectId === currentAudit.projectId &&
+            candidate.id !== baseAudit.id &&
+            candidate.id !== currentAudit.id &&
+            candidate.createdAt < currentAudit.createdAt &&
+            candidate.report,
+        )
+        .flatMap((candidate) => (candidate.report ? [candidate.report] : []));
+      console.log(JSON.stringify(compareReports(base, current, history), null, 2));
     } else if (command === 'evaluate' && target) {
       const ids = arguments_.slice(1).filter((argument) => !argument.startsWith('--'));
       const reports = ids.map((id) => {

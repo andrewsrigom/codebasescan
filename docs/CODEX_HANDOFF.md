@@ -26,6 +26,7 @@ normalization. The audit-mode pack is `0.7.0`. The generic SaaS layer consists o
 - bounded security-critical test-reference evidence without executing target tests.
 - captured OpenAPI/Swagger operation consistency against mapped Next.js and Express routes.
 - captured Prisma/Drizzle/SQL schema, migration, and source-entity consistency.
+- lifecycle diff v2 with local-history recurrence and per-component summaries.
 - agent-plan v5 and task-bundle v3 component/test context for focused authorized corrections.
 
 No production scanner or configuration default contains reference-project names or paths.

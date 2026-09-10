@@ -16,7 +16,8 @@ Phases 1–4 are implemented. Phase 5 currently includes bounded source-risk pat
 environment-contract consistency, framework-major rule coverage, declared monorepo component
 ownership, cross-component import evidence, security-critical test relationships, and captured
 OpenAPI/source route consistency plus database schema/migration/source correlation. Webhook,
-feature-flag, and component-aware lifecycle comparison remain next.
+feature-flag, and richer contract correlation remain next. Baseline comparison now attributes
+new, resolved, unchanged, recurring, severity, disposition, and ownership changes by component.
 Phase 6 has reproducible `seusaas` and `robs-web` pressure runs but still needs the full named corpus
 and independent dispositions. Later phases remain gated as described below.
 

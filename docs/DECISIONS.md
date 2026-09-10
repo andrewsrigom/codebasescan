@@ -164,3 +164,11 @@ call chains are correlated without loading an ORM or database. A comparison gap 
 when the corresponding captured schema or migration side exists; otherwise coverage remains
 unsupported. Files ending in .prisma join the bounded text snapshot. Report schema v11, workflow
 v25, and audit-mode pack 0.7.0 preserve the new output for consumers.
+
+## 2026-09-10 — component-aware lifecycle diff v2
+
+Report comparison keeps exact fingerprint semantics but now accepts earlier same-project reports.
+A finding is reappeared only when absent from the selected base, present in current, and present
+with the same fingerprint in supplied history. New, resolved, unchanged, recurring, severity,
+disposition, and ownership changes are summarized by captured component. Multi-component evidence
+counts in each owner and remains explicit in the comparison limitations.

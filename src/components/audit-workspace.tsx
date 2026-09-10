@@ -467,11 +467,51 @@ export function AuditWorkspace({
                     <span>Severity changes</span>
                     <strong>{comparison.severityChanges.length}</strong>
                   </div>
+                  <div className="detail-row">
+                    <span>Disposition changes</span>
+                    <strong>{comparison.dispositionChanges.length}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span>Component changes</span>
+                    <strong>{comparison.componentChanges.length}</strong>
+                  </div>
+                  <div className="detail-row">
+                    <span>Reappeared findings</span>
+                    <strong>{comparison.reappearedFindings.length}</strong>
+                  </div>
                   <p className="small muted">
                     Fingerprint comparison is local and line-sensitive. A resolved signal is not
                     proof of remediation.
                   </p>
                 </div>
+                {comparison.components.length > 0 && (
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Component</th>
+                          <th>New</th>
+                          <th>Resolved</th>
+                          <th>Unchanged</th>
+                          <th>Reappeared</th>
+                          <th>Review changes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparison.components.map((component) => (
+                          <tr key={component.componentId ?? 'unassigned'}>
+                            <td className="strong">{component.name}</td>
+                            <td>{component.newFindings}</td>
+                            <td>{component.resolvedFindings}</td>
+                            <td>{component.unchangedFindings}</td>
+                            <td>{component.reappearedFindings}</td>
+                            <td>{component.dispositionChanges}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </section>
             )}
             <section className="panel">

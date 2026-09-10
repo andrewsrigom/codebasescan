@@ -37,8 +37,21 @@ export default async function AuditPage({
               candidate.createdAt < audit.createdAt &&
               candidate.report,
           );
+  const history = database
+    .audits()
+    .filter(
+      (candidate) =>
+        candidate.projectId === audit.projectId &&
+        candidate.id !== audit.id &&
+        candidate.id !== previous?.id &&
+        candidate.createdAt < audit.createdAt &&
+        candidate.report,
+    )
+    .flatMap((candidate) => (candidate.report ? [candidate.report] : []));
   const comparison =
-    audit.report && previous?.report ? compareReports(previous.report, audit.report) : undefined;
+    audit.report && previous?.report
+      ? compareReports(previous.report, audit.report, history)
+      : undefined;
   const presented = presentAudit(audit);
   return (
     <AuditWorkspace

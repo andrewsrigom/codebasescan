@@ -965,16 +965,42 @@ export interface FindingReference {
   title: string;
   severity: Severity;
   suppressed?: boolean;
+  componentIds?: string[];
+}
+export interface ComponentLifecycleSummary {
+  componentId: string | null;
+  name: string;
+  newFindings: number;
+  resolvedFindings: number;
+  unchangedFindings: number;
+  reappearedFindings: number;
+  severityChanges: number;
+  dispositionChanges: number;
 }
 export interface AuditComparison {
+  schemaVersion: 2;
   baseAuditId: string;
   currentAuditId: string;
+  historyReports: number;
   newFindings: FindingReference[];
   resolvedFindings: FindingReference[];
   unchangedFindings: FindingReference[];
+  reappearedFindings: FindingReference[];
   severityChanges: {
     finding: FindingReference;
     before: Severity;
     after: Severity;
   }[];
+  dispositionChanges: {
+    finding: FindingReference;
+    before: Disposition;
+    after: Disposition;
+  }[];
+  componentChanges: {
+    finding: FindingReference;
+    before: string[];
+    after: string[];
+  }[];
+  components: ComponentLifecycleSummary[];
+  limitations: string[];
 }
