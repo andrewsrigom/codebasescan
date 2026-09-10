@@ -1,6 +1,6 @@
 import { digest } from '../src/domain/findings.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
-import type { AuditReport, Snapshot } from '../src/domain/types.ts';
+import type { AuditReport, RiskCorrelation, Snapshot } from '../src/domain/types.ts';
 export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
   return {
     digest: digest(content),
@@ -60,5 +60,53 @@ export function sampleReport(): AuditReport {
     dependencies: [],
     limitations: ['Not a security certification.'],
     publication: 'draft',
+  };
+}
+
+export function sampleRiskCorrelation(findingId: string): RiskCorrelation {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    paths: [
+      {
+        id: 'risk-path-1',
+        entrypointId: 'entrypoint-1',
+        route: '/api/example',
+        methods: ['POST'],
+        factId: 'fact-1',
+        factKind: 'database',
+        findingIds: [findingId],
+        priority: 80,
+        confidence: 'high',
+        steps: [
+          {
+            kind: 'entrypoint',
+            referenceId: 'entrypoint-1',
+            file: 'src/app/api/example/route.ts',
+            line: 1,
+            label: '/api/example',
+          },
+          {
+            kind: 'sensitive-operation',
+            referenceId: 'fact-1',
+            file: 'src/lib/database.ts',
+            line: 8,
+            label: 'database: account.update',
+          },
+        ],
+        truncated: false,
+      },
+    ],
+    summary: {
+      paths: 1,
+      entrypoints: 1,
+      eligibleFindings: 1,
+      correlatedFindings: 1,
+      uncorrelatedFindings: 0,
+      factKinds: { database: 1 },
+    },
+    truncated: false,
+    limitations: ['Static source path only.'],
   };
 }

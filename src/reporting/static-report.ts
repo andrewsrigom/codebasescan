@@ -87,6 +87,15 @@ export async function writeStaticReport(
       mediaType: 'application/json',
       content: json(report),
     },
+    ...(report.riskCorrelation
+      ? [
+          {
+            path: 'risk-paths.json',
+            mediaType: 'application/json',
+            content: json(report.riskCorrelation),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

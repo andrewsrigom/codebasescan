@@ -7,12 +7,13 @@ import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
-import { sampleReport } from '../helpers.ts';
+import { sampleReport, sampleRiskCorrelation } from '../helpers.ts';
 
 test('static report writes a self-contained versioned artifact directory', async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const report = sampleReport();
+  report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   const result = await writeStaticReport(report, temporary);
   assert.equal(result.directory, path.join(temporary, report.auditId));
   assert.deepEqual(
@@ -20,6 +21,7 @@ test('static report writes a self-contained versioned artifact directory', async
     [
       'index.html',
       'audit-report.json',
+      'risk-paths.json',
       'agent-plan.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
@@ -34,6 +36,7 @@ test('static report writes a self-contained versioned artifact directory', async
   );
   const html = await readFile(path.join(result.directory, 'index.html'), 'utf8');
   assert.ok(html.includes("default-src 'none'"));
+  assert.ok(html.includes('href="risk-paths.json"'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -45,6 +48,10 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('RULE TRANSPARENCY'));
   assert.ok(html.includes('Applied rule quality'));
   const agentPlan = await readFile(path.join(result.directory, 'agent-plan.json'), 'utf8');
+  const riskPaths = JSON.parse(
+    await readFile(path.join(result.directory, 'risk-paths.json'), 'utf8'),
+  ) as { summary: { paths: number } };
+  assert.equal(riskPaths.summary.paths, 1);
   assert.equal(
     agentPlan,
     await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8'),

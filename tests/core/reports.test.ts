@@ -9,7 +9,7 @@ import {
   toMarkdown,
   toSarif,
 } from '../../src/domain/reports.ts';
-import { sampleReport } from '../helpers.ts';
+import { sampleReport, sampleRiskCorrelation } from '../helpers.ts';
 import { buildCoverage } from '../../src/domain/coverage.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
@@ -36,6 +36,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
     stale: 1,
     unmatched: 1,
   };
+  report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
+  report.riskCorrelation.paths[0]!.steps[0]!.label = '<unsafe-path>';
   const output = toHtml(report);
   assert.ok(!output.includes('<script>'));
   assert.ok(!output.includes('<img src=x'));
@@ -52,6 +54,9 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Imported decisions'));
   assert.ok(output.includes('&lt;untrusted-audit&gt;'));
   assert.ok(!output.includes('<untrusted-audit>'));
+  assert.ok(output.includes('Entrypoint-to-operation paths'));
+  assert.ok(output.includes('&lt;unsafe-path&gt;'));
+  assert.ok(!output.includes('<unsafe-path>'));
 });
 test('SARIF export retains unresolved status and valid local locations', () => {
   const result = toSarif(sampleReport()) as {
@@ -196,6 +201,7 @@ test('Markdown includes scope and limitations', () => {
     coverageArtifacts: [{ file: 'coverage/coverage-summary.json', lines: 80 }],
     truncated: false,
   };
+  report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
@@ -214,6 +220,8 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(toHtml(report).includes('Supply chain, quality, structure, and duplication'));
   assert.ok(toHtml(report).includes('unused-package'));
   assert.ok(output.includes('NOT SUPPORTED'));
+  assert.ok(output.includes('## Correlated source paths'));
+  assert.ok(output.includes('risk-paths.json'));
   assert.ok(output.includes('## Limitations'));
 });
 test('exports group dependency advisories into conservative remediation plans', () => {

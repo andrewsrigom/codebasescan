@@ -250,6 +250,30 @@ export function toMarkdown(report: AuditReport): string {
             : []),
         ]
       : []),
+    ...(report.riskCorrelation
+      ? [
+          '',
+          '## Correlated source paths',
+          '',
+          `${report.riskCorrelation.summary.paths} bounded path(s) connect ${report.riskCorrelation.summary.entrypoints} entry point(s) to sensitive operations; ${report.riskCorrelation.summary.correlatedFindings} of ${report.riskCorrelation.summary.eligibleFindings} eligible source findings are attached.`,
+          '',
+          ...report.riskCorrelation.paths
+            .slice(0, 20)
+            .flatMap((path) => [
+              `### ${m(`${path.methods.join(', ') || 'ENTRY'} ${path.route ?? path.entrypointId}`)}`,
+              '',
+              `Priority ${path.priority}. ${m(path.factKind)} path: ${path.steps.map((step) => m(`${step.label} (${step.file}:${step.line})`)).join(' → ')}`,
+              `Related findings: ${path.findingIds.map(m).join(', ') || 'none'}.`,
+              '',
+            ]),
+          ...(report.riskCorrelation.paths.length > 20
+            ? [`Only the 20 highest-priority paths are shown here.`, '']
+            : []),
+          `Machine-readable detail: risk-paths.json retains all ${report.riskCorrelation.paths.length} bounded paths.`,
+          '',
+          ...report.riskCorrelation.limitations.map((limitation) => `- ${m(limitation)}`),
+        ]
+      : []),
     ...(report.mechanicalAnalysis
       ? [
           '',
@@ -541,6 +565,9 @@ export function toHtml(
         '</small></span></a></li>',
     )
     .join('');
+  const findingAnchors = new Map(
+    report.findings.map((finding, index) => [finding.id, `finding-${index + 1}`]),
+  );
   const findings = report.findings
     .map((finding, index) => {
       const evidence = finding.evidence
@@ -691,6 +718,67 @@ export function toHtml(
         ? '<p class="muted"><strong>Partial inventory:</strong> the bounded data map was truncated.</p>'
         : '') +
       '</section>'
+    : '';
+  const riskPaths = report.riskCorrelation
+    ? '<section class="report-section"><div class="section-head"><div><span class="kicker">CORRELATED SOURCE EVIDENCE</span><h2>Entrypoint-to-operation paths</h2></div><span class="status ' +
+      (report.riskCorrelation.status === 'complete' ? 'complete' : 'gap') +
+      '">' +
+      e(report.riskCorrelation.status) +
+      '</span></div><p>These paths use exact symbol ranges and resolved static call edges. They help review related findings together but do not prove runtime execution or exploitability.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      report.riskCorrelation.summary.paths +
+      '</strong><span>Bounded paths</span></div><div class="summary-card"><strong>' +
+      report.riskCorrelation.summary.entrypoints +
+      '</strong><span>Entry points</span></div><div class="summary-card"><strong>' +
+      report.riskCorrelation.summary.correlatedFindings +
+      '</strong><span>Correlated findings</span></div><div class="summary-card"><strong>' +
+      report.riskCorrelation.summary.uncorrelatedFindings +
+      '</strong><span>Uncorrelated eligible</span></div></div>' +
+      (report.riskCorrelation.paths.length
+        ? '<ol class="task-list">' +
+          report.riskCorrelation.paths
+            .slice(0, 20)
+            .map(
+              (path) =>
+                '<li><div><span class="status complete">source path</span><span class="meta">priority ' +
+                path.priority +
+                '</span><code>' +
+                e(path.id) +
+                '</code></div><h3>' +
+                e(`${path.methods.join(', ') || 'ENTRY'} ${path.route ?? path.entrypointId}`) +
+                ' → ' +
+                e(path.factKind) +
+                '</h3><ol class="path-steps">' +
+                path.steps
+                  .map(
+                    (step) =>
+                      '<li><strong>' +
+                      e(step.kind.replaceAll('-', ' ')) +
+                      '</strong> ' +
+                      e(step.label) +
+                      '<small>' +
+                      e(`${step.file}:${step.line}`) +
+                      '</small></li>',
+                  )
+                  .join('') +
+                '</ol><p><strong>Related findings:</strong> ' +
+                path.findingIds
+                  .map((id) => {
+                    const anchor = findingAnchors.get(id);
+                    return anchor
+                      ? '<a href="#' + e(anchor) + '">' + e(id) + '</a>'
+                      : '<code>' + e(id) + '</code>';
+                  })
+                  .join(', ') +
+                '</p></li>',
+            )
+            .join('') +
+          '</ol>'
+        : '<p>No eligible finding was connected to a sensitive operation through the captured call graph. This is not a clean result.</p>') +
+      (report.riskCorrelation.paths.length > 20
+        ? '<p class="muted">Only the 20 highest-priority paths are shown. The JSON artifact retains all bounded paths.</p>'
+        : '') +
+      list('Correlation limitations', report.riskCorrelation.limitations) +
+      '<p><a href="risk-paths.json">Open all correlated paths</a></p></section>'
     : '';
   const mechanical =
     report.mechanicalAnalysis || report.supplyChainAnalysis || report.codeQualityAnalysis
@@ -1016,6 +1104,9 @@ export function toHtml(
       (options.remediationResult
         ? '<li><a href="remediation-result.json">Remediation result JSON</a></li>'
         : '') +
+      (report.riskCorrelation
+        ? '<li><a href="risk-paths.json">Correlated source paths</a></li>'
+        : '') +
       '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
     : '';
   const css =
@@ -1030,6 +1121,7 @@ export function toHtml(
     '.dependency-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dependency-plan{border:1px solid #e7ece9;border-radius:9px;padding:17px}.dependency-plan h3{font:700 14px ui-monospace,monospace;overflow-wrap:anywhere}.dependency-plan .meta{margin-left:8px}.dependency-plan ul{padding-left:20px}.dependency-plan li+li{margin-top:12px}.dependency-plan p{color:var(--muted);font-size:13px;margin:4px 0}' +
     '.artifact-links{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;padding-left:20px}.artifact-links a{font-weight:650}' +
     '.task-list{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}.task-list li{border:1px solid #e7ece9;border-radius:9px;padding:16px}.task-list li>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.task-list code{margin-left:auto;color:var(--muted);font-size:10px}.task-list h3{font-size:15px;margin:10px 0 4px}.task-list p{margin:0;color:#42564c}.task-list small{display:block;color:var(--muted);margin-top:7px}' +
+    '.path-steps{margin:12px 0;padding-left:22px}.path-steps li{border:0;padding:4px 0}.path-steps small{font:11px ui-monospace,monospace}.path-steps strong{text-transform:capitalize}' +
     '.findings-title{margin-top:42px}.finding>h2{margin-top:18px}.finding-section{border-top:1px solid #e8eeea;margin-top:20px;padding-top:4px}.evidence h3{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172b26;color:#edf5f0;padding:18px;border-radius:8px;font:12px/1.55 ui-monospace,monospace}.evidence p{color:var(--muted)}.remediation{border-left:3px solid var(--accent);padding-left:16px}.review{border-left:3px solid #739b7f;padding-left:16px}' +
     'footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}' +
     '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans,.artifact-links{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
@@ -1076,6 +1168,7 @@ export function toHtml(
     rootCauseSummary +
     ruleQuality +
     profile +
+    riskPaths +
     dataMap +
     mechanical +
     dependencyRemediation +
