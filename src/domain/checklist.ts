@@ -626,6 +626,11 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const billingContexts = contexts.filter((context) =>
     context.facts.some((fact) => fact.kind === 'billing'),
   );
+  const directlyInspectedBilling = billingContexts.filter((context) =>
+    context.facts
+      .filter((fact) => fact.kind === 'billing')
+      .every((fact) => fact.file === context.entrypoint.file),
+  );
   const billingGaps = findingsByRule(findings, ['TW-SAAS001']);
   controls.push(
     control({
@@ -635,7 +640,8 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
       status: billingGaps.length
         ? 'GAP_CANDIDATE'
         : billingContexts.length
-          ? saasRun?.status === 'completed'
+          ? saasRun?.status === 'completed' &&
+            directlyInspectedBilling.length === billingContexts.length
             ? 'EVIDENCED'
             : saasRun?.status === 'failed'
               ? 'FAILED'
@@ -644,7 +650,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
       rationale: billingGaps.length
         ? `${billingGaps.length} request-derived billing value candidate(s) require review.`
         : billingContexts.length
-          ? `${billingContexts.length} mapped billing mutation boundary(s) were inspected without a request-derived price, product, plan, or amount candidate.`
+          ? `${billingContexts.length} billing mutation boundary(s) were mapped; ${directlyInspectedBilling.length} were directly inspected for request-derived price, product, plan, or amount fields.`
           : 'No supported billing-provider mutation was mapped.',
       applicability:
         'Applies to mapped checkout, payment-intent, subscription, invoice-item, refund, and transaction mutations.',
@@ -659,6 +665,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
       verification:
         'Tamper with plan, price, product, amount, currency, quantity, discount, and tenant ownership; compare the provider-side charge with the server catalog.',
       limitations: [
+        'Billing calls reached through another function or package are structurally mapped, but client-value taint is not yet propagated into the dedicated SaaS rule.',
         'Business pricing rules, provider dashboard configuration, discounts, taxes, and webhook reconciliation remain outside source-only proof.',
       ],
     }),

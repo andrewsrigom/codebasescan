@@ -326,6 +326,28 @@ test('SaaS checklist turns client-controlled billing into a focused gap', () => 
   );
 });
 
+test('SaaS checklist evidences only directly inspected server-owned billing values', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        const PRICE_IDS = { starter: 'price_server_owned' };
+        export async function POST(request: Request) {
+          await requireUser();
+          const body = await request.json();
+          return stripe.checkout.sessions.create({
+            line_items: [{ price: PRICE_IDS[body.plan] }]
+          });
+        }
+      `,
+      'src/app/api/checkout/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-BILLING-001')?.status,
+    'EVIDENCED',
+  );
+});
+
 test('SaaS checklist keeps OAuth and token lifecycle uncertainty explicit', () => {
   const checklist = checklistFor(
     snapshotOf(
