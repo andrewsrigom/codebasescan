@@ -32,6 +32,7 @@
     "test": "node --experimental-strip-types --test tests/core/*.test.ts",
     "test:graph": "node --experimental-strip-types --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
+    "test:package": "npm run build:cli && node scripts/check-package.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:graph",
