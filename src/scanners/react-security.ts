@@ -523,6 +523,7 @@ function sensitiveServerProps(
   const files = new Map(snapshot.files.map((file) => [file.path, file]));
   for (const item of profile.imports) {
     if (!item.resolvedFile || !clientFiles.has(item.resolvedFile)) continue;
+    if (clientFiles.has(item.file)) continue;
     const file = files.get(item.file);
     if (!file || !reactSource.test(file.path)) continue;
     const source = ts.createSourceFile(
@@ -616,7 +617,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }

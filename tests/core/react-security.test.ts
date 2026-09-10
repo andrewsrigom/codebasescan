@@ -76,6 +76,24 @@ test('Server Components do not pass sensitive-shaped props to Client Components'
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
 });
 
+test('Client Components may pass sensitive-shaped props to nested Client Components', () => {
+  const snapshot = snapshotFromFiles({
+    'src/components/account-panel.tsx': `
+      'use client';
+      import { SessionList } from './session-list';
+      export function AccountPanel({ sessions, password, onRevokeSession }) {
+        return <SessionList sessions={sessions} password={password} onRevokeSession={onRevokeSession} />;
+      }
+    `,
+    'src/components/session-list.tsx': `
+      'use client';
+      export function SessionList({ sessions }) { return <div>{sessions.length}</div>; }
+    `,
+  });
+  const result = scanReactSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
+});
+
 test('safe React boundaries avoid client security candidates', () => {
   const result = scan(`
     'use client';
