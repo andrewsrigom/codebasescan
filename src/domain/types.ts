@@ -251,6 +251,7 @@ export type ProjectFactKind =
   | 'authorization'
   | 'validation'
   | 'database'
+  | 'billing'
   | 'raw-sql'
   | 'outbound-request'
   | 'command-execution'

@@ -239,7 +239,7 @@ function containsSensitiveValue(node: ts.Node, sensitiveNames: Set<string>): boo
 }
 
 function isBillingSink(name: string): boolean {
-  return /(?:checkout\.sessions|paymentintents|subscriptions|invoiceitems|prices)\.(?:create|update)$/i.test(
+  return /(?:checkout\.sessions|paymentintents|subscriptions|invoiceitems|prices|refunds|transactions)\.(?:create|update|capture|cancel)$/i.test(
     name,
   );
 }

@@ -235,6 +235,23 @@ test('catch clauses are recorded as error-handling facts', () => {
   assert.equal(handling?.ownerSymbolId, handler?.id);
 });
 
+test('billing provider mutations are mapped as sensitive facts', () => {
+  const profile = profileProject(
+    snapshotOf(
+      `export async function POST() {
+        return stripe.checkout.sessions.create({ line_items: [] });
+      }`,
+      'src/app/api/checkout/route.ts',
+    ),
+  ).profile;
+  assert.ok(profile.facts.some((fact) => fact.kind === 'billing'));
+  assert.ok(
+    effectiveEntrypointFacts(profile, profile.entrypoints[0]!).some(
+      (fact) => fact.kind === 'billing',
+    ),
+  );
+});
+
 test('regular expression execution is not classified as operating-system command execution', () => {
   const result = profileProject(
     snapshotOf(

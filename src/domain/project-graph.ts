@@ -4,6 +4,7 @@ export const mutatingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 export const maximumCallDepth = 5;
 export const sensitiveProjectFactKinds = new Set<ProjectFact['kind']>([
   'database',
+  'billing',
   'raw-sql',
   'command-execution',
   'file-access',

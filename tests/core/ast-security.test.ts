@@ -269,6 +269,17 @@ test('read-only routes and webhook boundaries are not treated as missing login m
   assert.deepEqual(webhookResult.findings, []);
 });
 
+test('billing mutations participate in missing authentication review', () => {
+  const snapshot = snapshotOf(
+    `export async function POST() {
+      return stripe.checkout.sessions.create({ line_items: [] });
+    }`,
+    'src/app/api/checkout/route.ts',
+  );
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('unsupported and partial profiles never imply complete AST coverage', async () => {
   const unsupportedSnapshot = snapshotOf('{}', 'package.json');
   const unsupported = scanAstSecurity(

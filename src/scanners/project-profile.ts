@@ -201,6 +201,12 @@ function factKind(
     return 'authentication';
   if (/^(?:parse|safeparse|validate|validateasync|isvalid|assertvalid)[a-z0-9]*$/.test(terminal))
     return 'validation';
+  if (
+    /(?:checkout\.sessions|paymentintents|subscriptions|invoiceitems|refunds|transactions)\.(?:create|update|capture|cancel)$/i.test(
+      value,
+    )
+  )
+    return 'billing';
   if (/(?:\$queryrawunsafe|\$executerawunsafe|\.raw|\.queryraw)$/.test(value)) return 'raw-sql';
   if (
     /(?:^|\.)(?:findunique|findfirst|findmany|create|update|upsert|delete|executeraw|queryraw|transaction)$/.test(
