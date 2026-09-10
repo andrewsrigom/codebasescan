@@ -124,9 +124,13 @@ function sensitiveOperationSeverity(fact: ProjectFact): 'high' | 'medium' {
   return 'high';
 }
 
-function isPublicAuthenticationFlow(entrypoint: ProjectEntrypoint): boolean {
-  return /\/auth\/(?:forgot-password|reset-password|join|unlock-account|register|signup|sign-up|login|signin|sign-in|verify|callback)(?:\/|$)/i.test(
-    entrypoint.route ?? '',
+function isExpectedUnauthenticatedFlow(entrypoint: ProjectEntrypoint): boolean {
+  const route = entrypoint.route ?? '';
+  return (
+    /\/auth\/(?:forgot-password|reset-password|join|unlock-account|register|signup|sign-up|login|signin|sign-in|verify|callback)(?:\/|$)/i.test(
+      route,
+    ) ||
+    /^\/api\/(?:waitlist|contact|newsletter|subscribe)(?:\/submit)?\/?$/i.test(route)
   );
 }
 
@@ -1151,7 +1155,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.1.0',
+        version: '0.4.0',
       },
     };
 
@@ -1167,7 +1171,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     const authenticated = mappedFacts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
     );
-    if (!authenticated && !isPublicAuthenticationFlow(entrypoint)) {
+    if (!authenticated && !isExpectedUnauthenticatedFlow(entrypoint)) {
       const candidate = authorizationFinding({
         snapshot,
         profile,
@@ -1236,7 +1240,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }

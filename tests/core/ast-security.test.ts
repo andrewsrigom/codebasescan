@@ -194,6 +194,18 @@ test('public authentication flows are not required to have an existing session',
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('explicit public submission routes are not required to have an existing session', () => {
+  const snapshot = snapshotOf(
+    `export async function POST(request) {
+       const input = validateWaitlistEntry(await request.json());
+       return database.waitlist.create({ data: input });
+     }`,
+    'src/app/api/waitlist/route.ts',
+  );
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('explicit authorization or an ownership helper avoids dynamic-scope noise', () => {
   const authorized = snapshotOf(
     `export async function DELETE(request) {
