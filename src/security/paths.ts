@@ -98,14 +98,33 @@ const dependencyLockfiles = new Set([
   'yarn.lock',
 ]);
 const coverageArtifactPaths = ['coverage/coverage-summary.json', 'coverage/lcov.info'] as const;
+const environmentTemplateName = /^\.env(?:\.[A-Za-z0-9_-]+)*\.(?:example|sample|template)$/i;
+function isEnvironmentTemplate(name: string): boolean {
+  return environmentTemplateName.test(name);
+}
+function sanitizeEnvironmentTemplate(content: string): string {
+  const names = new Set<string>();
+  for (const line of content.split(/\r?\n/)) {
+    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    if (match?.[1]) names.add(match[1]);
+  }
+  return names.size ? `${[...names].map((name) => `${name}=`).join('\n')}\n` : '';
+}
 function fileByteLimit(name: string): number {
   return dependencyLockfiles.has(name) ? snapshotLimits.lockfileBytes : snapshotLimits.bytesPerFile;
 }
 function fileExclusion(name: string): 'sensitive-file' | 'unsupported-file' | null {
-  if (name.startsWith('.env') || /\.(pem|key|p12|pfx)$/i.test(name)) return 'sensitive-file';
+  if (
+    (name.startsWith('.env') && !isEnvironmentTemplate(name)) ||
+    /\.(pem|key|p12|pfx)$/i.test(name)
+  )
+    return 'sensitive-file';
   if (
     excludedFiles.has(name) ||
-    (!extensions.has(path.extname(name)) && name !== 'Dockerfile' && name !== 'yarn.lock')
+    (!extensions.has(path.extname(name)) &&
+      name !== 'Dockerfile' &&
+      name !== 'yarn.lock' &&
+      !isEnvironmentTemplate(name))
   )
     return 'unsupported-file';
   return null;
@@ -362,17 +381,20 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
             truncated = true;
             continue;
           }
-          const content = buffer.subarray(0, bytesRead).toString('utf8');
-          if (content.includes('\0')) {
+          const rawContent = buffer.subarray(0, bytesRead).toString('utf8');
+          if (rawContent.includes('\0')) {
             skip('binary-file');
             continue;
           }
+          const content = isEnvironmentTemplate(entry.name)
+            ? sanitizeEnvironmentTemplate(rawContent)
+            : rawContent;
           files.push({
             path: safeRelative(path.relative(root, absolute)),
             scope: classifySourceScope(path.relative(root, absolute)),
             content,
             digest: digest(content),
-            bytes: bytesRead,
+            bytes: Buffer.byteLength(content),
           });
           totalBytes += bytesRead;
         } finally {

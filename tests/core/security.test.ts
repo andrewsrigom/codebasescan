@@ -265,6 +265,11 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await mkdir(path.join(root, 'test-results'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
+  await writeFile(
+    path.join(root, '.env.example'),
+    'PUBLIC_URL=https://example.test\nSECRET_TOKEN=must-not-be-retained\n',
+  );
+  await writeFile(path.join(root, '.env.production.sample'), 'DATABASE_URL=private-value\n');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
   await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'traceward-report', 'audit-report.json'), '{"ignored":true}');
@@ -277,8 +282,18 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   const snapshot = await captureSnapshot(root);
   assert.deepEqual(
     snapshot.files.map((file) => file.path),
-    ['source.ts'],
+    ['.env.example', '.env.production.sample', 'source.ts'],
   );
+  assert.equal(
+    snapshot.files.find((file) => file.path === '.env.example')?.content,
+    'PUBLIC_URL=\nSECRET_TOKEN=\n',
+  );
+  assert.equal(
+    snapshot.files.find((file) => file.path === '.env.production.sample')?.content,
+    'DATABASE_URL=\n',
+  );
+  assert.equal(JSON.stringify(snapshot).includes('must-not-be-retained'), false);
+  assert.equal(JSON.stringify(snapshot).includes('private-value'), false);
   assert.equal(snapshot.skipped['sensitive-file'], 1);
   if (process.platform !== 'win32') assert.equal(snapshot.skipped['symbolic-link'], 1);
 });
