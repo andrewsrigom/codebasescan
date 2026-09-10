@@ -202,8 +202,12 @@ destructive operations, and public deployment require human authorization. A dir
 command outside the allowlist, unexpected file expansion, failed focused test, or new critical
 finding stops automatic correction.
 
-Gate: a `seusaas` correction pass proves the new ledger end to end with small commits, fresh audit
-evidence, and an honest remaining-work list.
+Local gate passed on `seusaas`: the baseline plan, six exact external command records, a fresh
+after audit, and the finalized static report were bound and validated end to end. All six records
+were applied, none were unmatched, and the report correctly kept all 61 security tasks open even
+though their declared test, build, and rescan checks passed. The pass also exposed and fixed
+line-only lifecycle churn for source findings. Signed executor identity and changed-file
+attestation remain release hardening rather than completed guarantees.
 
 ## Phase 8 — human report
 

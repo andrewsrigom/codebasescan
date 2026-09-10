@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 319 passed                                                             |
+| npm test                      | 323 passed                                                             |
 | npm run test:graph            | 13 passed, including real scanners, cache, and worker recovery         |
 | npm run benchmark             | TP 55, FP 1, FN 0; precision 0.9821, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
@@ -28,14 +28,15 @@ Environment:
 | SaaS benchmark subset         | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | npm run build                 | Passed                                                                 |
 | npm run test:e2e              | 7 passed in Chromium                                                   |
-| npm run test:package          | 81 files; 225,895 packed bytes; required CLI/scanner files present     |
+| npm run test:package          | 83 files; 229,060 packed bytes; required CLI/scanner files present     |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
 | Browser workspace             | Real `seusaas` report rendered with compact project-map data           |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,200 files, 108 candidates, 61 remediation tasks, 0 comparison churn  |
+| Latest `seusaas` offline run  | 1,201 files, 108 candidates, 61 remediation tasks, 0 comparison churn  |
+| `seusaas` verification loop   | 6/6 commands applied, 0 unmatched, 61 tasks honestly kept open         |
 | `robs-web` portability run    | 1,070 files, 6 candidates, 0 dedicated SaaS-rule candidates            |
 
 The earlier full offline `seusaas-platform` calibration run (`640cc6fb-771c-49e9-9072-c87fc53ad94e`) included Semgrep, Gitleaks, OSV,
@@ -75,7 +76,25 @@ The correction contract now has paired tests for exact external test/build comma
 failed commands, incomplete verification, stale after-snapshot binding, unmatched commands, strict
 raw-output rejection, schema generation, and finalized static artifacts. Remediation-result schema
 v3 retains the external ledger digest and bounded execution provenance while preserving the audit's
-no-execution boundary. A real `seusaas` end-to-end finalized report is the remaining Phase 7 gate.
+no-execution boundary.
+
+The real `seusaas` verification baseline
+(`1a5e9d0c-2b32-4dbc-9c6d-1272fff0a189`) and after audit
+(`7617ec6b-5a25-461e-9754-33ea2ae4192b`) captured 1,201 supported files and 108 candidates. The
+external ledger recorded the exact `env:check`, `lint`, `test`, `typecheck`, `boundary:check`,
+and `build` argument arrays with timestamps, durations, exit codes, output sizes, and output
+SHA-256 digests. Finalization applied all six records and rejected none. Across 61 remediation
+tasks, 61 project-test checks, 61 project-build checks, and 61 Traceward-rescan checks passed; 41
+finding-absence checks and 20 deterministic-control checks failed because the underlying security
+work was intentionally not claimed as complete. The final comparison retained 108 unchanged
+findings with zero new and zero resolved.
+
+The first finalization exposed one false resolved/new pair after a finding moved from line 693 to
+665 without changing its rule, file, evidence excerpt, or observation. Source lifecycle identity
+now ignores line-only movement while exact fingerprints remain available for review and
+suppression. The ledger is still explicit about its limit: executor authentication is false and
+network use is unknown, so this proves deterministic binding and command-result accounting, not a
+signed attestation.
 
 The structurally different `robs-web` portability run captured 1,070 files and completed its
 project profile. It produced 6 total candidates and no dedicated SaaS-rule candidate. Different
