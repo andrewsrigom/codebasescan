@@ -148,19 +148,30 @@ function callName(expression: ts.Expression): string {
 
 function factKind(callee: string): ProjectFactKind | null {
   const value = callee.toLowerCase();
-  if (
-    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|get(?:server|current)?(?:session|user)(?:withteam)?|currentuser|verifytoken|validatesession|withauth|throwifnoteamaccess)$/.test(
-      value,
-    )
-  )
-    return 'authentication';
+  const terminal = value.split('.').at(-1) ?? value;
   if (
     /(?:^|\.)(?:authorize|requirerole|haspermission|assertaccess|canaccess|checkpermission|throwifnotallowed)$/.test(
       value,
+    ) ||
+    /^(?:authorize|require|assert|check|can|has|ensure|validate|verify)[a-z0-9]*(?:permission|role|access|owner|admin|policy)[a-z0-9]*$/.test(
+      terminal,
     )
   )
     return 'authorization';
-  if (/(?:^|\.)(?:parse|safeparse|validate|validateasync|isvalid)$/.test(value))
+  if (
+    /(?:^|\.)(?:auth|authenticate|requireuser|requiresession|get(?:server|current)?(?:session|user)(?:withteam)?|currentuser|verifytoken|validatesession|withauth|throwifnoteamaccess)$/.test(
+      value,
+    ) ||
+    /^authenticate[a-z0-9]*$/.test(terminal) ||
+    /^require[a-z0-9]*(?:user|session|authentication|auth)[a-z0-9]*$/.test(terminal) ||
+    /^get(?:app|auth|server|current)?session(?:withteam)?$/.test(terminal) ||
+    /^(?:verify|validate)[a-z0-9]*(?:auth|session|token|credential|apikey|secret|signature)[a-z0-9]*$/.test(
+      terminal,
+    ) ||
+    /^withauth[a-z0-9]*$/.test(terminal)
+  )
+    return 'authentication';
+  if (/^(?:parse|safeparse|validate|validateasync|isvalid|assertvalid)[a-z0-9]*$/.test(terminal))
     return 'validation';
   if (/(?:\$queryrawunsafe|\$executerawunsafe|\.raw|\.queryraw)$/.test(value)) return 'raw-sql';
   if (
@@ -920,7 +931,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), and ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }

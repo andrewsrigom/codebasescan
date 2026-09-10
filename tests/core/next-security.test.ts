@@ -121,6 +121,20 @@ test('Next.js mutation rule requires recognized validation before sensitive work
   assert.ok(!safe.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
 });
 
+test('Next.js rules recognize descriptive authentication and validation wrappers', () => {
+  const result = scan(
+    `
+      export async function POST(request: Request) {
+        await authenticateDeveloperApiRequest(request);
+        const input = parseBoundedAccountInput(request);
+        return Response.json(await db.account.update({ data: input }));
+      }
+    `,
+    'src/app/api/accounts/route.ts',
+  );
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
 test('Next.js response rule catches sensitive-shaped response fields', () => {
   const result = scan(
     `

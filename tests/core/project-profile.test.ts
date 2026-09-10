@@ -286,3 +286,21 @@ test('common session guards and scoped helper calls become structural facts', ()
   assert.ok(profile.facts.some((fact) => fact.kind === 'authentication'));
   assert.ok(profile.facts.some((fact) => fact.kind === 'resource-scope'));
 });
+
+test('descriptive security wrapper names become structural facts', () => {
+  const profile = profileProject(
+    snapshotOf(
+      `export async function POST(request) {
+        await authenticateDeveloperApiRequest(request);
+        await requireSuperAdminSession(request.headers);
+        const input = parseBoundedProjectInput(request);
+        await database.project.update({ data: input });
+      }`,
+      'src/app/api/admin/projects/route.ts',
+    ),
+  ).profile;
+  const kinds = new Set(profile.facts.map((fact) => fact.kind));
+  assert.ok(kinds.has('authentication'));
+  assert.ok(kinds.has('authorization'));
+  assert.ok(kinds.has('validation'));
+});
