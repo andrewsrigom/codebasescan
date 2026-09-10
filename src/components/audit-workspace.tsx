@@ -896,6 +896,7 @@ export function AuditWorkspace({
           testEvidence={report?.testEvidence}
           apiContract={report?.apiContract}
           databaseContract={report?.databaseContract}
+          webhookContract={report?.webhookContract}
         />
       )}
       {tab === 'Checklist' && (

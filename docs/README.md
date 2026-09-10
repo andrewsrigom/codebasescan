@@ -12,6 +12,7 @@ Deeper references:
 
 - [Code-first and AI design](CODE_FIRST_AI_PLAN.md)
 - [Real-project evaluation](REAL_PROJECT_EVALUATION.md)
+- [Webhook contract correlation](WEBHOOK_CONTRACT.md)
 - [Edge cases](EDGE_CASES.md)
 - [Engineering decisions](DECISIONS.md)
 - [External sources](SOURCES.md)

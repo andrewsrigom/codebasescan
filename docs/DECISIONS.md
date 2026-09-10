@@ -172,3 +172,11 @@ A finding is reappeared only when absent from the selected base, present in curr
 with the same fingerprint in supplied history. New, resolved, unchanged, recurring, severity,
 disposition, and ownership changes are summarized by captured component. Multi-component evidence
 counts in each owner and remains explicit in the comparison limitations.
+
+## 2026-09-10 — bounded webhook contract correlation
+
+Mapped webhook routes now retain resolved call-edge, signature-verification, idempotency, and
+literal event-name evidence. Literal names produced and consumed locally are paired; one-sided names
+remain explicit external boundaries rather than mismatch findings. Callback routes require
+verification evidence so ordinary OAuth callbacks are excluded. Report schema v12, investigation
+bundle v3, workflow v26, and audit-mode pack 0.8.0 preserve the output for consumers.

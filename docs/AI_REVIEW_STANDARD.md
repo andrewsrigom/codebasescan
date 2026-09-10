@@ -83,6 +83,10 @@ Database contract differences are also bounded supporting context only. AI must 
 schema, migration, and runtime evidence as unknown and may not recommend executing a migration as
 part of review.
 
+Webhook contract records are navigation context only. AI must cite endpoint, call-edge, fact, and
+event-reference IDs used in an assessment, preserve external producer/consumer boundaries, and
+never turn an unpaired event or unverified control into a confirmed vulnerability by itself.
+
 ## Expansion gate
 
 Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled

@@ -8,6 +8,7 @@ import type {
   RiskCorrelation,
   Snapshot,
   TestEvidenceAnalysis,
+  WebhookContractAnalysis,
 } from '../src/domain/types.ts';
 export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
   return {
@@ -240,6 +241,77 @@ export function sampleDatabaseContract(): DatabaseContractAnalysis {
     parseFailures: 0,
     truncated: false,
     limitations: ['A gap is not proof that a database object is missing.'],
+  };
+}
+
+export function sampleWebhookContract(): WebhookContractAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    endpoints: [
+      {
+        id: 'webhook-endpoint-1',
+        entrypointId: 'entrypoint-1',
+        file: 'src/app/api/billing/webhook/route.ts',
+        line: 1,
+        route: '/api/billing/webhook',
+        methods: ['POST'],
+        reachableSymbolIds: ['symbol-1'],
+        callEdgeIds: ['call-1'],
+        verificationEvidenceIds: ['fact-1'],
+        idempotencyEvidenceIds: [],
+        eventReferenceIds: ['webhook-event-1', 'webhook-event-2'],
+        verification: 'evidenced',
+        idempotency: 'unverified',
+        traversalTruncated: false,
+      },
+    ],
+    eventReferences: [
+      {
+        id: 'webhook-event-1',
+        file: 'src/lib/billing.ts',
+        line: 10,
+        event: 'checkout.completed',
+        normalizedEvent: 'checkout.completed',
+        direction: 'produced',
+        origin: 'return-contract',
+        symbolId: 'symbol-1',
+      },
+      {
+        id: 'webhook-event-2',
+        file: 'src/app/api/billing/webhook/route.ts',
+        line: 5,
+        event: 'checkout.completed',
+        normalizedEvent: 'checkout.completed',
+        direction: 'consumed',
+        origin: 'branch',
+        symbolId: 'symbol-1',
+      },
+    ],
+    events: [
+      {
+        id: 'webhook-contract-1',
+        event: 'checkout.completed',
+        normalizedEvent: 'checkout.completed',
+        producerReferenceIds: ['webhook-event-1'],
+        consumerReferenceIds: ['webhook-event-2'],
+        status: 'matched-local',
+      },
+    ],
+    summary: {
+      endpoints: 1,
+      verifiedEndpoints: 1,
+      idempotentEndpoints: 0,
+      producedEvents: 1,
+      consumedEvents: 1,
+      matchedEvents: 1,
+      externalConsumerBoundaries: 0,
+      externalProducerBoundaries: 0,
+    },
+    parseFailures: 0,
+    truncated: false,
+    limitations: ['Unverified does not prove a runtime control is absent.'],
   };
 }
 

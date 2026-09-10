@@ -5,6 +5,7 @@ import type {
   MechanicalAnalysis,
   SupplyChainAnalysis,
   TestEvidenceAnalysis,
+  WebhookContractAnalysis,
 } from '../domain/types.ts';
 import { Badge, EmptyState } from './ui.tsx';
 
@@ -24,6 +25,7 @@ export function MechanicalReportPanel({
   testEvidence,
   apiContract,
   databaseContract,
+  webhookContract,
 }: {
   analysis?: MechanicalAnalysis;
   supplyChain?: SupplyChainAnalysis;
@@ -31,6 +33,7 @@ export function MechanicalReportPanel({
   testEvidence?: TestEvidenceAnalysis;
   apiContract?: ApiContractAnalysis;
   databaseContract?: DatabaseContractAnalysis;
+  webhookContract?: WebhookContractAnalysis;
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
@@ -71,7 +74,9 @@ export function MechanicalReportPanel({
     apiContract?.status === 'complete' &&
     !apiContract.truncated &&
     databaseContract?.status === 'complete' &&
-    !databaseContract.truncated,
+    !databaseContract.truncated &&
+    webhookContract?.status === 'complete' &&
+    !webhookContract.truncated,
   );
   return (
     <section
@@ -95,7 +100,8 @@ export function MechanicalReportPanel({
       !quality &&
       !testEvidence &&
       !apiContract &&
-      !databaseContract ? (
+      !databaseContract &&
+      !webhookContract ? (
         <EmptyState title="Source analysis unavailable">
           <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
@@ -524,6 +530,93 @@ export function MechanicalReportPanel({
                           <td>{entity.declarations.length}</td>
                           <td>{entity.migrations.length}</td>
                           <td>{entity.sourceReferences.length}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {webhookContract && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Webhook contract</h2>
+                  <p>Endpoint controls, bounded call evidence, and literal event vocabulary.</p>
+                </div>
+                <Badge
+                  tone={
+                    webhookContract.status === 'complete'
+                      ? webhookContract.summary.verifiedEndpoints ===
+                        webhookContract.summary.endpoints
+                        ? 'success'
+                        : 'medium'
+                      : 'neutral'
+                  }
+                >
+                  {webhookContract.summary.endpoints} endpoints
+                </Badge>
+              </div>
+              <div className="panel-body">
+                {webhookContract.status === 'unsupported' ? (
+                  <p className="small muted">
+                    No statically mapped webhook endpoint was found. No clean result is implied.
+                  </p>
+                ) : (
+                  <div className="stat-grid">
+                    <div className="stat-card">
+                      <div className="stat-label">Verification evidenced</div>
+                      <div className="stat-number">{webhookContract.summary.verifiedEndpoints}</div>
+                      <div className="stat-foot">
+                        of {webhookContract.summary.endpoints} endpoints
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Idempotency evidenced</div>
+                      <div className="stat-number">
+                        {webhookContract.summary.idempotentEndpoints}
+                      </div>
+                      <div className="stat-foot">Captured static evidence only</div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Locally paired events</div>
+                      <div className="stat-number">{webhookContract.summary.matchedEvents}</div>
+                      <div className="stat-foot">
+                        {webhookContract.summary.externalConsumerBoundaries +
+                          webhookContract.summary.externalProducerBoundaries}{' '}
+                        external boundaries
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <p className="small muted">
+                  Unverified is missing captured evidence, not proof a runtime control is absent.
+                  Unpaired events may belong to providers or customer endpoints.
+                </p>
+              </div>
+              {webhookContract.endpoints.length > 0 && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Endpoint</th>
+                        <th>Verification</th>
+                        <th>Idempotency</th>
+                        <th>Events</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {webhookContract.endpoints.slice(0, 100).map((endpoint) => (
+                        <tr key={endpoint.id}>
+                          <td className="strong mono">
+                            {endpoint.methods.join(', ') || 'HTTP'}{' '}
+                            {endpoint.route ?? endpoint.file}
+                          </td>
+                          <td>{endpoint.verification}</td>
+                          <td>{endpoint.idempotency}</td>
+                          <td>{endpoint.eventReferenceIds.length}</td>
                         </tr>
                       ))}
                     </tbody>

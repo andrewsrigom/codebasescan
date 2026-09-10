@@ -280,6 +280,7 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Security-critical test evidence](docs/TEST_EVIDENCE.md)
 - [API contract consistency](docs/API_CONTRACT.md)
 - [Database contract consistency](docs/DATABASE_CONTRACT.md)
+- [Webhook contract correlation](docs/WEBHOOK_CONTRACT.md)
 - [Finding lifecycle diff](docs/LIFECYCLE_DIFF.md)
 - [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)

@@ -665,6 +665,77 @@ const databaseContract = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const webhookContract = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  endpoints: z
+    .array(
+      z.object({
+        id: shortText,
+        entrypointId: shortText,
+        file: shortText,
+        line: z.number().int().positive(),
+        route: shortText.optional(),
+        methods: z.array(shortText).max(20),
+        componentId: shortText.optional(),
+        reachableSymbolIds: z.array(shortText).max(1_000),
+        callEdgeIds: z.array(shortText).max(5_000),
+        verificationEvidenceIds: z.array(shortText).max(100),
+        idempotencyEvidenceIds: z.array(shortText).max(100),
+        eventReferenceIds: z.array(shortText).max(2_000),
+        verification: z.enum(['evidenced', 'unverified']),
+        idempotency: z.enum(['evidenced', 'unverified']),
+        traversalTruncated: z.boolean(),
+      }),
+    )
+    .max(200),
+  eventReferences: z
+    .array(
+      z.object({
+        id: shortText,
+        file: shortText,
+        line: z.number().int().positive(),
+        event: shortText,
+        normalizedEvent: shortText,
+        direction: z.enum(['produced', 'consumed']),
+        origin: z.enum(['branch', 'return-contract', 'dispatch-call']),
+        symbolId: shortText.optional(),
+        componentId: shortText.optional(),
+      }),
+    )
+    .max(2_000),
+  events: z
+    .array(
+      z.object({
+        id: shortText,
+        event: shortText,
+        normalizedEvent: shortText,
+        producerReferenceIds: z.array(shortText).max(2_000),
+        consumerReferenceIds: z.array(shortText).max(2_000),
+        status: z.enum([
+          'matched-local',
+          'external-consumer-boundary',
+          'external-producer-boundary',
+        ]),
+      }),
+    )
+    .max(2_000),
+  summary: z.object({
+    endpoints: z.number().int().nonnegative().max(200),
+    verifiedEndpoints: z.number().int().nonnegative().max(200),
+    idempotentEndpoints: z.number().int().nonnegative().max(200),
+    producedEvents: z.number().int().nonnegative().max(2_000),
+    consumedEvents: z.number().int().nonnegative().max(2_000),
+    matchedEvents: z.number().int().nonnegative().max(2_000),
+    externalConsumerBoundaries: z.number().int().nonnegative().max(2_000),
+    externalProducerBoundaries: z.number().int().nonnegative().max(2_000),
+  }),
+  parseFailures: z.number().int().nonnegative().max(2_000),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -864,6 +935,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(9),
     z.literal(10),
     z.literal(11),
+    z.literal(12),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -902,6 +974,7 @@ export const auditReportSchema = z.looseObject({
   testEvidence: testEvidence.optional(),
   apiContract: apiContract.optional(),
   databaseContract: databaseContract.optional(),
+  webhookContract: webhookContract.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

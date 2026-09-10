@@ -18,6 +18,7 @@ import type {
   Snapshot,
   SupplyChainAnalysis,
   TestEvidenceAnalysis,
+  WebhookContractAnalysis,
 } from '../domain/types.ts';
 import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
@@ -46,6 +47,7 @@ import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
 import { scanTestEvidence } from '../scanners/test-evidence.ts';
 import { scanApiContract } from '../scanners/api-contract.ts';
 import { scanDatabaseContract } from '../scanners/database-contract.ts';
+import { scanWebhookContract } from '../scanners/webhook-contract.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -115,6 +117,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   databaseContract: Annotation<DatabaseContractAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  webhookContract: Annotation<WebhookContractAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -411,6 +417,30 @@ export function buildAuditGraph(options: {
       );
       return { databaseContract: result.analysis, scanners: [result.run] };
     })
+    .addNode('webhook_contract', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          webhookContract: null,
+          scanners: [
+            skippedByMode(
+              'webhook-contract',
+              'Webhook endpoint and event contract',
+              'release-readiness',
+            ),
+          ],
+        };
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to webhook contract analysis.');
+      const result = scanWebhookContract(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'webhook_contract',
+        result.analysis.status === 'unsupported'
+          ? 'No statically mapped webhook endpoint was available.'
+          : `${result.analysis.summary.endpoints} webhook endpoint(s); ${result.analysis.summary.verifiedEndpoints} with verification evidence and ${result.analysis.summary.matchedEvents} locally paired event name(s).`,
+      );
+      return { webhookContract: result.analysis, scanners: [result.run] };
+    })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
         return {
@@ -661,7 +691,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 11,
+        schemaVersion: 12,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -681,6 +711,7 @@ export function buildAuditGraph(options: {
         ...(state.testEvidence ? { testEvidence: state.testEvidence } : {}),
         ...(state.apiContract ? { apiContract: state.apiContract } : {}),
         ...(state.databaseContract ? { databaseContract: state.databaseContract } : {}),
+        ...(state.webhookContract ? { webhookContract: state.webhookContract } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -811,6 +842,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'test_evidence')
     .addEdge('project_profile', 'api_contract')
     .addEdge('project_profile', 'database_contract')
+    .addEdge('project_profile', 'webhook_contract')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -834,6 +866,7 @@ export function buildAuditGraph(options: {
         'test_evidence',
         'api_contract',
         'database_contract',
+        'webhook_contract',
         'architecture',
         'duplication',
         'supply_chain',

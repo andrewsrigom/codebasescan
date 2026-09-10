@@ -132,6 +132,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.webhookContract
+      ? [
+          {
+            path: 'webhook-contract.json',
+            mediaType: 'application/json',
+            content: json(report.webhookContract),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

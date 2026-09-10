@@ -14,6 +14,7 @@ import {
   sampleReport,
   sampleRiskCorrelation,
   sampleTestEvidence,
+  sampleWebhookContract,
 } from '../helpers.ts';
 
 test('static report writes a self-contained versioned artifact directory', async (context) => {
@@ -25,6 +26,7 @@ test('static report writes a self-contained versioned artifact directory', async
   report.testEvidence = sampleTestEvidence();
   report.apiContract = sampleApiContract();
   report.databaseContract = sampleDatabaseContract();
+  report.webhookContract = sampleWebhookContract();
   const result = await writeStaticReport(report, temporary);
   assert.equal(result.directory, path.join(temporary, report.auditId));
   assert.deepEqual(
@@ -37,6 +39,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'test-evidence.json',
       'api-contract.json',
       'database-contract.json',
+      'webhook-contract.json',
       'agent-plan.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
@@ -56,6 +59,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="test-evidence.json"'));
   assert.ok(html.includes('href="api-contract.json"'));
   assert.ok(html.includes('href="database-contract.json"'));
+  assert.ok(html.includes('href="webhook-contract.json"'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -87,6 +91,10 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'database-contract.json'), 'utf8'),
   ) as { summary: { gapCandidates: number } };
   assert.equal(databaseContract.summary.gapCandidates, 1);
+  const webhookContract = JSON.parse(
+    await readFile(path.join(result.directory, 'webhook-contract.json'), 'utf8'),
+  ) as { summary: { matchedEvents: number } };
+  assert.equal(webhookContract.summary.matchedEvents, 1);
   assert.equal(
     agentPlan,
     await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8'),
@@ -109,10 +117,12 @@ test('static report writes a self-contained versioned artifact directory', async
     environmentContract: { summary: { undocumented: number } };
     apiContract: { summary: { sourceOnly: number } };
     databaseContract: { summary: { gapCandidates: number } };
+    webhookContract: { summary: { matchedEvents: number } };
   };
-  assert.equal(investigationBundle.schemaVersion, 2);
+  assert.equal(investigationBundle.schemaVersion, 3);
   assert.equal(investigationBundle.environmentContract.summary.undocumented, 1);
   assert.equal(investigationBundle.apiContract.summary.sourceOnly, 1);
+  assert.equal(investigationBundle.webhookContract.summary.matchedEvents, 1);
   assert.equal(investigationBundle.databaseContract.summary.gapCandidates, 1);
   const ruleQualitySchema = JSON.parse(
     await readFile(path.join(result.directory, 'rule-quality.schema.json'), 'utf8'),
