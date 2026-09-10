@@ -140,6 +140,19 @@ export function AuditWorkspace({
   ).length;
   const coverageTotal = report?.coverage?.length ?? report?.scanners.length ?? 0;
   const coverageGaps = Math.max(0, coverageTotal - completedScanners);
+  const sourceAnalysisCount = report
+    ? (report.mechanicalAnalysis?.architecture?.cycleCount ??
+        report.mechanicalAnalysis?.architecture?.cycles.length ??
+        0) +
+      (report.mechanicalAnalysis?.duplication?.clones ?? 0) +
+      (report.codeQualityAnalysis?.hotspotCount ??
+        report.codeQualityAnalysis?.hotspots.length ??
+        0) +
+      Object.values(report.supplyChainAnalysis?.issueCounts ?? {}).reduce(
+        (total, count) => total + count,
+        0,
+      )
+    : 0;
   const reviewSummary = active
     ? 'Audit in progress. Results update as scanners finish.'
     : highFindings > 0
@@ -350,15 +363,7 @@ export function AuditWorkspace({
               <span className="tab-count">{investigations.length}</span>
             )}
             {label === 'Source analysis' && report && (
-              <span className="tab-count">
-                {(report.mechanicalAnalysis?.architecture?.cycles.length ?? 0) +
-                  (report.mechanicalAnalysis?.duplication?.blocks.length ?? 0) +
-                  (report.codeQualityAnalysis?.hotspots.length ?? 0) +
-                  Object.values(report.supplyChainAnalysis?.issueCounts ?? {}).reduce(
-                    (total, count) => total + count,
-                    0,
-                  )}
-              </span>
+              <span className="tab-count">{sourceAnalysisCount}</span>
             )}
           </button>
         ))}
