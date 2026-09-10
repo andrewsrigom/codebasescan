@@ -4,6 +4,8 @@ import type {
   Dependency,
   Finding,
   ProjectCallEdge,
+  ProjectComponent,
+  ProjectComponentEdge,
   ProjectDataMap,
   ProjectDeclaredContext,
   ProjectEntrypoint,
@@ -14,11 +16,13 @@ import type {
   SecurityControlResult,
   Severity,
   SourceRiskPath,
+  TestEvidenceAnalysis,
+  TestEvidenceTarget,
 } from './types.ts';
 import { digest, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
-export const remediationPlanVersion = 4 as const;
+export const remediationPlanVersion = 5 as const;
 export const remediationResultVersion = 1 as const;
 const maximumTasks = 2_000;
 const maximumRiskPathsPerTask = 50;
@@ -92,6 +96,8 @@ export interface RemediationTask {
   controlIds: string[];
   evidenceIds: string[];
   files: string[];
+  componentIds: string[];
+  testEvidenceFiles: string[];
   dependsOn: string[];
   target: {
     type: 'dependency' | 'source' | 'configuration' | 'control';
@@ -176,7 +182,7 @@ export interface RemediationResult {
 }
 
 export interface RemediationTaskBundle {
-  schemaVersion: 2;
+  schemaVersion: 3;
   kind: 'traceward-remediation-task-bundle';
   createdAt: string;
   audit: RemediationPlan['audit'];
@@ -189,12 +195,25 @@ export interface RemediationTaskBundle {
   coverage: (CoverageCapability | ScannerRun)[];
   projectContext: {
     frameworks: ProjectFramework[];
+    components: ProjectComponent[];
+    componentEdges: ProjectComponentEdge[];
     entrypoints: ProjectEntrypoint[];
     symbols: ProjectSymbol[];
     callEdges: ProjectCallEdge[];
     securityFacts: ProjectFact[];
     declaredContext: ProjectDeclaredContext | null;
     dataMap: ProjectDataMap | null;
+    testEvidence: {
+      schemaVersion: TestEvidenceAnalysis['schemaVersion'];
+      version: string;
+      status: TestEvidenceAnalysis['status'];
+      testFiles: number;
+      targets: TestEvidenceTarget[];
+      parseFailures: number;
+      unresolvedImports: number;
+      truncated: boolean;
+      limitations: string[];
+    } | null;
     truncated: boolean;
   } | null;
   limitations: string[];
@@ -375,6 +394,62 @@ function relatedRiskPathIds(report: AuditReport, findingIds: string[]): string[]
     .map((path) => path.id);
 }
 
+function fileBelongsToComponent(file: string, component: ProjectComponent): boolean {
+  if (file === component.manifest) return true;
+  if (component.root === '.') return !file.startsWith('../') && !file.startsWith('/');
+  return file === component.root || file.startsWith(`${component.root}/`);
+}
+
+function taskContext(
+  report: AuditReport,
+  task: RemediationTask,
+): Pick<RemediationTask, 'componentIds' | 'testEvidenceFiles'> {
+  const files = new Set(task.files);
+  const riskPathIds = new Set(task.riskPathIds);
+  for (const path of report.riskCorrelation?.paths ?? []) {
+    if (!riskPathIds.has(path.id)) continue;
+    for (const step of path.steps) files.add(step.file);
+  }
+  const componentIds = new Set<string>();
+  const profile = report.projectProfile;
+  const componentIdsByFile = new Map<string, Set<string>>();
+  for (const item of [
+    ...(profile?.entrypoints ?? []),
+    ...(profile?.symbols ?? []),
+    ...(profile?.imports ?? []),
+    ...(profile?.calls ?? []),
+    ...(profile?.facts ?? []),
+  ]) {
+    if (!item.componentId) continue;
+    const ids = componentIdsByFile.get(item.file) ?? new Set<string>();
+    ids.add(item.componentId);
+    componentIdsByFile.set(item.file, ids);
+  }
+  const componentsBySpecificity = [...(profile?.components ?? [])].sort(
+    (left, right) => right.root.length - left.root.length || left.id.localeCompare(right.id),
+  );
+  for (const file of files) {
+    const observedIds = componentIdsByFile.get(file);
+    if (observedIds?.size) {
+      for (const id of observedIds) componentIds.add(id);
+      continue;
+    }
+    const owningComponent = componentsBySpecificity.find((component) =>
+      fileBelongsToComponent(file, component),
+    );
+    if (owningComponent) componentIds.add(owningComponent.id);
+  }
+  const testEvidenceFiles = unique(
+    (report.testEvidence?.targets ?? [])
+      .filter((target) => files.has(target.file))
+      .map((target) => target.file),
+  );
+  return {
+    componentIds: [...componentIds].sort(),
+    testEvidenceFiles,
+  };
+}
+
 function dependencyTasks(report: AuditReport): RemediationTask[] {
   return groupDependencyAdvisories(
     report.findings.filter(unresolvedFinding),
@@ -448,6 +523,8 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
         group.findings.flatMap((finding) => finding.evidence.map((item) => item.id)),
       ),
       files,
+      componentIds: [],
+      testEvidenceFiles: [],
       dependsOn: [],
       target: {
         type: 'dependency',
@@ -569,6 +646,8 @@ function findingTask(report: AuditReport, groupedFindings: Finding[]): Remediati
     controlIds: [],
     evidenceIds: unique(findings.flatMap((item) => item.evidence.map((evidence) => evidence.id))),
     files,
+    componentIds: [],
+    testEvidenceFiles: [],
     dependsOn: [],
     target: { type: isConfiguration ? 'configuration' : 'source' },
     instructions: [
@@ -668,6 +747,8 @@ function controlTasks(report: AuditReport, tasksByFinding: Map<string, string>):
         controlIds: [control.id],
         evidenceIds: unique(control.evidence.map((item) => item.id)),
         files: [],
+        componentIds: [],
+        testEvidenceFiles: [],
         dependsOn: unique(
           linkedFindings.flatMap((findingId) => {
             const task = tasksByFinding.get(findingId);
@@ -715,12 +796,14 @@ export function buildRemediationPlan(report: AuditReport): RemediationPlan {
       task.findings.map((finding) => [finding.id, task.id]),
     ),
   );
-  const allTasks = [...dependency, ...source, ...controlTasks(report, tasksByFinding)].sort(
-    (left, right) =>
-      right.priority - left.priority ||
-      severityRank(left.severity) - severityRank(right.severity) ||
-      left.id.localeCompare(right.id),
-  );
+  const allTasks = [...dependency, ...source, ...controlTasks(report, tasksByFinding)]
+    .map((task) => ({ ...task, ...taskContext(report, task) }))
+    .sort(
+      (left, right) =>
+        right.priority - left.priority ||
+        severityRank(left.severity) - severityRank(right.severity) ||
+        left.id.localeCompare(right.id),
+    );
   const tasks = allTasks.slice(0, maximumTasks);
   const byKind = emptyKinds();
   for (const task of tasks) byKind[task.kind] += 1;
@@ -897,11 +980,28 @@ export function buildRemediationTaskBundle(
   const relevantEntrypoints = profile?.entrypoints.filter(matchesFile);
   const relevantDataEntries = profile?.dataMap?.entries.filter(matchesFile);
   const contextLimit = 200;
+  const selectedComponentIds = new Set(task.componentIds);
+  const relevantComponentEdges = (profile?.componentEdges ?? []).filter(
+    (edge) =>
+      selectedComponentIds.has(edge.fromComponentId) ||
+      selectedComponentIds.has(edge.toComponentId),
+  );
+  const bundleComponentIds = new Set(task.componentIds);
+  for (const edge of relevantComponentEdges) {
+    bundleComponentIds.add(edge.fromComponentId);
+    bundleComponentIds.add(edge.toComponentId);
+  }
+  const relevantComponents = (profile?.components ?? []).filter((component) =>
+    bundleComponentIds.has(component.id),
+  );
+  const relevantTestTargets = (report.testEvidence?.targets ?? []).filter(
+    (target) => files.has(target.file) || task.testEvidenceFiles.includes(target.file),
+  );
   const dataMapSummary: ProjectDataMap['summary'] = {};
   for (const entry of relevantDataEntries ?? [])
     dataMapSummary[entry.operation] = (dataMapSummary[entry.operation] ?? 0) + 1;
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     kind: 'traceward-remediation-task-bundle',
     createdAt: report.createdAt,
     audit: plan.audit,
@@ -915,6 +1015,8 @@ export function buildRemediationTaskBundle(
     projectContext: profile
       ? {
           frameworks: profile.frameworks,
+          components: relevantComponents.slice(0, contextLimit),
+          componentEdges: relevantComponentEdges.slice(0, contextLimit),
           entrypoints: (relevantEntrypoints ?? []).slice(0, contextLimit),
           symbols: (relevantSymbols ?? []).slice(0, contextLimit),
           callEdges: (relevantCalls ?? []).slice(0, contextLimit),
@@ -929,7 +1031,23 @@ export function buildRemediationTaskBundle(
                   profile.dataMap.truncated || (relevantDataEntries?.length ?? 0) > contextLimit,
               }
             : null,
+          testEvidence: report.testEvidence
+            ? {
+                schemaVersion: report.testEvidence.schemaVersion,
+                version: report.testEvidence.version,
+                status: report.testEvidence.status,
+                testFiles: report.testEvidence.testFiles,
+                targets: relevantTestTargets.slice(0, contextLimit),
+                parseFailures: report.testEvidence.parseFailures,
+                unresolvedImports: report.testEvidence.unresolvedImports,
+                truncated:
+                  report.testEvidence.truncated || relevantTestTargets.length > contextLimit,
+                limitations: report.testEvidence.limitations,
+              }
+            : null,
           truncated: [
+            relevantComponents,
+            relevantComponentEdges,
             relevantEntrypoints,
             relevantSymbols,
             relevantCalls,
@@ -942,6 +1060,9 @@ export function buildRemediationTaskBundle(
       ...plan.limitations,
       ...task.uncertainties,
       ...(riskPaths.length ? (report.riskCorrelation?.limitations ?? []) : []),
+      ...(report.testEvidence
+        ? ['Test evidence records bounded static import relationships, not executed assertions.']
+        : []),
       'The bundle contains only evidence already captured by the audit and does not contain the repository source tree.',
     ],
   };

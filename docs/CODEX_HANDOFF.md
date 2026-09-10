@@ -23,6 +23,8 @@ normalization. The security checklist pack is `0.5.0`. The generic SaaS layer co
 - tenant, rate-limit, webhook-idempotency, CSRF, billing, recovery, and OAuth controls;
 - paired vulnerable and benign unit/benchmark cases.
 - bounded workspace package-export and imported-reexport resolution.
+- bounded security-critical test-reference evidence without executing target tests.
+- agent-plan v5 and task-bundle v3 component/test context for focused authorized corrections.
 
 No production scanner or configuration default contains reference-project names or paths.
 

@@ -78,6 +78,8 @@ const task = z.object({
   controlIds: stringList,
   evidenceIds: stringList,
   files: stringList,
+  componentIds: stringList,
+  testEvidenceFiles: stringList,
   dependsOn: stringList,
   target: z.object({
     type: z.enum(['dependency', 'source', 'configuration', 'control']),
@@ -105,7 +107,7 @@ const task = z.object({
 });
 
 const planSchema = z.object({
-  schemaVersion: z.literal(4),
+  schemaVersion: z.literal(5),
   kind: z.literal('traceward-remediation-plan'),
   createdAt: shortText,
   audit: z.object({

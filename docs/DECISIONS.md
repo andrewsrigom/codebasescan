@@ -138,3 +138,11 @@ a low-severity review candidate only when at least one template was captured. Wi
 names stay unverified instead of being reported as defects. Report schema v8 and audit-mode pack
 0.4.0 preserve this behavior for downstream consumers. Rule-quality schema v2 accepts the new
 source and records its paired benchmark scope.
+
+## 2026-09-10 — agent plan contract v5 component context
+
+Every remediation task now carries bounded owning-component IDs and exact critical source targets
+that have captured test-reference evidence. Task-bundle version 3 adds only those targets plus the
+selected components and their immediate cross-component edges. Neighbor component metadata is
+included so an edge never points at an unknown package. Static import relationships remain
+navigation evidence rather than proof of executed assertions or behavioral coverage.

@@ -70,6 +70,11 @@ one coherent change, run only authorized commands, and require a fresh Traceward
 the candidate disappeared. Authentication policy, tenant model, billing behavior, database
 migrations, destructive actions, and deployment always require human authorization.
 
+Task-bundle version 3 supplies the owning workspace component, adjacent cross-component import
+edges, and any matching security-critical test-reference target. These records help the coding
+agent select local context and focused tests; they do not claim that a test executed or asserted the
+reported behavior.
+
 ## Expansion gate
 
 Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled

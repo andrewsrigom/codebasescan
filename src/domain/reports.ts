@@ -1255,7 +1255,22 @@ export function toHtml(
             e(task.rationale) +
             '</p><small>' +
             e(task.instructions[0] ?? 'Review the linked evidence.') +
-            '</small></li>',
+            '</small>' +
+            (task.componentIds.length || task.testEvidenceFiles.length
+              ? '<p class="muted">' +
+                (task.componentIds.length
+                  ? 'Components: ' + e(task.componentIds.join(', ')) + '. '
+                  : '') +
+                (task.testEvidenceFiles.length
+                  ? task.testEvidenceFiles.length +
+                    (task.testEvidenceFiles.length === 1
+                      ? ' critical target has'
+                      : ' critical targets have') +
+                    ' static test-reference evidence.'
+                  : 'No matching critical test target was captured.') +
+                '</p>'
+              : '') +
+            '</li>',
         )
         .join('') +
       '</ol>' +

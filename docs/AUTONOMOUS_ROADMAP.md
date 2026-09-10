@@ -41,7 +41,9 @@ eligibility, human-authorization requirement, allowed paths, network policy, ord
 verification commands, and separate rescan/test/build/human acceptance criteria.
 
 Publish a JSON Schema and validate every plan before disk. A task bundle contains only the selected
-task and referenced evidence.
+task and referenced evidence. Contract v5 identifies the owning workspace components and matching
+security-critical test targets; bundle v3 includes the selected component boundary, neighboring
+component edges, and bounded related-test references.
 
 Gate: schema, determinism, path containment, command allowlist, compatibility alias, manifest, and
 baseline-result tests pass.

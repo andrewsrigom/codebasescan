@@ -51,7 +51,7 @@ test('remediation plan is deterministic, bounded, and contains references instea
   const first = buildRemediationPlan(report);
   const second = buildRemediationPlan(report);
   assert.deepEqual(first, second);
-  assert.equal(first.schemaVersion, 4);
+  assert.equal(first.schemaVersion, 5);
   assert.equal(first.tasks.length, 1);
   assert.equal(first.tasks[0]?.kind, 'upgrade_dependency');
   assert.equal(first.tasks[0]?.target.fixCandidate, '1.2.5');
@@ -78,7 +78,7 @@ test('agent plan JSON Schema describes the current required contract', () => {
     properties?: { schemaVersion?: { const?: number }; tasks?: unknown };
     required?: string[];
   };
-  assert.equal(schema.properties?.schemaVersion?.const, 4);
+  assert.equal(schema.properties?.schemaVersion?.const, 5);
   assert.ok(schema.required?.includes('tasks'));
 });
 
@@ -222,13 +222,120 @@ test('task bundle includes only source paths related to the selected findings', 
   });
   const plan = buildRemediationPlan(report);
   const bundle = buildRemediationTaskBundle(report, plan.tasks[0]!.id);
-  assert.equal(bundle.schemaVersion, 2);
+  assert.equal(bundle.schemaVersion, 3);
   assert.deepEqual(bundle.task.riskPathIds, ['risk-path-1']);
   assert.deepEqual(
     bundle.riskPaths.map((path) => path.id),
     ['risk-path-1'],
   );
   assert.equal(JSON.stringify(bundle).includes('unrelated-risk-path'), false);
+});
+
+test('tasks and bundles carry bounded component and test-evidence context', () => {
+  const report = sampleReport();
+  const finding = report.findings[0]!;
+  finding.evidence[0]!.file = 'apps/web/src/app/api/example/route.ts';
+  report.projectProfile = {
+    schemaVersion: 1,
+    status: 'complete',
+    languages: ['typescript'],
+    frameworks: [],
+    components: [
+      {
+        id: 'component-web',
+        name: 'web',
+        root: 'apps/web',
+        manifest: 'apps/web/package.json',
+        kind: 'package',
+        sourceFiles: 2,
+      },
+      {
+        id: 'component-worker',
+        name: 'worker',
+        root: 'apps/worker',
+        manifest: 'apps/worker/package.json',
+        kind: 'package',
+        sourceFiles: 1,
+      },
+    ],
+    componentEdges: [
+      {
+        id: 'edge-web-worker',
+        fromComponentId: 'component-web',
+        toComponentId: 'component-worker',
+        imports: 1,
+        importIds: ['import-1'],
+        truncated: false,
+      },
+    ],
+    entrypoints: [
+      {
+        id: 'entrypoint-1',
+        kind: 'next-route',
+        file: 'apps/web/src/app/api/example/route.ts',
+        line: 1,
+        name: '/api/example',
+        methods: ['POST'],
+        dynamicParameters: [],
+        symbolIds: [],
+        componentId: 'component-web',
+      },
+    ],
+    symbols: [],
+    imports: [],
+    calls: [],
+    facts: [],
+    filesAnalyzed: 2,
+    nodesAnalyzed: 2,
+    issues: [],
+    truncated: false,
+  };
+  report.testEvidence = {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    testFiles: 1,
+    criticalFiles: 1,
+    withRelatedTests: 1,
+    withoutRelatedTests: 0,
+    targets: [
+      {
+        file: 'apps/web/src/app/api/example/route.ts',
+        componentId: 'component-web',
+        entrypointIds: ['entrypoint-1'],
+        sensitiveFactIds: [],
+        sensitiveFactKinds: [],
+        status: 'observed',
+        relatedTests: [
+          {
+            file: 'apps/web/src/app/api/example/route.test.ts',
+            relation: 'direct-import',
+            depth: 1,
+          },
+        ],
+        truncated: false,
+      },
+    ],
+    parseFailures: 0,
+    unresolvedImports: 0,
+    truncated: false,
+    limitations: ['Static relationship only.'],
+  };
+  const plan = buildRemediationPlan(report);
+  const task = plan.tasks[0]!;
+  assert.deepEqual(task.componentIds, ['component-web']);
+  assert.deepEqual(task.testEvidenceFiles, ['apps/web/src/app/api/example/route.ts']);
+  const bundle = buildRemediationTaskBundle(report, task.id);
+  assert.deepEqual(
+    bundle.projectContext?.components.map((component) => component.id),
+    ['component-web', 'component-worker'],
+  );
+  assert.deepEqual(
+    bundle.projectContext?.componentEdges.map((edge) => edge.id),
+    ['edge-web-worker'],
+  );
+  assert.equal(bundle.projectContext?.testEvidence?.targets.length, 1);
+  assert.equal(bundle.projectContext?.testEvidence?.targets[0]?.relatedTests.length, 1);
 });
 
 test('task bundle rejects an unknown task id', () => {
