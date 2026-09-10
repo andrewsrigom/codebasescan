@@ -28,6 +28,7 @@ test(
       users.find({ $where: code });
       response.json({ message: 'failed', stack: error.stack });
       response.logger.info({ token });
+      response.logger.error('request failed', { password: key });
       response.serializer.unserialize(code);
       const callback = new URL('https://example.test/callback');
       callback.searchParams.set('access_token', token);
@@ -60,6 +61,11 @@ test(
     ])
       assert.ok(rules.has(rule), `${rule} was not reported: ${JSON.stringify(result)}`);
     assert.equal(
+      result.findings.filter((finding) => finding.ruleId === 'traceward.sensitive-log-field')
+        .length,
+      2,
+    );
+    assert.equal(
       result.findings.find((finding) => finding.ruleId === 'traceward.jwt-ignore-expiration')
         ?.category,
       'authentication',
@@ -83,6 +89,9 @@ test(
           users.find({ tenantId: value });
           response.json({ message: 'failed' });
           logger.info({ userId: value });
+          authClient.signIn.email({ email: value, password: key });
+          JSON.stringify({ username: value, password: key });
+          database.select({ password: key });
           const callback = new URL('https://example.test/callback');
           callback.searchParams.set('state', value);
           return { agent, parsed: JSON.parse(value) };

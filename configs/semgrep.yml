@@ -88,15 +88,30 @@ rules:
     languages: [typescript, javascript]
     severity: WARNING
     message: A sensitive-shaped value is included in structured application logging.
-    pattern-either:
-      - pattern: |
-          $LOGGER.$METHOD({ ..., token: $VALUE, ... })
-      - pattern: |
-          $LOGGER.$METHOD({ ..., password: $VALUE, ... })
-      - pattern: |
-          $LOGGER.$METHOD({ ..., authorization: $VALUE, ... })
-      - pattern: |
-          $LOGGER.$METHOD({ ..., cookie: $VALUE, ... })
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $LOGGER.$METHOD({ ..., token: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD({ ..., password: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD({ ..., authorization: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD({ ..., cookie: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD($MESSAGE, { ..., token: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD($MESSAGE, { ..., password: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD($MESSAGE, { ..., authorization: $VALUE, ... })
+          - pattern: |
+              $LOGGER.$METHOD($MESSAGE, { ..., cookie: $VALUE, ... })
+      - metavariable-regex:
+          metavariable: $LOGGER
+          regex: (?i)^(?:console|.*(?:logger|log)|pino|winston)$
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(?:log|info|warn|error|debug|trace|fatal)$
     metadata:
       category: secrets
       cwe: [CWE-532]
