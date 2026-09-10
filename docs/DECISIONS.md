@@ -195,3 +195,11 @@ Static exports include a schema-validated compact manifest before the larger evi
 It records product/workflow/pack versions, mode selection, snapshot limits, scanner duration and
 status, explicit coverage states, limitations, and output digests. The existing outer artifact
 manifest digests this run manifest, avoiding a circular self-digest while preserving integrity.
+
+## 2026-09-10 — deterministic built-in policy profiles
+
+Advisory never blocks, balanced gates high-confidence high/critical work and adopts baselines using
+new-only findings, and strict includes existing medium-or-higher debt. Failed/truncated coverage
+blocks balanced; partial coverage also blocks strict. Optional and unsupported product capabilities
+stay visible without making every static audit fail. Exit 1 means finding failure and exit 2 means
+blocking coverage or operational failure; `policy-result.json` distinguishes the latter cases.

@@ -36,6 +36,7 @@ import {
   upsertReviewLedger,
 } from '../domain/review-ledger.ts';
 import { parseReviewLedger } from '../domain/review-ledger-schema.ts';
+import { buildPolicyResult, policyProfiles, type PolicyProfile } from '../domain/policy.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -273,21 +274,33 @@ try {
       const threshold = option('--fail-on');
       if (threshold && !severities.includes(threshold as Severity))
         throw new Error('Use critical, high, medium, low, or info for --fail-on.');
+      const policyName = option('--policy');
+      if (policyName && !policyProfiles.includes(policyName as PolicyProfile))
+        throw new Error('Use advisory, balanced, or strict for --policy.');
+      if (policyName && threshold)
+        throw new Error('Use either --policy or the compatibility --fail-on option, not both.');
       const baselinePath = option('--baseline');
       const baseline = baselinePath ? await loadBaseline(baselinePath) : null;
       if (baseline && baseline.projectName !== report.projectName)
         throw new Error('Baseline report belongs to a different project.');
       const comparison = baseline ? compareReports(baseline, report) : null;
-      const gate = comparison
-        ? baselineCiGate(comparison, threshold as Severity | undefined)
-        : ciGate(report, threshold as Severity | undefined);
+      const policyResult = buildPolicyResult(
+        report,
+        (policyName as PolicyProfile | undefined) ?? 'advisory',
+        comparison,
+      );
+      const gate = policyName
+        ? { exitCode: policyResult.exitCode, gatedFindings: policyResult.summary.gatedFindings }
+        : comparison
+          ? baselineCiGate(comparison, threshold as Severity | undefined)
+          : ciGate(report, threshold as Severity | undefined);
       const requestedFormat = option('--format');
       const destination = option('--output');
       if (!requestedFormat && !destination) {
         const staticReport = await writeStaticReport(
           report,
           option('--report-dir') ?? path.resolve('traceward-report'),
-          baseline ? { baseline } : {},
+          { ...(baseline ? { baseline } : {}), policyResult },
         );
         console.log(`Saved static report ${staticReport.directory}`);
         console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
@@ -307,6 +320,10 @@ try {
       if (threshold)
         console.error(
           `Severity gate ${threshold}: ${gate.gatedFindings} ${comparison ? 'new' : 'unresolved'} finding(s) at or above threshold.`,
+        );
+      if (policyName)
+        console.error(
+          `Policy ${policyResult.profile}: ${policyResult.decision}; ${policyResult.summary.gatedFindings} finding(s), ${policyResult.summary.blockingCoverageIssues} blocking coverage issue(s).`,
         );
       process.exitCode = gate.exitCode;
     } finally {
@@ -378,7 +395,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }

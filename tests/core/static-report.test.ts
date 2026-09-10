@@ -8,6 +8,7 @@ import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
 import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
+import { parsePolicyResult } from '../../src/domain/policy-schema.ts';
 import {
   sampleApiContract,
   sampleDatabaseContract,
@@ -49,6 +50,8 @@ test('static report writes a self-contained versioned artifact directory', async
       'remediation-plan.json',
       'agent-plan.schema.json',
       'run-manifest.schema.json',
+      'policy-result.json',
+      'policy-result.schema.json',
       'rule-quality.json',
       'rule-quality.schema.json',
       'review-ledger.schema.json',
@@ -69,6 +72,8 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="feature-flags.json"'));
   assert.ok(html.includes('href="run-manifest.json"'));
   assert.ok(html.includes('href="run-manifest.schema.json"'));
+  assert.ok(html.includes('href="policy-result.json"'));
+  assert.ok(html.includes('href="policy-result.schema.json"'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -133,6 +138,15 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'run-manifest.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(runManifestSchema.properties?.schemaVersion?.const, 1);
+  const policyResult = parsePolicyResult(
+    JSON.parse(await readFile(path.join(result.directory, 'policy-result.json'), 'utf8')),
+  );
+  assert.equal(policyResult.profile, 'advisory');
+  assert.equal(policyResult.exitCode, 0);
+  const policyResultSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'policy-result.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(policyResultSchema.properties?.schemaVersion?.const, 1);
   const ruleQuality = parseRuleQualityReport(
     JSON.parse(await readFile(path.join(result.directory, 'rule-quality.json'), 'utf8')),
   );

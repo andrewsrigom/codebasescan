@@ -21,8 +21,9 @@ OpenAPI/source route consistency, database schema/migration/source correlation, 
 endpoint/control/event correlation, and feature-flag declaration/usage/default correlation.
 Provider-specific and richer cross-contract correlation remain. Baseline comparison now attributes
 new, resolved, unchanged, recurring, severity, disposition, and ownership changes by component.
-Phase 6 has reproducible `seusaas` and `robs-web` pressure runs but still needs the full named corpus
-and independent dispositions. Later phases remain gated as described below.
+Phase 6 has a reproducible five-project corpus covering the named project set; independent owner
+dispositions and false-negative review remain. Phase 8 now includes schema-validated advisory,
+balanced, and strict policy results with stable CLI exit codes. Human report refinement remains.
 
 The versioned run manifest is implemented and publishes mode selection, snapshot limits, scanner
 status/duration, explicit coverage state, limitations, and output digests with a JSON Schema.
@@ -198,6 +199,10 @@ progress; verification provenance; and links to JSON, SARIF, SBOM, agent plan, b
 Add configurable policy profiles (`advisory`, `balanced`, and `strict`) with deterministic CLI exit
 codes. Policy evaluates severity, confidence, novelty, coverage health, and accepted/suppressed
 state; it does not reinterpret evidence or claim compliance. Publish the policy decision as JSON.
+
+Implemented: static exports publish a validated policy result and schema. `balanced` supports
+new-only baseline adoption, while `strict` includes existing debt; incomplete blocking coverage
+uses a distinct exit code from finding failure.
 
 Keep raw detail lazy and bounded. Accessibility, mobile layout, script-free static output, and
 truthful empty/error states are release gates.

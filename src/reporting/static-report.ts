@@ -20,6 +20,8 @@ import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-qu
 import { reviewLedgerJsonSchema } from '../domain/review-ledger-schema.ts';
 import { buildRunManifest, type RunManifestOutput } from '../domain/run-manifest.ts';
 import { parseRunManifest, runManifestJsonSchema } from '../domain/run-manifest-schema.ts';
+import { buildPolicyResult, type PolicyResult } from '../domain/policy.ts';
+import { parsePolicyResult, policyResultJsonSchema } from '../domain/policy-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -40,6 +42,7 @@ export interface StaticReportManifest {
 
 export interface StaticReportOptions {
   baseline?: AuditReport;
+  policyResult?: PolicyResult;
 }
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
@@ -83,6 +86,9 @@ export async function writeStaticReport(
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
   const ruleQuality = parseRuleQualityReport(buildRuleQualityReport(report));
+  const policyResult = parsePolicyResult(
+    options.policyResult ?? buildPolicyResult(report, 'advisory'),
+  );
   const remediationResult = options.baseline
     ? parseRemediationResult(
         buildRemediationResult(buildRemediationPlan(options.baseline), options.baseline, report),
@@ -186,6 +192,16 @@ export async function writeStaticReport(
       path: 'run-manifest.schema.json',
       mediaType: 'application/schema+json',
       content: json(runManifestJsonSchema()),
+    },
+    {
+      path: 'policy-result.json',
+      mediaType: 'application/json',
+      content: json(policyResult),
+    },
+    {
+      path: 'policy-result.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(policyResultJsonSchema()),
     },
     {
       path: 'rule-quality.json',

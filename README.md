@@ -239,12 +239,15 @@ Attach the generated bundle to an authorized Codex task. It contains bounded evi
 ## CI
 
 ```bash
-traceward audit . --fail-on high --format sarif --output traceward.sarif
+traceward audit . --policy balanced
 ```
 
-Exit 0: gate passed. Exit 1: unresolved findings reached the threshold. Exit 2: audit failed operationally.
+Exit 0: advisory/pass. Exit 1: finding policy failed. Exit 2: coverage or audit execution failed.
+Every static report includes the schema-validated `policy-result.json`. The legacy
+`--fail-on high` severity gate remains available for compatibility.
 
-Use --baseline report.json to gate only newly introduced findings. A passing gate is not a security certification.
+With `--baseline report.json`, balanced gates only newly introduced findings; strict still includes
+existing debt. A passing gate is not a security certification.
 
 ## What is intentionally out of scope
 
@@ -283,6 +286,7 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Webhook contract correlation](docs/WEBHOOK_CONTRACT.md)
 - [Feature flag consistency](docs/FEATURE_FLAGS.md)
 - [Run and coverage manifest](docs/RUN_MANIFEST.md)
+- [Policy profiles and exit codes](docs/POLICY_PROFILES.md)
 - [Finding lifecycle diff](docs/LIFECYCLE_DIFF.md)
 - [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)
