@@ -304,3 +304,41 @@ test('SaaS checklist recognizes explicit webhook idempotency', () => {
     'EVIDENCED',
   );
 });
+
+test('SaaS checklist turns client-controlled billing into a focused gap', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        export async function POST(request: Request) {
+          await requireUser();
+          const body = await request.json();
+          return stripe.checkout.sessions.create({
+            line_items: [{ price: body.priceId }]
+          });
+        }
+      `,
+      'src/app/api/checkout/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-BILLING-001')?.status,
+    'GAP_CANDIDATE',
+  );
+});
+
+test('SaaS checklist keeps OAuth and token lifecycle uncertainty explicit', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `export async function GET() { return Response.json({ ok: true }); }`,
+      'src/app/api/auth/oauth/callback/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-OAUTH-001')?.status,
+    'UNVERIFIED',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-RECOVERY-001')?.status,
+    'NOT_APPLICABLE',
+  );
+});

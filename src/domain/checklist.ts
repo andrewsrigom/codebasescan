@@ -623,6 +623,126 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const billingContexts = contexts.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'billing'),
+  );
+  const billingGaps = findingsByRule(findings, ['TW-SAAS001']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-BILLING-001',
+      domain: 'authorization',
+      title: 'Billing mutations derive charged values on the server',
+      status: billingGaps.length
+        ? 'GAP_CANDIDATE'
+        : billingContexts.length
+          ? saasRun?.status === 'completed'
+            ? 'EVIDENCED'
+            : saasRun?.status === 'failed'
+              ? 'FAILED'
+              : 'PARTIAL'
+          : noMappedApplicability,
+      rationale: billingGaps.length
+        ? `${billingGaps.length} request-derived billing value candidate(s) require review.`
+        : billingContexts.length
+          ? `${billingContexts.length} mapped billing mutation boundary(s) were inspected without a request-derived price, product, plan, or amount candidate.`
+          : 'No supported billing-provider mutation was mapped.',
+      applicability:
+        'Applies to mapped checkout, payment-intent, subscription, invoice-item, refund, and transaction mutations.',
+      evidence: [
+        ...references(
+          'finding',
+          billingGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(billingContexts, ['billing']),
+        ...saasRefs,
+      ],
+      verification:
+        'Tamper with plan, price, product, amount, currency, quantity, discount, and tenant ownership; compare the provider-side charge with the server catalog.',
+      limitations: [
+        'Business pricing rules, provider dashboard configuration, discounts, taxes, and webhook reconciliation remain outside source-only proof.',
+      ],
+    }),
+  );
+
+  const recoveryContexts = contexts.filter((context) =>
+    /(?:password|reset|forgot|recovery|invite|verification|verify|otp)/i.test(
+      `${context.entrypoint.route ?? ''} ${context.entrypoint.name} ${context.entrypoint.file}`,
+    ),
+  );
+  const recoveryGaps = findingsByRule(findings, ['TW-SAAS003', 'TW-SAAS008', 'TW-SAAS009']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-RECOVERY-001',
+      domain: 'authentication',
+      title: 'Recovery and invitation tokens have a bounded lifecycle',
+      status: recoveryGaps.length
+        ? 'GAP_CANDIDATE'
+        : recoveryContexts.length
+          ? saasRun?.status === 'failed'
+            ? 'FAILED'
+            : 'PARTIAL'
+          : noMappedApplicability,
+      rationale: recoveryGaps.length
+        ? `${recoveryGaps.length} predictable, plaintext, or non-expiring token candidate(s) require review.`
+        : recoveryContexts.length
+          ? `${recoveryContexts.length} recovery, invitation, or verification boundary(s) were mapped without a decisive token-generation/storage candidate; atomic one-time use remains unverified.`
+          : 'No supported recovery, invitation, or verification boundary was mapped.',
+      applicability:
+        'Applies to password recovery, invitations, email verification, unlock, magic-link, and OTP-style flows.',
+      evidence: [
+        ...references(
+          'finding',
+          recoveryGaps.map((item) => item.id),
+        ),
+        ...saasRefs,
+      ],
+      verification:
+        'Test expiry, replay, concurrent redemption, account binding, user enumeration, token disclosure, and invalidation after password or email changes.',
+      limitations: [
+        'The mechanical scan cannot prove atomic consumption, delivery-channel security, or identity-provider policy.',
+      ],
+    }),
+  );
+
+  const oauthContexts = contexts.filter((context) =>
+    /(?:oauth|oidc|openid|auth[/._-].*callback|callback[/._-].*auth)/i.test(
+      `${context.entrypoint.route ?? ''} ${context.entrypoint.name} ${context.entrypoint.file}`,
+    ),
+  );
+  const oauthGaps = findingsByRule(findings, ['TW-SAAS007']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-OAUTH-001',
+      domain: 'authentication',
+      title: 'OAuth/OIDC flows bind redirects and authorization responses',
+      status: oauthGaps.length
+        ? 'GAP_CANDIDATE'
+        : oauthContexts.length
+          ? saasRun?.status === 'failed'
+            ? 'FAILED'
+            : 'UNVERIFIED'
+          : noMappedApplicability,
+      rationale: oauthGaps.length
+        ? `${oauthGaps.length} request-derived OAuth redirect candidate(s) require review.`
+        : oauthContexts.length
+          ? `${oauthContexts.length} OAuth/OIDC-shaped boundary(s) were mapped; state, PKCE, nonce, redirect registration, and account-linking policy require explicit verification.`
+          : 'No supported OAuth/OIDC boundary was mapped.',
+      applicability: 'Applies to OAuth/OIDC authorization initiation, callbacks, and account linking.',
+      evidence: [
+        ...references(
+          'finding',
+          oauthGaps.map((item) => item.id),
+        ),
+        ...saasRefs,
+      ],
+      verification:
+        'Test missing/reused state, PKCE mismatch, nonce mismatch, redirect variants, login CSRF, account-link confusion, and authorization-code replay.',
+      limitations: [
+        'Provider SDK defaults and console-registered redirect URIs are external evidence.',
+      ],
+    }),
+  );
+
   const tenantKeys = new Set(
     (profile?.saasSemantics?.vocabulary.tenantKeys ?? []).map((key) => key.toLowerCase()),
   );
