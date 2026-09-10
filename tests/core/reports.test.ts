@@ -9,7 +9,7 @@ import {
   toMarkdown,
   toSarif,
 } from '../../src/domain/reports.ts';
-import { sampleReport, sampleRiskCorrelation } from '../helpers.ts';
+import { sampleEnvironmentContract, sampleReport, sampleRiskCorrelation } from '../helpers.ts';
 import { buildCoverage } from '../../src/domain/coverage.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
@@ -38,6 +38,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
   };
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.riskCorrelation.paths[0]!.steps[0]!.label = '<unsafe-path>';
+  report.environmentContract = sampleEnvironmentContract();
+  report.environmentContract.variables[0]!.name = '<unsafe-env-name>';
   const output = toHtml(report);
   assert.ok(!output.includes('<script>'));
   assert.ok(!output.includes('<img src=x'));
@@ -57,6 +59,9 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Entrypoint-to-operation paths'));
   assert.ok(output.includes('&lt;unsafe-path&gt;'));
   assert.ok(!output.includes('<unsafe-path>'));
+  assert.ok(output.includes('Environment configuration'));
+  assert.ok(output.includes('&lt;unsafe-env-name&gt;'));
+  assert.ok(!output.includes('<unsafe-env-name>'));
 });
 test('SARIF export retains unresolved status and valid local locations', () => {
   const result = toSarif(sampleReport()) as {
@@ -202,6 +207,7 @@ test('Markdown includes scope and limitations', () => {
     truncated: false,
   };
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
+  report.environmentContract = sampleEnvironmentContract();
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
@@ -222,6 +228,8 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Correlated source paths'));
   assert.ok(output.includes('risk-paths.json'));
+  assert.ok(output.includes('## Environment contract'));
+  assert.ok(output.includes('environment-contract.json'));
   assert.ok(output.includes('## Limitations'));
 });
 test('exports group dependency advisories into conservative remediation plans', () => {
@@ -296,13 +304,17 @@ test('investigation bundle is bounded, evidence-led, and ready for manual AI rev
     scanners: report.scanners,
     dependencies: [],
   });
+  report.environmentContract = sampleEnvironmentContract();
   const bundle = toInvestigationBundle(report) as {
+    schemaVersion: number;
     kind: string;
     policy: string[];
     findings: { id: string; evidence: { id: string }[] }[];
     projectMap: { entrypoints: unknown[]; securityFacts: unknown[]; callEdges: unknown[] };
     mechanicalAnalysis: unknown;
+    environmentContract: { summary: { undocumented: number } };
   };
+  assert.equal(bundle.schemaVersion, 2);
   assert.equal(bundle.kind, 'traceward-investigation-bundle');
   assert.ok(bundle.policy.some((item) => item.includes('untrusted evidence')));
   assert.equal(bundle.findings[0]?.id, report.findings[0]?.id);
@@ -311,5 +323,6 @@ test('investigation bundle is bounded, evidence-led, and ready for manual AI rev
   assert.ok(bundle.projectMap.securityFacts.length <= 1_000);
   assert.ok(bundle.projectMap.callEdges.length <= 1_000);
   assert.equal(bundle.mechanicalAnalysis, null);
+  assert.equal(bundle.environmentContract.summary.undocumented, 1);
   assert.equal('root' in bundle, false);
 });

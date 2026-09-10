@@ -10,6 +10,7 @@ test('environment contract compares named source access with sanitized templates
       'src/server.ts': `
         const { DATABASE_URL } = process.env;
         export const missing = process.env.WEBHOOK_SECRET;
+        export const feature = process.env.FEATURE_MODE;
         export const builtIn = process.env.NODE_ENV;
       `,
       'src/client.tsx': `
@@ -20,7 +21,7 @@ test('environment contract compares named source access with sanitized templates
       'src/vite.ts': `export const mode = import.meta.env.MODE;`,
     }),
   );
-  assert.deepEqual(result.analysis.undocumented, ['WEBHOOK_SECRET']);
+  assert.deepEqual(result.analysis.undocumented, ['FEATURE_MODE', 'WEBHOOK_SECRET']);
   assert.deepEqual(result.analysis.unusedDeclarations, ['STALE_NAME']);
   assert.equal(result.analysis.summary.documented, 2);
   assert.equal(result.analysis.summary.platformProvided, 2);
@@ -34,6 +35,7 @@ test('environment contract compares named source access with sanitized templates
     result.findings.map((finding) => finding.ruleId),
     ['TW-ENV001'],
   );
+  assert.match(result.findings[0]?.evidence[0]?.observation ?? '', /WEBHOOK_SECRET/);
   assert.equal(result.run.status, 'completed');
 });
 

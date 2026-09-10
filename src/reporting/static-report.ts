@@ -96,6 +96,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.environmentContract
+      ? [
+          {
+            path: 'environment-contract.json',
+            mediaType: 'application/json',
+            content: json(report.environmentContract),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

@@ -1,6 +1,11 @@
 import { digest } from '../src/domain/findings.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
-import type { AuditReport, RiskCorrelation, Snapshot } from '../src/domain/types.ts';
+import type {
+  AuditReport,
+  EnvironmentContractAnalysis,
+  RiskCorrelation,
+  Snapshot,
+} from '../src/domain/types.ts';
 export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
   return {
     digest: digest(content),
@@ -108,5 +113,45 @@ export function sampleRiskCorrelation(findingId: string): RiskCorrelation {
     },
     truncated: false,
     limitations: ['Static source path only.'],
+  };
+}
+
+export function sampleEnvironmentContract(): EnvironmentContractAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    templates: [{ file: '.env.example', variables: 1 }],
+    variables: [
+      {
+        name: 'WEBHOOK_SECRET',
+        status: 'undocumented',
+        declaredIn: [],
+        locations: [
+          {
+            file: 'src/config.ts',
+            line: 4,
+            syntax: 'process.env',
+            context: 'server',
+          },
+        ],
+        truncated: false,
+      },
+    ],
+    undocumented: ['WEBHOOK_SECRET'],
+    unverified: [],
+    unusedDeclarations: ['OLD_SETTING'],
+    dynamicAccesses: [],
+    summary: {
+      used: 1,
+      documented: 0,
+      undocumented: 1,
+      platformProvided: 0,
+      unverified: 0,
+      unusedDeclarations: 1,
+      dynamicAccesses: 0,
+    },
+    truncated: false,
+    limitations: ['Deployment-provided names remain possible.'],
   };
 }

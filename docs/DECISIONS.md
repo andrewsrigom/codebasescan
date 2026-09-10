@@ -112,4 +112,5 @@ is discarded; real `.env` files remain excluded. Workflow v20 compares the retai
 bounded `process.env`, `import.meta.env`, and direct destructuring accesses. A missing name becomes
 a low-severity review candidate only when at least one template was captured. Without a template,
 names stay unverified instead of being reported as defects. Report schema v8 and audit-mode pack
-0.4.0 preserve this behavior for downstream consumers.
+0.4.0 preserve this behavior for downstream consumers. Rule-quality schema v2 accepts the new
+source and records its paired benchmark scope.

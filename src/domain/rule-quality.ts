@@ -1,6 +1,6 @@
 import type { AuditReport, Finding } from './types.ts';
 
-export const ruleQualityVersion = 1 as const;
+export const ruleQualityVersion = 2 as const;
 
 export interface RuleQualityEntry {
   id: string;
@@ -58,6 +58,7 @@ const benchmarked = new Set([
     { length: 2 },
     (_, index) => `reliability:TW-REL${String(index + 1).padStart(3, '0')}`,
   ),
+  'environment:TW-ENV001',
   'builtin:TW-001',
   'builtin:TW-005',
   'builtin:TW-006',
@@ -76,6 +77,7 @@ const frameworks: Partial<Record<Finding['source'], string[]>> = {
   accessibility: ['React JSX', 'Next.js'],
   privacy: ['Node.js', 'React', 'Next.js'],
   reliability: ['Node.js', 'Next.js request boundaries'],
+  environment: ['Node.js', 'Next.js', 'Vite'],
   posture: ['Node.js', 'Next.js'],
   'supply-chain': ['npm', 'pnpm', 'Yarn'],
   osv: ['npm', 'pnpm', 'Yarn'],
@@ -95,6 +97,9 @@ const limitations: Partial<Record<Finding['source'], string[]>> = {
     'Purpose, consent, retention, deletion, and actual third-party transfer are unverified.',
   ],
   reliability: ['Platform timeouts, retries, queues, and recovery behavior may be external.'],
+  environment: [
+    'Deployment-provided names and dynamic environment access can remain outside captured templates.',
+  ],
   'supply-chain': ['A declaration is a review candidate, not proof of compromise.'],
   'http-probe': ['One response does not establish whole-application runtime behavior.'],
   osv: ['Package presence and source-reference hints do not prove vulnerable code execution.'],

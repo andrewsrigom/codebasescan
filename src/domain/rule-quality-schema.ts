@@ -22,6 +22,7 @@ const rule = z.object({
     'accessibility',
     'privacy',
     'reliability',
+    'environment',
     'supply-chain',
     'http-probe',
     'osv',
@@ -55,7 +56,7 @@ const rule = z.object({
 });
 
 const schema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   kind: z.literal('traceward-rule-quality'),
   generatedAt: shortText,
   auditId: shortText,

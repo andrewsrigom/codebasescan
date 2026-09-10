@@ -49,5 +49,5 @@ test('rule quality JSON Schema is versioned', () => {
   const schema = ruleQualityJsonSchema() as {
     properties?: { schemaVersion?: { const?: number } };
   };
-  assert.equal(schema.properties?.schemaVersion?.const, 1);
+  assert.equal(schema.properties?.schemaVersion?.const, 2);
 });

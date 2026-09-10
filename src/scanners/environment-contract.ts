@@ -20,10 +20,14 @@ const maximumDynamicAccesses = 100;
 const maximumFindings = 300;
 const platformVariables = new Set([
   'CI',
+  'COREPACK_ENABLE_DOWNLOAD_PROMPT',
+  'GIT_COMMIT_SHA',
   'HOST',
   'HOSTNAME',
+  'NODE_OPTIONS',
   'NODE_ENV',
   'PORT',
+  'USER',
   'NEXT_RUNTIME',
   'VERCEL',
   'VERCEL_ENV',
@@ -41,6 +45,8 @@ const platformVariables = new Set([
   'VERCEL_GIT_COMMIT_AUTHOR_NAME',
 ]);
 const viteVariables = new Set(['MODE', 'BASE_URL', 'PROD', 'DEV', 'SSR']);
+const reviewCandidateName =
+  /(?:AUTH|CREDENTIAL|DATABASE|ENCRYPT|PASSWORD|POSTGRES|PRIVATE|REDIS|SECRET|STRIPE|TOKEN|WEBHOOK)/i;
 
 interface NamedAccess extends EnvironmentContractLocation {
   name: string;
@@ -335,9 +341,11 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
             'No captured environment template was available, so non-platform names remain unverified rather than undocumented.',
           ]),
       'Unused declarations may be consumed by frameworks, package scripts, external services, or files outside the bounded snapshot.',
+      'Only security-, authentication-, credential-, data-service-, or payment-shaped undocumented names become findings; all other mismatches remain visible in this contract.',
     ],
   };
-  const findings = undocumented.slice(0, maximumFindings).flatMap((name) => {
+  const findingNames = undocumented.filter((name) => reviewCandidateName.test(name));
+  const findings = findingNames.slice(0, maximumFindings).flatMap((name) => {
     const first = byName.get(name)?.[0];
     return first ? [contractFinding(first)] : [];
   });
@@ -353,7 +361,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
       detail:
         status === 'unsupported'
           ? 'No supported runtime source or sanitized environment template was available.'
-          : `Compared ${variables.length} named environment use(s) with ${templates.length} sanitized template(s); ${undocumented.length} undocumented, ${unverified.length} unverified, ${unusedDeclarations.length} declared but not observed, and ${dynamicAccesses.length} dynamic access(es). Values were not retained.`,
+          : `Compared ${variables.length} named environment use(s) with ${templates.length} sanitized template(s); ${undocumented.length} undocumented (${findingNames.length} high-signal review candidates), ${unverified.length} unverified, ${unusedDeclarations.length} declared but not observed, and ${dynamicAccesses.length} dynamic access(es). Values were not retained.`,
       version: '1.0.0',
     },
   };
