@@ -36,3 +36,25 @@ test('native semantics and complete labels avoid accessibility candidates', () =
   );
   assert.deepEqual(result.findings, []);
 });
+
+test('component names are not downgraded into intrinsic HTML semantics', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `export function Form() {
+        return <><Image src="/logo.png" /><Label>Email</Label><Input id="email" /><Select /></>;
+      }`,
+    }),
+  );
+  assert.deepEqual(result.findings, []);
+});
+
+test('dynamic label references and forwarded intrinsic attributes stay unverified', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `export function Field({ id, ...props }) {
+        return <><label htmlFor={id}>Email</label><input id={id} /><textarea {...props} /></>;
+      }`,
+    }),
+  );
+  assert.deepEqual(result.findings, []);
+});

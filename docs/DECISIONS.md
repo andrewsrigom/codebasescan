@@ -45,6 +45,14 @@ Rule quality is emitted separately as `rule-quality.json` plus a JSON Schema. It
 that produced findings in the audit, keeps fixture measurements separate from real-project human
 dispositions, and states detector limitations instead of presenting one unsupported accuracy score.
 
+## 2026-09-10 — intrinsic JSX accessibility semantics
+
+Static accessibility rules preserve JSX tag casing. A React component such as `Input` is not
+treated as the intrinsic `input` element, and an intrinsic wrapper forwarding spread attributes is
+left unverified because its accessible name may be supplied by the caller. Exact static or dynamic
+`htmlFor`/`id` expressions remain linkable. Scanner version 0.2.0 and workflow v14 prevent old
+results from being presented as current calibration.
+
 ## 2026-09-10 — declared context and observed data map
 
 Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script

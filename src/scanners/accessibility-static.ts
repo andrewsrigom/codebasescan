@@ -11,7 +11,7 @@ function lineOf(source: ts.SourceFile, node: ts.Node): number {
 }
 
 function tagName(node: ts.JsxOpeningLikeElement): string {
-  return node.tagName.getText(node.getSourceFile()).toLowerCase();
+  return node.tagName.getText(node.getSourceFile());
 }
 
 function attribute(node: ts.JsxOpeningLikeElement, name: string): ts.JsxAttribute | undefined {
@@ -26,6 +26,19 @@ function literalAttribute(node: ts.JsxOpeningLikeElement, name: string): string 
   return found?.initializer && ts.isStringLiteral(found.initializer)
     ? found.initializer.text
     : undefined;
+}
+
+function attributeReference(node: ts.JsxOpeningLikeElement, name: string): string | undefined {
+  const found = attribute(node, name);
+  if (!found?.initializer) return undefined;
+  if (ts.isStringLiteral(found.initializer)) return `literal:${found.initializer.text}`;
+  if (ts.isJsxExpression(found.initializer) && found.initializer.expression)
+    return `expression:${found.initializer.expression.getText(node.getSourceFile())}`;
+  return undefined;
+}
+
+function hasSpreadAttributes(node: ts.JsxOpeningLikeElement): boolean {
+  return node.attributes.properties.some(ts.isJsxSpreadAttribute);
 }
 
 function finding(
@@ -82,7 +95,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
       tagName(ts.isJsxElement(node) ? node.openingElement : node) === 'label'
     ) {
       const opening = ts.isJsxElement(node) ? node.openingElement : node;
-      const target = literalAttribute(opening, 'htmlfor');
+      const target = attributeReference(opening, 'htmlfor');
       if (target) labels.add(target);
     }
     ts.forEachChild(node, collectLabels);
@@ -144,13 +157,14 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
         );
       if (['input', 'select', 'textarea'].includes(tag)) {
         const type = literalAttribute(opening, 'type')?.toLowerCase();
-        const id = literalAttribute(opening, 'id');
+        const id = attributeReference(opening, 'id');
         const named =
           type === 'hidden' ||
           Boolean(attribute(opening, 'aria-label')) ||
           Boolean(attribute(opening, 'aria-labelledby')) ||
           Boolean(id && labels.has(id)) ||
-          insideLabel(opening);
+          insideLabel(opening) ||
+          hasSpreadAttributes(opening);
         if (!named)
           findings.push(
             finding(
@@ -198,7 +212,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
       detail: files.length
         ? `Inspected ${files.length} JSX file(s) for four bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior were not tested.`
         : 'No runtime JSX source was available for static accessibility review.',
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }
