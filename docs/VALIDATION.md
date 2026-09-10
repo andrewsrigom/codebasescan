@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 214 passed                                                             |
+| npm test                      | 224 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
 | npm run benchmark             | TP 36, FP 1, FN 0; precision 0.9730, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
@@ -27,13 +27,14 @@ Environment:
 | React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | npm run build                 | Passed                                                                 |
 | npm run test:e2e              | 7 passed in Chromium                                                   |
+| npm run test:package          | 56 files; 147,977 packed bytes; required CLI/rules present             |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
 | Browser workspace             | Dependency plans rendered real data with no overlay or console error   |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,196 files, 0 snapshot truncations, 112 candidates, 7 checklist gaps  |
+| Latest `seusaas` offline run  | 1,196 files, 1,094 dependencies, 112 candidates, 52 remediation tasks  |
 
 The latest full offline `seusaas-platform` run included Semgrep, Gitleaks, OSV,
 dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
@@ -49,7 +50,10 @@ with exact totals. The checklist retained 8 evidenced controls, 7 gap candidates
 controls, and one partial control. The 112 security candidates were 4 critical, 63 high, 37 medium,
 and 8 low: 101 exact-version OSV advisories across 26 affected packages plus 11 source candidates.
 The corrected pnpm inventory retained 1,094 distinct dependencies, including full scoped-package
-names; remediation plans were verified in the workspace, Markdown, HTML, and Codex bundle. Calibration against this run
+names. It mapped bounded parent paths for 1,085 dependencies and every one of the 26 dependency
+remediation tasks. Remediation plans were verified in the workspace, static HTML, Markdown, and
+focused Codex task bundles. The terminal flow also passed static-directory generation, baseline
+before/after output, packed-content validation, and a real 17 KiB focused task export. Calibration against this run
 removed 45 reproducible false positives without weakening the declared benchmark. No target code,
 configuration module, test, or package lifecycle script ran.
 
@@ -96,6 +100,7 @@ npm run test:graph
 npm run benchmark
 npm run build
 npm run test:e2e
+npm run test:package
 npm audit --audit-level=low
 ```
 
