@@ -106,3 +106,70 @@ test('custom SaaS vocabulary is applied without executable configuration', () =>
   const findings = scanSaasSecurity(snapshot, profileProject(snapshot).profile).findings;
   assert.ok(findings.some((finding) => finding.ruleId === 'TW-SAAS002'));
 });
+
+test('SaaS data exposure rules distinguish raw sensitive values from redaction', () => {
+  const vulnerable = findingsFor(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      logger.info({ email: body.email, token: body.token }, 'received');
+      const url = new URL('https://example.test/callback');
+      url.searchParams.set('token', body.token);
+      return Response.json({ ok: true });
+    }
+  `);
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS005'));
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS006'));
+
+  const safe = findingsFor(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      logger.info({ emailHash: hash(body.email) }, 'received');
+      return fetch('https://example.test/callback', {
+        headers: { authorization: 'Bearer ' + body.token }
+      });
+    }
+  `);
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS005'));
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS006'));
+});
+
+test('SaaS OAuth rule distinguishes client redirects from an allowlisted lookup', () => {
+  const vulnerable = findingsFor(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      return oauth.authorization.create({ redirect_uri: body.redirectUri });
+    }
+  `);
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS007'));
+
+  const safe = findingsFor(`
+    const REDIRECT_URIS = { app: 'https://app.example.test/callback' };
+    export async function POST(request: Request) {
+      const body = await request.json();
+      return oauth.authorization.create({ redirect_uri: REDIRECT_URIS[body.client] });
+    }
+  `);
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS007'));
+});
+
+test('SaaS recovery rules require hashed tokens and an expiry', () => {
+  const vulnerable = findingsFor(`
+    export async function POST() {
+      const resetToken = crypto.randomUUID();
+      return database.passwordReset.create({ data: { resetToken } });
+    }
+  `);
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS008'));
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS009'));
+
+  const safe = findingsFor(`
+    export async function POST() {
+      const resetToken = crypto.randomUUID();
+      return database.passwordReset.create({
+        data: { tokenHash: hash(resetToken), expiresAt: new Date(Date.now() + 900_000) }
+      });
+    }
+  `);
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS008'));
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS009'));
+});

@@ -182,6 +182,62 @@ function sensitiveProperties(
   return results;
 }
 
+function objectProperties(
+  node: ts.Node,
+): (ts.PropertyAssignment | ts.ShorthandPropertyAssignment)[] {
+  const results: (ts.PropertyAssignment | ts.ShorthandPropertyAssignment)[] = [];
+  let inspected = 0;
+  const visit = (child: ts.Node): void => {
+    if (inspected++ > 5000) return;
+    if (ts.isPropertyAssignment(child) || ts.isShorthandPropertyAssignment(child))
+      results.push(child);
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return results;
+}
+
+function propertyInitializer(
+  property: ts.PropertyAssignment | ts.ShorthandPropertyAssignment,
+): ts.Expression {
+  return ts.isPropertyAssignment(property) ? property.initializer : property.name;
+}
+
+function isProtectedTransform(node: ts.Node): boolean {
+  return /(?:hash|digest|hmac|scrypt|argon|bcrypt|mask|redact|sanitize)\s*\(/i.test(
+    node.getText(node.getSourceFile()),
+  );
+}
+
+function containsSensitiveValue(node: ts.Node, sensitiveNames: Set<string>): boolean {
+  if (ts.isCallExpression(node) && isProtectedTransform(node)) return false;
+  let found = false;
+  let inspected = 0;
+  const visit = (child: ts.Node): void => {
+    if (found || inspected++ > 2000) return;
+    if (ts.isCallExpression(child) && isProtectedTransform(child)) return;
+    if (ts.isPropertyAssignment(child)) {
+      const name = propertyName(child.name);
+      if (name && sensitiveNames.has(name.toLowerCase()) && !isProtectedTransform(child.initializer)) {
+        found = true;
+        return;
+      }
+    }
+    if (
+      (ts.isIdentifier(child) || ts.isPropertyAccessExpression(child)) &&
+      sensitiveNames.has(
+        (ts.isIdentifier(child) ? child.text : child.name.text).toLowerCase(),
+      )
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return found;
+}
+
 function isBillingSink(name: string): boolean {
   return /(?:checkout\.sessions|paymentintents|subscriptions|invoiceitems|prices)\.(?:create|update)$/i.test(
     name,
@@ -193,6 +249,49 @@ function isDatabaseMutation(name: string): boolean {
     /\.(?:create|createMany|update|updateMany|upsert)$/i.test(name) &&
     /(?:prisma|database|\bdb\b|repository|model|supabase|drizzle)/i.test(name)
   );
+}
+
+function isLoggingSink(name: string): boolean {
+  return /(?:^|\.)(?:console|logger|log|audit|analytics|telemetry)\.(?:log|info|warn|error|debug|trace|track|identify|capture|record)$/i.test(
+    name,
+  );
+}
+
+function isOauthSink(name: string): boolean {
+  return /(?:oauth|openid|oidc|authorization|authorize|token).*(?:create|exchange|redirect|request|start|url)$/i.test(
+    name,
+  );
+}
+
+function isRecoveryTokenSink(name: string): boolean {
+  return (
+    /(?:password.?reset|account.?recovery|invitation?|verification).*(?:create|upsert)$/i.test(name) ||
+    /(?:create|upsert).*(?:password.?reset|account.?recovery|invitation?|verification)/i.test(name)
+  );
+}
+
+function sensitiveUrlKey(value: string, sensitiveNames: Set<string>): boolean {
+  const normalized = value.replace(/[-_]/g, '').toLowerCase();
+  return [...sensitiveNames].some(
+    (name) => name.replace(/[-_]/g, '').toLowerCase() === normalized,
+  );
+}
+
+function urlLeak(call: ts.CallExpression, sensitiveNames: Set<string>): boolean {
+  const name = callName(call);
+  if (/\.searchParams\.(?:set|append)$/i.test(name)) {
+    const key = call.arguments[0];
+    return Boolean(key && ts.isStringLiteralLike(key) && sensitiveUrlKey(key.text, sensitiveNames));
+  }
+  if (!/(?:URL|URLSearchParams|redirect)$/i.test(name)) return false;
+  return call.arguments.some((argument) => {
+    const text = argument.getText(argument.getSourceFile());
+    return [...sensitiveNames].some(
+      (sensitive) =>
+        new RegExp(`[?&]${sensitive.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=`, 'i').test(text) &&
+        /\$\{|\+/.test(text),
+    );
+  });
 }
 
 function weakEntropy(node: ts.Node): boolean {
@@ -238,6 +337,30 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
     ),
   );
   const tokenKeys = new Set(vocabulary.tokenKeys.map((key) => key.toLowerCase()));
+  const sensitiveDataKeys = new Set(
+    [
+      ...vocabulary.tokenKeys,
+      'password',
+      'passwordHash',
+      'secret',
+      'apiKey',
+      'authorization',
+      'cookie',
+      'session',
+      'email',
+      'phone',
+      'address',
+      'ssn',
+      'taxId',
+      'creditCard',
+      'cardNumber',
+    ].map((key) => key.toLowerCase()),
+  );
+  const oauthRedirectKeys = new Set(
+    ['redirectUri', 'redirect_uri', 'callbackUrl', 'callback_url', 'returnTo'].map((key) =>
+      key.toLowerCase(),
+    ),
+  );
   let nodes = 0;
 
   const add = (candidate: Finding): void => {
@@ -286,7 +409,118 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
               observation: `${propertyName(property.name) ?? 'Sensitive field'} receives request-derived data before ${name}.`,
             }),
           );
+
+        if (isRecoveryTokenSink(name)) {
+          const properties = objectProperties(node);
+          const storedTokens = properties.filter((property) => {
+            const propertyKey = propertyName(property.name);
+            return propertyKey ? tokenKeys.has(propertyKey.toLowerCase()) : false;
+          });
+          for (const property of storedTokens) {
+            const initializer = propertyInitializer(property);
+            const propertyKey = propertyName(property.name) ?? 'token';
+            if (!/(?:hash|digest)$/i.test(propertyKey) && !isProtectedTransform(initializer))
+              add(
+                finding({
+                  parsed,
+                  node: property,
+                  ruleId: 'TW-SAAS008',
+                  title: 'Recovery token may be stored in plaintext',
+                  category: 'authentication',
+                  severity: 'high',
+                  description:
+                    'A reset, recovery, invitation, or verification record stores a token-shaped value without a recognized one-way transform. Database disclosure could make unused tokens immediately reusable.',
+                  remediation:
+                    'Store a keyed or cryptographic hash of the token, compare hashes in constant-time where applicable, and never log or return the raw value after delivery.',
+                  cwe: ['CWE-256', 'CWE-312'],
+                  observation: `${propertyKey} is persisted by ${name} without a recognized hash transform.`,
+                }),
+              );
+          }
+          const hasExpiry = properties.some((property) =>
+            /^(?:expiresAt|expires|expiry|validUntil)$/i.test(propertyName(property.name) ?? ''),
+          );
+          if (storedTokens.length && !hasExpiry)
+            add(
+              finding({
+                parsed,
+                node,
+                ruleId: 'TW-SAAS009',
+                title: 'Recovery token record has no mapped expiry',
+                category: 'authentication',
+                severity: 'medium',
+                description:
+                  'A reset, recovery, invitation, or verification record is created with a token-shaped field but no recognized expiry field in the same bounded mutation.',
+                remediation:
+                  'Persist a short expiry, reject expired records before use, consume tokens atomically once, and test replay and concurrent redemption.',
+                cwe: ['CWE-613'],
+                observation: `${name} persists a recovery token without a mapped expiry field.`,
+              }),
+            );
+        }
       }
+
+      if (isLoggingSink(name)) {
+        const sensitiveArgument = node.arguments.find(
+          (argument) =>
+            containsSensitiveValue(argument, sensitiveDataKeys) ||
+            (ts.isIdentifier(argument) && requestNames.has(argument.text) && tainted.has(argument.text)),
+        );
+        if (sensitiveArgument)
+          add(
+            finding({
+              parsed,
+              node,
+              ruleId: 'TW-SAAS005',
+              title: 'Sensitive data may be written to logs or analytics',
+              category: 'secrets',
+              severity: 'medium',
+              description:
+                'A token-, credential-, personal-data-, session-, or whole-request-shaped value reaches a logging, telemetry, or analytics call without a recognized mask, redaction, or hash transform.',
+              remediation:
+                'Log stable identifiers and event metadata only. Apply centralized structured redaction and verify exported telemetry, retention, and access controls.',
+              cwe: ['CWE-532', 'CWE-359'],
+              observation: `${name} receives a sensitive-shaped value without a mapped protective transform.`,
+            }),
+          );
+      }
+
+      if (urlLeak(node, sensitiveDataKeys))
+        add(
+          finding({
+            parsed,
+            node,
+            ruleId: 'TW-SAAS006',
+            title: 'Sensitive value may be placed in a URL',
+            category: 'secrets',
+            severity: 'high',
+            description:
+              'A sensitive-shaped query parameter is added to a URL. URLs can leak through browser history, referrers, proxies, access logs, screenshots, and analytics.',
+            remediation:
+              'Keep credentials and personal data out of URLs. Use an authorization header, secure cookie, or one-time opaque exchange code with short expiry.',
+            cwe: ['CWE-598'],
+            observation: `${name} adds a sensitive-shaped query parameter.`,
+          }),
+        );
+
+      if (isOauthSink(name))
+        for (const property of sensitiveProperties(node, oauthRedirectKeys, tainted))
+          add(
+            finding({
+              parsed,
+              node: property,
+              ruleId: 'TW-SAAS007',
+              title: 'OAuth redirect destination may be client-controlled',
+              category: 'authentication',
+              severity: 'high',
+              description:
+                'A request-derived redirect or callback destination reaches an OAuth/OIDC-shaped operation. Weak redirect validation can leak authorization codes or tokens.',
+              remediation:
+                'Resolve redirect destinations from an exact server-owned allowlist and enforce state, PKCE, and nonce as required by the flow.',
+              cwe: ['CWE-601', 'CWE-346'],
+              observation: `${propertyName(property.name) ?? 'OAuth redirect'} receives request-derived data before ${name}.`,
+            }),
+          );
     }
 
     if (ts.isVariableDeclaration(node) && node.initializer) {
@@ -404,8 +638,8 @@ export function scanSaasSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: findings.length,
       detail:
-        'Four bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, predictable token entropy, and internal error exposure. Findings are source candidates, not runtime proof.',
-      version: '0.1.0',
+        'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
+      version: '0.2.0',
     },
   };
 }
