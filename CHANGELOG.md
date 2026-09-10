@@ -34,3 +34,5 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added safe declarative Knip settings, workspace manifests, package-script entry hints, and TypeScript path aliases to reduce monorepo dead-code noise without executing target configuration.
 - Preserved exact totals for bounded architecture, quality, dead-code, and duplicate reports, and added safe file/line Semgrep parser diagnostics.
 - Reduced real-project React/Next/AST/Semgrep noise by respecting nested Client Components, descriptive security wrappers, scoped service helpers, explicit public submission routes, standards-compliant `noreferrer` links, and actual logger call shapes.
+- Grouped OSV findings into package/version remediation plans with conservative same-major fixed-event coverage in the workspace, Markdown, HTML, and Codex bundle exports.
+- Corrected modern pnpm scoped-package parsing so packages such as `@aws-crypto/crc32` retain their full identity and advisory coverage.

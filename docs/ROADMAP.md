@@ -32,6 +32,7 @@
 - Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
 - Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
 - The 1,196-file `seusaas-platform` pressure test now calibrates nested React client boundaries, descriptive auth/validation wrappers, scoped service helpers, public submission routes, new-tab protection, and structured-log matching; 45 reproducible false positives were removed while benchmark recall stayed unchanged.
+- Dependency findings now collapse into actionable package/version plans with conservative OSV fix coverage, lazy full-inventory rendering, and matching Markdown, HTML, and Codex bundle exports. Modern pnpm scoped packages retain their complete names.
 
 ## Next — independent real-project ground truth
 
@@ -39,7 +40,7 @@ Repeat evaluation on owner-authorized applications with production context and i
 
 Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
-Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
+Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Add parent-chain explanations for transitive upgrade plans. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 
 ## Next — operational hardening
 

@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 211 passed                                                             |
+| npm test                      | 214 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
 | npm run benchmark             | TP 36, FP 1, FN 0; precision 0.9730, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
@@ -29,11 +29,11 @@ Environment:
 | npm run test:e2e              | 7 passed in Chromium                                                   |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
-| Browser workspace             | Source analysis rendered real data with no overlay or console error    |
+| Browser workspace             | Dependency plans rendered real data with no overlay or console error   |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,196 files, 0 snapshot truncations, 102 candidates, 7 checklist gaps  |
+| Latest `seusaas` offline run  | 1,196 files, 0 snapshot truncations, 112 candidates, 7 checklist gaps  |
 
 The latest full offline `seusaas-platform` run included Semgrep, Gitleaks, OSV,
 dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
@@ -46,8 +46,10 @@ dependency candidates. The profile completed with 3,424 imports. Semgrep produce
 reported one explicit partial parse at
 `apps/analytics/src/features/reports/reports-preview.tsx:87`; all other omitted detail is reported
 with exact totals. The checklist retained 8 evidenced controls, 7 gap candidates, 7 unverified
-controls, and one partial control. The 102 security candidates were 4 critical, 57 high, 34 medium,
-and 7 low: 91 exact-version OSV advisories plus 11 source candidates. Calibration against this run
+controls, and one partial control. The 112 security candidates were 4 critical, 63 high, 37 medium,
+and 8 low: 101 exact-version OSV advisories across 26 affected packages plus 11 source candidates.
+The corrected pnpm inventory retained 1,094 distinct dependencies, including full scoped-package
+names; remediation plans were verified in the workspace, Markdown, HTML, and Codex bundle. Calibration against this run
 removed 45 reproducible false positives without weakening the declared benchmark. No target code,
 configuration module, test, or package lifecycle script ran.
 
