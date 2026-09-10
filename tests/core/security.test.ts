@@ -227,6 +227,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'node_modules'));
   await mkdir(path.join(root, '.next-dev'));
+  await mkdir(path.join(root, 'traceward-report'));
   await mkdir(path.join(root, '.pnpm-store'));
   await mkdir(path.join(root, 'out'));
   await mkdir(path.join(root, 'output'));
@@ -236,6 +237,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
   await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, 'traceward-report', 'audit-report.json'), '{"ignored":true}');
   await writeFile(path.join(root, '.pnpm-store', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'out', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');

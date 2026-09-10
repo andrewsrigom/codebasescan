@@ -430,7 +430,7 @@ export function toMarkdown(report: AuditReport): string {
   lines.push('## Limitations', '', ...report.limitations.map((limitation) => `- ${m(limitation)}`));
   return lines.join('\n');
 }
-export function toHtml(report: AuditReport): string {
+export function toHtml(report: AuditReport, options: { artifactLinks?: boolean } = {}): string {
   const e = escapeHtml;
   const list = (title: string, items?: string[]) =>
     items?.length
@@ -767,6 +767,9 @@ export function toHtml(report: AuditReport): string {
         .join('') +
       '</div></section>'
     : '';
+  const artifactLinks = options.artifactLinks
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="remediation-plan.json">Remediation plan JSON</a></li><li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
+    : '';
   const css =
     ':root{color-scheme:light;--ink:#182824;--muted:#5a6e64;--line:#dce5e0;--paper:#fff;--canvas:#f3f6f4;--accent:#08745c;--amber:#9b641f;--red:#a94943}' +
     '*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.65 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}' +
@@ -777,9 +780,10 @@ export function toHtml(report: AuditReport): string {
     '.severity,.status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.severity.critical,.severity.high{background:#f9e6e3;color:var(--red)}.severity.medium{background:#fbefd9;color:var(--amber)}.severity.low,.severity.info{background:#edf2ef;color:#4f655a}.status.complete{background:#e6f3eb;color:#28704f}.status.gap{background:#f6ecdd;color:#895d25}' +
     '.coverage-list strong{display:block}.coverage-list p{margin:2px 0 0;color:var(--muted)}.facts{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.facts span{background:#f4f7f5;border:1px solid #e7ece9;border-radius:8px;padding:9px 11px;font-size:12px}.facts strong{font-size:16px}.muted{color:var(--muted)}.checklist-facts{margin-bottom:22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.control{border:1px solid #e7ece9;border-radius:9px;padding:17px}.control h3{font-size:15px;text-transform:none}.control p{font-size:13px;color:#42564c}.control .meta{margin-left:8px}' +
     '.dependency-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dependency-plan{border:1px solid #e7ece9;border-radius:9px;padding:17px}.dependency-plan h3{font:700 14px ui-monospace,monospace;overflow-wrap:anywhere}.dependency-plan .meta{margin-left:8px}.dependency-plan ul{padding-left:20px}.dependency-plan li+li{margin-top:12px}.dependency-plan p{color:var(--muted);font-size:13px;margin:4px 0}' +
+    '.artifact-links{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;padding-left:20px}.artifact-links a{font-weight:650}' +
     '.findings-title{margin-top:42px}.finding>h2{margin-top:18px}.finding-section{border-top:1px solid #e8eeea;margin-top:20px;padding-top:4px}.evidence h3{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172b26;color:#edf5f0;padding:18px;border-radius:8px;font:12px/1.55 ui-monospace,monospace}.evidence p{color:var(--muted)}.remediation{border-left:3px solid var(--accent);padding-left:16px}.review{border-left:3px solid #739b7f;padding-left:16px}' +
     'footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}' +
-    '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
+    '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans,.artifact-links{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
     '@media print{body{background:white}main{max-width:none;padding:0}.report-section,.finding{break-inside:avoid;box-shadow:none}.finding-head a{display:none}.callout{border:1px solid #ddd}.priority-list a{color:var(--ink)}}';
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Traceward · ' +
@@ -820,6 +824,7 @@ export function toHtml(report: AuditReport): string {
     profile +
     mechanical +
     dependencyRemediation +
+    artifactLinks +
     checklist +
     '<section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">' +
     report.findings.length +

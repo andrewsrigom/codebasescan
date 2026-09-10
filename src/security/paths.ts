@@ -19,6 +19,7 @@ const ignoredDirectories = new Set([
   'coverage',
   'storybook-static',
   'test-results',
+  'traceward-report',
   '.traceward',
   '.turbo',
   '.venv',
