@@ -4,6 +4,7 @@ import {
   declarativeKnipConfiguration,
   declarativeSaasConfiguration,
   declarativeWorkspacePatterns,
+  declarativeWorkspacePackageEntrypoints,
   sanitizedManifest,
   typeScriptPathAliases,
 } from '../../src/scanners/declarative-config.ts';
@@ -100,6 +101,30 @@ test('workspace manifests and pnpm declarations are read as data', () => {
     'pnpm-workspace.yaml': `packages:\n  - tools/*\n  - ../outside\n`,
   });
   assert.deepEqual(declarativeWorkspacePatterns(snapshot), ['apps/*', 'tools/*']);
+});
+
+test('workspace package exports resolve only to captured contained source', () => {
+  const snapshot = snapshotFromFiles({
+    'packages/security/package.json': JSON.stringify({
+      name: '@fixture/security',
+      exports: { '.': { import: './src/index.ts' } },
+    }),
+    'packages/security/src/index.ts': `export function requireUser() {}`,
+    'packages/unsafe/package.json': JSON.stringify({
+      name: '@fixture/unsafe',
+      exports: '../outside.ts',
+    }),
+    'packages/outside.ts': `export const unsafe = true;`,
+  });
+  const result = declarativeWorkspacePackageEntrypoints(snapshot);
+  assert.deepEqual(result.entries, [
+    {
+      name: '@fixture/security',
+      manifest: 'packages/security/package.json',
+      file: 'packages/security/src/index.ts',
+    },
+  ]);
+  assert.ok(result.issues.some((issue) => issue.includes('packages/unsafe/package.json')));
 });
 
 test('staged manifests keep dependency metadata but drop scripts', () => {

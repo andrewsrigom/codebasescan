@@ -7,6 +7,7 @@ import { isRuntimeSource } from '../security/paths.ts';
 const maximumPatterns = 200;
 const maximumWorkspaces = 50;
 const maximumSaasAliases = 100;
+const maximumWorkspacePackages = 200;
 const workspaceKeys = new Set([
   'entry',
   'project',
@@ -146,6 +147,12 @@ export interface TypeScriptPathAlias {
   configFile: string;
   pattern: string;
   targets: string[];
+}
+
+export interface WorkspacePackageEntrypoint {
+  name: string;
+  manifest: string;
+  file: string;
 }
 
 function object(value: unknown): Record<string, unknown> | null {
@@ -551,6 +558,80 @@ export function declarativeWorkspacePatterns(snapshot: Snapshot): string[] {
     }
   }
   return [...patterns].sort();
+}
+
+function packageExportTarget(value: unknown, depth = 0): string | undefined {
+  if (depth > 3) return undefined;
+  if (typeof value === 'string') return safeAliasPath(value);
+  const input = object(value);
+  if (!input) return undefined;
+  for (const key of ['import', 'node', 'default', 'require', 'types']) {
+    const target = packageExportTarget(input[key], depth + 1);
+    if (target) return target;
+  }
+  return undefined;
+}
+
+function capturedSourceTarget(base: string, paths: Set<string>): string | undefined {
+  const candidates = new Set<string>([base]);
+  const extension = path.posix.extname(base);
+  if (!extension)
+    for (const candidate of ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']) {
+      candidates.add(`${base}${candidate}`);
+      candidates.add(`${base}/index${candidate}`);
+    }
+  return [...candidates].find((candidate) => paths.has(candidate));
+}
+
+export function declarativeWorkspacePackageEntrypoints(snapshot: Snapshot): {
+  entries: WorkspacePackageEntrypoint[];
+  issues: string[];
+} {
+  const entries: WorkspacePackageEntrypoint[] = [];
+  const issues: string[] = [];
+  const sourcePaths = new Set(snapshot.files.map((file) => file.path));
+  const manifests = snapshot.files
+    .filter((file) => isRuntimeSource(file) && /(?:^|\/)package\.json$/.test(file.path))
+    .slice(0, maximumWorkspacePackages);
+  for (const manifest of manifests) {
+    const parsed = parseJsonc(manifest);
+    const name = safePackagePattern(parsed?.name);
+    if (!parsed || !name || /[*?]/.test(name)) continue;
+    const directory =
+      path.posix.dirname(manifest.path) === '.' ? '' : path.posix.dirname(manifest.path);
+    const rawExports = parsed.exports;
+    const exportsObject = object(rawExports);
+    const target =
+      packageExportTarget(
+        exportsObject && Object.hasOwn(exportsObject, '.') ? exportsObject['.'] : rawExports,
+      ) ??
+      packageExportTarget(parsed.module) ??
+      packageExportTarget(parsed.main) ??
+      packageExportTarget(parsed.types);
+    const rawBases = target ? [target] : ['./src/index', './index'];
+    const resolved = rawBases.flatMap((rawBase) => {
+      const normalizedTarget = rawBase.replace(/^\.\//, '');
+      if (!normalizedTarget || normalizedTarget.includes('..')) return [];
+      const base = path.posix.normalize(path.posix.join(directory, normalizedTarget));
+      const contained = directory ? base.startsWith(`${directory}/`) : !base.startsWith('../');
+      if (!contained) return [];
+      const captured = capturedSourceTarget(base, sourcePaths);
+      return captured ? [captured] : [];
+    })[0];
+    if (resolved) entries.push({ name, manifest: manifest.path, file: resolved });
+    else if (target)
+      issues.push(`${manifest.path} declares a package entry point outside captured source.`);
+  }
+  return {
+    entries: [
+      ...new Map(
+        entries
+          .sort((left, right) => left.name.localeCompare(right.name))
+          .map((entry) => [entry.name, entry]),
+      ).values(),
+    ],
+    issues: issues.slice(0, 100),
+  };
 }
 
 export function sanitizedManifest(

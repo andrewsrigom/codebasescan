@@ -116,6 +116,30 @@ test('declarative TypeScript path aliases resolve without loading config code', 
   assert.equal(result.profile.status, 'complete');
 });
 
+test('captured workspace package exports resolve without loading package code', () => {
+  const snapshot = snapshotFromFiles({
+    'packages/security/package.json': JSON.stringify({
+      name: '@fixture/security',
+      exports: './src/index.ts',
+    }),
+    'packages/security/src/index.ts': `export async function requireUser() { return { id: '1' }; }`,
+    'apps/web/src/app/api/account/route.ts': `
+      import { requireUser } from '@fixture/security';
+      export async function POST() {
+        await requireUser();
+        return database.account.update({ data: { active: true } });
+      }
+    `,
+  });
+  const profile = profileProject(snapshot).profile;
+  assert.equal(profile.imports[0]?.resolvedFile, 'packages/security/src/index.ts');
+  const entrypoint = profile.entrypoints.find((item) => item.kind === 'next-route');
+  assert.ok(entrypoint);
+  assert.ok(
+    effectiveEntrypointFacts(profile, entrypoint).some((fact) => fact.kind === 'authentication'),
+  );
+});
+
 test('declarative SaaS semantics recognize project vocabulary and helpers', () => {
   const snapshot = snapshotFromFiles({
     'traceward.config.json': JSON.stringify({

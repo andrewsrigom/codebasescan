@@ -18,6 +18,7 @@ import type {
 import { isRuntimeSource } from '../security/paths.ts';
 import {
   declarativeSaasConfiguration,
+  declarativeWorkspacePackageEntrypoints,
   typeScriptPathAliases,
   type TrustedSaasConfiguration,
   type TypeScriptPathAlias,
@@ -387,8 +388,11 @@ function resolveImport(
   specifier: string,
   paths: Set<string>,
   aliases: TypeScriptPathAlias[],
+  workspacePackages: Map<string, string>,
 ): string | undefined {
   const bases = configuredAliasBases(file, specifier, aliases);
+  const workspaceTarget = workspacePackages.get(specifier);
+  if (workspaceTarget) bases.push(workspaceTarget);
   if (specifier.startsWith('.'))
     bases.push(path.posix.normalize(path.posix.join(path.posix.dirname(file), specifier)));
   else if (specifier.startsWith('@/') || specifier.startsWith('~/')) {
@@ -693,8 +697,13 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       isRuntimeSource(file) && sourcePattern.test(file.path) && !declarationPattern.test(file.path),
   );
   const aliasConfiguration = typeScriptPathAliases(snapshot);
+  const workspacePackageConfiguration = declarativeWorkspacePackageEntrypoints(snapshot);
   const saasConfiguration = declarativeSaasConfiguration(snapshot);
-  const issues: string[] = [...aliasConfiguration.issues, ...saasConfiguration.issues];
+  const issues: string[] = [
+    ...aliasConfiguration.issues,
+    ...workspacePackageConfiguration.issues,
+    ...saasConfiguration.issues,
+  ];
   let truncated = snapshot.truncated || candidates.length > maximumFiles;
   if (candidates.length > maximumFiles)
     issues.push(`Source profiling was limited to ${maximumFiles} files.`);
@@ -721,6 +730,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
   const facts: ProjectFact[] = [];
   const entrypoints: ProjectEntrypoint[] = [];
   const sourcePaths = new Set(parsed.map((item) => item.source.path));
+  const workspacePackages = new Map(
+    workspacePackageConfiguration.entries.map((entry) => [entry.name, entry.file]),
+  );
   const cap = (current: number, maximum: number, label: string): boolean => {
     if (current < maximum) return false;
     truncated = true;
@@ -755,6 +767,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             specifier,
             sourcePaths,
             aliasConfiguration.aliases,
+            workspacePackages,
           );
           imports.push({
             id: stableId('import', item.source.path, specifier, line),
@@ -968,7 +981,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
-        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
+        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
       version: '0.5.0',
     },
