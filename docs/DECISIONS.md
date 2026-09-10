@@ -61,6 +61,13 @@ means an undocumented empty catch; a comment explaining a narrow intentional ign
 review context without becoming a finding. The scanners and audit-mode pack move to 0.2.0 and the
 workflow moves to v15.
 
+## 2026-09-10 — structural caught-error exposure
+
+TW-SAAS004 now requires an AST value reference to the catch binding. A response property named
+`error` with a constant public code is no longer mistaken for exposure merely because its key has
+the same text. Direct objects, messages, stacks, causes, and helper calls receiving the caught value
+remain review candidates. SaaS scanner and mode-pack versions move to 0.3.0; workflow moves to v16.
+
 ## 2026-09-10 — declared context and observed data map
 
 Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script

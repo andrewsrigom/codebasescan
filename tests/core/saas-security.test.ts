@@ -107,6 +107,14 @@ test('SaaS error rule reports caught internals but accepts a stable public error
     }
   `);
   assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const stableErrorField = findingsFor(`
+    export async function POST() {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch { return Response.json({ error: 'INVOICE_FAILED' }, { status: 500 }); }
+    }
+  `);
+  assert.ok(!stableErrorField.some((finding) => finding.ruleId === 'TW-SAAS004'));
 });
 
 test('custom SaaS vocabulary is applied without executable configuration', () => {

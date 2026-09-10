@@ -364,22 +364,42 @@ function weakEntropy(node: ts.Node): boolean {
   );
 }
 
+function identifierIsPropertyName(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  return (
+    (ts.isPropertyAssignment(parent) && parent.name === node) ||
+    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
+    (ts.isMethodDeclaration(parent) && parent.name === node) ||
+    (ts.isGetAccessorDeclaration(parent) && parent.name === node) ||
+    (ts.isSetAccessorDeclaration(parent) && parent.name === node)
+  );
+}
+
+function containsCaughtErrorValue(node: ts.Node, caught: Set<string>): boolean {
+  let found = false;
+  const visit = (child: ts.Node): void => {
+    if (found) return;
+    if (ts.isIdentifier(child) && caught.has(child.text) && !identifierIsPropertyName(child)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return found;
+}
+
 function caughtErrorExposure(catchClause: ts.CatchClause): ts.CallExpression[] {
-  const caught = catchClause.variableDeclaration
-    ? bindingNames(catchClause.variableDeclaration.name)
-    : ['error', 'err'];
+  const caught = new Set(
+    catchClause.variableDeclaration ? bindingNames(catchClause.variableDeclaration.name) : [],
+  );
   const exposed: ts.CallExpression[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const name = callName(node);
       if (
         /(?:^|\.)(?:json|send)$/i.test(name) &&
-        node.arguments.some((argument) => {
-          const text = argument.getText(argument.getSourceFile()).replace(/\s+/g, '');
-          return caught.some((identifier) =>
-            new RegExp(`\\b${identifier}(?:\\.(?:message|stack|cause))?\\b`).test(text),
-          );
-        })
+        node.arguments.some((argument) => containsCaughtErrorValue(argument, caught))
       )
         exposed.push(node);
     }
@@ -703,7 +723,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }
