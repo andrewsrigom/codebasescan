@@ -45,6 +45,7 @@ The full execution sequence and release gates are maintained in
 - Next.js posture review now flags explicit wildcard Server Action origins and broad or insecure remote image declarations.
 - Captured workspace package exports and imported reexport bridges now participate in the bounded project graph without loading package code or build configuration.
 - Static accessibility, privacy, and reliability scanners add nine paired source rules for JSX semantics, sensitive URL/log/browser storage, request timeouts, and swallowed errors.
+- Bounded source-risk paths now connect eligible findings to proven entrypoint/call/sensitive-operation chains, and sanitized environment templates are compared with named source usage without retaining values.
 
 ## Next — independent real-project ground truth
 

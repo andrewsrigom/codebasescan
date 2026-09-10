@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-environment-contract-safe",
+  "category": "false-positives",
+  "scanners": ["environment"],
+  "expectedRuleIds": []
+}

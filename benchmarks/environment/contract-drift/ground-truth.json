@@ -1,0 +1,6 @@
+{
+  "id": "environment-contract-drift",
+  "category": "configuration",
+  "scanners": ["environment"],
+  "expectedRuleIds": ["TW-ENV001"]
+}

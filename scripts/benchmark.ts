@@ -14,6 +14,7 @@ import { scanSaasSecurity } from '../src/scanners/saas-security.ts';
 import { scanAccessibilityStatic } from '../src/scanners/accessibility-static.ts';
 import { scanPrivacyStatic } from '../src/scanners/privacy-static.ts';
 import { scanReliabilityStatic } from '../src/scanners/reliability-static.ts';
+import { scanEnvironmentContract } from '../src/scanners/environment-contract.ts';
 
 const truthSchema = z.object({
   id: z.string(),
@@ -29,6 +30,7 @@ const truthSchema = z.object({
       'accessibility',
       'privacy',
       'reliability',
+      'environment',
       'osv',
     ]),
   ),
@@ -100,6 +102,7 @@ try {
       ...(truth.scanners.includes('reliability')
         ? scanReliabilityStatic(source, profile).findings
         : []),
+      ...(truth.scanners.includes('environment') ? scanEnvironmentContract(source).findings : []),
     ];
     if (truth.scanners.includes('osv')) {
       const osv = await scanOsv(

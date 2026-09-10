@@ -391,6 +391,63 @@ const riskCorrelation = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const environmentContract = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  templates: z
+    .array(
+      z.object({
+        file: shortText,
+        variables: z.number().int().nonnegative().max(5_000),
+      }),
+    )
+    .max(1_500),
+  variables: z
+    .array(
+      z.object({
+        name: shortText,
+        status: z.enum(['documented', 'undocumented', 'platform-provided', 'unverified']),
+        declaredIn: z.array(shortText).max(1_500),
+        locations: z
+          .array(
+            z.object({
+              file: shortText,
+              line: z.number().int().positive(),
+              syntax: z.enum(['process.env', 'import.meta.env']),
+              context: z.enum(['server', 'client']),
+            }),
+          )
+          .max(20),
+        truncated: z.boolean(),
+      }),
+    )
+    .max(5_000),
+  undocumented: z.array(shortText).max(5_000),
+  unverified: z.array(shortText).max(5_000),
+  unusedDeclarations: z.array(shortText).max(5_000),
+  dynamicAccesses: z
+    .array(
+      z.object({
+        file: shortText,
+        line: z.number().int().positive(),
+        syntax: z.enum(['process.env', 'import.meta.env']),
+      }),
+    )
+    .max(100),
+  summary: z.object({
+    used: z.number().int().nonnegative().max(5_000),
+    documented: z.number().int().nonnegative().max(5_000),
+    undocumented: z.number().int().nonnegative().max(5_000),
+    platformProvided: z.number().int().nonnegative().max(5_000),
+    unverified: z.number().int().nonnegative().max(5_000),
+    unusedDeclarations: z.number().int().nonnegative().max(5_000),
+    dynamicAccesses: z.number().int().nonnegative().max(100),
+  }),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -586,6 +643,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(5),
     z.literal(6),
     z.literal(7),
+    z.literal(8),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -620,6 +678,7 @@ export const auditReportSchema = z.looseObject({
   scopePreflight: scopePreflight.optional(),
   projectProfile: projectProfile.optional(),
   riskCorrelation: riskCorrelation.optional(),
+  environmentContract: environmentContract.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

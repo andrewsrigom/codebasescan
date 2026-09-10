@@ -6,6 +6,7 @@ import type {
   AuditReport,
   CodeQualityAnalysis,
   Dependency,
+  EnvironmentContractAnalysis,
   DuplicationAnalysis,
   Finding,
   HttpProbeOptions,
@@ -38,6 +39,7 @@ import { scanCodeQuality } from '../scanners/quality.ts';
 import { scanAccessibilityStatic } from '../scanners/accessibility-static.ts';
 import { scanPrivacyStatic } from '../scanners/privacy-static.ts';
 import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
+import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -91,6 +93,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   codeQualityAnalysis: Annotation<CodeQualityAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  environmentContract: Annotation<EnvironmentContractAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -299,6 +305,31 @@ export function buildAuditGraph(options: {
         `${result.findings.length} static reliability candidate(s).`,
       );
       return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('environment_contract', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          findings: [],
+          environmentContract: null,
+          scanners: [
+            skippedByMode(
+              'environment-contract',
+              'Environment contract consistency',
+              'release-readiness',
+            ),
+          ],
+        };
+      const result = scanEnvironmentContract(await checkedSnapshot(state));
+      event(
+        state,
+        'environment_contract',
+        `${result.analysis.summary.undocumented} undocumented environment name(s); values were not retained.`,
+      );
+      return {
+        findings: result.findings,
+        environmentContract: result.analysis,
+        scanners: [result.run],
+      };
     })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
@@ -550,7 +581,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 7,
+        schemaVersion: 8,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -566,6 +597,7 @@ export function buildAuditGraph(options: {
         ...(scopePreflight ? { scopePreflight } : {}),
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         ...(riskCorrelation ? { riskCorrelation } : {}),
+        ...(state.environmentContract ? { environmentContract: state.environmentContract } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -692,6 +724,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'accessibility_static')
     .addEdge('project_profile', 'privacy_static')
     .addEdge('project_profile', 'reliability_static')
+    .addEdge('snapshot', 'environment_contract')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -711,6 +744,7 @@ export function buildAuditGraph(options: {
         'accessibility_static',
         'privacy_static',
         'reliability_static',
+        'environment_contract',
         'architecture',
         'duplication',
         'supply_chain',

@@ -104,3 +104,12 @@ entrypoint-to-operation path. A version 2 task bundle embeds only those related 
 its bounded project context with their files. The links are navigation evidence, not runtime or
 exploitability claims. Version 3 plan and version 1 bundle consumers must regenerate artifacts from
 the immutable audit report.
+
+## 2026-09-10 — sanitized environment contract
+
+Environment examples, samples, and templates enter the snapshot only after every value and comment
+is discarded; real `.env` files remain excluded. Workflow v20 compares the retained names with
+bounded `process.env`, `import.meta.env`, and direct destructuring accesses. A missing name becomes
+a low-severity review candidate only when at least one template was captured. Without a template,
+names stay unverified instead of being reported as defects. Report schema v8 and audit-mode pack
+0.4.0 preserve this behavior for downstream consumers.

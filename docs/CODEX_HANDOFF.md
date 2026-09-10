@@ -8,7 +8,7 @@ bounded snapshot, parses target code/configuration as untrusted data, runs deter
 and exports a human report plus machine-readable remediation artifacts. It never installs or runs
 the target project.
 
-The audit workflow is `traceward-audit-v19`. Nineteen scanner/profile results fan into
+The audit workflow is `traceward-audit-v20`. Twenty scanner/profile results fan into
 normalization. The security checklist pack is `0.5.0`. The generic SaaS layer consists of:
 
 - safe root `traceward.config.json`/JSONC semantics;
@@ -19,6 +19,7 @@ normalization. The security checklist pack is `0.5.0`. The generic SaaS layer co
 - a dedicated `saas-security` scanner with nine source rules;
 - bounded source-risk paths backed by entrypoint IDs, resolved call IDs, exact symbol ranges,
   sensitive-operation fact IDs, and related finding IDs;
+- sanitized environment-template names compared with `process.env` and `import.meta.env` usage;
 - tenant, rate-limit, webhook-idempotency, CSRF, billing, recovery, and OAuth controls;
 - paired vulnerable and benign unit/benchmark cases.
 - bounded workspace package-export and imported-reexport resolution.

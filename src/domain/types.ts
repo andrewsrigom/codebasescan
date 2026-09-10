@@ -721,7 +721,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -737,6 +737,7 @@ export interface AuditReport {
   scopePreflight?: AuditScopePreflight;
   projectProfile?: ProjectProfile;
   riskCorrelation?: RiskCorrelation;
+  environmentContract?: EnvironmentContractAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;
