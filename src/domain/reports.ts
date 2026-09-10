@@ -1,6 +1,7 @@
 import type { AuditReport } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
+import type { RemediationResult } from './remediation.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -430,7 +431,10 @@ export function toMarkdown(report: AuditReport): string {
   lines.push('## Limitations', '', ...report.limitations.map((limitation) => `- ${m(limitation)}`));
   return lines.join('\n');
 }
-export function toHtml(report: AuditReport, options: { artifactLinks?: boolean } = {}): string {
+export function toHtml(
+  report: AuditReport,
+  options: { artifactLinks?: boolean; remediationResult?: RemediationResult } = {},
+): string {
   const e = escapeHtml;
   const list = (title: string, items?: string[]) =>
     items?.length
@@ -767,8 +771,25 @@ export function toHtml(report: AuditReport, options: { artifactLinks?: boolean }
         .join('') +
       '</div></section>'
     : '';
+  const remediationResult = options.remediationResult
+    ? '<section class="report-section"><span class="kicker">BEFORE / AFTER</span><h2>Remediation result</h2><p>Compared this audit with baseline ' +
+      e(options.remediationResult.before.auditId.slice(0, 8)) +
+      ' using the baseline remediation plan.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      options.remediationResult.summary.resolved +
+      '</strong><span>Tasks resolved</span></div><div class="summary-card"><strong>' +
+      options.remediationResult.summary.partial +
+      '</strong><span>Partially resolved</span></div><div class="summary-card"><strong>' +
+      options.remediationResult.summary.remaining +
+      '</strong><span>Tasks remaining</span></div><div class="summary-card"><strong>' +
+      options.remediationResult.summary.newFindings +
+      '</strong><span>New findings</span></div></div><p class="muted">Test and build checks stay not run unless a trusted executor supplies them. A missing fingerprint is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a></p></section>'
+    : '';
   const artifactLinks = options.artifactLinks
-    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="remediation-plan.json">Remediation plan JSON</a></li><li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="remediation-plan.json">Remediation plan JSON</a></li>' +
+      (options.remediationResult
+        ? '<li><a href="remediation-result.json">Remediation result JSON</a></li>'
+        : '') +
+      '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
     : '';
   const css =
     ':root{color-scheme:light;--ink:#182824;--muted:#5a6e64;--line:#dce5e0;--paper:#fff;--canvas:#f3f6f4;--accent:#08745c;--amber:#9b641f;--red:#a94943}' +
@@ -824,6 +845,7 @@ export function toHtml(report: AuditReport, options: { artifactLinks?: boolean }
     profile +
     mechanical +
     dependencyRemediation +
+    remediationResult +
     artifactLinks +
     checklist +
     '<section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">' +

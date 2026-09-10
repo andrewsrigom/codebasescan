@@ -156,6 +156,7 @@ try {
         const staticReport = await writeStaticReport(
           completed.report,
           option('--report-dir') ?? path.resolve('traceward-report'),
+          baseline ? { baseline } : {},
         );
         console.log(`Saved static report ${staticReport.directory}`);
         console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);

@@ -9,8 +9,8 @@ import {
   toMarkdown,
   toSarif,
 } from '../domain/reports.ts';
-import { buildRemediationPlan } from '../domain/remediation.ts';
-import { parseRemediationPlan } from '../domain/remediation-schema.ts';
+import { buildRemediationPlan, buildRemediationResult } from '../domain/remediation.ts';
+import { parseRemediationPlan, parseRemediationResult } from '../domain/remediation-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -29,6 +29,10 @@ export interface StaticReportManifest {
   }[];
 }
 
+export interface StaticReportOptions {
+  baseline?: AuditReport;
+}
+
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
 function safeAuditSegment(auditId: string): string {
@@ -40,6 +44,7 @@ function safeAuditSegment(auditId: string): string {
 export async function writeStaticReport(
   report: AuditReport,
   outputRoot: string,
+  options: StaticReportOptions = {},
 ): Promise<{ directory: string; manifest: StaticReportManifest }> {
   const root = path.resolve(outputRoot);
   const directory = path.join(root, safeAuditSegment(report.auditId));
@@ -53,11 +58,16 @@ export async function writeStaticReport(
   }
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
+  const remediationResult = options.baseline
+    ? parseRemediationResult(
+        buildRemediationResult(buildRemediationPlan(options.baseline), options.baseline, report),
+      )
+    : undefined;
   const artifacts = [
     {
       path: 'index.html',
       mediaType: 'text/html; charset=utf-8',
-      content: toHtml(report, { artifactLinks: true }),
+      content: toHtml(report, { artifactLinks: true, remediationResult }),
     },
     {
       path: 'audit-report.json',
@@ -89,6 +99,15 @@ export async function writeStaticReport(
       mediaType: 'application/vnd.cyclonedx+json',
       content: json(toCycloneDx(report)),
     },
+    ...(remediationResult
+      ? [
+          {
+            path: 'remediation-result.json',
+            mediaType: 'application/json',
+            content: json(remediationResult),
+          },
+        ]
+      : []),
   ];
   await Promise.all(
     artifacts.map((artifact) =>
