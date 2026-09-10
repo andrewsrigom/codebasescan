@@ -20,7 +20,7 @@
 | AI cannot change scanner truth                       | Model output adds contextual assessment only; it cannot suppress findings, lower scanner severity, or publish a report.                                                                                                                                                                                                         |
 | Human publication separate from finding confirmation | Reviewing a report must not falsely confirm every candidate.                                                                                                                                                                                                                                                                    |
 | Explicit limitations in every export                 | Portable artifacts must preserve uncertainty even when viewed outside the app.                                                                                                                                                                                                                                                  |
-| Custom CSS and system fonts                          | Small UI dependency surface, offline assets, readable components. No forced component library migration.                                                                                                                                                                                                                        |
+| Shadcn primitives and system fonts                   | Shared typed primitives keep the application UI consistent without remote font assets. Feature components and the portable static report remain separate presentation layers.                                                                                                                                                   |
 | Apache-2.0 for original starter                      | Explicit open-source intention. External binary, rules, and model licenses must be reviewed separately.                                                                                                                                                                                                                         |
 | No bundled binary/model/font files                   | Keep redistribution auditable and the starter lightweight.                                                                                                                                                                                                                                                                      |
 | Pinned mechanical scanner packages                   | dependency-cruiser and jscpd run offline from CodebaseScan-owned dependencies with fixed arguments; target scanner configuration is never loaded.                                                                                                                                                                               |
@@ -38,6 +38,14 @@ already used by unrelated products, while CodebaseScan states the tool's source-
 directly. This is a pre-release breaking rename: existing local databases, checkpoints, generated
 reports, and configuration filenames are not migrated or resumed across names. Regenerate them with
 the CodebaseScan build instead of mixing old and new state.
+
+## 2026-09-10 — typed UI foundation
+
+The persistent Next.js application adopts Tailwind CSS and local shadcn primitives under
+`src/components/ui`. Feature-level audit presentation remains under `src/components`, and the
+script-free static report keeps its independent renderer. Existing visual behavior is preserved
+while new screens can grow from reusable typed components. System fonts remain the default so the
+local interface never depends on a font download.
 
 ## 2026-09-10 — explicit framework-major rule coverage
 

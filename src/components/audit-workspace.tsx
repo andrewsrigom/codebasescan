@@ -13,7 +13,7 @@ import type {
   SecurityControlReviewDecision,
 } from '../domain/types.ts';
 import { Icon } from './icon.tsx';
-import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
+import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './audit-primitives.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
 import { FindingDetails } from './finding-details.tsx';
 import { MechanicalReportPanel } from './mechanical-report.tsx';

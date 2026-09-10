@@ -1,7 +1,7 @@
 import { store } from '../server/context.ts';
 import { AuditWorkspace } from '../components/audit-workspace.tsx';
 import { NewAudit } from '../components/new-audit.tsx';
-import { EmptyState } from '../components/ui.tsx';
+import { EmptyState } from '../components/audit-primitives.tsx';
 import { buildRemediationPlan } from '../domain/remediation.ts';
 import { presentAudit } from '../domain/workspace-presentation.ts';
 export const dynamic = 'force-dynamic';

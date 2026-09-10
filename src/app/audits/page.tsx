@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { store } from '../../server/context.ts';
 import { NewAudit } from '../../components/new-audit.tsx';
-import { EmptyState, StatusBadge, utcDate } from '../../components/ui.tsx';
+import { EmptyState, StatusBadge, utcDate } from '../../components/audit-primitives.tsx';
 import { Icon } from '../../components/icon.tsx';
 export const dynamic = 'force-dynamic';
 export default function AuditHistoryPage() {

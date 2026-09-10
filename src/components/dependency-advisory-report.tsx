@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import type { Dependency, Finding, Severity } from '../domain/types.ts';
 import { groupDependencyAdvisories } from '../domain/dependency-advisories.ts';
-import { Badge, EmptyState, SeverityBadge } from './ui.tsx';
+import { Badge, EmptyState, SeverityBadge } from './audit-primitives.tsx';
 
 function severitySummary(counts: Record<Severity, number>): string {
   return (['critical', 'high', 'medium', 'low', 'info'] as const)

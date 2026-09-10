@@ -1,7 +1,7 @@
 import { store } from '../../server/context.ts';
 import { Icon } from '../../components/icon.tsx';
 import { NewAudit } from '../../components/new-audit.tsx';
-import { Badge } from '../../components/ui.tsx';
+import { Badge } from '../../components/audit-primitives.tsx';
 export const dynamic = 'force-dynamic';
 export default function ProjectsPage() {
   const projects = store().projects();

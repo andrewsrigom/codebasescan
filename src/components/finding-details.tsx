@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Disposition, Finding } from '../domain/types.ts';
 import { Icon } from './icon.tsx';
-import { Badge, SeverityBadge } from './ui.tsx';
+import { Badge, SeverityBadge } from './audit-primitives.tsx';
 import { mutate } from './new-audit.tsx';
 export function FindingDetails({
   finding,

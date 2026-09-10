@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 import type { AuditStatus, Severity } from '../domain/types.ts';
+import { Badge as BaseBadge } from './ui/badge.tsx';
+
 export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
-  return <span className={`pill ${tone}`}>{children}</span>;
+  return (
+    <BaseBadge variant="outline" className={`pill ${tone}`}>
+      {children}
+    </BaseBadge>
+  );
 }
 export function SeverityBadge({ severity }: { severity: Severity }) {
   return (

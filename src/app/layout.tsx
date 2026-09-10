@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Icon } from '../components/icon.tsx';
 import { Navigation } from '../components/navigation.tsx';
 import './globals.css';
+
 export const metadata: Metadata = {
   title: 'CodebaseScan · Security review workbench',
   description: 'Local-first, evidence-led security review. Your code stays in your workspace.',

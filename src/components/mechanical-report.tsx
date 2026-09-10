@@ -8,7 +8,7 @@ import type {
   TestEvidenceAnalysis,
   WebhookContractAnalysis,
 } from '../domain/types.ts';
-import { Badge, EmptyState } from './ui.tsx';
+import { Badge, EmptyState } from './audit-primitives.tsx';
 
 const supplyLabels: Record<keyof SupplyChainAnalysis['issueCounts'], string> = {
   dangerousLifecycleScripts: 'Dangerous lifecycle scripts',

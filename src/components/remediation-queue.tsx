@@ -1,5 +1,5 @@
 import type { RemediationPlan } from '../domain/remediation.ts';
-import { Badge, EmptyState, SeverityBadge } from './ui.tsx';
+import { Badge, EmptyState, SeverityBadge } from './audit-primitives.tsx';
 
 const kindLabel = (kind: RemediationPlan['tasks'][number]['kind']) => kind.replaceAll('_', ' ');
 
