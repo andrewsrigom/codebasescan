@@ -5,6 +5,17 @@
   "type": "module",
   "description": "A local-first, evidence-led security review workbench.",
   "license": "Apache-2.0",
+  "bin": {
+    "traceward": "./bin/traceward.mjs"
+  },
+  "files": [
+    "bin",
+    "configs",
+    "src",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "engines": {
     "node": ">=22.16.0"
   },

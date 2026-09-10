@@ -1,4 +1,7 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const bundledRulesDirectory = fileURLToPath(new URL('../../configs', import.meta.url));
 export interface Configuration {
   dataDirectory: string;
   databasePath: string;
@@ -67,7 +70,9 @@ export function configuration(): Configuration {
     databasePath: path.join(dataDirectory, 'application.sqlite'),
     checkpointPath: path.join(dataDirectory, 'checkpoints.sqlite'),
     temporaryDirectory: path.join(dataDirectory, 'temporary'),
-    rulesDirectory: path.resolve('configs'),
+    rulesDirectory: process.env.TRACEWARD_RULES_DIR
+      ? path.resolve(process.env.TRACEWARD_RULES_DIR)
+      : bundledRulesDirectory,
     aiMode,
     model,
     strongModel: process.env.OPENAI_STRONG_MODEL?.trim() ?? '',
