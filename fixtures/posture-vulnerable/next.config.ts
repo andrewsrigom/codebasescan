@@ -1,4 +1,12 @@
 export default {
+  experimental: {
+    serverActions: {
+      allowedOrigins: ['*'],
+    },
+  },
+  images: {
+    remotePatterns: [{ protocol: 'http', hostname: '**' }],
+  },
   async headers() {
     return [
       {

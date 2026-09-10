@@ -17,6 +17,8 @@ const expectedRules = [
   'TW-P009',
   'TW-P010',
   'TW-P011',
+  'TW-P012',
+  'TW-P013',
 ] as const;
 
 test('posture fixture exercises every rule as an unresolved review candidate', async () => {

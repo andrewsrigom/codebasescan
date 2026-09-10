@@ -361,6 +361,63 @@ function environmentCandidates(snapshot: Snapshot): Candidate[] {
   return candidates;
 }
 
+function nextConfigurationCandidates(snapshot: Snapshot): Candidate[] {
+  const candidates: Candidate[] = [];
+  for (const file of snapshot.files.filter((entry) =>
+    /(?:^|\/)next\.config\.[cm]?[jt]s$/.test(entry.path),
+  )) {
+    const serverActions = /serverActions\s*:\s*\{[\s\S]{0,1200}?\}/gi;
+    for (const section of file.content.matchAll(serverActions)) {
+      const allowedOrigins = /allowedOrigins\s*:\s*\[[\s\S]{0,500}?["'`](?:\*|\*\*)["'`]/i.exec(
+        section[0],
+      );
+      if (!allowedOrigins) continue;
+      candidates.push({
+        ruleId: 'TW-P012',
+        title: 'Server Actions allow a wildcard origin',
+        category: 'configuration',
+        severity: 'high',
+        description:
+          'The captured Next.js configuration explicitly includes a wildcard in Server Actions allowedOrigins. This broadens which browser origins may submit state-changing requests.',
+        remediation:
+          'Remove wildcard entries and list only exact trusted origins required by the deployment. Keep authentication, authorization, and CSRF/origin tests independent.',
+        cwe: ['CWE-942', 'CWE-346'],
+        file,
+        index: section.index + allowedOrigins.index,
+        observation: 'Next.js Server Actions allowedOrigins contains an explicit wildcard.',
+      });
+    }
+
+    const imageSections = file.content.matchAll(/images\s*:\s*\{[\s\S]{0,3000}?\}/gi);
+    for (const section of imageSections) {
+      const broadHost = /(?:hostname\s*:\s*|domains\s*:\s*\[[\s\S]{0,300}?)["'`](?:\*|\*\*)["'`]/i.exec(
+        section[0],
+      );
+      const insecureProtocol = /protocol\s*:\s*["'`]http["'`]/i.exec(section[0]);
+      const match = broadHost ?? insecureProtocol;
+      if (!match) continue;
+      candidates.push({
+        ruleId: 'TW-P013',
+        title: 'Next.js image source policy is overly broad or insecure',
+        category: 'configuration',
+        severity: broadHost ? 'medium' : 'low',
+        description: broadHost
+          ? 'The captured Next.js image configuration explicitly permits a wildcard remote hostname. Arbitrary remote content can cross an application-managed image boundary.'
+          : 'The captured Next.js image configuration explicitly permits plain HTTP for a remote image source.',
+        remediation:
+          'Use exact HTTPS hostnames and narrow pathname patterns for required image sources. Treat user-selected remote URLs as untrusted input.',
+        cwe: ['CWE-16', 'CWE-346'],
+        file,
+        index: section.index + match.index,
+        observation: broadHost
+          ? 'Next.js images configuration contains an explicit wildcard hostname.'
+          : 'Next.js images configuration contains an explicit HTTP protocol.',
+      });
+    }
+  }
+  return candidates;
+}
+
 export function scanPosture(
   snapshot: Snapshot,
   options: { includeStructuralCandidates?: boolean } = {},
@@ -377,6 +434,7 @@ export function scanPosture(
       ? []
       : authorizationCandidates(runtimeSnapshot)),
     ...environmentCandidates(runtimeSnapshot),
+    ...nextConfigurationCandidates(runtimeSnapshot),
   ]
     .slice(0, 300)
     .map(finding);
