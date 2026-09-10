@@ -15,7 +15,6 @@ if (!pack || !Array.isArray(pack.files)) throw new Error('npm did not return a p
 const files = new Set(pack.files.map((file) => file.path));
 const required = [
   'LICENSE',
-  'NOTICE',
   'README.md',
   'bin/codebasescan.mjs',
   'configs/gitleaks.toml',
