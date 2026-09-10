@@ -33,3 +33,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added tRPC procedure mapping and detection for Drizzle, Auth.js, GraphQL, Zod, Joi, and Valibot.
 - Added safe declarative Knip settings, workspace manifests, package-script entry hints, and TypeScript path aliases to reduce monorepo dead-code noise without executing target configuration.
 - Preserved exact totals for bounded architecture, quality, dead-code, and duplicate reports, and added safe file/line Semgrep parser diagnostics.
+- Reduced real-project React/Next/AST noise by respecting nested Client Components, descriptive security wrappers, scoped service helpers, explicit public submission routes, and standards-compliant `noreferrer` links.
