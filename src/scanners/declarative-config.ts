@@ -6,6 +6,7 @@ import { isRuntimeSource } from '../security/paths.ts';
 
 const maximumPatterns = 200;
 const maximumWorkspaces = 50;
+const maximumSaasAliases = 100;
 const workspaceKeys = new Set([
   'entry',
   'project',
@@ -28,6 +29,112 @@ const allowedIssueTypes = new Set([
   'types',
 ]);
 const executableKnipConfig = /(?:^|\/)(?:\.knip|knip(?:\.config)?)\.[cm]?[jt]s$/i;
+const executableTracewardConfig = /(?:^|\/)traceward\.config\.[cm]?[jt]s$/i;
+
+const saasVocabularyKeys = [
+  'tenantKeys',
+  'ownerKeys',
+  'roleKeys',
+  'billingKeys',
+  'tokenKeys',
+] as const;
+const saasHelperKeys = [
+  'authentication',
+  'authorization',
+  'validation',
+  'resourceScope',
+  'rateLimit',
+  'idempotency',
+  'csrf',
+  'auditLog',
+] as const;
+
+export interface SaasVocabulary {
+  tenantKeys: string[];
+  ownerKeys: string[];
+  roleKeys: string[];
+  billingKeys: string[];
+  tokenKeys: string[];
+}
+
+export interface SaasHelpers {
+  authentication: string[];
+  authorization: string[];
+  validation: string[];
+  resourceScope: string[];
+  rateLimit: string[];
+  idempotency: string[];
+  csrf: string[];
+  auditLog: string[];
+}
+
+export interface TrustedSaasConfiguration {
+  schemaVersion: 1;
+  vocabulary: SaasVocabulary;
+  helpers: SaasHelpers;
+  expectedUnauthenticatedRoutes: string[];
+}
+
+export interface TrustedSaasConfigurationResult {
+  config: TrustedSaasConfiguration;
+  sources: string[];
+  issues: string[];
+}
+
+export const defaultSaasConfiguration: TrustedSaasConfiguration = {
+  schemaVersion: 1,
+  vocabulary: {
+    tenantKeys: [
+      'tenant',
+      'tenantId',
+      'organization',
+      'organizationId',
+      'org',
+      'orgId',
+      'workspace',
+      'workspaceId',
+      'team',
+      'teamId',
+      'account',
+      'accountId',
+    ],
+    ownerKeys: ['owner', 'ownerId', 'userId'],
+    roleKeys: ['role', 'roles', 'permission', 'permissions', 'isAdmin'],
+    billingKeys: [
+      'amount',
+      'amountCents',
+      'unitAmount',
+      'unit_amount',
+      'price',
+      'priceId',
+      'price_id',
+      'product',
+      'productId',
+      'product_id',
+      'plan',
+      'planId',
+      'plan_id',
+    ],
+    tokenKeys: ['token', 'code', 'nonce', 'resetToken', 'inviteToken', 'verificationToken'],
+  },
+  helpers: {
+    authentication: [],
+    authorization: [],
+    validation: [],
+    resourceScope: [],
+    rateLimit: ['rateLimit', 'checkRateLimit', 'enforceRateLimit', 'throttle'],
+    idempotency: [
+      'claimEvent',
+      'ensureIdempotent',
+      'checkIdempotency',
+      'recordWebhookEvent',
+      'upsertWebhookEvent',
+    ],
+    csrf: ['verifyCsrf', 'validateCsrf', 'checkOrigin', 'verifyOrigin'],
+    auditLog: [],
+  },
+  expectedUnauthenticatedRoutes: [],
+};
 
 export interface TrustedKnipConfiguration {
   config: Record<string, unknown>;
@@ -76,6 +183,124 @@ function safePackagePattern(value: unknown): string | undefined {
     /^[A-Za-z0-9@._*?/-]+$/.test(value)
     ? value
     : undefined;
+}
+
+function safeIdentifier(value: unknown): string | undefined {
+  return typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 80 &&
+    /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value)
+    ? value
+    : undefined;
+}
+
+function safeRoutePattern(value: unknown): string | undefined {
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.length > 300 ||
+    value.includes('..') ||
+    value.includes('\\') ||
+    !/^\/[A-Za-z0-9_./:[\]-]*(?:\/\*)?$/.test(value)
+  )
+    return undefined;
+  return value;
+}
+
+function boundedIdentifiers(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const values = [
+    ...new Set(value.slice(0, maximumSaasAliases).map(safeIdentifier).filter(Boolean)),
+  ];
+  return values.length ? (values as string[]) : [];
+}
+
+function hasRejectedIdentifiers(value: unknown): boolean {
+  return (
+    !Array.isArray(value) ||
+    value.length > maximumSaasAliases ||
+    value.some((item) => safeIdentifier(item) === undefined)
+  );
+}
+
+function mergeAliases(defaults: string[], configured: string[] | undefined): string[] {
+  return [...new Set([...defaults, ...(configured ?? [])])];
+}
+
+function saasHasRejectedSettings(value: unknown): boolean {
+  const input = object(value);
+  if (!input) return true;
+  if (
+    Object.keys(input).some(
+      (key) =>
+        key !== '$schema' &&
+        key !== 'schemaVersion' &&
+        key !== 'vocabulary' &&
+        key !== 'helpers' &&
+        key !== 'expectedUnauthenticatedRoutes',
+    )
+  )
+    return true;
+  if (input.schemaVersion !== 1) return true;
+  const vocabulary = object(input.vocabulary);
+  if (
+    input.vocabulary !== undefined &&
+    (!vocabulary ||
+      Object.keys(vocabulary).some(
+        (key) => !saasVocabularyKeys.includes(key as (typeof saasVocabularyKeys)[number]),
+      ) ||
+      Object.values(vocabulary).some(hasRejectedIdentifiers))
+  )
+    return true;
+  const helpers = object(input.helpers);
+  if (
+    input.helpers !== undefined &&
+    (!helpers ||
+      Object.keys(helpers).some(
+        (key) => !saasHelperKeys.includes(key as (typeof saasHelperKeys)[number]),
+      ) ||
+      Object.values(helpers).some(hasRejectedIdentifiers))
+  )
+    return true;
+  if (
+    input.expectedUnauthenticatedRoutes !== undefined &&
+    (!Array.isArray(input.expectedUnauthenticatedRoutes) ||
+      input.expectedUnauthenticatedRoutes.length > maximumSaasAliases ||
+      input.expectedUnauthenticatedRoutes.some((route) => safeRoutePattern(route) === undefined))
+  )
+    return true;
+  return false;
+}
+
+function sanitizeSaasConfiguration(value: unknown): TrustedSaasConfiguration {
+  const input = object(value) ?? {};
+  const vocabulary = object(input.vocabulary) ?? {};
+  const helpers = object(input.helpers) ?? {};
+  return {
+    schemaVersion: 1,
+    vocabulary: Object.fromEntries(
+      saasVocabularyKeys.map((key) => [
+        key,
+        mergeAliases(defaultSaasConfiguration.vocabulary[key], boundedIdentifiers(vocabulary[key])),
+      ]),
+    ) as unknown as SaasVocabulary,
+    helpers: Object.fromEntries(
+      saasHelperKeys.map((key) => [
+        key,
+        mergeAliases(defaultSaasConfiguration.helpers[key], boundedIdentifiers(helpers[key])),
+      ]),
+    ) as unknown as SaasHelpers,
+    expectedUnauthenticatedRoutes: [
+      ...new Set(
+        (Array.isArray(input.expectedUnauthenticatedRoutes)
+          ? input.expectedUnauthenticatedRoutes.slice(0, maximumSaasAliases)
+          : []
+        )
+          .map(safeRoutePattern)
+          .filter(Boolean),
+      ),
+    ] as string[],
+  };
 }
 
 function safeAliasPath(value: unknown): string | undefined {
@@ -269,6 +494,36 @@ export function declarativeKnipConfiguration(snapshot: Snapshot): TrustedKnipCon
   if (snapshot.files.some((file) => isRuntimeSource(file) && executableKnipConfig.test(file.path)))
     issues.push('Executable Knip configuration was ignored. Use knip.json for safe import.');
   return { config: {}, sources, issues };
+}
+
+export function declarativeSaasConfiguration(
+  snapshot: Snapshot,
+): TrustedSaasConfigurationResult {
+  const sources: string[] = [];
+  const issues: string[] = [];
+  const candidates = ['traceward.config.json', 'traceward.config.jsonc'];
+  for (const name of candidates) {
+    const file = snapshot.files.find((item) => item.path === name && isRuntimeSource(item));
+    if (!file) continue;
+    const parsed = parseJsonc(file);
+    if (!parsed) {
+      issues.push(`${name} could not be parsed as declarative JSON.`);
+      return { config: sanitizeSaasConfiguration({}), sources, issues };
+    }
+    sources.push(name);
+    if (saasHasRejectedSettings(parsed))
+      issues.push(`${name} contains unsupported or unsafe settings that were ignored.`);
+    return { config: sanitizeSaasConfiguration(parsed), sources, issues };
+  }
+  if (
+    snapshot.files.some(
+      (file) => isRuntimeSource(file) && executableTracewardConfig.test(file.path),
+    )
+  )
+    issues.push(
+      'Executable Traceward configuration was ignored. Use traceward.config.json for safe import.',
+    );
+  return { config: sanitizeSaasConfiguration({}), sources, issues };
 }
 
 function workspacePatternsFromManifest(file: SourceFile): string[] {

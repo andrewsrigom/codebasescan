@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   declarativeKnipConfiguration,
+  declarativeSaasConfiguration,
   declarativeWorkspacePatterns,
   sanitizedManifest,
   typeScriptPathAliases,
@@ -37,6 +38,63 @@ test('executable Knip configuration is detected but never imported', () => {
   const result = declarativeKnipConfiguration(snapshot);
   assert.deepEqual(result.config, {});
   assert.ok(result.issues[0]?.includes('Executable Knip configuration'));
+});
+
+test('declarative SaaS configuration extends bounded generic semantics', () => {
+  const snapshot = snapshotFromFiles({
+    'traceward.config.jsonc': `{
+      // Project terms extend the generic defaults.
+      "schemaVersion": 1,
+      "vocabulary": {
+        "tenantKeys": ["customerWorkspaceKey"],
+        "roleKeys": ["membershipLevel"]
+      },
+      "helpers": {
+        "authorization": ["requireMembership"],
+        "resourceScope": ["scopeToCustomerWorkspace"]
+      },
+      "expectedUnauthenticatedRoutes": ["/api/health", "/api/public/*"]
+    }`,
+  });
+
+  const result = declarativeSaasConfiguration(snapshot);
+  assert.deepEqual(result.sources, ['traceward.config.jsonc']);
+  assert.ok(result.config.vocabulary.tenantKeys.includes('tenantId'));
+  assert.ok(result.config.vocabulary.tenantKeys.includes('customerWorkspaceKey'));
+  assert.ok(result.config.helpers.authorization.includes('requireMembership'));
+  assert.deepEqual(result.config.expectedUnauthenticatedRoutes, [
+    '/api/health',
+    '/api/public/*',
+  ]);
+  assert.deepEqual(result.issues, []);
+});
+
+test('unsafe SaaS settings are reported and removed without executing code', () => {
+  const snapshot = snapshotFromFiles({
+    'traceward.config.json': JSON.stringify({
+      schemaVersion: 1,
+      vocabulary: { tenantKeys: ['workspaceId', 'bad.name'] },
+      helpers: { authorization: ['requireRole'], execute: ['targetCode'] },
+      expectedUnauthenticatedRoutes: ['/api/health', '../outside', '/api/(.*)'],
+      plugins: ['./target-code.ts'],
+    }),
+  });
+
+  const result = declarativeSaasConfiguration(snapshot);
+  assert.equal(result.issues.length, 1);
+  assert.ok(result.config.vocabulary.tenantKeys.includes('workspaceId'));
+  assert.ok(!result.config.vocabulary.tenantKeys.includes('bad.name'));
+  assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health']);
+  assert.equal((result.config.helpers as unknown as Record<string, unknown>).execute, undefined);
+});
+
+test('executable Traceward configuration is detected but never imported', () => {
+  const snapshot = snapshotFromFiles({
+    'traceward.config.ts': `throw new Error('must not run'); export default {};`,
+  });
+  const result = declarativeSaasConfiguration(snapshot);
+  assert.deepEqual(result.sources, []);
+  assert.ok(result.issues[0]?.includes('Executable Traceward configuration'));
 });
 
 test('workspace manifests and pnpm declarations are read as data', () => {
