@@ -68,6 +68,7 @@ const finding = z.looseObject({
     'builtin',
     'posture',
     'ast',
+    'saas',
     'next',
     'react',
     'supply-chain',

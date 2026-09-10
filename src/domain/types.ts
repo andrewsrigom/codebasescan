@@ -103,6 +103,7 @@ export interface Finding {
     | 'builtin'
     | 'posture'
     | 'ast'
+    | 'saas'
     | 'next'
     | 'react'
     | 'supply-chain'
