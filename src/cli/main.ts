@@ -29,6 +29,7 @@ import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
 import { writeStaticReport } from '../reporting/static-report.ts';
+import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -66,8 +67,20 @@ const commandAuditOptions = (): AuditOptions => {
   };
 };
 function render(report: AuditReport, format: string): string {
-  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle', 'plan', 'agent-plan'].includes(format))
-    throw new Error('Use json, md, html, sarif, sbom, bundle, plan, or agent-plan.');
+  if (
+    ![
+      'json',
+      'md',
+      'html',
+      'sarif',
+      'sbom',
+      'bundle',
+      'plan',
+      'agent-plan',
+      'rule-quality',
+    ].includes(format)
+  )
+    throw new Error('Use json, md, html, sarif, sbom, bundle, plan, agent-plan, or rule-quality.');
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
@@ -79,9 +92,11 @@ function render(report: AuditReport, format: string): string {
               ? toCycloneDx(report)
               : format === 'bundle'
                 ? toInvestigationBundle(report)
-                : format === 'plan' || format === 'agent-plan'
-                  ? buildRemediationPlan(report)
-                  : report,
+                : format === 'rule-quality'
+                  ? buildRuleQualityReport(report)
+                  : format === 'plan' || format === 'agent-plan'
+                    ? buildRemediationPlan(report)
+                    : report,
           null,
           2,
         );
@@ -255,7 +270,7 @@ try {
       const report = store.audit(target).report;
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
-      const extension = ['bundle', 'sbom', 'plan', 'agent-plan'].includes(format)
+      const extension = ['bundle', 'sbom', 'plan', 'agent-plan', 'rule-quality'].includes(format)
         ? `${format}.json`
         : format;
       const destination = path.resolve(`traceward-${report.auditId}.${extension}`);
@@ -276,7 +291,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }

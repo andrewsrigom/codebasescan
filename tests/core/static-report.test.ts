@@ -6,6 +6,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
+import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
 import { sampleReport } from '../helpers.ts';
 
 test('static report writes a self-contained versioned artifact directory', async (context) => {
@@ -22,6 +23,8 @@ test('static report writes a self-contained versioned artifact directory', async
       'agent-plan.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
+      'rule-quality.json',
+      'rule-quality.schema.json',
       'codex-bundle.json',
       'report.md',
       'report.sarif',
@@ -32,6 +35,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes("default-src 'none'"));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
+  assert.ok(html.includes('href="rule-quality.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
   const agentPlan = await readFile(path.join(result.directory, 'agent-plan.json'), 'utf8');
@@ -45,6 +49,15 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'agent-plan.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(schema.properties?.schemaVersion?.const, 2);
+  const ruleQuality = parseRuleQualityReport(
+    JSON.parse(await readFile(path.join(result.directory, 'rule-quality.json'), 'utf8')),
+  );
+  assert.equal(ruleQuality.auditId, report.auditId);
+  assert.equal(ruleQuality.summary.appliedRules, 1);
+  const ruleQualitySchema = JSON.parse(
+    await readFile(path.join(result.directory, 'rule-quality.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(ruleQualitySchema.properties?.schemaVersion?.const, 1);
   const manifest = JSON.parse(
     await readFile(path.join(result.directory, 'manifest.json'), 'utf8'),
   ) as { kind: string; files: { sha256: string }[] };

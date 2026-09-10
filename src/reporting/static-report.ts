@@ -15,6 +15,8 @@ import {
   parseRemediationResult,
   remediationPlanJsonSchema,
 } from '../domain/remediation-schema.ts';
+import { buildRuleQualityReport } from '../domain/rule-quality.ts';
+import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-quality-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -62,6 +64,7 @@ export async function writeStaticReport(
   }
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
+  const ruleQuality = parseRuleQualityReport(buildRuleQualityReport(report));
   const remediationResult = options.baseline
     ? parseRemediationResult(
         buildRemediationResult(buildRemediationPlan(options.baseline), options.baseline, report),
@@ -92,6 +95,16 @@ export async function writeStaticReport(
       path: 'agent-plan.schema.json',
       mediaType: 'application/schema+json',
       content: json(remediationPlanJsonSchema()),
+    },
+    {
+      path: 'rule-quality.json',
+      mediaType: 'application/json',
+      content: json(ruleQuality),
+    },
+    {
+      path: 'rule-quality.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(ruleQualityJsonSchema()),
     },
     {
       path: 'codex-bundle.json',

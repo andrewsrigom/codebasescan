@@ -39,6 +39,12 @@ verification-command allowlists. `remediation-plan.json` remains a byte-identica
 existing report consumers can move deliberately; its payload also carries schema version 2. Version
 1 plans were external generated artifacts rather than stored audit state and are not rewritten.
 
+## 2026-09-10 — applied rule quality artifact
+
+Rule quality is emitted separately as `rule-quality.json` plus a JSON Schema. It reports only rules
+that produced findings in the audit, keeps fixture measurements separate from real-project human
+dispositions, and states detector limitations instead of presenting one unsupported accuracy score.
+
 ## 2026-09-10 — declared context and observed data map
 
 Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script
