@@ -231,6 +231,15 @@ const projectProfile = z.looseObject({
   imports: z.array(z.looseObject({ id: shortText, file: shortText })).max(20_000),
   calls: z.array(z.looseObject({ id: shortText, file: shortText })).max(50_000),
   facts: z.array(z.looseObject({ id: shortText, file: shortText })).max(50_000),
+  saasSemantics: z
+    .looseObject({
+      schemaVersion: z.literal(1),
+      sources: z.array(shortText).max(10),
+      vocabulary: z.record(shortText, z.array(shortText).max(100)),
+      helpers: z.record(shortText, z.array(shortText).max(100)),
+      expectedUnauthenticatedRoutes: z.array(shortText).max(100),
+    })
+    .optional(),
   filesAnalyzed: z.number().int().nonnegative(),
   nodesAnalyzed: z.number().int().nonnegative(),
   issues: z.array(shortText).max(10_000),

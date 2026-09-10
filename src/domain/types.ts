@@ -261,7 +261,10 @@ export type ProjectFactKind =
   | 'resource-scope'
   | 'logging'
   | 'error-handling'
-  | 'webhook-verification';
+  | 'webhook-verification'
+  | 'rate-limit'
+  | 'idempotency'
+  | 'csrf';
 export interface ProjectFramework {
   id:
     | 'nextjs-app-router'
@@ -328,6 +331,28 @@ export interface ProjectFact {
   signal: string;
   ownerSymbolId?: string;
 }
+export interface ProjectSaasSemantics {
+  schemaVersion: 1;
+  sources: string[];
+  vocabulary: {
+    tenantKeys: string[];
+    ownerKeys: string[];
+    roleKeys: string[];
+    billingKeys: string[];
+    tokenKeys: string[];
+  };
+  helpers: {
+    authentication: string[];
+    authorization: string[];
+    validation: string[];
+    resourceScope: string[];
+    rateLimit: string[];
+    idempotency: string[];
+    csrf: string[];
+    auditLog: string[];
+  };
+  expectedUnauthenticatedRoutes: string[];
+}
 export interface ProjectProfile {
   schemaVersion: 1;
   status: ProjectProfileStatus;
@@ -338,6 +363,7 @@ export interface ProjectProfile {
   imports: ProjectImport[];
   calls: ProjectCallEdge[];
   facts: ProjectFact[];
+  saasSemantics?: ProjectSaasSemantics;
   filesAnalyzed: number;
   nodesAnalyzed: number;
   issues: string[];

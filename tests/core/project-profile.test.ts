@@ -116,6 +116,45 @@ test('declarative TypeScript path aliases resolve without loading config code', 
   assert.equal(result.profile.status, 'complete');
 });
 
+test('declarative SaaS semantics recognize project vocabulary and helpers', () => {
+  const snapshot = snapshotFromFiles({
+    'traceward.config.json': JSON.stringify({
+      schemaVersion: 1,
+      vocabulary: { tenantKeys: ['customerWorkspaceKey'] },
+      helpers: {
+        authorization: ['requireMembership'],
+        resourceScope: ['scopeToCustomerWorkspace'],
+        rateLimit: ['consumeQuota'],
+        idempotency: ['claimDelivery'],
+        csrf: ['assertSameOrigin'],
+      },
+      expectedUnauthenticatedRoutes: ['/api/status'],
+    }),
+    'src/app/api/workspaces/[id]/route.ts': `
+      export async function PATCH() {
+        await requireMembership();
+        await consumeQuota();
+        await assertSameOrigin();
+        await claimDelivery();
+        return database.workspace.update({
+          where: { customerWorkspaceKey: 'workspace_1' },
+          data: { name: 'Updated' }
+        });
+      }
+    `,
+  });
+
+  const profile = profileProject(snapshot).profile;
+  for (const kind of ['authorization', 'rate-limit', 'idempotency', 'csrf', 'resource-scope'])
+    assert.ok(
+      profile.facts.some((fact) => fact.kind === kind),
+      `missing configured ${kind} fact`,
+    );
+  assert.ok(profile.saasSemantics);
+  assert.deepEqual(profile.saasSemantics.sources, ['traceward.config.json']);
+  assert.deepEqual(profile.saasSemantics.expectedUnauthenticatedRoutes, ['/api/status']);
+});
+
 test('profiling parses target code as data without executing it', () => {
   const result = profileProject(
     snapshotOf("throw new Error('must not run'); export function safe() { return 1; }"),

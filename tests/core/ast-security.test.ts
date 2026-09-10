@@ -206,6 +206,24 @@ test('explicit public submission routes are not required to have an existing ses
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('declarative public routes avoid project-specific missing-login noise', () => {
+  const snapshot = snapshotFromFiles({
+    'traceward.config.json': JSON.stringify({
+      schemaVersion: 1,
+      expectedUnauthenticatedRoutes: ['/api/partner/callback'],
+    }),
+    'src/app/api/partner/callback/route.ts': `
+      export async function POST() {
+        await database.callback.create({ data: { received: true } });
+        return Response.json({ ok: true });
+      }
+    `,
+  });
+  const profile = profileProject(snapshot).profile;
+  const findings = scanAstSecurity(snapshot, profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('explicit authorization or an ownership helper avoids dynamic-scope noise', () => {
   const authorized = snapshotOf(
     `export async function DELETE(request) {

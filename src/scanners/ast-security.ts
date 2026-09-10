@@ -124,9 +124,17 @@ function sensitiveOperationSeverity(fact: ProjectFact): 'high' | 'medium' {
   return 'high';
 }
 
-function isExpectedUnauthenticatedFlow(entrypoint: ProjectEntrypoint): boolean {
+function isExpectedUnauthenticatedFlow(
+  entrypoint: ProjectEntrypoint,
+  profile: ProjectProfile,
+): boolean {
   const route = entrypoint.route ?? '';
+  const configured = (profile.saasSemantics?.expectedUnauthenticatedRoutes ?? []).some((pattern) => {
+    if (pattern.endsWith('/*')) return route.startsWith(pattern.slice(0, -1));
+    return route === pattern || route === `${pattern}/`;
+  });
   return (
+    configured ||
     /\/auth\/(?:forgot-password|reset-password|join|unlock-account|register|signup|sign-up|login|signin|sign-in|verify|callback)(?:\/|$)/i.test(
       route,
     ) || /^\/api\/(?:waitlist|contact|newsletter|subscribe)(?:\/submit)?\/?$/i.test(route)
@@ -1170,7 +1178,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     const authenticated = mappedFacts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
     );
-    if (!authenticated && !isExpectedUnauthenticatedFlow(entrypoint)) {
+    if (!authenticated && !isExpectedUnauthenticatedFlow(entrypoint, profile)) {
       const candidate = authorizationFinding({
         snapshot,
         profile,

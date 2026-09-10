@@ -16,7 +16,12 @@ import type {
   SourceFile,
 } from '../domain/types.ts';
 import { isRuntimeSource } from '../security/paths.ts';
-import { typeScriptPathAliases, type TypeScriptPathAlias } from './declarative-config.ts';
+import {
+  declarativeSaasConfiguration,
+  typeScriptPathAliases,
+  type TrustedSaasConfiguration,
+  type TypeScriptPathAlias,
+} from './declarative-config.ts';
 
 const sourcePattern = /\.(?:[cm]?[jt]sx?)$/i;
 const declarationPattern = /\.d\.[cm]?ts$/i;
@@ -111,22 +116,27 @@ function functionSymbol(file: string, source: ts.SourceFile, node: ts.Node): Pro
   };
 }
 
-function resourceScopeSignal(node: ts.CallExpression): string | null {
+function resourceScopeSignal(
+  node: ts.CallExpression,
+  configuration: TrustedSaasConfiguration,
+): string | null {
+  const terminal = callName(node.expression).split('.').at(-1) ?? '';
+  if (configuration.helpers.resourceScope.some((helper) => helper === terminal)) return terminal;
   const helperScope =
-    /(?:for|by)(tenant|owner|user|account|organization|org|workspace)(?:id)?$/i.exec(
-      callName(node.expression).split('.').at(-1) ?? '',
-    );
+    /(?:for|by)(tenant|owner|user|account|organization|org|workspace|team)(?:id)?$/i.exec(terminal);
   if (helperScope) return helperScope[1]!.toLowerCase();
+  const scopeKeys = new Set(
+    [...configuration.vocabulary.tenantKeys, ...configuration.vocabulary.ownerKeys].map((key) =>
+      key.toLowerCase(),
+    ),
+  );
   let found: string | null = null;
   let inspected = 0;
   const visit = (child: ts.Node): void => {
     if (found || inspected++ > 2000) return;
     if (ts.isPropertyAssignment(child) || ts.isShorthandPropertyAssignment(child)) {
       const name = propertyName(child.name);
-      if (
-        name &&
-        /^(?:tenant|tenantId|owner|ownerId|userId|accountId|organizationId|orgId)$/i.test(name)
-      ) {
+      if (name && scopeKeys.has(name.toLowerCase())) {
         found = name;
         return;
       }
@@ -151,9 +161,22 @@ function callName(expression: ts.Expression): string {
   return expression.getText().replace(/\s+/g, ' ').slice(0, 180);
 }
 
-function factKind(callee: string): ProjectFactKind | null {
+function factKind(
+  callee: string,
+  configuration: TrustedSaasConfiguration,
+): ProjectFactKind | null {
   const value = callee.toLowerCase();
   const terminal = value.split('.').at(-1) ?? value;
+  const configured = Object.entries(configuration.helpers).find(([, helpers]) =>
+    helpers.some((helper: string) => helper.toLowerCase() === terminal),
+  )?.[0];
+  if (configured === 'authentication') return 'authentication';
+  if (configured === 'authorization') return 'authorization';
+  if (configured === 'validation') return 'validation';
+  if (configured === 'rateLimit') return 'rate-limit';
+  if (configured === 'idempotency') return 'idempotency';
+  if (configured === 'csrf') return 'csrf';
+  if (configured === 'auditLog') return 'logging';
   if (
     /(?:^|\.)(?:authorize|requirerole|haspermission|assertaccess|canaccess|checkpermission|throwifnotallowed)$/.test(
       value,
@@ -667,7 +690,8 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       isRuntimeSource(file) && sourcePattern.test(file.path) && !declarationPattern.test(file.path),
   );
   const aliasConfiguration = typeScriptPathAliases(snapshot);
-  const issues: string[] = [...aliasConfiguration.issues];
+  const saasConfiguration = declarativeSaasConfiguration(snapshot);
+  const issues: string[] = [...aliasConfiguration.issues, ...saasConfiguration.issues];
   let truncated = snapshot.truncated || candidates.length > maximumFiles;
   if (candidates.length > maximumFiles)
     issues.push(`Source profiling was limited to ${maximumFiles} files.`);
@@ -750,7 +774,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             callee,
             ...(ownerSymbolId ? { callerSymbolId: ownerSymbolId } : {}),
           });
-        const kind = factKind(callee);
+        const kind = factKind(callee, saasConfiguration.config);
         const callback = node.arguments.find(
           (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
         );
@@ -779,7 +803,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
         const scope =
           kind === 'database' ||
           /(?:^|\.)(?:find|get|create|update|upsert|delete|remove)[A-Za-z0-9_]*$/i.test(callee)
-            ? resourceScopeSignal(node)
+            ? resourceScopeSignal(node, saasConfiguration.config)
             : null;
         if (scope && !cap(facts.length, maximumFacts, 'Security fact'))
           facts.push({
@@ -920,6 +944,13 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
     imports,
     calls: resolveCallTargets(calls, symbols, imports),
     facts,
+    saasSemantics: {
+      schemaVersion: 1,
+      sources: saasConfiguration.sources,
+      vocabulary: saasConfiguration.config.vocabulary,
+      helpers: saasConfiguration.config.helpers,
+      expectedUnauthenticatedRoutes: saasConfiguration.config.expectedUnauthenticatedRoutes,
+    },
     filesAnalyzed: parsed.length,
     nodesAnalyzed,
     issues: issues.slice(0, 200),
@@ -934,9 +965,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
-        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), and ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
+        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.4.0',
+      version: '0.5.0',
     },
   };
 }
