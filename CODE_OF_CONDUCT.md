@@ -6,6 +6,6 @@ Harassment, discrimination, threats, doxxing, sexualized conduct, and publishing
 
 Maintainers may edit or remove comments, reject contributions, or restrict participation when behavior harms contributors or users.
 
-Report conduct issues privately to the maintainers. Before the repository is published, the owner must add a verified private reporting route here; do not put sensitive reports in public issues.
+Report conduct issues privately to the maintainer. Do not put sensitive reports, credentials, or private source code in public issues.
 
 This policy applies in repository issues, pull requests, discussions, and project events.

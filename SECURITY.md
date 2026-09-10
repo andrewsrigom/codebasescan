@@ -12,7 +12,7 @@ Read `docs/THREAT_MODEL.md` before reviewing nontrivial repositories. The source
 
 Do not include real source code, credentials, tokens, local paths, or unredacted reports in public issues. Share a minimal inert reproduction.
 
-Before the first public release, the owner must enable GitHub private vulnerability reporting and put the verified reporting route here. No contact email, published repository URL, or security-response SLA is invented in this starter. Until that route exists, this is not a supported public release.
+Use [GitHub private vulnerability reporting](https://github.com/andrewsrigom/codebasescan/security/advisories/new) for security issues. Do not open a public issue for a suspected vulnerability.
 
 ## Disclosure discipline
 
