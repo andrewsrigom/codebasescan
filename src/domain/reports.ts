@@ -594,6 +594,17 @@ export function toMarkdown(
           ]),
         ]
       : []),
+    ...(report.suppressionImport
+      ? [
+          '',
+          '## Portable suppressions',
+          '',
+          `Entries: ${report.suppressionImport.entries}. Applied: ${report.suppressionImport.applied}. Stale: ${report.suppressionImport.stale}. Expired: ${report.suppressionImport.expired}. Unmatched: ${report.suppressionImport.unmatched}.`,
+          `Ledger digest: ${report.suppressionImport.ledgerDigest}. Imported: ${report.suppressionImport.importedAt}.`,
+          '',
+          '> Entries match exact fingerprint, rule, paths, and source digests. Owner authenticity is not verified.',
+        ]
+      : []),
     '',
     '## Findings',
     '',
@@ -612,7 +623,15 @@ export function toMarkdown(
         : []),
       ...(finding.suppression
         ? [
-            `Project exception: ${m(finding.suppression.reason)}${finding.suppression.expiresAt ? ` | Expires: ${finding.suppression.expiresAt}` : ' | No expiry'}`,
+            `Project exception: ${m(finding.suppression.reason)}${finding.suppression.owner ? ` | Owner: ${m(finding.suppression.owner)}` : ''}${finding.suppression.expiresAt ? ` | Expires: ${finding.suppression.expiresAt}` : ' | No expiry'}`,
+            ...(finding.suppression.evidence
+              ? [`Supporting evidence: ${m(finding.suppression.evidence)}`]
+              : []),
+            ...(finding.suppression.target
+              ? [
+                  `Exact target: ${m(finding.suppression.target.ruleId)} | ${m(finding.suppression.target.paths.join(', '))} | ${finding.suppression.target.fingerprint}`,
+                ]
+              : []),
             '',
           ]
         : []),
@@ -826,7 +845,23 @@ export function toHtml(
       const suppression = finding.suppression
         ? '<section class="finding-section review"><h3>Project exception</h3><p>' +
           e(finding.suppression.reason) +
-          '</p><p>' +
+          '</p>' +
+          (finding.suppression.owner
+            ? '<p><strong>Owner:</strong> ' + e(finding.suppression.owner) + '</p>'
+            : '') +
+          (finding.suppression.evidence
+            ? '<p><strong>Supporting evidence:</strong> ' + e(finding.suppression.evidence) + '</p>'
+            : '') +
+          (finding.suppression.target
+            ? '<p><strong>Exact target:</strong> ' +
+              e(finding.suppression.target.ruleId) +
+              ' · ' +
+              e(finding.suppression.target.paths.join(', ')) +
+              ' · <code>' +
+              e(finding.suppression.target.fingerprint) +
+              '</code></p>'
+            : '') +
+          '<p>' +
           (finding.suppression.expiresAt
             ? 'Expires ' + e(finding.suppression.expiresAt)
             : 'No expiry') +
@@ -1585,6 +1620,23 @@ export function toHtml(
       e(report.reviewImport.importedAt) +
       '.</p></section>'
     : '';
+  const portableSuppression = report.suppressionImport
+    ? '<section class="report-section"><span class="kicker">PORTABLE SUPPRESSIONS</span><h2>Imported exceptions</h2><p>Only entries matching the exact fingerprint, rule, paths, and source-file digests were applied. Owner authenticity was not verified.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      report.suppressionImport.applied +
+      '</strong><span>Applied</span></div><div class="summary-card"><strong>' +
+      report.suppressionImport.stale +
+      '</strong><span>Stale</span></div><div class="summary-card"><strong>' +
+      report.suppressionImport.expired +
+      '</strong><span>Expired</span></div><div class="summary-card"><strong>' +
+      report.suppressionImport.unmatched +
+      '</strong><span>Not present</span></div></div>' +
+      list('Source audits', report.suppressionImport.sourceAuditIds) +
+      '<p class="muted">Ledger digest: <code>' +
+      e(report.suppressionImport.ledgerDigest) +
+      '</code> · imported ' +
+      e(report.suppressionImport.importedAt) +
+      '.</p></section>'
+    : '';
   const policySummary = options.policyResult
     ? '<section class="report-section"><div class="section-head"><div><span class="kicker">DETERMINISTIC POLICY</span><h2>Policy result</h2></div><span class="status ' +
       (options.policyResult.exitCode === 0 ? 'complete' : 'gap') +
@@ -1609,7 +1661,7 @@ export function toHtml(
       '. Passing does not certify security or compliance.</p></section>'
     : '';
   const artifactLinks = options.artifactLinks
-    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li>' +
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li><li><a href="suppression-ledger.schema.json">Portable suppression ledger JSON Schema</a></li>' +
       (options.remediationResult
         ? '<li><a href="remediation-result.json">Remediation result JSON</a></li>'
         : '') +
@@ -1693,6 +1745,7 @@ export function toHtml(
     coverage +
     '</ul></section>' +
     portableReview +
+    portableSuppression +
     rootCauseSummary +
     ruleQuality +
     profile +

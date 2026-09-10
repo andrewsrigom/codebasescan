@@ -53,6 +53,29 @@ test('HTML export escapes source and titles rather than executing them', () => {
     stale: 1,
     unmatched: 1,
   };
+  report.suppressionImport = {
+    schemaVersion: 1,
+    ledgerDigest: 'b'.repeat(64),
+    sourceAuditIds: ['<suppression-audit>'],
+    importedAt: '2026-09-10T13:00:00.000Z',
+    entries: 4,
+    applied: 1,
+    stale: 1,
+    unmatched: 1,
+    expired: 1,
+  };
+  report.findings[0]!.suppression = {
+    reason: '<unsafe-reason>',
+    owner: '<unsafe-owner>',
+    evidence: '<unsafe-evidence>',
+    createdAt: '2026-09-10T12:00:00.000Z',
+    source: 'portable-ledger',
+    target: {
+      fingerprint: report.findings[0]!.fingerprint,
+      ruleId: report.findings[0]!.ruleId,
+      paths: ['<unsafe-path-target>'],
+    },
+  };
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.riskCorrelation.paths[0]!.steps[0]!.label = '<unsafe-path>';
   report.environmentContract = sampleEnvironmentContract();
@@ -81,6 +104,12 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Imported decisions'));
   assert.ok(output.includes('&lt;untrusted-audit&gt;'));
   assert.ok(!output.includes('<untrusted-audit>'));
+  assert.ok(output.includes('Imported exceptions'));
+  assert.ok(output.includes('&lt;suppression-audit&gt;'));
+  assert.ok(output.includes('&lt;unsafe-owner&gt;'));
+  assert.ok(output.includes('&lt;unsafe-evidence&gt;'));
+  assert.ok(output.includes('&lt;unsafe-path-target&gt;'));
+  assert.ok(!output.includes('<unsafe-owner>'));
   assert.ok(output.includes('Entrypoint-to-operation paths'));
   assert.ok(output.includes('&lt;unsafe-path&gt;'));
   assert.ok(!output.includes('<unsafe-path>'));

@@ -55,6 +55,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'rule-quality.json',
       'rule-quality.schema.json',
       'review-ledger.schema.json',
+      'suppression-ledger.schema.json',
       'codex-bundle.json',
       'report.md',
       'report.sarif',
@@ -74,6 +75,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="run-manifest.schema.json"'));
   assert.ok(html.includes('href="policy-result.json"'));
   assert.ok(html.includes('href="policy-result.schema.json"'));
+  assert.ok(html.includes('href="suppression-ledger.schema.json"'));
   assert.ok(html.includes('DETERMINISTIC POLICY'));
   assert.ok(html.includes('Policy result'));
   assert.ok(html.includes('href="agent-plan.json"'));
@@ -149,6 +151,10 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'policy-result.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(policyResultSchema.properties?.schemaVersion?.const, 1);
+  const suppressionLedgerSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'suppression-ledger.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(suppressionLedgerSchema.properties?.schemaVersion?.const, 1);
   const markdown = await readFile(path.join(result.directory, 'report.md'), 'utf8');
   assert.ok(markdown.includes('## Policy result'));
   assert.ok(markdown.includes('Profile: advisory. Decision: advisory. Exit code: 0.'));

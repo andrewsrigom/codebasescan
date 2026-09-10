@@ -37,6 +37,12 @@ import {
 } from '../domain/review-ledger.ts';
 import { parseReviewLedger } from '../domain/review-ledger-schema.ts';
 import { buildPolicyResult, policyProfiles, type PolicyProfile } from '../domain/policy.ts';
+import {
+  applySuppressionLedger,
+  type SuppressionLedger,
+  upsertSuppressionLedger,
+} from '../domain/suppression-ledger.ts';
+import { parseSuppressionLedger } from '../domain/suppression-ledger-schema.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -148,9 +154,35 @@ async function loadReviewLedger(file: string) {
   }
 }
 
+async function loadSuppressionLedger(file: string): Promise<SuppressionLedger> {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 2 * 1024 * 1024)
+    throw new Error('Suppression ledger must be a regular JSON file no larger than 2 MB.');
+  try {
+    return parseSuppressionLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Suppression ledger is not valid Traceward JSON.');
+  }
+}
+
 async function existingReviewLedger(file: string) {
   try {
     return await loadReviewLedger(file);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    )
+      return undefined;
+    throw error;
+  }
+}
+
+async function existingSuppressionLedger(file: string) {
+  try {
+    return await loadSuppressionLedger(file);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -174,6 +206,14 @@ async function defaultReviewLedgerDestination(location: string): Promise<string>
   return metadata.isDirectory()
     ? path.join(resolved, 'review-ledger.json')
     : path.join(path.dirname(resolved), 'review-ledger.json');
+}
+
+async function defaultSuppressionLedgerDestination(location: string): Promise<string> {
+  const resolved = path.resolve(location);
+  const metadata = await stat(resolved);
+  return metadata.isDirectory()
+    ? path.join(resolved, 'suppression-ledger.json')
+    : path.join(path.dirname(resolved), 'suppression-ledger.json');
 }
 
 async function preflight(root: string, requireApproval: boolean) {
@@ -246,6 +286,29 @@ try {
     );
     await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
     console.log(`Saved review ledger ${destination}`);
+  } else if (command === 'suppress' && target && arguments_[2] && !arguments_[2].startsWith('--')) {
+    const report = await loadReportArtifact(target);
+    const destination = path.resolve(
+      option('--output') ?? (await defaultSuppressionLedgerDestination(target)),
+    );
+    const owner = option('--owner');
+    const justification = option('--justification');
+    const evidence = option('--evidence');
+    const expiresAt = option('--expires-at');
+    if (!owner || !justification || !evidence)
+      throw new Error('Use --owner, --justification, and --evidence for a suppression.');
+    const current = await existingSuppressionLedger(destination);
+    const ledger = parseSuppressionLedger(
+      upsertSuppressionLedger(current, report, {
+        findingId: arguments_[2],
+        owner,
+        justification,
+        evidence,
+        ...(expiresAt ? { expiresAt } : {}),
+      }),
+    );
+    await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
+    console.log(`Saved suppression ledger ${destination}`);
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -268,9 +331,13 @@ try {
       if (completed.status !== 'completed' || !completed.report)
         throw new Error('Non-interactive audit did not produce a complete draft report.');
       const reviewsPath = option('--reviews');
-      const report = reviewsPath
+      const reviewedReport = reviewsPath
         ? applyReviewLedger(completed.report, await loadReviewLedger(reviewsPath))
         : completed.report;
+      const suppressionsPath = option('--suppressions');
+      const report = suppressionsPath
+        ? applySuppressionLedger(reviewedReport, await loadSuppressionLedger(suppressionsPath))
+        : reviewedReport;
       const threshold = option('--fail-on');
       if (threshold && !severities.includes(threshold as Severity))
         throw new Error('Use critical, high, medium, low, or info for --fail-on.');
@@ -395,7 +462,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }

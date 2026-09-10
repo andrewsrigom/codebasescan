@@ -104,6 +104,25 @@ const finding = z.looseObject({
   evidence: z.array(evidence).min(1).max(1_000),
   disposition: z.enum(['needs_review', 'confirmed', 'fixed', 'false_positive', 'accepted_risk']),
   confidence: z.enum(['low', 'medium', 'high']).optional(),
+  exposure: z.enum(['potentially_public', 'authenticated', 'local', 'unknown']).optional(),
+  priority: z.number().int().min(0).max(100).optional(),
+  suppression: z
+    .looseObject({
+      reason: shortText,
+      owner: shortText.optional(),
+      evidence: shortText.optional(),
+      createdAt: shortText,
+      expiresAt: shortText.optional(),
+      source: z.enum(['local-project', 'portable-ledger']).optional(),
+      target: z
+        .object({
+          fingerprint: shortText,
+          ruleId: shortText,
+          paths: z.array(shortText).min(1).max(1_000),
+        })
+        .optional(),
+    })
+    .optional(),
   analysis: analysis.optional(),
   runtimeVerification: z
     .looseObject({
@@ -1006,6 +1025,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(11),
     z.literal(12),
     z.literal(13),
+    z.literal(14),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -1078,6 +1098,19 @@ export const auditReportSchema = z.looseObject({
       applied: z.number().int().nonnegative(),
       stale: z.number().int().nonnegative(),
       unmatched: z.number().int().nonnegative(),
+    })
+    .optional(),
+  suppressionImport: z
+    .looseObject({
+      schemaVersion: z.literal(1),
+      ledgerDigest: shortText,
+      sourceAuditIds: z.array(shortText).max(100_000),
+      importedAt: shortText,
+      entries: z.number().int().nonnegative(),
+      applied: z.number().int().nonnegative(),
+      stale: z.number().int().nonnegative(),
+      unmatched: z.number().int().nonnegative(),
+      expired: z.number().int().nonnegative(),
     })
     .optional(),
   limitations: z.array(shortText).max(10_000),

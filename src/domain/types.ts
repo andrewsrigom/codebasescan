@@ -133,8 +133,16 @@ export interface Finding {
   priority?: number;
   suppression?: {
     reason: string;
+    owner?: string;
+    evidence?: string;
     createdAt: string;
     expiresAt?: string;
+    source?: 'local-project' | 'portable-ledger';
+    target?: {
+      fingerprint: string;
+      ruleId: string;
+      paths: string[];
+    };
   };
   analysis?: Analysis;
   runtimeVerification?: {
@@ -1005,7 +1013,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -1043,6 +1051,17 @@ export interface AuditReport {
     applied: number;
     stale: number;
     unmatched: number;
+  };
+  suppressionImport?: {
+    schemaVersion: 1;
+    ledgerDigest: string;
+    sourceAuditIds: string[];
+    importedAt: string;
+    entries: number;
+    applied: number;
+    stale: number;
+    unmatched: number;
+    expired: number;
   };
   limitations: string[];
   publication: 'draft' | 'reviewed';

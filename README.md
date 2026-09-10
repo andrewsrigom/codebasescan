@@ -249,6 +249,10 @@ Every static report includes the schema-validated `policy-result.json`. The lega
 With `--baseline report.json`, balanced gates only newly introduced findings; strict still includes
 existing debt. A passing gate is not a security certification.
 
+Portable exceptions require an exact fingerprint, rule, evidence paths and source digests plus an
+owner, justification, supporting evidence, and optional expiry. See
+[Portable suppressions](docs/SUPPRESSIONS.md).
+
 ## What is intentionally out of scope
 
 - whole-program path-sensitive taint or dependency reachability proof;
@@ -287,6 +291,7 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Feature flag consistency](docs/FEATURE_FLAGS.md)
 - [Run and coverage manifest](docs/RUN_MANIFEST.md)
 - [Policy profiles and exit codes](docs/POLICY_PROFILES.md)
+- [Portable suppressions](docs/SUPPRESSIONS.md)
 - [Finding lifecycle diff](docs/LIFECYCLE_DIFF.md)
 - [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)

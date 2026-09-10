@@ -65,6 +65,9 @@ An invalid schema or citation fails closed and preserves the original finding. A
 scanner severity, suppress evidence, set a human disposition, mark a task fixed, or certify
 coverage.
 
+Portable suppressions remain visible to AI with their exact target and import status. A model may
+explain an active exception but cannot create, renew, broaden, or authenticate it.
+
 ## Correction boundary
 
 Assessment and correction are separate operations. A coding agent may modify a project only after

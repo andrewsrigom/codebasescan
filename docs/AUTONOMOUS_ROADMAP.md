@@ -25,6 +25,10 @@ Phase 6 has a reproducible five-project corpus covering the named project set; i
 dispositions and false-negative review remain. Phase 8 now includes schema-validated advisory,
 balanced, and strict policy results with stable CLI exit codes. Human report refinement remains.
 
+Portable scoped suppressions are implemented with owner, justification, supporting evidence,
+creation/expiry, and exact fingerprint/rule/path/source-digest matching. Stale, expired, and
+unmatched records remain counted; reviewer identity/signature policy is still future hardening.
+
 The versioned run manifest is implemented and publishes mode selection, snapshot limits, scanner
 status/duration, explicit coverage state, limitations, and output digests with a JSON Schema.
 

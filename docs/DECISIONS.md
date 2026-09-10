@@ -203,3 +203,11 @@ new-only findings, and strict includes existing medium-or-higher debt. Failed/tr
 blocks balanced; partial coverage also blocks strict. Optional and unsupported product capabilities
 stay visible without making every static audit fail. Exit 1 means finding failure and exit 2 means
 blocking coverage or operational failure; `policy-result.json` distinguishes the latter cases.
+
+## 2026-09-10 — exact portable suppression ledger
+
+Portable suppressions are separate explicitly supplied data, not executable project configuration.
+They match project, fingerprint, rule, paths, and evidence-file digests; expired, stale, and absent
+targets remain counted without changing the finding. Owner, justification, supporting evidence,
+creation, and optional expiry are required/preserved. Identity remains unauthenticated and visible
+as a limitation until signed reviewer policy exists.

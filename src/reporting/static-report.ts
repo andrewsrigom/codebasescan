@@ -22,6 +22,7 @@ import { buildRunManifest, type RunManifestOutput } from '../domain/run-manifest
 import { parseRunManifest, runManifestJsonSchema } from '../domain/run-manifest-schema.ts';
 import { buildPolicyResult, type PolicyResult } from '../domain/policy.ts';
 import { parsePolicyResult, policyResultJsonSchema } from '../domain/policy-schema.ts';
+import { suppressionLedgerJsonSchema } from '../domain/suppression-ledger-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -218,6 +219,11 @@ export async function writeStaticReport(
       path: 'review-ledger.schema.json',
       mediaType: 'application/schema+json',
       content: json(reviewLedgerJsonSchema()),
+    },
+    {
+      path: 'suppression-ledger.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(suppressionLedgerJsonSchema()),
     },
     {
       path: 'codex-bundle.json',
