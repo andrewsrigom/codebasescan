@@ -18,6 +18,14 @@ test('HTML export escapes source and titles rather than executing them', () => {
   const report = sampleReport();
   report.projectName = '<script>alert(1)</script>';
   report.findings[0]!.evidence[0]!.excerpt = '<img src=x onerror=alert(1)>';
+  report.auditModes = [
+    { id: 'security', version: '1.0.0', enabled: true },
+    { id: 'accessibility-static', version: '1.0.0', enabled: false },
+  ];
+  report.projectProfile = profileProject(
+    snapshotOf('export function handler() { return Response.json({ ok: true }); }'),
+  ).profile;
+  report.projectProfile.dataMap!.declaredBoundaries.externalServices = ['<unsafe-service>'];
   const output = toHtml(report);
   assert.ok(!output.includes('<script>'));
   assert.ok(!output.includes('<img src=x'));
@@ -27,6 +35,10 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Review priorities'));
   assert.ok(output.includes('Need human review'));
   assert.ok(output.includes('id="finding-1"'));
+  assert.ok(output.includes('Selected review lenses'));
+  assert.ok(output.includes('Observed signals and declared context'));
+  assert.ok(output.includes('&lt;unsafe-service&gt;'));
+  assert.ok(!output.includes('<unsafe-service>'));
 });
 test('SARIF export retains unresolved status and valid local locations', () => {
   const result = toSarif(sampleReport()) as {

@@ -2,6 +2,7 @@ import type { AuditReport } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 import type { RemediationPlan, RemediationResult } from './remediation.ts';
+import type { RuleQualityReport } from './rule-quality.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -439,6 +440,7 @@ export function toHtml(
     artifactLinks?: boolean;
     remediationPlan?: RemediationPlan;
     remediationResult?: RemediationResult;
+    ruleQuality?: RuleQualityReport;
   } = {},
 ): string {
   const e = escapeHtml;
@@ -466,6 +468,59 @@ export function toHtml(
   const dependencyAdvisoryCount = dependencyRemediationGroups.reduce(
     (total, group) => total + group.advisoryCount,
     0,
+  );
+  const auditModes = report.auditModes
+    ? '<section class="report-section"><span class="kicker">AUDIT MODES</span><h2>Selected review lenses</h2><p>Enabled modes decide which mechanical checks contribute evidence. Disabled modes are explicit gaps, not passing results.</p><div class="facts">' +
+      report.auditModes
+        .map(
+          (mode) =>
+            '<span><span class="status ' +
+            (mode.enabled ? 'complete' : 'gap') +
+            '">' +
+            (mode.enabled ? 'enabled' : 'disabled') +
+            '</span> <strong>' +
+            e(mode.id) +
+            '</strong> · ' +
+            e(mode.version) +
+            '</span>',
+        )
+        .join('') +
+      '</div></section>'
+    : '';
+  type RootCausePreview = {
+    id: string;
+    summary: string;
+    taskCount: number;
+    findingIds: Set<string>;
+    priority: number;
+    severity: RemediationPlan['tasks'][number]['severity'];
+  };
+  const rootCausePreviews = new Map<string, RootCausePreview>();
+  for (const task of options.remediationPlan?.tasks ?? []) {
+    const current = rootCausePreviews.get(task.rootCause.id);
+    if (current) {
+      current.taskCount += 1;
+      for (const finding of task.findings) current.findingIds.add(finding.id);
+      if (task.priority > current.priority) {
+        current.priority = task.priority;
+        current.severity = task.severity;
+      }
+      continue;
+    }
+    rootCausePreviews.set(task.rootCause.id, {
+      id: task.rootCause.id,
+      summary: task.rootCause.summary,
+      taskCount: 1,
+      findingIds: new Set(task.findings.map((finding) => finding.id)),
+      priority: task.priority,
+      severity: task.severity,
+    });
+  }
+  const orderedRootCauses = [...rootCausePreviews.values()].sort(
+    (left, right) =>
+      right.priority - left.priority ||
+      right.findingIds.size - left.findingIds.size ||
+      left.id.localeCompare(right.id),
   );
   const priorityLinks = report.findings
     .map((finding, index) => ({ finding, index }))
@@ -603,6 +658,37 @@ export function toHtml(
         ? '<h3>Profile issues</h3><ul>' +
           report.projectProfile.issues.map((issue) => '<li>' + e(issue) + '</li>').join('') +
           '</ul>'
+        : '') +
+      '</section>'
+    : '';
+  const dataMap = report.projectProfile?.dataMap
+    ? '<section class="report-section"><span class="kicker">DATA FLOW INVENTORY</span><h2>Observed signals and declared context</h2><p><strong>Observed</strong> entries come from static source facts. <strong>Declared</strong> data and boundaries come from project configuration and are not proof of runtime behavior.</p><div class="facts"><span><strong>' +
+      report.projectProfile.dataMap.entries.length +
+      '</strong> observed signals</span><span><strong>' +
+      Object.keys(report.projectProfile.dataMap.summary).length +
+      '</strong> operation types</span><span><strong>' +
+      report.projectProfile.dataMap.declaredData.length +
+      '</strong> declared data classes</span><span><strong>' +
+      (report.projectProfile.dataMap.declaredBoundaries.storage.length +
+        report.projectProfile.dataMap.declaredBoundaries.externalServices.length) +
+      '</strong> declared boundaries</span></div>' +
+      list(
+        'Observed operations',
+        Object.entries(report.projectProfile.dataMap.summary).map(
+          ([operation, count]) => `${operation}: ${count}`,
+        ),
+      ) +
+      list('Declared sensitive data', report.projectProfile.dataMap.declaredData) +
+      list(
+        'Declared storage boundaries',
+        report.projectProfile.dataMap.declaredBoundaries.storage,
+      ) +
+      list(
+        'Declared external services',
+        report.projectProfile.dataMap.declaredBoundaries.externalServices,
+      ) +
+      (report.projectProfile.dataMap.truncated
+        ? '<p class="muted"><strong>Partial inventory:</strong> the bounded data map was truncated.</p>'
         : '') +
       '</section>'
     : '';
@@ -782,6 +868,45 @@ export function toHtml(
         .join('') +
       '</div></section>'
     : '';
+  const rootCauseSummary = options.remediationPlan
+    ? '<section class="report-section"><span class="kicker">CAUSE-ORIENTED REVIEW</span><h2>Likely root causes</h2><p>Repeated findings are grouped by rule and location so reviewers can judge one underlying problem before opening every occurrence.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      report.findings.length +
+      '</strong><span>Finding candidates</span></div><div class="summary-card"><strong>' +
+      orderedRootCauses.length +
+      '</strong><span>Root-cause groups</span></div><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.tasks +
+      '</strong><span>Actionable tasks</span></div><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.requiresHuman +
+      '</strong><span>Require human input</span></div></div><ol class="task-list">' +
+      orderedRootCauses
+        .slice(0, 12)
+        .map(
+          (rootCause) =>
+            '<li><div><span class="severity ' +
+            e(rootCause.severity) +
+            '">' +
+            e(rootCause.severity) +
+            '</span><code>' +
+            e(rootCause.id) +
+            '</code></div><h3>' +
+            e(rootCause.summary) +
+            '</h3><small>' +
+            rootCause.findingIds.size +
+            (rootCause.findingIds.size === 1 ? ' finding' : ' findings') +
+            ' · ' +
+            rootCause.taskCount +
+            (rootCause.taskCount === 1 ? ' task' : ' tasks') +
+            ' · priority ' +
+            rootCause.priority +
+            '</small></li>',
+        )
+        .join('') +
+      '</ol>' +
+      (orderedRootCauses.length > 12
+        ? '<p class="muted">Only the 12 highest-priority root causes are shown here. The agent plan retains every bounded group and linked finding.</p>'
+        : '') +
+      '</section>'
+    : '';
   const remediationResult = options.remediationResult
     ? '<section class="report-section"><span class="kicker">BEFORE / AFTER</span><h2>Remediation result</h2><p>Compared this audit with baseline ' +
       e(options.remediationResult.before.auditId.slice(0, 8)) +
@@ -833,6 +958,41 @@ export function toHtml(
         ? '<p class="muted">Only the first 50 tasks are rendered here. The JSON plan retains the full bounded queue.</p>'
         : '') +
       '</section>'
+    : '';
+  const unmeasuredRules = (options.ruleQuality?.rules ?? [])
+    .filter((rule) => rule.declaredFixtureMetrics.status === 'not_measured')
+    .sort(
+      (left, right) =>
+        right.observedFindings - left.observedFindings || left.id.localeCompare(right.id),
+    );
+  const knownFalsePositiveRules = (options.ruleQuality?.rules ?? []).filter(
+    (rule) => rule.declaredFixtureMetrics.status === 'known_false_positive',
+  );
+  const ruleQuality = options.ruleQuality
+    ? '<section class="report-section"><span class="kicker">RULE TRANSPARENCY</span><h2>Applied rule quality</h2><p>Fixture measurements describe declared inert test cases only. They do not establish precision, recall, or exploitability on this project.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      options.ruleQuality.summary.appliedRules +
+      '</strong><span>Applied rules</span></div><div class="summary-card"><strong>' +
+      options.ruleQuality.summary.fixtureMeasured +
+      '</strong><span>Fixture-measured</span></div><div class="summary-card"><strong>' +
+      unmeasuredRules.length +
+      '</strong><span>Not measured</span></div><div class="summary-card"><strong>' +
+      options.ruleQuality.summary.withHumanDisposition +
+      '</strong><span>Human-calibrated</span></div></div>' +
+      list(
+        'Most active unmeasured rules',
+        unmeasuredRules
+          .slice(0, 12)
+          .map(
+            (rule) =>
+              `${rule.id}: ${rule.observedFindings} observed candidate${rule.observedFindings === 1 ? '' : 's'}`,
+          ),
+      ) +
+      list(
+        'Rules with a declared fixture false positive',
+        knownFalsePositiveRules.map((rule) => `${rule.id}: ${rule.declaredFixtureMetrics.scope}`),
+      ) +
+      list('Quality limitations', options.ruleQuality.limitations) +
+      '<p><a href="rule-quality.json">Open the complete per-rule quality record</a></p></section>'
     : '';
   const artifactLinks = options.artifactLinks
     ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li>' +
@@ -886,14 +1046,19 @@ export function toHtml(
     (priorityLinks
       ? '<ol class="priority-list">' + priorityLinks + '</ol>'
       : '<p>No candidate is waiting for a human disposition. Coverage gaps and accepted risk may still remain.</p>') +
-    '</nav><section class="report-section"><div class="section-head"><div><span class="kicker">WHAT ACTUALLY RAN</span><h2>Coverage</h2></div><span class="status ' +
+    '</nav>' +
+    auditModes +
+    '<section class="report-section"><div class="section-head"><div><span class="kicker">WHAT ACTUALLY RAN</span><h2>Coverage</h2></div><span class="status ' +
     (coverageGaps.length ? 'gap' : 'complete') +
     '">' +
     coverageGaps.length +
     ' gaps</span></div><ul class="coverage-list">' +
     coverage +
     '</ul></section>' +
+    rootCauseSummary +
+    ruleQuality +
     profile +
+    dataMap +
     mechanical +
     dependencyRemediation +
     remediationPlan +

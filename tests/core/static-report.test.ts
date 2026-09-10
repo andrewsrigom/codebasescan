@@ -38,6 +38,10 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="rule-quality.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
+  assert.ok(html.includes('CAUSE-ORIENTED REVIEW'));
+  assert.ok(html.includes('Likely root causes'));
+  assert.ok(html.includes('RULE TRANSPARENCY'));
+  assert.ok(html.includes('Applied rule quality'));
   const agentPlan = await readFile(path.join(result.directory, 'agent-plan.json'), 'utf8');
   assert.equal(
     agentPlan,
