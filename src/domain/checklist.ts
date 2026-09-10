@@ -79,6 +79,7 @@ function contextEvidence(
 export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist {
   const { projectProfile: profile, findings, scanners, httpProbe, dependencies } = input;
   const astRun = scanner(scanners, 'ast-security');
+  const saasRun = scanner(scanners, 'saas-security');
   const nextRun = scanner(scanners, 'next-security');
   const reactRun = scanner(scanners, 'react-security');
   const postureRun = scanner(scanners, 'posture');
@@ -114,6 +115,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   );
   const webhooks = sensitiveContexts.filter((context) => isWebhookEntrypoint(context.entrypoint));
   const astRefs = references('scanner', [astRun?.id]);
+  const saasRefs = references('scanner', [saasRun?.id]);
   const controls: SecurityControlResult[] = [];
 
   const authGaps = findingsByRule(findings, ['TW-AST001']);
@@ -556,6 +558,168 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     }),
   );
 
+  const webhookIdempotent = webhooks.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'idempotency'),
+  );
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-WEBHOOK-001',
+      domain: 'integrations',
+      title: 'Webhook side effects resist duplicate delivery',
+      status: webhooks.length
+        ? webhookIdempotent.length === webhooks.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'EVIDENCED'
+          : 'GAP_CANDIDATE'
+        : noMappedApplicability,
+      rationale: webhooks.length
+        ? `${webhookIdempotent.length} of ${webhooks.length} mapped webhook/callback boundary(s) contain a recognized idempotency claim or event-recording operation.`
+        : 'No supported webhook/callback boundary reaching a sensitive operation was mapped.',
+      applicability:
+        'Applies to webhook/callback boundaries whose repeated delivery can persist data or repeat another sensitive effect.',
+      evidence: [...contextEvidence(webhookIdempotent, ['idempotency']), ...saasRefs],
+      verification:
+        'Replay the same provider event concurrently and after a failure; confirm one durable effect and safe retry recovery.',
+      limitations: [
+        'Database uniqueness, queue deduplication, or provider infrastructure outside the mapped source may enforce replay safety.',
+      ],
+    }),
+  );
+
+  const highRiskRoute =
+    /(?:login|sign[-_]?in|sign[-_]?up|register|password|reset|forgot|verify|otp|invite|checkout|billing)/i;
+  const abuseSensitive = contexts.filter((context) =>
+    highRiskRoute.test(
+      `${context.entrypoint.route ?? ''} ${context.entrypoint.name} ${context.entrypoint.file}`,
+    ),
+  );
+  const rateLimited = abuseSensitive.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'rate-limit'),
+  );
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-ABUSE-001',
+      domain: 'authentication',
+      title: 'Abuse-sensitive routes apply rate limits',
+      status: abuseSensitive.length
+        ? rateLimited.length === abuseSensitive.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'EVIDENCED'
+          : 'GAP_CANDIDATE'
+        : noMappedApplicability,
+      rationale: abuseSensitive.length
+        ? `${rateLimited.length} of ${abuseSensitive.length} mapped login, registration, recovery, invitation, verification, checkout, or billing boundary(s) contain a recognized rate-limit operation.`
+        : 'No supported abuse-sensitive boundary was mapped.',
+      applicability:
+        'Applies to mapped authentication, account recovery, invitation, verification, checkout, and billing boundaries.',
+      evidence: [...contextEvidence(rateLimited, ['rate-limit']), ...saasRefs],
+      verification:
+        'Burst requests by IP and account identifier, then confirm bounded retries, useful backoff, and no easy key rotation bypass.',
+      limitations: [
+        'Gateway, CDN, identity-provider, or distributed limiter enforcement outside the repository may remain unverified.',
+      ],
+    }),
+  );
+
+  const tenantKeys = new Set(
+    (profile?.saasSemantics?.vocabulary.tenantKeys ?? []).map((key) => key.toLowerCase()),
+  );
+  const resourceHelpers = new Set(
+    (profile?.saasSemantics?.helpers.resourceScope ?? []).map((helper) => helper.toLowerCase()),
+  );
+  const tenantAware = Boolean(
+    profile?.facts.some(
+      (fact) =>
+        fact.kind === 'resource-scope' &&
+        (tenantKeys.has(fact.signal.toLowerCase()) || resourceHelpers.has(fact.signal.toLowerCase())),
+    ),
+  );
+  const databaseContexts = tenantAware
+    ? sensitiveContexts.filter((context) =>
+        context.facts.some((fact) => ['database', 'raw-sql'].includes(fact.kind)),
+      )
+    : [];
+  const tenantScoped = databaseContexts.filter((context) =>
+    context.facts.some(
+      (fact) =>
+        fact.kind === 'authorization' ||
+        (fact.kind === 'resource-scope' &&
+          (tenantKeys.has(fact.signal.toLowerCase()) ||
+            resourceHelpers.has(fact.signal.toLowerCase()))),
+    ),
+  );
+  const assignmentGaps = findingsByRule(findings, ['TW-SAAS002']);
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-TENANT-001',
+      domain: 'authorization',
+      title: 'Tenant-aware data operations enforce a server-side scope',
+      status: assignmentGaps.length
+        ? 'GAP_CANDIDATE'
+        : databaseContexts.length
+          ? tenantScoped.length === databaseContexts.length
+            ? profilePartial
+              ? 'PARTIAL'
+              : 'EVIDENCED'
+            : 'GAP_CANDIDATE'
+          : noMappedApplicability,
+      rationale: assignmentGaps.length
+        ? `${assignmentGaps.length} client-controlled ownership or privilege assignment candidate(s) require review.`
+        : databaseContexts.length
+          ? `${tenantScoped.length} of ${databaseContexts.length} mapped database boundary(s) in a tenant-aware project contain a recognized tenant scope or explicit authorization decision.`
+          : 'No tenant-aware database boundary was established by the captured semantics and source.',
+      applicability:
+        'Applies after the profiler observes tenant vocabulary or a configured resource-scope helper at a database operation.',
+      evidence: [
+        ...references(
+          'finding',
+          assignmentGaps.map((item) => item.id),
+        ),
+        ...contextEvidence(tenantScoped, ['resource-scope', 'authorization']),
+        ...saasRefs,
+      ],
+      verification:
+        'Exercise every operation as two tenants, including list, lookup, update, delete, export, background job, and administrative paths; inspect effective RLS separately.',
+      limitations: [
+        'Row-level security and policy injected below the five-hop map can make an apparent gap safe.',
+      ],
+    }),
+  );
+
+  const cookieMutations = mutations.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'cookie'),
+  );
+  const csrfProtected = cookieMutations.filter((context) =>
+    context.facts.some((fact) => fact.kind === 'csrf'),
+  );
+  controls.push(
+    control({
+      id: 'TW-CTRL-SAAS-CSRF-001',
+      domain: 'browser-security',
+      title: 'Cookie-authenticated mutations validate request origin or CSRF token',
+      status: cookieMutations.length
+        ? csrfProtected.length === cookieMutations.length
+          ? profilePartial
+            ? 'PARTIAL'
+            : 'EVIDENCED'
+          : 'GAP_CANDIDATE'
+        : noMappedApplicability,
+      rationale: cookieMutations.length
+        ? `${csrfProtected.length} of ${cookieMutations.length} mapped cookie-using sensitive mutation boundary(s) contain a recognized CSRF or origin validation operation.`
+        : 'No mapped sensitive mutation also contained a cookie operation.',
+      applicability:
+        'Applies when browsers automatically attach authentication cookies to state-changing HTTP requests.',
+      evidence: [...contextEvidence(csrfProtected, ['csrf']), ...saasRefs],
+      verification:
+        'Send cross-site form, fetch, null-Origin, and sibling-subdomain requests; confirm rejection before the sensitive effect.',
+      limitations: [
+        'SameSite policy or centralized origin validation outside the mapped source may change applicability.',
+      ],
+    }),
+  );
+
   const headerGaps = findingsByRule(findings, [
     'TW-P001',
     'TW-P002',
@@ -839,23 +1003,35 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const handled = sensitiveContexts.filter((context) =>
     context.facts.some((fact) => fact.kind === 'error-handling'),
   );
+  const exposedErrors = findingsByRule(findings, ['TW-SAAS004']);
   controls.push(
     control({
       id: 'TW-CTRL-ERRORS-001',
       domain: 'logging',
       title: 'Sensitive boundaries define explicit failure handling',
-      status: sensitiveContexts.length
-        ? handled.length === sensitiveContexts.length
-          ? 'EVIDENCED'
-          : handled.length
-            ? 'PARTIAL'
-            : 'UNVERIFIED'
+      status: exposedErrors.length
+        ? 'GAP_CANDIDATE'
+        : sensitiveContexts.length
+          ? handled.length === sensitiveContexts.length
+            ? 'EVIDENCED'
+            : handled.length
+              ? 'PARTIAL'
+              : 'UNVERIFIED'
         : noMappedApplicability,
-      rationale: sensitiveContexts.length
-        ? `${handled.length} of ${sensitiveContexts.length} mapped sensitive boundary(s) contain an explicit catch clause within five call hops.`
+      rationale: exposedErrors.length
+        ? `${exposedErrors.length} caught internal error response candidate(s) require review.`
+        : sensitiveContexts.length
+          ? `${handled.length} of ${sensitiveContexts.length} mapped sensitive boundary(s) contain an explicit catch clause within five call hops.`
         : 'No supported sensitive operation boundary was mapped.',
       applicability: 'Applies to mapped sensitive request/action boundaries.',
-      evidence: contextEvidence(handled, ['error-handling']),
+      evidence: [
+        ...references(
+          'finding',
+          exposedErrors.map((item) => item.id),
+        ),
+        ...contextEvidence(handled, ['error-handling']),
+        ...saasRefs,
+      ],
       verification:
         'Exercise dependency, validation, authorization, and storage failures; confirm safe responses and useful internal diagnostics.',
       limitations: [
@@ -1034,7 +1210,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   return {
     schemaVersion: 1,
     packId: 'traceward-web-application',
-    packVersion: '0.4.0',
+    packVersion: '0.5.0',
     controls,
     summary,
   };

@@ -6,6 +6,7 @@ import { scanAstSecurity } from '../../src/scanners/ast-security.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { scanReactSecurity } from '../../src/scanners/react-security.ts';
 import { scanNextSecurity } from '../../src/scanners/next-security.ts';
+import { scanSaasSecurity } from '../../src/scanners/saas-security.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import type { ScannerRun, Snapshot } from '../../src/domain/types.ts';
 import { snapshotOf } from '../helpers.ts';
@@ -26,14 +27,21 @@ function checklistFor(snapshot: Snapshot) {
   const astResult = scanAstSecurity(snapshot, profileResult.profile);
   const nextResult = scanNextSecurity(snapshot, profileResult.profile);
   const reactResult = scanReactSecurity(snapshot, profileResult.profile);
+  const saasResult = scanSaasSecurity(snapshot, profileResult.profile);
   return buildSecurityChecklist({
     projectProfile: profileResult.profile,
-    findings: [...astResult.findings, ...nextResult.findings, ...reactResult.findings],
+    findings: [
+      ...astResult.findings,
+      ...nextResult.findings,
+      ...reactResult.findings,
+      ...saasResult.findings,
+    ],
     scanners: [
       profileResult.run,
       astResult.run,
       nextResult.run,
       reactResult.run,
+      saasResult.run,
       { ...skipped('posture'), status: 'completed' },
       skipped('gitleaks'),
       skipped('osv'),
@@ -148,7 +156,7 @@ test('code-first flow findings become checklist gaps without claiming runtime pr
       'GAP_CANDIDATE',
       id,
     );
-  assert.equal(checklist.packVersion, '0.4.0');
+  assert.equal(checklist.packVersion, '0.5.0');
 });
 
 test('React findings become explicit checklist gaps', () => {
@@ -214,5 +222,85 @@ test('webhook signature calls do not hide unsafe body parsing order', () => {
   assert.equal(
     checklist.controls.find((control) => control.id === 'TW-CTRL-WEBHOOK-001')?.status,
     'GAP_CANDIDATE',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-WEBHOOK-001')?.status,
+    'GAP_CANDIDATE',
+  );
+});
+
+test('SaaS checklist maps rate-limit, idempotency, tenant, and CSRF evidence', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        export async function POST(request: Request) {
+          await rateLimit();
+          await verifyCsrf();
+          const session = cookies().get('session');
+          return database.account.update({
+            where: { tenantId: session.tenantId },
+            data: { lastLoginAt: new Date() }
+          });
+        }
+      `,
+      'src/app/api/auth/login/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-ABUSE-001')?.status,
+    'EVIDENCED',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-TENANT-001')?.status,
+    'EVIDENCED',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-CSRF-001')?.status,
+    'EVIDENCED',
+  );
+});
+
+test('SaaS checklist keeps missing mechanical controls as reviewable gaps', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        export async function POST(request: Request) {
+          const session = cookies().get('session');
+          return database.account.update({
+            where: { tenantId: session.tenantId },
+            data: { lastLoginAt: new Date() }
+          });
+        }
+      `,
+      'src/app/api/auth/login/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-ABUSE-001')?.status,
+    'GAP_CANDIDATE',
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-CSRF-001')?.status,
+    'GAP_CANDIDATE',
+  );
+});
+
+test('SaaS checklist recognizes explicit webhook idempotency', () => {
+  const checklist = checklistFor(
+    snapshotOf(
+      `
+        export async function POST(request: Request) {
+          const bytes = await request.text();
+          verifySignature(bytes);
+          await claimEvent('provider_event_id');
+          return database.event.create({ data: { processed: true } });
+        }
+      `,
+      'src/app/api/webhooks/provider/route.ts',
+    ),
+  );
+  assert.equal(
+    checklist.controls.find((control) => control.id === 'TW-CTRL-SAAS-WEBHOOK-001')?.status,
+    'EVIDENCED',
   );
 });
