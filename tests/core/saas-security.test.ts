@@ -117,6 +117,50 @@ test('SaaS error rule reports caught internals but accepts a stable public error
   assert.ok(!stableErrorField.some((finding) => finding.ruleId === 'TW-SAAS004'));
 });
 
+test('SaaS error rule proves imported normalizers return only fixed public codes', () => {
+  const safeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { resolvePublicError } from '../../../lib/errors';
+      export async function POST() {
+        try { return Response.json(await database.invoice.create({ data: {} })); }
+        catch (error) {
+          return Response.json({ error: resolvePublicError(error) }, { status: 500 });
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export function resolvePublicError(error: unknown) {
+        if (error instanceof Error && error.message.includes('missing')) {
+          return 'NOT_FOUND' as const;
+        }
+        return 'INTERNAL_ERROR';
+      }
+    `,
+  });
+  const safe = scanSaasSecurity(safeSnapshot, profileProject(safeSnapshot).profile).findings;
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const unsafeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { resolvePublicError } from '../../../lib/errors';
+      export async function POST() {
+        try { return Response.json(await database.invoice.create({ data: {} })); }
+        catch (error) {
+          return Response.json({ error: resolvePublicError(error) }, { status: 500 });
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export function resolvePublicError(error: unknown) {
+        if (error instanceof Error) return error.message;
+        return 'INTERNAL_ERROR';
+      }
+    `,
+  });
+  const unsafe = scanSaasSecurity(unsafeSnapshot, profileProject(unsafeSnapshot).profile).findings;
+  assert.ok(unsafe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+});
+
 test('custom SaaS vocabulary is applied without executable configuration', () => {
   const snapshot = snapshotFromFiles({
     'traceward.config.json': JSON.stringify({

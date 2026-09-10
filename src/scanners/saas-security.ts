@@ -375,10 +375,85 @@ function identifierIsPropertyName(node: ts.Identifier): boolean {
   );
 }
 
-function containsCaughtErrorValue(node: ts.Node, caught: Set<string>): boolean {
+function staticPublicErrorValue(node: ts.Expression): boolean {
+  if (ts.isStringLiteralLike(node)) return true;
+  if (ts.isConditionalExpression(node))
+    return staticPublicErrorValue(node.whenTrue) && staticPublicErrorValue(node.whenFalse);
+  if (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isSatisfiesExpression(node)
+  )
+    return staticPublicErrorValue(node.expression);
+  return false;
+}
+
+function returnsOnlyStaticPublicErrors(node: ts.FunctionLikeDeclaration): boolean {
+  if (!node.body) return false;
+  if (!ts.isBlock(node.body)) return staticPublicErrorValue(node.body);
+
+  let returns = 0;
+  let unsafe = false;
+  const visit = (child: ts.Node): void => {
+    if (unsafe || (child !== node.body && executableFunction(child))) return;
+    if (ts.isReturnStatement(child)) {
+      returns++;
+      if (!child.expression || !staticPublicErrorValue(child.expression)) unsafe = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node.body);
+  return returns > 0 && !unsafe;
+}
+
+function staticPublicErrorSymbols(parsed: ParsedSource[], profile: ProjectProfile): Set<string> {
+  const symbolsByLocation = new Map(
+    profile.symbols.map((symbol) => [`${symbol.file}:${symbol.line}:${symbol.name}`, symbol.id]),
+  );
+  const safe = new Set<string>();
+  for (const item of parsed) {
+    const visit = (node: ts.Node): void => {
+      if (executableFunction(node) && returnsOnlyStaticPublicErrors(node)) {
+        const name = functionName(node);
+        if (name) {
+          const symbol = symbolsByLocation.get(
+            `${item.file.path}:${lineOf(item.source, node)}:${name}`,
+          );
+          if (symbol) safe.add(symbol);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(item.source);
+  }
+  return safe;
+}
+
+function resolvedCallTargets(parsed: ParsedSource, profile: ProjectProfile): Map<string, string> {
+  return new Map(
+    profile.calls
+      .filter((call) => call.file === parsed.file.path && call.targetSymbolId)
+      .map((call) => [`${call.line}:${call.callee.replace(/\s+/g, '')}`, call.targetSymbolId!]),
+  );
+}
+
+function containsCaughtErrorValue(
+  node: ts.Node,
+  caught: Set<string>,
+  parsed: ParsedSource,
+  callTargets: Map<string, string>,
+  staticPublicSymbols: Set<string>,
+): boolean {
   let found = false;
   const visit = (child: ts.Node): void => {
     if (found) return;
+    if (ts.isCallExpression(child)) {
+      const target = callTargets.get(`${lineOf(parsed.source, child)}:${callName(child)}`);
+      if (target && staticPublicSymbols.has(target)) return;
+    }
     if (ts.isIdentifier(child) && caught.has(child.text) && !identifierIsPropertyName(child)) {
       found = true;
       return;
@@ -389,17 +464,25 @@ function containsCaughtErrorValue(node: ts.Node, caught: Set<string>): boolean {
   return found;
 }
 
-function caughtErrorExposure(catchClause: ts.CatchClause): ts.CallExpression[] {
+function caughtErrorExposure(
+  catchClause: ts.CatchClause,
+  parsed: ParsedSource,
+  profile: ProjectProfile,
+  staticPublicSymbols: Set<string>,
+): ts.CallExpression[] {
   const caught = new Set(
     catchClause.variableDeclaration ? bindingNames(catchClause.variableDeclaration.name) : [],
   );
+  const callTargets = resolvedCallTargets(parsed, profile);
   const exposed: ts.CallExpression[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const name = callName(node);
       if (
         /(?:^|\.)(?:json|send)$/i.test(name) &&
-        node.arguments.some((argument) => containsCaughtErrorValue(argument, caught))
+        node.arguments.some((argument) =>
+          containsCaughtErrorValue(argument, caught, parsed, callTargets, staticPublicSymbols),
+        )
       )
         exposed.push(node);
     }
@@ -409,7 +492,11 @@ function caughtErrorExposure(catchClause: ts.CatchClause): ts.CallExpression[] {
   return exposed;
 }
 
-function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
+function scanFile(
+  parsed: ParsedSource,
+  profile: ProjectProfile,
+  staticPublicSymbols: Set<string>,
+): Finding[] {
   const findings: Finding[] = [];
   const taints = boundaryTaints(parsed, profile);
   const vocabulary = profile.saasSemantics?.vocabulary ?? defaultSaasConfiguration.vocabulary;
@@ -653,7 +740,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
     }
 
     if (tainted && ts.isCatchClause(node))
-      for (const call of caughtErrorExposure(node))
+      for (const call of caughtErrorExposure(node, parsed, profile, staticPublicSymbols))
         add(
           finding({
             parsed,
@@ -690,7 +777,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.1.0',
+        version: '0.4.0',
       },
     };
 
@@ -707,7 +794,10 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         scriptKind(file.path),
       ),
     }));
-  const findings = parsed.flatMap((file) => scanFile(file, profile)).slice(0, maximumFindings);
+  const safeErrorSymbols = staticPublicErrorSymbols(parsed, profile);
+  const findings = parsed
+    .flatMap((file) => scanFile(file, profile, safeErrorSymbols))
+    .slice(0, maximumFindings);
   const partial =
     profile.status === 'partial' ||
     snapshot.truncated ||
@@ -723,7 +813,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }
