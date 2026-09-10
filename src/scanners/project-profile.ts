@@ -161,10 +161,7 @@ function callName(expression: ts.Expression): string {
   return expression.getText().replace(/\s+/g, ' ').slice(0, 180);
 }
 
-function factKind(
-  callee: string,
-  configuration: TrustedSaasConfiguration,
-): ProjectFactKind | null {
+function factKind(callee: string, configuration: TrustedSaasConfiguration): ProjectFactKind | null {
   const value = callee.toLowerCase();
   const terminal = value.split('.').at(-1) ?? value;
   const configured = Object.entries(configuration.helpers).find(([, helpers]) =>

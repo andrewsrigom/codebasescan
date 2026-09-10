@@ -62,10 +62,7 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
   assert.ok(result.config.vocabulary.tenantKeys.includes('tenantId'));
   assert.ok(result.config.vocabulary.tenantKeys.includes('customerWorkspaceKey'));
   assert.ok(result.config.helpers.authorization.includes('requireMembership'));
-  assert.deepEqual(result.config.expectedUnauthenticatedRoutes, [
-    '/api/health',
-    '/api/public/*',
-  ]);
+  assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health', '/api/public/*']);
   assert.deepEqual(result.issues, []);
 });
 

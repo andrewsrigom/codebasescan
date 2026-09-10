@@ -218,16 +218,18 @@ function containsSensitiveValue(node: ts.Node, sensitiveNames: Set<string>): boo
     if (ts.isCallExpression(child) && isProtectedTransform(child)) return;
     if (ts.isPropertyAssignment(child)) {
       const name = propertyName(child.name);
-      if (name && sensitiveNames.has(name.toLowerCase()) && !isProtectedTransform(child.initializer)) {
+      if (
+        name &&
+        sensitiveNames.has(name.toLowerCase()) &&
+        !isProtectedTransform(child.initializer)
+      ) {
         found = true;
         return;
       }
     }
     if (
       (ts.isIdentifier(child) || ts.isPropertyAccessExpression(child)) &&
-      sensitiveNames.has(
-        (ts.isIdentifier(child) ? child.text : child.name.text).toLowerCase(),
-      )
+      sensitiveNames.has((ts.isIdentifier(child) ? child.text : child.name.text).toLowerCase())
     ) {
       found = true;
       return;
@@ -265,16 +267,16 @@ function isOauthSink(name: string): boolean {
 
 function isRecoveryTokenSink(name: string): boolean {
   return (
-    /(?:password.?reset|account.?recovery|invitation?|verification).*(?:create|upsert)$/i.test(name) ||
+    /(?:password.?reset|account.?recovery|invitation?|verification).*(?:create|upsert)$/i.test(
+      name,
+    ) ||
     /(?:create|upsert).*(?:password.?reset|account.?recovery|invitation?|verification)/i.test(name)
   );
 }
 
 function sensitiveUrlKey(value: string, sensitiveNames: Set<string>): boolean {
   const normalized = value.replace(/[-_]/g, '').toLowerCase();
-  return [...sensitiveNames].some(
-    (name) => name.replace(/[-_]/g, '').toLowerCase() === normalized,
-  );
+  return [...sensitiveNames].some((name) => name.replace(/[-_]/g, '').toLowerCase() === normalized);
 }
 
 function urlLeak(call: ts.CallExpression, sensitiveNames: Set<string>): boolean {
@@ -312,9 +314,8 @@ function caughtErrorExposure(catchClause: ts.CatchClause): ts.CallExpression[] {
         /(?:^|\.)(?:json|send)$/i.test(name) &&
         node.arguments.some((argument) => {
           const text = argument.getText(argument.getSourceFile()).replace(/\s+/g, '');
-          return caught.some(
-            (identifier) =>
-              new RegExp(`\\b${identifier}(?:\\.(?:message|stack|cause))?\\b`).test(text),
+          return caught.some((identifier) =>
+            new RegExp(`\\b${identifier}(?:\\.(?:message|stack|cause))?\\b`).test(text),
           );
         })
       )
@@ -372,7 +373,8 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
       const name = callName(node);
       if (isBillingSink(name)) {
         for (const property of sensitiveProperties(node, billingKeys, tainted)) {
-          if (ts.isPropertyAssignment(property) && isServerOwnedLookup(property.initializer)) continue;
+          if (ts.isPropertyAssignment(property) && isServerOwnedLookup(property.initializer))
+            continue;
           add(
             finding({
               parsed,
@@ -464,7 +466,9 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
         const sensitiveArgument = node.arguments.find(
           (argument) =>
             containsSensitiveValue(argument, sensitiveDataKeys) ||
-            (ts.isIdentifier(argument) && requestNames.has(argument.text) && tainted.has(argument.text)),
+            (ts.isIdentifier(argument) &&
+              requestNames.has(argument.text) &&
+              tainted.has(argument.text)),
         );
         if (sensitiveArgument)
           add(
@@ -590,10 +594,7 @@ function scanFile(parsed: ParsedSource, profile: ProjectProfile): Finding[] {
   return findings;
 }
 
-export function scanSaasSecurity(
-  snapshot: Snapshot,
-  profile: ProjectProfile,
-): SaasSecurityResult {
+export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): SaasSecurityResult {
   const started = performance.now();
   if (profile.status === 'unsupported')
     return {

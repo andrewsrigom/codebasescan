@@ -390,9 +390,8 @@ function nextConfigurationCandidates(snapshot: Snapshot): Candidate[] {
 
     const imageSections = file.content.matchAll(/images\s*:\s*\{[\s\S]{0,3000}?\}/gi);
     for (const section of imageSections) {
-      const broadHost = /(?:hostname\s*:\s*|domains\s*:\s*\[[\s\S]{0,300}?)["'`](?:\*|\*\*)["'`]/i.exec(
-        section[0],
-      );
+      const broadHost =
+        /(?:hostname\s*:\s*|domains\s*:\s*\[[\s\S]{0,300}?)["'`](?:\*|\*\*)["'`]/i.exec(section[0]);
       const insecureProtocol = /protocol\s*:\s*["'`]http["'`]/i.exec(section[0]);
       const match = broadHost ?? insecureProtocol;
       if (!match) continue;

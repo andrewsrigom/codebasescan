@@ -496,9 +496,7 @@ export function declarativeKnipConfiguration(snapshot: Snapshot): TrustedKnipCon
   return { config: {}, sources, issues };
 }
 
-export function declarativeSaasConfiguration(
-  snapshot: Snapshot,
-): TrustedSaasConfigurationResult {
+export function declarativeSaasConfiguration(snapshot: Snapshot): TrustedSaasConfigurationResult {
   const sources: string[] = [];
   const issues: string[] = [];
   const candidates = ['traceward.config.json', 'traceward.config.jsonc'];

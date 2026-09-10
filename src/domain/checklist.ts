@@ -727,7 +727,8 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
         : oauthContexts.length
           ? `${oauthContexts.length} OAuth/OIDC-shaped boundary(s) were mapped; state, PKCE, nonce, redirect registration, and account-linking policy require explicit verification.`
           : 'No supported OAuth/OIDC boundary was mapped.',
-      applicability: 'Applies to OAuth/OIDC authorization initiation, callbacks, and account linking.',
+      applicability:
+        'Applies to OAuth/OIDC authorization initiation, callbacks, and account linking.',
       evidence: [
         ...references(
           'finding',
@@ -753,7 +754,8 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     profile?.facts.some(
       (fact) =>
         fact.kind === 'resource-scope' &&
-        (tenantKeys.has(fact.signal.toLowerCase()) || resourceHelpers.has(fact.signal.toLowerCase())),
+        (tenantKeys.has(fact.signal.toLowerCase()) ||
+          resourceHelpers.has(fact.signal.toLowerCase())),
     ),
   );
   const databaseContexts = tenantAware
@@ -1137,12 +1139,12 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
             : handled.length
               ? 'PARTIAL'
               : 'UNVERIFIED'
-        : noMappedApplicability,
+          : noMappedApplicability,
       rationale: exposedErrors.length
         ? `${exposedErrors.length} caught internal error response candidate(s) require review.`
         : sensitiveContexts.length
           ? `${handled.length} of ${sensitiveContexts.length} mapped sensitive boundary(s) contain an explicit catch clause within five call hops.`
-        : 'No supported sensitive operation boundary was mapped.',
+          : 'No supported sensitive operation boundary was mapped.',
       applicability: 'Applies to mapped sensitive request/action boundaries.',
       evidence: [
         ...references(
