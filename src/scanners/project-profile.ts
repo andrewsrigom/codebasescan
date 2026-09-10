@@ -674,6 +674,29 @@ function resolveCallTargets(
   const importsByFile = new Map<string, ProjectImport[]>();
   for (const item of imports)
     importsByFile.set(item.file, [...(importsByFile.get(item.file) ?? []), item]);
+  const importedSymbol = (
+    file: string,
+    name: string,
+    depth = 0,
+    visited = new Set<string>(),
+  ): ProjectSymbol | undefined => {
+    if (depth > 5) return undefined;
+    const key = `${file}:${name}`;
+    if (visited.has(key)) return undefined;
+    visited.add(key);
+    const local = symbolsByFileAndName.get(key);
+    if (local) return local;
+    for (const item of importsByFile.get(file) ?? []) {
+      if (!item.resolvedFile) continue;
+      const binding = item.bindings.find(
+        (candidate) => candidate.local === name && candidate.imported !== '*',
+      );
+      if (!binding) continue;
+      const target = importedSymbol(item.resolvedFile, binding.imported, depth + 1, visited);
+      if (target) return target;
+    }
+    return undefined;
+  };
   return calls.map((call) => {
     const first = call.callee.split('.')[0] ?? call.callee;
     const last = call.callee.split('.').at(-1) ?? call.callee;
@@ -683,7 +706,7 @@ function resolveCallTargets(
       if (!item.resolvedFile) continue;
       const binding = item.bindings.find((candidate) => candidate.local === first);
       if (!binding || binding.imported === '*') continue;
-      const target = symbolsByFileAndName.get(`${item.resolvedFile}:${binding.imported}`);
+      const target = importedSymbol(item.resolvedFile, binding.imported);
       if (target) return { ...call, targetSymbolId: target.id };
     }
     return call;

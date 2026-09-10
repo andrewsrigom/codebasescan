@@ -123,8 +123,15 @@ test('captured workspace package exports resolve without loading package code', 
       exports: './src/index.ts',
     }),
     'packages/security/src/index.ts': `export async function requireUser() { return { id: '1' }; }`,
-    'apps/web/src/app/api/account/route.ts': `
+    'apps/web/tsconfig.json': JSON.stringify({
+      compilerOptions: { paths: { '@/*': ['./src/*'] } },
+    }),
+    'apps/web/src/lib/security.ts': `
       import { requireUser } from '@fixture/security';
+      export { requireUser };
+    `,
+    'apps/web/src/app/api/account/route.ts': `
+      import { requireUser } from '@/lib/security';
       export async function POST() {
         await requireUser();
         return database.account.update({ data: { active: true } });
@@ -132,7 +139,13 @@ test('captured workspace package exports resolve without loading package code', 
     `,
   });
   const profile = profileProject(snapshot).profile;
-  assert.equal(profile.imports[0]?.resolvedFile, 'packages/security/src/index.ts');
+  assert.ok(
+    profile.imports.some(
+      (item) =>
+        item.specifier === '@fixture/security' &&
+        item.resolvedFile === 'packages/security/src/index.ts',
+    ),
+  );
   const entrypoint = profile.entrypoints.find((item) => item.kind === 'next-route');
   assert.ok(entrypoint);
   assert.ok(
