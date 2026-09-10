@@ -10,6 +10,14 @@ import {
   parseRemediationResult,
   remediationPlanJsonSchema,
 } from '../../src/domain/remediation-schema.ts';
+import {
+  remediationPlanArtifactDigest,
+  type VerificationLedger,
+} from '../../src/domain/verification-ledger.ts';
+import {
+  parseVerificationLedger,
+  verificationLedgerJsonSchema,
+} from '../../src/domain/verification-ledger-schema.ts';
 import { sampleReport, sampleRiskCorrelation } from '../helpers.ts';
 
 function dependencyReport() {
@@ -183,6 +191,171 @@ test('remediation result separates resolved, remaining, and unexecuted checks', 
   assert.deepEqual(parseRemediationResult(result), result);
 });
 
+test('remediation result applies exact external test and build evidence', () => {
+  const before = dependencyReport();
+  const plan = buildRemediationPlan(before);
+  const task = plan.tasks[0]!;
+  task.verificationCommands.unshift(
+    {
+      id: `${task.id}:project-test:test`,
+      kind: 'project_test',
+      argv: ['pnpm', 'run', 'test'],
+      workingDirectory: 'project_root',
+      timeoutSeconds: 900,
+      network: 'denied',
+      requiresApproval: true,
+      source: 'project_context',
+    },
+    {
+      id: `${task.id}:project-build:build`,
+      kind: 'project_build',
+      argv: ['pnpm', 'run', 'build'],
+      workingDirectory: 'project_root',
+      timeoutSeconds: 1_800,
+      network: 'denied',
+      requiresApproval: true,
+      source: 'project_context',
+    },
+  );
+  const after = structuredClone(before);
+  after.auditId = '00000000-0000-4000-8000-000000000002';
+  after.snapshotDigest = 'a'.repeat(64);
+  after.createdAt = '2026-09-10T10:00:00.000Z';
+  after.findings = [];
+  const ledger: VerificationLedger = {
+    schemaVersion: 1,
+    kind: 'traceward-verification-ledger',
+    createdAt: '2026-09-10T09:59:00.000Z',
+    project: {
+      name: before.projectName,
+      before: { auditId: before.auditId, snapshotDigest: before.snapshotDigest },
+      after: { auditId: after.auditId, snapshotDigest: after.snapshotDigest },
+    },
+    planDigest: remediationPlanArtifactDigest(plan),
+    executions: [
+      {
+        id: 'execution-1111111111111111',
+        kind: 'project_test',
+        argv: ['pnpm', 'run', 'test'],
+        workingDirectory: 'project_root',
+        startedAt: '2026-09-10T09:00:00.000Z',
+        durationMs: 12_000,
+        exitCode: 0,
+        outputSha256: 'b'.repeat(64),
+        outputBytes: 4_096,
+        outputTruncated: false,
+        executor: 'test-agent',
+        network: 'denied',
+      },
+      {
+        id: 'execution-2222222222222222',
+        kind: 'project_build',
+        argv: ['pnpm', 'run', 'build'],
+        workingDirectory: 'project_root',
+        startedAt: '2026-09-10T09:01:00.000Z',
+        durationMs: 24_000,
+        exitCode: 0,
+        outputSha256: 'c'.repeat(64),
+        outputBytes: 8_192,
+        outputTruncated: true,
+        executor: 'test-agent',
+        network: 'denied',
+      },
+      {
+        id: 'execution-3333333333333333',
+        kind: 'project_test',
+        argv: ['pnpm', 'run', 'lint'],
+        workingDirectory: 'project_root',
+        startedAt: '2026-09-10T09:02:00.000Z',
+        durationMs: 1_000,
+        exitCode: 0,
+        outputSha256: 'd'.repeat(64),
+        outputBytes: 1_024,
+        outputTruncated: false,
+        executor: 'test-agent',
+        network: 'denied',
+      },
+    ],
+  };
+
+  assert.deepEqual(parseVerificationLedger(ledger), ledger);
+  const result = buildRemediationResult(plan, before, after, ledger);
+  assert.equal(result.schemaVersion, 3);
+  assert.equal(result.taskResults[0]?.outcome, 'resolved');
+  assert.equal(
+    result.taskResults[0]?.verification.find((item) => item.checkId.endsWith('project_tests'))
+      ?.status,
+    'passed',
+  );
+  assert.equal(
+    result.taskResults[0]?.verification.find((item) => item.checkId.endsWith('project_build'))
+      ?.status,
+    'passed',
+  );
+  assert.equal(result.externalVerification?.executionsReceived, 3);
+  assert.equal(result.externalVerification?.executionsApplied, 2);
+  assert.deepEqual(result.externalVerification?.unmatchedExecutionIds, [
+    'execution-3333333333333333',
+  ]);
+  assert.deepEqual(parseRemediationResult(result), result);
+
+  const failedLedger = structuredClone(ledger);
+  failedLedger.executions[0]!.exitCode = 1;
+  const failed = buildRemediationResult(plan, before, after, failedLedger);
+  assert.equal(failed.taskResults[0]?.outcome, 'partial');
+  assert.equal(
+    failed.taskResults[0]?.verification.find((item) => item.checkId.endsWith('project_tests'))
+      ?.status,
+    'failed',
+  );
+
+  const staleLedger = structuredClone(ledger);
+  staleLedger.project.after.snapshotDigest = 'e'.repeat(64);
+  assert.throws(
+    () => buildRemediationResult(plan, before, after, staleLedger),
+    /does not match the after audit/,
+  );
+});
+
+test('verification ledger schema is strict and versioned', () => {
+  const schema = verificationLedgerJsonSchema() as {
+    properties?: { schemaVersion?: { const?: number }; executions?: unknown };
+    required?: string[];
+  };
+  assert.equal(schema.properties?.schemaVersion?.const, 1);
+  assert.ok(schema.required?.includes('executions'));
+  assert.throws(() =>
+    parseVerificationLedger({
+      schemaVersion: 1,
+      kind: 'traceward-verification-ledger',
+      createdAt: '2026-09-10T09:59:00.000Z',
+      project: {
+        name: 'example',
+        before: { auditId: 'before', snapshotDigest: 'a'.repeat(64) },
+        after: { auditId: 'after', snapshotDigest: 'b'.repeat(64) },
+      },
+      planDigest: 'c'.repeat(64),
+      executions: [
+        {
+          id: 'execution-1111111111111111',
+          kind: 'project_test',
+          argv: ['pnpm', 'run', 'test'],
+          workingDirectory: 'project_root',
+          startedAt: '2026-09-10T09:00:00.000Z',
+          durationMs: 10,
+          exitCode: 0,
+          outputSha256: 'd'.repeat(64),
+          outputBytes: 10,
+          outputTruncated: false,
+          executor: 'test-agent',
+          network: 'denied',
+          output: 'must not be retained',
+        },
+      ],
+    }),
+  );
+});
+
 test('remediation keeps an advisory open when only its lockfile-line fingerprint changes', () => {
   const before = dependencyReport();
   const plan = buildRemediationPlan(before);
@@ -193,7 +366,7 @@ test('remediation keeps an advisory open when only its lockfile-line fingerprint
   after.findings[0]!.fingerprint = 'moved-lockfile-line-fingerprint';
 
   const result = buildRemediationResult(plan, before, after);
-  assert.equal(result.schemaVersion, 2);
+  assert.equal(result.schemaVersion, 3);
   assert.equal(result.summary.resolved, 0);
   assert.equal(result.summary.remaining, 1);
   assert.equal(result.summary.newFindings, 0);

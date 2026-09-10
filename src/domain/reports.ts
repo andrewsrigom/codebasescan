@@ -1513,7 +1513,19 @@ export function toHtml(
       options.remediationResult.summary.remaining +
       '</strong><span>Tasks remaining</span></div><div class="summary-card"><strong>' +
       options.remediationResult.summary.newFindings +
-      '</strong><span>New findings</span></div></div><p class="muted">Test and build checks stay not run unless a trusted executor supplies them. A missing lifecycle identity is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a></p></section>'
+      '</strong><span>New findings</span></div></div>' +
+      (options.remediationResult.externalVerification
+        ? '<p class="muted">Applied ' +
+          options.remediationResult.externalVerification.executionsApplied +
+          ' of ' +
+          options.remediationResult.externalVerification.executionsReceived +
+          ' supplied external command record(s). Executor identity is not authenticated.</p>'
+        : '<p class="muted">Test and build checks stay not run unless a trusted executor supplies them.</p>') +
+      '<p class="muted">A missing lifecycle identity is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a>' +
+      (options.remediationResult.externalVerification
+        ? ' · <a href="verification-ledger.json">Open supplied verification ledger</a>'
+        : '') +
+      '</p></section>'
     : '';
   const remediationPlan = options.remediationPlan
     ? '<section class="report-section"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +
@@ -1662,9 +1674,12 @@ export function toHtml(
       '. Passing does not certify security or compliance.</p></section>'
     : '';
   const artifactLinks = options.artifactLinks
-    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li><li><a href="suppression-ledger.schema.json">Portable suppression ledger JSON Schema</a></li>' +
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li><li><a href="suppression-ledger.schema.json">Portable suppression ledger JSON Schema</a></li><li><a href="verification-ledger.schema.json">External verification ledger JSON Schema</a></li>' +
       (options.remediationResult
-        ? '<li><a href="remediation-result.json">Remediation result JSON</a></li>'
+        ? '<li><a href="remediation-result.json">Remediation result JSON</a></li><li><a href="remediation-result.schema.json">Remediation result JSON Schema</a></li>' +
+          (options.remediationResult.externalVerification
+            ? '<li><a href="verification-ledger.json">Supplied verification ledger</a></li>'
+            : '')
         : '') +
       (report.riskCorrelation
         ? '<li><a href="risk-paths.json">Correlated source paths</a></li>'

@@ -149,7 +149,7 @@ const planSchema = z.object({
 });
 
 const resultSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   kind: z.literal('traceward-remediation-result'),
   generatedAt: shortText,
   planDigest: shortText,
@@ -184,6 +184,36 @@ const resultSchema = z.object({
     .max(2_000),
   newFindingIds: stringList,
   changedFiles: stringList,
+  externalVerification: z
+    .object({
+      ledgerDigest: z.string().regex(/^[a-f0-9]{64}$/),
+      source: z.literal('external_executor'),
+      authenticated: z.literal(false),
+      executionsReceived: z.number().int().nonnegative().max(100),
+      executionsApplied: z.number().int().nonnegative().max(100),
+      unmatchedExecutionIds: stringList,
+      executions: z
+        .array(
+          z.object({
+            id: shortText,
+            kind: z.enum(['project_test', 'project_build']),
+            argv: z.array(shortText).min(1).max(32),
+            workingDirectory: z.literal('project_root'),
+            startedAt: z.iso.datetime(),
+            durationMs: z.number().int().nonnegative().max(86_400_000),
+            exitCode: z.number().int().min(0).max(255),
+            outputSha256: z.string().regex(/^[a-f0-9]{64}$/),
+            outputBytes: z.number().int().nonnegative().max(1_000_000_000),
+            outputTruncated: z.boolean(),
+            executor: z.string().min(1).max(200),
+            network: z.enum(['denied', 'used', 'unknown']),
+            status: z.enum(['applied', 'unmatched']),
+            matchedTaskIds: stringList,
+          }),
+        )
+        .max(100),
+    })
+    .optional(),
   limitations: stringList,
 });
 
@@ -200,4 +230,8 @@ export function remediationPlanJsonSchema(): unknown {
 
 export function parseRemediationResult(value: unknown): RemediationResult {
   return resultSchema.parse(value) as RemediationResult;
+}
+
+export function remediationResultJsonSchema(): unknown {
+  return z.toJSONSchema(resultSchema, { target: 'draft-07', unrepresentable: 'throw' });
 }

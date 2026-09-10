@@ -6,6 +6,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
+import { buildRemediationPlan } from '../../src/domain/remediation.ts';
+import { remediationPlanArtifactDigest } from '../../src/domain/verification-ledger.ts';
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
 import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
 import { parsePolicyResult } from '../../src/domain/policy-schema.ts';
@@ -56,6 +58,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'rule-quality.schema.json',
       'review-ledger.schema.json',
       'suppression-ledger.schema.json',
+      'verification-ledger.schema.json',
       'codex-bundle.json',
       'report.md',
       'report.sarif',
@@ -209,15 +212,31 @@ test('static report records remediation progress when a baseline is supplied', a
     snapshotDigest: 'a'.repeat(64),
     findings: [],
   };
-  const result = await writeStaticReport(current, temporary, { baseline });
+  const verificationLedger = {
+    schemaVersion: 1 as const,
+    kind: 'traceward-verification-ledger' as const,
+    createdAt: '2026-09-08T12:59:00.000Z',
+    project: {
+      name: baseline.projectName,
+      before: { auditId: baseline.auditId, snapshotDigest: baseline.snapshotDigest },
+      after: { auditId: current.auditId, snapshotDigest: current.snapshotDigest },
+    },
+    planDigest: remediationPlanArtifactDigest(buildRemediationPlan(baseline)),
+    executions: [],
+  };
+  const result = await writeStaticReport(current, temporary, { baseline, verificationLedger });
   assert.ok(result.manifest.files.some((file) => file.path === 'remediation-result.json'));
+  assert.ok(result.manifest.files.some((file) => file.path === 'remediation-result.schema.json'));
+  assert.ok(result.manifest.files.some((file) => file.path === 'verification-ledger.json'));
   const remediation = parseRemediationResult(
     JSON.parse(await readFile(path.join(result.directory, 'remediation-result.json'), 'utf8')),
   );
   assert.equal(remediation.before.auditId, baseline.auditId);
   assert.equal(remediation.after.auditId, current.auditId);
   assert.equal(remediation.summary.resolved, 1);
+  assert.equal(remediation.externalVerification?.executionsReceived, 0);
   const html = await readFile(path.join(result.directory, 'index.html'), 'utf8');
   assert.ok(html.includes('BEFORE / AFTER'));
   assert.ok(html.includes('href="remediation-result.json"'));
+  assert.ok(html.includes('href="verification-ledger.json"'));
 });

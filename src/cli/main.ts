@@ -43,6 +43,8 @@ import {
   upsertSuppressionLedger,
 } from '../domain/suppression-ledger.ts';
 import { parseSuppressionLedger } from '../domain/suppression-ledger-schema.ts';
+import type { VerificationLedger } from '../domain/verification-ledger.ts';
+import { parseVerificationLedger } from '../domain/verification-ledger-schema.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -163,6 +165,18 @@ async function loadSuppressionLedger(file: string): Promise<SuppressionLedger> {
     return parseSuppressionLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch {
     throw new Error('Suppression ledger is not valid Traceward JSON.');
+  }
+}
+
+async function loadVerificationLedger(file: string): Promise<VerificationLedger> {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 2 * 1024 * 1024)
+    throw new Error('Verification ledger must be a regular JSON file no larger than 2 MB.');
+  try {
+    return parseVerificationLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Verification ledger is not valid Traceward JSON.');
   }
 }
 
@@ -309,6 +323,38 @@ try {
     );
     await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
     console.log(`Saved suppression ledger ${destination}`);
+  } else if (command === 'finalize' && target) {
+    const baselinePath = option('--baseline');
+    const verificationPath = option('--verification');
+    if (!baselinePath || !verificationPath)
+      throw new Error('finalize requires --baseline and --verification.');
+    const [after, baseline, verificationLedger] = await Promise.all([
+      loadReportArtifact(target),
+      loadBaseline(baselinePath),
+      loadVerificationLedger(verificationPath),
+    ]);
+    if (baseline.projectName !== after.projectName)
+      throw new Error('Baseline report belongs to a different project.');
+    const policyName = option('--policy');
+    if (policyName && !policyProfiles.includes(policyName as PolicyProfile))
+      throw new Error('Use advisory, balanced, or strict for --policy.');
+    const comparison = compareReports(baseline, after);
+    const policyResult = buildPolicyResult(
+      after,
+      (policyName as PolicyProfile | undefined) ?? 'advisory',
+      comparison,
+    );
+    const staticReport = await writeStaticReport(
+      after,
+      option('--report-dir') ?? path.resolve('traceward-final-report'),
+      { baseline, policyResult, verificationLedger },
+    );
+    console.log(`Saved finalized report ${staticReport.directory}`);
+    console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
+    console.error(
+      `Baseline comparison: ${comparison.newFindings.length} new, ${comparison.resolvedFindings.length} resolved, ${comparison.unchangedFindings.length} unchanged.`,
+    );
+    process.exitCode = policyResult.exitCode;
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -368,7 +414,10 @@ try {
         const staticReport = await writeStaticReport(
           report,
           option('--report-dir') ?? path.resolve('traceward-report'),
-          { ...(baseline ? { baseline } : {}), policyResult },
+          {
+            ...(baseline ? { baseline } : {}),
+            policyResult,
+          },
         );
         console.log(`Saved static report ${staticReport.directory}`);
         console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
@@ -463,13 +512,13 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir traceward-final-report] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Command failed.');
-  process.exitCode = command === 'audit' ? 2 : 1;
+  process.exitCode = command === 'audit' || command === 'finalize' ? 2 : 1;
 } finally {
   store?.close();
 }

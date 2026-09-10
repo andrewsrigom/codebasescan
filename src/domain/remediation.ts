@@ -21,9 +21,16 @@ import type {
 } from './types.ts';
 import { digest, findingLifecycleKey, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
+import {
+  evaluateVerificationLedger,
+  remediationPlanArtifactDigest,
+  verificationCommandKey,
+  type ExternalVerificationSummary,
+  type VerificationLedger,
+} from './verification-ledger.ts';
 
 export const remediationPlanVersion = 5 as const;
-export const remediationResultVersion = 2 as const;
+export const remediationResultVersion = 3 as const;
 const maximumTasks = 2_000;
 const maximumRiskPathsPerTask = 50;
 
@@ -178,6 +185,7 @@ export interface RemediationResult {
   taskResults: RemediationTaskResult[];
   newFindingIds: string[];
   changedFiles: string[];
+  externalVerification?: ExternalVerificationSummary;
   limitations: string[];
 }
 
@@ -852,6 +860,7 @@ export function buildRemediationResult(
   plan: RemediationPlan,
   before: AuditReport,
   after: AuditReport,
+  verificationLedger?: VerificationLedger,
 ): RemediationResult {
   if (plan.audit.id !== before.auditId || plan.audit.snapshotDigest !== before.snapshotDigest)
     throw new Error('Remediation plan does not belong to the before audit.');
@@ -870,6 +879,48 @@ export function buildRemediationResult(
   const currentControls = new Map(
     (after.checklist?.controls ?? []).map((control) => [control.id, control]),
   );
+  const externalVerification = verificationLedger
+    ? evaluateVerificationLedger(verificationLedger, plan, before, after)
+    : undefined;
+  const externalCheck = (
+    task: RemediationTask,
+    kind: 'project_test' | 'project_build',
+  ): RemediationTaskResult['verification'][number] => {
+    const check = task.acceptanceChecks.find((item) =>
+      kind === 'project_test' ? item.kind === 'project_tests' : item.kind === 'project_build',
+    );
+    if (!check) throw new Error(`Missing acceptance check for ${kind}.`);
+    const commands = task.verificationCommands.filter((command) => command.kind === kind);
+    const label = kind === 'project_test' ? 'test' : 'build';
+    if (!commands.length)
+      return {
+        checkId: check.id,
+        status: 'not_run',
+        detail: `No project ${label} command was declared in trusted project context.`,
+      };
+    const executions = commands.map((command) =>
+      externalVerification?.executionsByCommand.get(verificationCommandKey(command)),
+    );
+    const supplied = executions.filter((execution) => execution !== undefined);
+    const failed = supplied.filter((execution) => execution.exitCode !== 0);
+    if (failed.length)
+      return {
+        checkId: check.id,
+        status: 'failed',
+        detail: `${failed.length} of ${commands.length} declared project ${label} command(s) failed in supplied external evidence.`,
+      };
+    if (supplied.length === commands.length)
+      return {
+        checkId: check.id,
+        status: 'passed',
+        detail: `All ${commands.length} declared project ${label} command(s) passed in supplied external evidence.`,
+      };
+    return {
+      checkId: check.id,
+      status: 'not_run',
+      detail: `${supplied.length} of ${commands.length} declared project ${label} command result(s) were supplied.`,
+    };
+  };
   const taskResults = plan.tasks.map((task): RemediationTaskResult => {
     const remaining = task.findings.filter(remains);
     const resolved = task.findings.filter((finding) => !remains(finding));
@@ -878,13 +929,25 @@ export function buildRemediationResult(
       return status === 'EVIDENCED' || status === 'NOT_APPLICABLE';
     });
     const evaluated = task.findings.length > 0 || task.controlIds.length > 0;
-    const outcome: RemediationTaskOutcome = !evaluated
+    const projectTest = externalCheck(task, 'project_test');
+    const projectBuild = externalCheck(task, 'project_build');
+    const declaredProjectChecks = [projectTest, projectBuild].filter(
+      (check) => !check.detail.startsWith('No project'),
+    );
+    const projectVerificationComplete = declaredProjectChecks.every(
+      (check) => check.status === 'passed',
+    );
+    const lifecycleOutcome: RemediationTaskOutcome = !evaluated
       ? 'not_evaluated'
       : remaining.length === 0 && controlsResolved
         ? 'resolved'
         : resolved.length > 0
           ? 'partial'
           : 'remaining';
+    const outcome: RemediationTaskOutcome =
+      lifecycleOutcome === 'resolved' && !projectVerificationComplete
+        ? 'partial'
+        : lifecycleOutcome;
     return {
       taskId: task.id,
       outcome,
@@ -914,11 +977,7 @@ export function buildRemediationResult(
             status: 'passed' as const,
             detail: `Compared against Traceward audit ${after.auditId}.`,
           };
-        return {
-          checkId: item.id,
-          status: 'not_run' as const,
-          detail: 'No trusted execution result was supplied.',
-        };
+        return item.kind === 'project_tests' ? projectTest : projectBuild;
       }),
     };
   });
@@ -938,16 +997,28 @@ export function buildRemediationResult(
     schemaVersion: remediationResultVersion,
     kind: 'traceward-remediation-result',
     generatedAt: after.createdAt,
-    planDigest: digest(JSON.stringify(plan)),
+    planDigest: remediationPlanArtifactDigest(plan),
     before: { auditId: before.auditId, snapshotDigest: before.snapshotDigest },
     after: { auditId: after.auditId, snapshotDigest: after.snapshotDigest },
     summary,
     taskResults,
     newFindingIds: newFindings.map((finding) => finding.id),
     changedFiles: [],
+    ...(externalVerification ? { externalVerification: externalVerification.summary } : {}),
     limitations: [
       'Changed files are unavailable because audit reports contain evidence snapshots, not source-control diffs.',
-      'Project test and build checks remain not_run until a trusted executor supplies results.',
+      ...(externalVerification
+        ? [
+            'Project test and build statuses came from an explicitly supplied external ledger. Traceward matched exact allowlisted commands but did not execute them or authenticate the executor.',
+          ]
+        : [
+            'Project test and build checks remain not_run until a trusted executor supplies results.',
+          ]),
+      ...(externalVerification?.summary.unmatchedExecutionIds.length
+        ? [
+            `${externalVerification.summary.unmatchedExecutionIds.length} supplied execution record(s) did not match a command in the baseline plan and were not applied.`,
+          ]
+        : []),
       'A missing lifecycle identity is evidence of report change, not proof that the underlying risk is eliminated.',
     ],
   };

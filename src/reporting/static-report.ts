@@ -14,6 +14,7 @@ import {
   parseRemediationPlan,
   parseRemediationResult,
   remediationPlanJsonSchema,
+  remediationResultJsonSchema,
 } from '../domain/remediation-schema.ts';
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-quality-schema.ts';
@@ -23,6 +24,8 @@ import { parseRunManifest, runManifestJsonSchema } from '../domain/run-manifest-
 import { buildPolicyResult, type PolicyResult } from '../domain/policy.ts';
 import { parsePolicyResult, policyResultJsonSchema } from '../domain/policy-schema.ts';
 import { suppressionLedgerJsonSchema } from '../domain/suppression-ledger-schema.ts';
+import type { VerificationLedger } from '../domain/verification-ledger.ts';
+import { verificationLedgerJsonSchema } from '../domain/verification-ledger-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -44,6 +47,7 @@ export interface StaticReportManifest {
 export interface StaticReportOptions {
   baseline?: AuditReport;
   policyResult?: PolicyResult;
+  verificationLedger?: VerificationLedger;
 }
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
@@ -92,7 +96,12 @@ export async function writeStaticReport(
   );
   const remediationResult = options.baseline
     ? parseRemediationResult(
-        buildRemediationResult(buildRemediationPlan(options.baseline), options.baseline, report),
+        buildRemediationResult(
+          buildRemediationPlan(options.baseline),
+          options.baseline,
+          report,
+          options.verificationLedger,
+        ),
       )
     : undefined;
   const artifacts: StaticArtifact[] = [
@@ -226,6 +235,11 @@ export async function writeStaticReport(
       content: json(suppressionLedgerJsonSchema()),
     },
     {
+      path: 'verification-ledger.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(verificationLedgerJsonSchema()),
+    },
+    {
       path: 'codex-bundle.json',
       mediaType: 'application/json',
       content: json(toInvestigationBundle(report)),
@@ -248,9 +262,23 @@ export async function writeStaticReport(
     ...(remediationResult
       ? [
           {
+            path: 'remediation-result.schema.json',
+            mediaType: 'application/schema+json',
+            content: json(remediationResultJsonSchema()),
+          },
+          {
             path: 'remediation-result.json',
             mediaType: 'application/json',
             content: json(remediationResult),
+          },
+        ]
+      : []),
+    ...(options.verificationLedger
+      ? [
+          {
+            path: 'verification-ledger.json',
+            mediaType: 'application/json',
+            content: json(options.verificationLedger),
           },
         ]
       : []),
