@@ -31,6 +31,7 @@
 - Bounded architecture, quality, dead-code, and duplication reports now preserve exact totals alongside retained detail counts; Semgrep parser diagnostics expose only safe snapshot file/line locations.
 - Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
 - Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
+- The 1,196-file `seusaas-platform` pressure test now calibrates nested React client boundaries, descriptive auth/validation wrappers, scoped service helpers, public submission routes, new-tab protection, and structured-log matching; 45 reproducible false positives were removed while benchmark recall stayed unchanged.
 
 ## Next — independent real-project ground truth
 

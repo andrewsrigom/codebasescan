@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 205 passed                                                             |
+| npm test                      | 211 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
 | npm run benchmark             | TP 36, FP 1, FN 0; precision 0.9730, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
@@ -33,7 +33,7 @@ Environment:
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,196 files, 0 snapshot truncations, 147 candidates, 11 checklist gaps |
+| Latest `seusaas` offline run  | 1,196 files, 0 snapshot truncations, 102 candidates, 7 checklist gaps  |
 
 The latest full offline `seusaas-platform` run included Semgrep, Gitleaks, OSV,
 dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
@@ -42,11 +42,14 @@ mapped 739 runtime modules, 295 local dependencies, one cycle, 50 orphan candida
 coupling hotspots (100 detail rows retained). It measured 6,064 functions and found 259 quality
 hotspots (200 retained), 54 duplicate blocks (2.7026%), 55 unused-file candidates, 6
 source-unreferenced runtime dependencies, 149 unused exports, 78 unused types, and 21 unlisted
-dependency candidates. The profile completed with 3,424 imports. Semgrep reported one explicit
-partial parse at `apps/analytics/src/features/reports/reports-preview.tsx:87`; all other omitted
-detail is reported with exact totals. The checklist retained 11 gap candidates and 7 unverified
-controls. The 147 security candidates were 4 critical, 77 high, 58 medium, and 8 low; no target
-code, configuration module, test, or package lifecycle script ran.
+dependency candidates. The profile completed with 3,424 imports. Semgrep produced no finding and
+reported one explicit partial parse at
+`apps/analytics/src/features/reports/reports-preview.tsx:87`; all other omitted detail is reported
+with exact totals. The checklist retained 8 evidenced controls, 7 gap candidates, 7 unverified
+controls, and one partial control. The 102 security candidates were 4 critical, 57 high, 34 medium,
+and 7 low: 91 exact-version OSV advisories plus 11 source candidates. Calibration against this run
+removed 45 reproducible false positives without weakening the declared benchmark. No target code,
+configuration module, test, or package lifecycle script ran.
 
 The benchmark measures declared inert fixtures. It is not a generic accuracy claim. The public-project pass has manual triage but not owner-confirmed ground truth; see [Real-project evaluation](REAL_PROJECT_EVALUATION.md).
 
