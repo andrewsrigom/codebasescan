@@ -5,6 +5,7 @@ import type {
   DatabaseContractAnalysis,
   AuditReport,
   EnvironmentContractAnalysis,
+  FeatureFlagAnalysis,
   RiskCorrelation,
   Snapshot,
   TestEvidenceAnalysis,
@@ -312,6 +313,67 @@ export function sampleWebhookContract(): WebhookContractAnalysis {
     parseFailures: 0,
     truncated: false,
     limitations: ['Unverified does not prove a runtime control is absent.'],
+  };
+}
+
+export function sampleFeatureFlags(): FeatureFlagAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    providers: ['Custom/local'],
+    declarations: [
+      {
+        id: 'flag-declaration-1',
+        key: 'analytics',
+        normalizedKey: 'analytics',
+        file: 'catalog/plan.json',
+        line: 3,
+        source: 'json-feature-flags',
+        default: {
+          kind: 'boolean',
+          fingerprint: 'a'.repeat(64),
+          display: 'true',
+        },
+      },
+    ],
+    usages: [
+      {
+        id: 'flag-usage-1',
+        file: 'src/features.ts',
+        line: 4,
+        callee: 'isFeatureEnabled',
+        context: 'guard',
+        key: 'analytics',
+        normalizedKey: 'analytics',
+        declarationIds: ['flag-declaration-1'],
+        status: 'matched',
+      },
+    ],
+    flags: [
+      {
+        id: 'feature-flag-1',
+        key: 'analytics',
+        normalizedKey: 'analytics',
+        declarationIds: ['flag-declaration-1'],
+        usageIds: ['flag-usage-1'],
+        status: 'matched',
+      },
+    ],
+    summary: {
+      providers: 1,
+      declarationFiles: 1,
+      declaredFlags: 1,
+      staticUsages: 1,
+      dynamicUsages: 0,
+      matchedFlags: 1,
+      declarationOnly: 0,
+      usageOnly: 0,
+      defaultConflicts: 0,
+    },
+    parseFailures: 0,
+    truncated: false,
+    limitations: ['Differences are consistency candidates, not runtime proof.'],
   };
 }
 

@@ -387,7 +387,7 @@ export function scanFeatureFlags(
     if (!usage.normalizedKey) continue;
     const matches = declarationsByKey.get(usage.normalizedKey) ?? [];
     usage.declarationIds = matches.map((declaration) => declaration.id).sort();
-    usage.status = matches.length ? 'matched' : declarations.length ? 'usage-only' : 'usage-only';
+    usage.status = matches.length ? 'matched' : 'usage-only';
   }
   const usagesByKey = new Map<string, FeatureFlagUsage[]>();
   for (const usage of source.usages)

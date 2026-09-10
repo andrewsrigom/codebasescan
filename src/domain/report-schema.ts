@@ -736,6 +736,75 @@ const webhookContract = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const featureFlagLiteral = z.object({
+  kind: z.enum(['boolean', 'string', 'number', 'null']),
+  fingerprint: shortText,
+  display: shortText.optional(),
+});
+
+const featureFlags = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  providers: z.array(shortText).max(50),
+  declarations: z
+    .array(
+      z.object({
+        id: shortText,
+        key: shortText,
+        normalizedKey: shortText,
+        file: shortText,
+        line: z.number().int().positive(),
+        source: z.enum(['json-feature-flags', 'typescript-definition']),
+        default: featureFlagLiteral.optional(),
+      }),
+    )
+    .max(2_000),
+  usages: z
+    .array(
+      z.object({
+        id: shortText,
+        file: shortText,
+        line: z.number().int().positive(),
+        callee: shortText,
+        context: z.enum(['guard', 'read']),
+        key: shortText.optional(),
+        normalizedKey: shortText.optional(),
+        componentId: shortText.optional(),
+        default: featureFlagLiteral.optional(),
+        declarationIds: z.array(shortText).max(2_000),
+        status: z.enum(['matched', 'usage-only', 'dynamic']),
+      }),
+    )
+    .max(5_000),
+  flags: z
+    .array(
+      z.object({
+        id: shortText,
+        key: shortText,
+        normalizedKey: shortText,
+        declarationIds: z.array(shortText).max(2_000),
+        usageIds: z.array(shortText).max(5_000),
+        status: z.enum(['matched', 'declaration-only', 'usage-only', 'default-conflict']),
+      }),
+    )
+    .max(5_000),
+  summary: z.object({
+    providers: z.number().int().nonnegative().max(50),
+    declarationFiles: z.number().int().nonnegative().max(2_000),
+    declaredFlags: z.number().int().nonnegative().max(2_000),
+    staticUsages: z.number().int().nonnegative().max(5_000),
+    dynamicUsages: z.number().int().nonnegative().max(5_000),
+    matchedFlags: z.number().int().nonnegative().max(5_000),
+    declarationOnly: z.number().int().nonnegative().max(5_000),
+    usageOnly: z.number().int().nonnegative().max(5_000),
+    defaultConflicts: z.number().int().nonnegative().max(5_000),
+  }),
+  parseFailures: z.number().int().nonnegative().max(2_000),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -936,6 +1005,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(10),
     z.literal(11),
     z.literal(12),
+    z.literal(13),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -975,6 +1045,7 @@ export const auditReportSchema = z.looseObject({
   apiContract: apiContract.optional(),
   databaseContract: databaseContract.optional(),
   webhookContract: webhookContract.optional(),
+  featureFlags: featureFlags.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

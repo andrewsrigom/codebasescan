@@ -2,6 +2,7 @@ import type {
   ApiContractAnalysis,
   CodeQualityAnalysis,
   DatabaseContractAnalysis,
+  FeatureFlagAnalysis,
   MechanicalAnalysis,
   SupplyChainAnalysis,
   TestEvidenceAnalysis,
@@ -26,6 +27,7 @@ export function MechanicalReportPanel({
   apiContract,
   databaseContract,
   webhookContract,
+  featureFlags,
 }: {
   analysis?: MechanicalAnalysis;
   supplyChain?: SupplyChainAnalysis;
@@ -34,6 +36,7 @@ export function MechanicalReportPanel({
   apiContract?: ApiContractAnalysis;
   databaseContract?: DatabaseContractAnalysis;
   webhookContract?: WebhookContractAnalysis;
+  featureFlags?: FeatureFlagAnalysis;
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
@@ -76,7 +79,9 @@ export function MechanicalReportPanel({
     databaseContract?.status === 'complete' &&
     !databaseContract.truncated &&
     webhookContract?.status === 'complete' &&
-    !webhookContract.truncated,
+    !webhookContract.truncated &&
+    featureFlags?.status === 'complete' &&
+    !featureFlags.truncated,
   );
   return (
     <section
@@ -101,7 +106,8 @@ export function MechanicalReportPanel({
       !testEvidence &&
       !apiContract &&
       !databaseContract &&
-      !webhookContract ? (
+      !webhookContract &&
+      !featureFlags ? (
         <EmptyState title="Source analysis unavailable">
           <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
@@ -619,6 +625,97 @@ export function MechanicalReportPanel({
                           <td>{endpoint.eventReferenceIds.length}</td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
+          {featureFlags && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Feature flag consistency</h2>
+                  <p>Literal declarations, evaluation keys, guards, and defaults.</p>
+                </div>
+                <Badge
+                  tone={
+                    featureFlags.summary.usageOnly +
+                      featureFlags.summary.declarationOnly +
+                      featureFlags.summary.defaultConflicts >
+                    0
+                      ? 'medium'
+                      : featureFlags.status === 'complete'
+                        ? 'success'
+                        : 'neutral'
+                  }
+                >
+                  {featureFlags.summary.usageOnly +
+                    featureFlags.summary.declarationOnly +
+                    featureFlags.summary.defaultConflicts}{' '}
+                  candidates
+                </Badge>
+              </div>
+              <div className="panel-body">
+                {featureFlags.status === 'unsupported' ? (
+                  <p className="small muted">
+                    No supported feature flag declaration, provider, or evaluation call was
+                    captured. No clean result is implied.
+                  </p>
+                ) : (
+                  <div className="stat-grid">
+                    <div className="stat-card">
+                      <div className="stat-label">Declared flags</div>
+                      <div className="stat-number">{featureFlags.summary.declaredFlags}</div>
+                      <div className="stat-foot">
+                        {featureFlags.summary.declarationFiles} declaration files
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Literal usages</div>
+                      <div className="stat-number">{featureFlags.summary.staticUsages}</div>
+                      <div className="stat-foot">
+                        {featureFlags.summary.dynamicUsages} dynamic and unpaired
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Matched flags</div>
+                      <div className="stat-number">{featureFlags.summary.matchedFlags}</div>
+                      <div className="stat-foot">
+                        {featureFlags.summary.defaultConflicts} default conflicts
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <p className="small muted">
+                  Differences are review candidates. Plan/environment variants and dynamic runtime
+                  values are not guessed.
+                </p>
+              </div>
+              {featureFlags.flags.some((flag) => flag.status !== 'matched') && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Flag</th>
+                        <th>Status</th>
+                        <th>Declarations</th>
+                        <th>Usages</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {featureFlags.flags
+                        .filter((flag) => flag.status !== 'matched')
+                        .slice(0, 100)
+                        .map((flag) => (
+                          <tr key={flag.id}>
+                            <td className="strong mono">{flag.key}</td>
+                            <td>{flag.status}</td>
+                            <td>{flag.declarationIds.length}</td>
+                            <td>{flag.usageIds.length}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>

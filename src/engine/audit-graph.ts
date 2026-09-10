@@ -11,6 +11,7 @@ import type {
   EnvironmentContractAnalysis,
   DuplicationAnalysis,
   Finding,
+  FeatureFlagAnalysis,
   HttpProbeOptions,
   HttpProbeReport,
   ProjectProfile,
@@ -48,6 +49,7 @@ import { scanTestEvidence } from '../scanners/test-evidence.ts';
 import { scanApiContract } from '../scanners/api-contract.ts';
 import { scanDatabaseContract } from '../scanners/database-contract.ts';
 import { scanWebhookContract } from '../scanners/webhook-contract.ts';
+import { scanFeatureFlags } from '../scanners/feature-flags.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -121,6 +123,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   webhookContract: Annotation<WebhookContractAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  featureFlags: Annotation<FeatureFlagAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -441,6 +447,30 @@ export function buildAuditGraph(options: {
       );
       return { webhookContract: result.analysis, scanners: [result.run] };
     })
+    .addNode('feature_flags', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          featureFlags: null,
+          scanners: [
+            skippedByMode(
+              'feature-flags',
+              'Feature flag declaration and usage consistency',
+              'release-readiness',
+            ),
+          ],
+        };
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to feature flag analysis.');
+      const result = scanFeatureFlags(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'feature_flags',
+        result.analysis.status === 'unsupported'
+          ? 'No supported feature flag declaration, provider, or evaluation call was available.'
+          : `${result.analysis.summary.declaredFlags} declared flag(s), ${result.analysis.summary.matchedFlags} matched, ${result.analysis.summary.usageOnly} usage-only, and ${result.analysis.summary.defaultConflicts} default conflict candidate(s).`,
+      );
+      return { featureFlags: result.analysis, scanners: [result.run] };
+    })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
         return {
@@ -691,7 +721,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 12,
+        schemaVersion: 13,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -712,6 +742,7 @@ export function buildAuditGraph(options: {
         ...(state.apiContract ? { apiContract: state.apiContract } : {}),
         ...(state.databaseContract ? { databaseContract: state.databaseContract } : {}),
         ...(state.webhookContract ? { webhookContract: state.webhookContract } : {}),
+        ...(state.featureFlags ? { featureFlags: state.featureFlags } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -843,6 +874,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'api_contract')
     .addEdge('project_profile', 'database_contract')
     .addEdge('project_profile', 'webhook_contract')
+    .addEdge('project_profile', 'feature_flags')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -867,6 +899,7 @@ export function buildAuditGraph(options: {
         'api_contract',
         'database_contract',
         'webhook_contract',
+        'feature_flags',
         'architecture',
         'duplication',
         'supply_chain',

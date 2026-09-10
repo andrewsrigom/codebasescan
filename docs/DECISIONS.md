@@ -180,3 +180,11 @@ literal event-name evidence. Literal names produced and consumed locally are pai
 remain explicit external boundaries rather than mismatch findings. Callback routes require
 verification evidence so ordinary OAuth callbacks are excluded. Report schema v12, investigation
 bundle v3, workflow v26, and audit-mode pack 0.8.0 preserve the output for consumers.
+
+## 2026-09-10 — inert feature flag consistency
+
+Primitive JSON feature maps and literal TypeScript definition collections are correlated with a
+narrow allowlist of evaluation and definition-by-key calls. Dynamic keys remain unpaired. Defaults
+retain type and digest while arbitrary strings stay out of reports. Different declaration files may
+represent valid plan/environment variants and do not conflict by themselves. Report schema v13,
+investigation bundle v4, workflow v27, and audit-mode pack 0.9.0 preserve the new output.

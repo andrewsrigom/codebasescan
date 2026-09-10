@@ -87,6 +87,10 @@ Webhook contract records are navigation context only. AI must cite endpoint, cal
 event-reference IDs used in an assessment, preserve external producer/consumer boundaries, and
 never turn an unpaired event or unverified control into a confirmed vulnerability by itself.
 
+Feature-flag records are also navigation context. AI must preserve plan/environment variants and
+dynamic keys as unknown, cite declaration and usage IDs, and may not infer runtime rollout state or
+dead code from a declaration-only, usage-only, or default-conflict candidate.
+
 ## Expansion gate
 
 Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled

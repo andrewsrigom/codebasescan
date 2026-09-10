@@ -141,6 +141,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.featureFlags
+      ? [
+          {
+            path: 'feature-flags.json',
+            mediaType: 'application/json',
+            content: json(report.featureFlags),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

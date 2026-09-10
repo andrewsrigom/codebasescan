@@ -181,7 +181,10 @@ export function AuditWorkspace({
       (report.testEvidence?.withoutRelatedTests ?? 0) +
       (report.apiContract?.summary.declaredOnly ?? 0) +
       (report.apiContract?.summary.sourceOnly ?? 0) +
-      (report.databaseContract?.summary.gapCandidates ?? 0)
+      (report.databaseContract?.summary.gapCandidates ?? 0) +
+      (report.featureFlags?.summary.usageOnly ?? 0) +
+      (report.featureFlags?.summary.declarationOnly ?? 0) +
+      (report.featureFlags?.summary.defaultConflicts ?? 0)
     : 0;
   const reviewSummary = active
     ? 'Audit in progress. Results update as scanners finish.'
@@ -897,6 +900,7 @@ export function AuditWorkspace({
           apiContract={report?.apiContract}
           databaseContract={report?.databaseContract}
           webhookContract={report?.webhookContract}
+          featureFlags={report?.featureFlags}
         />
       )}
       {tab === 'Checklist' && (

@@ -8,8 +8,8 @@ bounded snapshot, parses target code/configuration as untrusted data, runs deter
 and exports a human report plus machine-readable remediation artifacts. It never installs or runs
 the target project.
 
-The audit workflow is `traceward-audit-v26`. Twenty-four scanner/profile results fan into
-normalization. The audit-mode pack is `0.8.0`. The generic SaaS layer consists of:
+The audit workflow is `traceward-audit-v27`. Twenty-five scanner/profile results fan into
+normalization. The audit-mode pack is `0.9.0`. The generic SaaS layer consists of:
 
 - safe root `traceward.config.json`/JSONC semantics;
 - bounded declared project context, verified script names, and an observed data map;
