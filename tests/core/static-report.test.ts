@@ -75,6 +75,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="webhook-contract.json"'));
   assert.ok(html.includes('href="feature-flags.json"'));
   assert.ok(html.includes('href="run-manifest.json"'));
+  assert.ok(!html.includes('href="manifest.json"'));
   assert.ok(html.includes('href="run-manifest.schema.json"'));
   assert.ok(html.includes('href="policy-result.json"'));
   assert.ok(html.includes('href="policy-result.schema.json"'));

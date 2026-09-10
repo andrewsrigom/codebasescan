@@ -712,7 +712,6 @@ export function toHtml(
         '</ul>'
       : '';
   const needsReview = report.findings.filter((finding) => finding.disposition === 'needs_review');
-  const reviewed = report.findings.length - needsReview.length;
   const highPriority = needsReview.filter((finding) =>
     ['critical', 'high'].includes(finding.severity),
   );
@@ -720,6 +719,12 @@ export function toHtml(
   const coverageGaps = capabilities.filter(
     (capability) => capability.status !== 'COMPLETE' && capability.status !== 'completed',
   );
+  const completeCoverage = capabilities.filter(
+    (capability) => capability.status === 'COMPLETE' || capability.status === 'completed',
+  ).length;
+  const partialCoverage = capabilities.filter(
+    (capability) => capability.status === 'PARTIAL' || capability.status === 'partial',
+  ).length;
   const dependencyRemediationGroups = groupDependencyAdvisories(
     report.findings,
     report.dependencies,
@@ -800,6 +805,75 @@ export function toHtml(
         '</small></span></a></li>',
     )
     .join('');
+  const orderedTasks = [...(options.remediationPlan?.tasks ?? [])].sort(
+    (left, right) => right.priority - left.priority || left.id.localeCompare(right.id),
+  );
+  const topRiskRows = orderedTasks.length
+    ? orderedTasks
+        .slice(0, 6)
+        .map(
+          (task, index) =>
+            '<li><a href="#task-' +
+            e(task.id) +
+            '"><span class="rank">' +
+            String(index + 1).padStart(2, '0') +
+            '</span><span class="risk-copy"><strong>' +
+            e(task.title) +
+            '</strong><small>' +
+            e(task.rootCause.summary) +
+            '</small></span><span class="risk-meta"><span class="severity ' +
+            e(task.severity) +
+            '">' +
+            e(task.severity) +
+            '</span><span>Priority ' +
+            task.priority +
+            '</span><span>' +
+            task.findings.length +
+            ' linked</span></span><span class="arrow" aria-hidden="true">↘</span></a></li>',
+        )
+        .join('')
+    : priorityLinks;
+  const queueGroups = options.remediationPlan
+    ? [
+        {
+          title: 'Investigate findings',
+          description: 'Validate evidence, reachability, and source context before changing code.',
+          kinds: ['investigate_finding', 'review_configuration'],
+        },
+        {
+          title: 'Apply corrections',
+          description: 'Upgrade dependencies, patch source, and add focused tests.',
+          kinds: ['upgrade_dependency', 'patch_source', 'add_test'],
+        },
+        {
+          title: 'Verify controls',
+          description: 'Close evidence gaps with deterministic or authorized runtime checks.',
+          kinds: ['verify_control'],
+        },
+      ]
+        .map((group) => ({
+          ...group,
+          tasks: orderedTasks.filter((task) => group.kinds.includes(task.kind)),
+        }))
+        .map(
+          (group) =>
+            '<article class="queue-card"><strong>' +
+            group.tasks.length +
+            '</strong><h3>' +
+            e(group.title) +
+            '</h3><p>' +
+            e(group.description) +
+            '</p><ul>' +
+            group.tasks
+              .slice(0, 3)
+              .map(
+                (task) => '<li><a href="#task-' + e(task.id) + '">' + e(task.title) + '</a></li>',
+              )
+              .join('') +
+            '</ul></article>',
+        )
+        .join('')
+    : '';
   const findingAnchors = new Map(
     report.findings.map((finding, index) => [finding.id, `finding-${index + 1}`]),
   );
@@ -869,9 +943,9 @@ export function toHtml(
           '</p></section>'
         : '';
       return (
-        '<article class="finding" id="finding-' +
+        '<details class="finding" id="finding-' +
         (index + 1) +
-        '"><header class="finding-head"><div><span class="severity ' +
+        '"><summary class="finding-summary"><span><span class="severity ' +
         e(finding.severity) +
         '">' +
         e(finding.severity) +
@@ -879,9 +953,11 @@ export function toHtml(
         e(finding.source) +
         ' · ' +
         e(finding.disposition.replaceAll('_', ' ')) +
-        '</span></div><a href="#top">Back to summary ↑</a></header><h2>' +
+        '</span></span><strong>' +
         e(finding.title) +
-        '</h2><p>' +
+        '</strong><span class="finding-location">' +
+        e(finding.evidence[0]?.file ?? 'Unknown location') +
+        '</span></summary><div class="finding-body"><p>' +
         e(finding.description) +
         '</p><section class="finding-section"><h3>Evidence</h3>' +
         evidence +
@@ -891,7 +967,7 @@ export function toHtml(
         analysis +
         suppression +
         review +
-        '</article>'
+        '<p><a href="#top">Back to summary ↑</a></p></div></details>'
       );
     })
     .join('');
@@ -1528,7 +1604,7 @@ export function toHtml(
       '</p></section>'
     : '';
   const remediationPlan = options.remediationPlan
-    ? '<section class="report-section"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+    ? '<section class="report-section" id="remediation-queue"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +
       options.remediationPlan.summary.tasks +
       '</strong><span>Total tasks</span></div><div class="summary-card"><strong>' +
       options.remediationPlan.summary.ready +
@@ -1541,7 +1617,9 @@ export function toHtml(
         .slice(0, 50)
         .map(
           (task) =>
-            '<li><div><span class="severity ' +
+            '<li id="task-' +
+            e(task.id) +
+            '"><details class="task-detail"><summary><span><span class="severity ' +
             e(task.severity) +
             '">' +
             e(task.severity) +
@@ -1549,11 +1627,13 @@ export function toHtml(
             (task.status === 'ready' ? 'complete' : 'gap') +
             '">' +
             e(task.status.replaceAll('_', ' ')) +
-            '</span><code>' +
-            e(task.id) +
-            '</code></div><h3>' +
+            '</span></span><strong>' +
             e(task.title) +
-            '</h3><p>' +
+            '</strong><span class="task-priority">Priority ' +
+            task.priority +
+            '</span></summary><div class="task-body"><code>' +
+            e(task.id) +
+            '</code><p>' +
             e(task.rationale) +
             '</p><small>' +
             e(task.instructions[0] ?? 'Review the linked evidence.') +
@@ -1572,7 +1652,7 @@ export function toHtml(
                   : 'No matching critical test target was captured.') +
                 '</p>'
               : '') +
-            '</li>',
+            '</div></details></li>',
         )
         .join('') +
       '</ol>' +
@@ -1702,7 +1782,7 @@ export function toHtml(
       (report.featureFlags
         ? '<li><a href="feature-flags.json">Feature flag consistency</a></li>'
         : '') +
-      '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
+      '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li></ul></section>'
     : '';
   const css =
     ':root{color-scheme:light;--ink:#182824;--muted:#5a6e64;--line:#dce5e0;--paper:#fff;--canvas:#f3f6f4;--accent:#08745c;--amber:#9b641f;--red:#a94943}' +
@@ -1721,72 +1801,123 @@ export function toHtml(
     'footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}' +
     '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans,.artifact-links{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
     '@media print{body{background:white}main{max-width:none;padding:0}.report-section,.finding{break-inside:avoid;box-shadow:none}.finding-head a{display:none}.callout{border:1px solid #ddd}.priority-list a{color:var(--ink)}}';
+  const redesignedCss =
+    css +
+    ':root{--ink:#111827;--muted:#667085;--line:#e4e7ec;--paper:#fff;--canvas:#f5f6f8;--accent:#2563eb;--amber:#a15c07;--red:#b42318;--nav:#101419;--nav-muted:#aab3bf;--shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.04)}' +
+    'body{font:14px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.report-app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}.report-sidebar{background:var(--nav);color:#fff;position:sticky;top:0;height:100vh;padding:20px 14px;display:flex;flex-direction:column;z-index:20}.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 22px}.brand-mark{width:30px;height:30px;border:1px solid #424a55;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800;letter-spacing:.08em}.brand strong{font-size:13px;letter-spacing:.08em}.brand small{display:block;color:var(--nav-muted);font-size:10px}.nav-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#66717e;padding:12px 10px 8px}.report-nav{display:grid;gap:2px}.report-nav a{display:flex;align-items:center;gap:10px;color:#bac2cc;padding:9px 10px;border-radius:8px;font-size:12px;text-decoration:none}.report-nav a:hover,.report-nav a:focus-visible{background:#1a2027;color:#fff;outline:none}.nav-icon{width:17px;text-align:center;color:#7f8996}.side-meta{margin-top:auto;border-top:1px solid #282f38;padding:14px 8px 0;color:var(--nav-muted);font-size:10px}.side-meta strong{display:block;color:#e1e5eb;font-size:11px;margin-bottom:4px}.report-main{min-width:0}.topbar{height:64px;background:rgba(255,255,255,.94);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 34px;position:sticky;top:0;z-index:15}.breadcrumb{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.breadcrumb strong{color:var(--ink)}.top-actions{display:flex;gap:8px}.button{display:inline-flex;align-items:center;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:8px 11px;font-size:12px;font-weight:700;text-decoration:none}.button.primary{background:#171b21;border-color:#171b21;color:#fff}.button:hover,.button:focus-visible{border-color:#98a2b3;outline:3px solid #eaf0ff;outline-offset:1px}.report-content{max-width:1240px;margin:0 auto;padding:32px 36px 80px}.section-shell{margin-top:30px;scroll-margin-top:84px}.eyebrow{font-size:10px;line-height:1;text-transform:uppercase;letter-spacing:.13em;color:#98a2b3;font-weight:800}.overview-hero{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:26px;align-items:end;margin:4px 0 24px}.overview-hero h1{font-size:34px;letter-spacing:-.035em;line-height:1.1;margin:8px 0}.overview-hero p{margin:0;color:var(--muted);max-width:740px}.review-note{border:1px solid #ecd9b9;background:#fffaf0;border-radius:12px;padding:14px 15px}.review-note strong{font-size:12px}.review-note p{font-size:11px;margin:7px 0 0;color:var(--muted);line-height:1.45}.executive-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.executive-metric{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px 18px}.executive-metric span{display:block;color:#98a2b3;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.executive-metric strong{display:block;font-size:29px;line-height:1;margin:15px 0 6px;letter-spacing:-.04em}.executive-metric p{font-size:11px;margin:0;color:var(--muted)}.machine-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px dashed #cfd4dc;border-radius:11px;padding:12px 14px;margin-top:14px;color:#475467;font-size:10px}.machine-banner strong{color:var(--ink)}.machine-banner a{font-weight:750;white-space:nowrap}.section-heading{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:11px}.section-heading h2{font-size:18px;margin:5px 0 0}.section-heading p{margin:0;color:var(--muted);font-size:11px;max-width:610px}.risk-table{list-style:none;margin:0;padding:0;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}.risk-table li+li{border-top:1px solid #eef0f2}.risk-table a{display:grid;grid-template-columns:46px minmax(0,1fr) auto 22px;gap:14px;align-items:center;padding:15px 16px;color:var(--ink);text-decoration:none}.risk-table a:hover,.risk-table a:focus-visible{background:#f9fafb;outline:none}.rank{font:600 11px ui-monospace,monospace;color:#98a2b3}.risk-copy{min-width:0}.risk-copy strong,.risk-copy small{display:block}.risk-copy small{color:var(--muted);font-size:11px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.risk-meta{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:10px}.arrow{color:#98a2b3}.queue-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.queue-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:17px;min-height:190px}.queue-card>strong{font-size:24px}.queue-card h3{font-size:13px;margin:8px 0 4px}.queue-card p{font-size:11px;color:var(--muted);margin:0 0 14px}.queue-card ul{border-top:1px solid #eef0f2;list-style:none;margin:0;padding:9px 0 0}.queue-card li{font-size:10px;padding:4px 0}.queue-card li a{color:#475467;text-decoration:none}.queue-card li a:hover{text-decoration:underline}.report-section{border-radius:14px;box-shadow:var(--shadow);margin:12px 0;padding:22px}.coverage-panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}.coverage-panel .coverage-list{margin:0;padding:6px 18px}.coverage-panel .coverage-list li{display:grid;grid-template-columns:110px minmax(0,1fr);padding:12px 0}.detail-group{background:#fff;border:1px solid var(--line);border-radius:12px;margin:8px 0;overflow:hidden}.detail-group>summary{cursor:pointer;list-style:none;padding:15px 17px;font-size:12px;font-weight:750;display:flex;justify-content:space-between}.detail-group>summary::-webkit-details-marker,.finding-summary::-webkit-details-marker{display:none}.detail-group>summary:after,.finding-summary:after{content:"+";color:#98a2b3;font-size:16px;font-weight:400}.detail-group[open]>summary:after,.finding[open]>.finding-summary:after{content:"−"}.detail-group[open]>summary{border-bottom:1px solid #eef0f2}.detail-group-body{padding:6px 10px 10px}.detail-group-body>.report-section{box-shadow:none;border:0;border-radius:8px;border-bottom:1px solid #eef0f2}.detail-group-body>.report-section:last-child{border-bottom:0}.task-list{gap:6px}.task-list li{padding:0;scroll-margin-top:82px}.task-detail>summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(220px,1fr) 80px 18px;align-items:center;gap:12px;padding:13px 14px}.task-detail>summary::-webkit-details-marker{display:none}.task-detail>summary:after{content:"+";color:#98a2b3;font-size:16px}.task-detail[open]>summary:after{content:"−"}.task-detail>summary>span{display:flex;gap:6px}.task-detail>summary>strong{font-size:12px}.task-priority{font:10px ui-monospace,monospace;color:var(--muted)}.task-body{border-top:1px solid #eef0f2;padding:12px 16px 16px}.task-body>code{font-size:10px;color:var(--muted)}.finding{display:block;background:#fff;border:1px solid var(--line);border-radius:11px;margin:8px 0;padding:0;overflow:hidden;scroll-margin-top:82px;box-shadow:none}.finding-summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(140px,.5fr) 20px;align-items:center;gap:14px;padding:13px 15px}.finding-summary>span:first-child{display:flex;align-items:center;gap:7px}.finding-summary>strong{font-size:12px}.finding-location{font:10px ui-monospace,monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.finding-body{border-top:1px solid #eef0f2;padding:4px 18px 18px}.finding-body>p:first-child{color:#475467}.technical-intro{color:var(--muted);font-size:12px;margin:-2px 0 14px}.artifact-links{list-style:none;padding:0;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.artifact-links li{border:1px solid #eef0f2;border-radius:8px;padding:9px 10px}.artifact-links a{font-size:11px;text-decoration:none}.artifact-links a:hover{text-decoration:underline}footer{font-size:11px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}' +
+    '@media(max-width:1020px){.report-app{grid-template-columns:70px minmax(0,1fr)}.report-sidebar{padding:20px 9px}.brand>div:last-child,.nav-label,.report-nav a span:last-child,.side-meta{display:none}.brand{justify-content:center;padding-left:0;padding-right:0}.report-nav a{justify-content:center}.nav-icon{width:auto}.overview-hero{grid-template-columns:1fr}.executive-metrics{grid-template-columns:1fr 1fr}}' +
+    '@media(max-width:720px){.report-app{display:block}.report-sidebar{position:static;height:auto;padding:10px 12px;display:block}.brand{justify-content:flex-start;padding:2px 4px 8px}.brand>div:last-child{display:block}.nav-label,.side-meta{display:none}.report-nav{display:flex;overflow-x:auto;padding-bottom:2px}.report-nav a{flex:0 0 auto;padding:8px}.report-nav a span:last-child{display:inline}.topbar{height:auto;min-height:58px;padding:10px 15px}.breadcrumb>span:first-child,.top-actions .button:first-child{display:none}.report-content{padding:24px 15px 60px}.overview-hero{grid-template-columns:1fr}.overview-hero h1{font-size:28px}.executive-metrics,.queue-grid{grid-template-columns:1fr}.risk-table a{grid-template-columns:34px minmax(0,1fr) 20px}.risk-meta{display:none}.section-heading{display:block}.section-heading p{margin-top:7px}.task-detail>summary{grid-template-columns:auto minmax(0,1fr) 18px}.task-priority{display:none}.finding-summary{grid-template-columns:auto minmax(0,1fr) 20px}.finding-location{display:none}.artifact-links{grid-template-columns:1fr}.machine-banner{align-items:flex-start;flex-direction:column}}' +
+    '@media print{.report-app{display:block}.report-sidebar,.topbar,.machine-banner{display:none}.report-content{max-width:none;padding:0}.detail-group{break-inside:avoid}.detail-group>summary:after,.finding-summary:after{display:none}}';
+  const darkThemeCss =
+    ':root{color-scheme:dark;--ink:#f5f7ff;--muted:#929bb1;--line:#293047;--paper:#121728;--canvas:#080b14;--accent:#3478ff;--amber:#f0a909;--red:#ff6b63;--nav:#0d1120;--nav-muted:#8c96ad;--shadow:none}' +
+    'body{background:var(--canvas)}.report-sidebar{border-right:1px solid #222a3d}.brand-mark{border-color:#4a5571}.brand strong{color:#fff}.nav-label{color:#5f6980}.report-nav a{color:#c3cad9}.report-nav a:hover,.report-nav a:focus-visible{background:#171d30}.report-nav a.current{background:#2364f5;color:#fff}.report-nav a.current .nav-icon{color:#fff}.side-meta{border-color:#293047}.side-meta strong{color:#fff}.topbar{background:rgba(8,11,20,.94);backdrop-filter:blur(12px)}.button{background:#0e1322;color:var(--ink)}.button.primary{background:#2364f5;border-color:#2364f5}.button:hover,.button:focus-visible{border-color:#4b7fff;outline-color:#152a52}.review-note{border-color:#574317;background:#19170e}.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group,.finding{background:var(--paper)}.machine-banner{background:#0d1322;border-color:#39435d;color:var(--muted)}.risk-table li+li,.queue-card ul,.detail-group[open]>summary,.detail-group-body>.report-section,.task-body,.finding-body,.finding-section{border-color:#252d43}.risk-table a:hover,.risk-table a:focus-visible{background:#171e32}.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#b0b8ca}.task-list li,.control,.dependency-plan,.artifact-links li{border-color:#293047}.facts span{background:#171d30;border-color:#293047}.callout{background:#17150d}.evidence pre{background:#070a12;color:#dfe7ff}.severity.critical,.severity.high{background:#35171c;color:#ff8c85}.severity.medium{background:#382b10;color:#ffc85b}.severity.low,.severity.info{background:#20283a;color:#aeb8ce}.status.complete{background:#0d3229;color:#57d9a3}.status.gap{background:#3a2b10;color:#ffd075}.artifact-links a{color:#78a4ff}' +
+    '@media print{:root{color-scheme:light;--ink:#111827;--muted:#667085;--line:#dfe3ea;--paper:#fff;--canvas:#fff;--accent:#245fe5}.report-section,.finding,.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group{background:#fff}.review-note{background:#fffaf0;color:#111827}.risk-table a,.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#111827}}';
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Traceward · ' +
     e(report.projectName) +
     '</title><style>' +
-    css +
-    '</style></head><body><main id="top"><header class="hero"><span class="kicker">TRACEWARD / LOCAL SECURITY REVIEW</span><h1>' +
+    redesignedCss +
+    darkThemeCss +
+    '</style></head><body><div class="report-app"><aside class="report-sidebar"><div class="brand"><div class="brand-mark">TW</div><div><strong>TRACEWARD</strong><small>Audit review</small></div></div><div class="nav-label">Report</div><nav class="report-nav" aria-label="Report sections"><a class="current" aria-current="page" href="#overview"><span class="nav-icon">⌂</span><span>Overview</span></a><a href="#risks"><span class="nav-icon">!</span><span>Top risks</span></a>' +
+    (queueGroups
+      ? '<a href="#queue"><span class="nav-icon">≡</span><span>Fix queue</span></a>'
+      : '') +
+    '<a href="#coverage"><span class="nav-icon">◫</span><span>Coverage</span></a><a href="#technical"><span class="nav-icon">⌘</span><span>Technical data</span></a>' +
+    (options.artifactLinks
+      ? '<a href="#artifacts"><span class="nav-icon">↓</span><span>Artifacts</span></a>'
+      : '') +
+    '<a href="#findings"><span class="nav-icon">◆</span><span>Findings</span></a></nav><div class="side-meta"><strong>' +
     e(report.projectName) +
-    '</h1><div class="hero-meta"><span>Audit ' +
+    '</strong>Audit ' +
     e(report.auditId.slice(0, 8)) +
-    '</span><span>' +
-    e(report.createdAt) +
-    '</span><span>' +
-    report.filesAnalyzed +
-    ' files</span><span>' +
+    '<br>Local static review</div></aside><div class="report-main"><header class="topbar"><div class="breadcrumb"><span>Audits</span><span>›</span><strong>' +
+    e(report.projectName) +
+    '</strong><span class="status gap">' +
     e(report.publication) +
-    '</span><code>Snapshot ' +
-    e(report.snapshotDigest) +
-    '</code></div></header><aside class="callout"><strong>Evidence-led review, not a security certification.</strong> Severity and human disposition are separate. Missing or failed coverage never counts as a clean result.</aside><section aria-labelledby="summary-title"><span class="kicker">DECISION SUPPORT</span><h2 id="summary-title">Review summary</h2><div class="summary-grid"><div class="summary-card"><strong>' +
-    needsReview.length +
-    '</strong><span>Need human review</span></div><div class="summary-card"><strong>' +
+    '</span></div><div class="top-actions">' +
+    (options.artifactLinks
+      ? '<a class="button" href="agent-plan.json">Agent data</a><a class="button primary" href="report.md">Export report</a>'
+      : '<a class="button primary" href="#findings">Browse findings</a>') +
+    '</div></header><main class="report-content" id="top"><section id="overview" class="section-shell" style="margin-top:0"><div class="overview-hero"><div><div class="eyebrow">Executive overview · Review summary</div><h1>Code audit review</h1><p>Decision-oriented view of captured findings, grouped remediation work, and what the audit did — and did not — cover.</p></div><aside class="review-note"><strong>Human review required</strong><p>' +
+    (options.remediationPlan
+      ? options.remediationPlan.summary.requiresHuman +
+        ' of ' +
+        options.remediationPlan.summary.tasks +
+        ' grouped tasks require human input.'
+      : needsReview.length + ' findings require human input.') +
+    ' Static evidence does not establish exploitability or certification.</p></aside></div><div class="executive-metrics"><article class="executive-metric"><span>Finding candidates</span><strong>' +
+    report.findings.length +
+    '</strong><p>Unique findings linked to captured evidence</p></article><article class="executive-metric"><span>Critical + high</span><strong>' +
     highPriority.length +
-    '</strong><span>Critical + high pending</span></div><div class="summary-card"><strong>' +
-    reviewed +
-    '</strong><span>Reviewed candidates</span></div><div class="summary-card"><strong>' +
+    '</strong><p>Pending candidates requiring prioritization</p></article><article class="executive-metric"><span>Grouped work</span><strong>' +
+    (options.remediationPlan?.summary.tasks ?? needsReview.length) +
+    '</strong><p>Root-cause tasks instead of repeated occurrences</p></article><article class="executive-metric"><span>Coverage</span><strong>' +
+    completeCoverage +
+    ' / ' +
+    partialCoverage +
+    '</strong><p>Complete capabilities / partial capabilities</p></article></div>' +
+    (options.artifactLinks
+      ? '<div class="machine-banner"><span><strong>Machine contract preserved.</strong> Task IDs, priorities, checks, constraints, and original JSON remain available without crowding the human summary.</span><a href="agent-plan.json">Open agent data →</a></div>'
+      : '') +
+    '</section><section id="risks" class="section-shell"><div class="section-heading"><div><div class="eyebrow">01 · Prioritize</div><h2>Top risks</h2></div><p>Grouped by remediation task instead of repeating every scanner occurrence. Open a row for the linked work and evidence.</p></div>' +
+    (topRiskRows
+      ? '<ol class="risk-table">' + topRiskRows + '</ol>'
+      : '<div class="report-section"><p>No candidate is waiting for review. Coverage gaps and accepted risk may still remain.</p></div>') +
+    '</section>' +
+    (queueGroups
+      ? '<section id="queue" class="section-shell"><div class="section-heading"><div><div class="eyebrow">02 · Act</div><h2>Grouped fix queue</h2></div><p>Work is grouped by the decision needed, while the complete JSON plan stays available for an authorized agent.</p></div><div class="queue-grid">' +
+        queueGroups +
+        '</div>' +
+        remediationPlan +
+        '</section>'
+      : '') +
+    '<section id="coverage" class="section-shell"><div class="section-heading"><div><div class="eyebrow">03 · Trust boundaries</div><h2>Coverage</h2></div><p>Complete, partial, skipped, and unsupported checks remain distinct. Missing coverage never becomes a clean result.</p></div><div class="coverage-panel"><div class="section-head" style="padding:18px 18px 0"><div><strong>' +
+    completeCoverage +
+    ' complete · ' +
     coverageGaps.length +
-    '</strong><span>Coverage gaps</span></div></div></section><nav class="report-section" aria-labelledby="priority-title"><span class="kicker">START HERE</span><h2 id="priority-title">Review priorities</h2>' +
-    (priorityLinks
-      ? '<ol class="priority-list">' + priorityLinks + '</ol>'
-      : '<p>No candidate is waiting for a human disposition. Coverage gaps and accepted risk may still remain.</p>') +
-    '</nav>' +
-    policySummary +
-    auditModes +
-    '<section class="report-section"><div class="section-head"><div><span class="kicker">WHAT ACTUALLY RAN</span><h2>Coverage</h2></div><span class="status ' +
+    ' not complete</strong></div><span class="status ' +
     (coverageGaps.length ? 'gap' : 'complete') +
     '">' +
     coverageGaps.length +
     ' gaps</span></div><ul class="coverage-list">' +
     coverage +
-    '</ul></section>' +
+    '</ul></div></section><section id="technical" class="section-shell"><div class="section-heading"><div><div class="eyebrow">04 · Inspect</div><h2>Technical data</h2></div><p>Secondary evidence stays collapsed until a reviewer needs it.</p></div><p class="technical-intro">Open only the evidence needed for the current decision.</p><details class="detail-group"><summary>Policy, modes, and review state</summary><div class="detail-group-body">' +
+    policySummary +
+    auditModes +
     portableReview +
     portableSuppression +
-    rootCauseSummary +
-    ruleQuality +
+    remediationResult +
+    '</div></details><details class="detail-group"><summary>Source model and correlated evidence</summary><div class="detail-group-body">' +
     profile +
     riskPaths +
-    environmentContract +
     testEvidence +
+    dataMap +
+    '</div></details><details class="detail-group"><summary>Contracts and control evidence</summary><div class="detail-group-body">' +
+    environmentContract +
     apiContract +
     databaseContract +
     webhookContract +
     featureFlags +
-    dataMap +
+    checklist +
+    '</div></details><details class="detail-group"><summary>Mechanical analysis and rule quality</summary><div class="detail-group-body">' +
+    rootCauseSummary +
+    ruleQuality +
     mechanical +
     dependencyRemediation +
-    remediationPlan +
-    remediationResult +
-    artifactLinks +
-    checklist +
-    '<section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">' +
+    '</div></details></section>' +
+    (artifactLinks
+      ? '<section id="artifacts" class="section-shell"><div class="section-heading"><div><div class="eyebrow">05 · Export</div><h2>Artifacts</h2></div><p>Human report, agent contract, interoperability formats, and integrity records.</p></div>' +
+        artifactLinks +
+        '</section>'
+      : '') +
+    '<section id="findings" class="section-shell"><div class="section-heading"><div><div class="eyebrow">06 · Evidence</div><h2>All findings</h2></div><p>' +
     report.findings.length +
-    ' review candidates. Static signals require human validation.</p></section>' +
+    ' review candidates. Open one row for evidence, remediation, analysis, and human disposition.</p></div>' +
     (findings ||
       '<section class="report-section"><p>No candidates were found in the captured scope. This is not proof of safety.</p></section>') +
-    '<footer><h2>Limitations</h2><ul>' +
+    '</section><footer><h2>Limitations</h2><ul>' +
     report.limitations.map((limitation) => '<li>' + e(limitation) + '</li>').join('') +
-    '</ul><p>Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in this report.</p></footer></main></body></html>'
+    '</ul><p>Generated locally by Traceward. No scripts, external fonts, or tracking are embedded in this report.</p></footer></main></div></div></body></html>'
   );
 }
 export function toSarif(report: AuditReport): object {

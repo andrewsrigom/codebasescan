@@ -91,9 +91,12 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(!output.includes('<img src=x'));
   assert.ok(output.includes('&lt;script&gt;'));
   assert.ok(output.includes("default-src 'none'"));
+  assert.ok(output.includes('class="report-app"'));
   assert.ok(output.includes('Review summary'));
-  assert.ok(output.includes('Review priorities'));
-  assert.ok(output.includes('Need human review'));
+  assert.ok(output.includes('Top risks'));
+  assert.ok(output.includes('Human review required'));
+  assert.ok(output.includes('Technical data'));
+  assert.ok(output.includes('<details class="finding"'));
   assert.ok(output.includes('id="finding-1"'));
   assert.ok(output.includes('Selected review lenses'));
   assert.ok(output.includes('Observed signals and declared context'));
