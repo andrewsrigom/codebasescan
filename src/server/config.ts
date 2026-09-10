@@ -1,7 +1,12 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const bundledRulesDirectory = fileURLToPath(new URL('../../configs', import.meta.url));
+const bundledRulesDirectory = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'configs',
+);
 export interface Configuration {
   dataDirectory: string;
   databasePath: string;
