@@ -371,6 +371,24 @@ export interface ProjectProfile {
   issues: string[];
   truncated: boolean;
 }
+export interface ProjectEntrypointPresentation extends ProjectEntrypoint {
+  factKinds: ProjectFactKind[];
+  sensitiveOperations: number;
+}
+export interface ProjectProfilePresentation {
+  status: ProjectProfileStatus;
+  languages: ProjectProfile['languages'];
+  frameworks: ProjectFramework[];
+  entrypoints: ProjectEntrypointPresentation[];
+  symbolCount: number;
+  callCount: number;
+  factCount: number;
+  factCounts: [ProjectFactKind, number][];
+  filesAnalyzed: number;
+  nodesAnalyzed: number;
+  issues: string[];
+  truncated: boolean;
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;

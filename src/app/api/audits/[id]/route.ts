@@ -9,6 +9,7 @@ import {
   uuid,
 } from '../../../../domain/validation.ts';
 import { buildRemediationPlan } from '../../../../domain/remediation.ts';
+import { presentAudit } from '../../../../domain/workspace-presentation.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Context = {
@@ -23,9 +24,11 @@ export async function GET(request: Request, context: Context) {
     const id = uuid((await context.params).id);
     const database = store();
     const audit = database.audit(id);
+    const presented = presentAudit(audit);
     return Response.json(
       {
-        audit,
+        audit: presented.audit,
+        projectProfile: presented.projectProfile,
         events: database.events(id),
         workerOnline: database.workerOnline(),
         remediationPlan: audit.report ? buildRemediationPlan(audit.report) : null,

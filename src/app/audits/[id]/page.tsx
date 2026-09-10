@@ -4,6 +4,7 @@ import { AuditWorkspace } from '../../../components/audit-workspace.tsx';
 import { uuid } from '../../../domain/validation.ts';
 import { compareReports } from '../../../domain/comparison.ts';
 import { buildRemediationPlan } from '../../../domain/remediation.ts';
+import { presentAudit } from '../../../domain/workspace-presentation.ts';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export default async function AuditPage({
@@ -38,10 +39,12 @@ export default async function AuditPage({
           );
   const comparison =
     audit.report && previous?.report ? compareReports(previous.report, audit.report) : undefined;
+  const presented = presentAudit(audit);
   return (
     <AuditWorkspace
       key={audit.id}
-      initialAudit={audit}
+      initialAudit={presented.audit}
+      initialProjectProfile={presented.projectProfile}
       initialEvents={database.events(id)}
       initialWorkerOnline={database.workerOnline()}
       projects={database.projects().map(({ id, name }) => ({ id, name }))}

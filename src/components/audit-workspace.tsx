@@ -8,9 +8,9 @@ import type {
   AuditEvent,
   Finding,
   Project,
+  ProjectProfilePresentation,
   SecurityControlReviewDecision,
 } from '../domain/types.ts';
-import { effectiveEntrypointFacts, sensitiveProjectFactKinds } from '../domain/project-graph.ts';
 import { Icon } from './icon.tsx';
 import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx';
 import { NewAudit, mutate } from './new-audit.tsx';
@@ -36,6 +36,7 @@ type Tab = (typeof tabs)[number];
 const tabId = (label: Tab) => label.toLowerCase().replaceAll(' ', '-');
 export function AuditWorkspace({
   initialAudit,
+  initialProjectProfile,
   initialEvents,
   initialWorkerOnline,
   projects,
@@ -44,6 +45,7 @@ export function AuditWorkspace({
   initialRemediationPlan,
 }: {
   initialAudit: Audit;
+  initialProjectProfile?: ProjectProfilePresentation;
   initialEvents: AuditEvent[];
   initialWorkerOnline: boolean;
   projects: Pick<Project, 'id' | 'name'>[];
@@ -52,6 +54,7 @@ export function AuditWorkspace({
   initialRemediationPlan: RemediationPlan | null;
 }) {
   const [audit, setAudit] = useState(initialAudit);
+  const [projectProfile, setProjectProfile] = useState(initialProjectProfile);
   const [events, setEvents] = useState(initialEvents);
   const [workerOnline, setWorkerOnline] = useState(initialWorkerOnline);
   const [tab, setTab] = useState<Tab>('Overview');
@@ -81,11 +84,13 @@ export function AuditWorkspace({
     if (!response.ok) throw new Error('Could not refresh this audit.');
     const result = (await response.json()) as {
       audit: Audit;
+      projectProfile?: ProjectProfilePresentation;
       events: AuditEvent[];
       workerOnline: boolean;
       remediationPlan: RemediationPlan | null;
     };
     setAudit(result.audit);
+    setProjectProfile(result.projectProfile);
     setEvents(result.events);
     setWorkerOnline(result.workerOnline);
     setRemediationPlan(result.remediationPlan);
@@ -174,7 +179,7 @@ export function AuditWorkspace({
           : 'No pending candidate decisions in the captured scope.';
   const investigations = findings.filter((finding) => finding.analysis?.provider);
   const projectMapRows = useMemo(() => {
-    const profile = report?.projectProfile;
+    const profile = projectProfile;
     if (!profile) return [];
     const normalized = mapQuery.trim().toLowerCase();
     return profile.entrypoints
@@ -187,24 +192,16 @@ export function AuditWorkspace({
       )
       .slice(0, 200)
       .map((entrypoint) => {
-        const facts = effectiveEntrypointFacts(profile, entrypoint);
-        const factKinds = new Set(facts.map((fact) => fact.kind));
+        const factKinds = new Set(entrypoint.factKinds);
         return {
           entrypoint,
           authentication: factKinds.has('authentication'),
           authorization: factKinds.has('authorization') || factKinds.has('resource-scope'),
           validation: factKinds.has('validation'),
-          sensitiveOperations: facts.filter((fact) => sensitiveProjectFactKinds.has(fact.kind))
-            .length,
+          sensitiveOperations: entrypoint.sensitiveOperations,
         };
       });
-  }, [mapQuery, report?.projectProfile]);
-  const projectFactCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const fact of report?.projectProfile?.facts ?? [])
-      counts.set(fact.kind, (counts.get(fact.kind) ?? 0) + 1);
-    return [...counts.entries()].sort((left, right) => right[1] - left[1]);
-  }, [report?.projectProfile]);
+  }, [mapQuery, projectProfile]);
   const osvRun = report?.scanners.find((scanner) => scanner.id === 'osv');
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex: number | null = null;
@@ -657,41 +654,40 @@ export function AuditWorkspace({
               <h2>Project map</h2>
               <p>Frameworks, request boundaries, and security-relevant source facts.</p>
             </div>
-            <Badge tone={report?.projectProfile?.status === 'complete' ? 'success' : 'medium'}>
-              {report?.projectProfile?.status ?? 'not generated'}
+            <Badge tone={projectProfile?.status === 'complete' ? 'success' : 'medium'}>
+              {projectProfile?.status ?? 'not generated'}
             </Badge>
           </div>
-          {report?.projectProfile ? (
+          {projectProfile ? (
             <>
               <div className="panel-body">
                 <div className="detail-row">
                   <span>Languages</span>
-                  <strong>{report.projectProfile.languages.join(', ') || 'Unsupported'}</strong>
+                  <strong>{projectProfile.languages.join(', ') || 'Unsupported'}</strong>
                 </div>
                 <div className="detail-row">
                   <span>Frameworks</span>
                   <strong>
-                    {report.projectProfile.frameworks.map((item) => item.name).join(', ') ||
+                    {projectProfile.frameworks.map((item) => item.name).join(', ') ||
                       'No recognized framework'}
                   </strong>
                 </div>
                 <div className="detail-row">
                   <span>Structural coverage</span>
                   <strong>
-                    {report.projectProfile.filesAnalyzed} files ·{' '}
-                    {report.projectProfile.nodesAnalyzed} AST nodes
+                    {projectProfile.filesAnalyzed} files · {projectProfile.nodesAnalyzed} AST nodes
                   </strong>
                 </div>
                 <div className="checklist-summary">
-                  {projectFactCounts.slice(0, 12).map(([kind, count]) => (
+                  {projectProfile.factCounts.slice(0, 12).map(([kind, count]) => (
                     <Badge key={kind}>
                       {kind.replaceAll('-', ' ')} {count}
                     </Badge>
                   ))}
                 </div>
-                {report.projectProfile.issues.length > 0 && (
+                {projectProfile.issues.length > 0 && (
                   <ul className="limitations">
-                    {report.projectProfile.issues.map((issue) => (
+                    {projectProfile.issues.map((issue) => (
                       <li key={issue}>{issue}</li>
                     ))}
                   </ul>
@@ -709,7 +705,7 @@ export function AuditWorkspace({
                 </div>
                 <Badge>
                   {projectMapRows.length}
-                  {report.projectProfile.entrypoints.length > 200 ? ' shown' : ' entry points'}
+                  {projectProfile.entrypoints.length > 200 ? ' shown' : ' entry points'}
                 </Badge>
               </div>
               <div className="table-scroll">
@@ -1124,39 +1120,39 @@ export function AuditWorkspace({
               </div>
             </section>
           )}
-          {report?.projectProfile && (
+          {projectProfile && (
             <section className="panel">
               <div className="panel-header">
                 <h2>Project structure</h2>
-                <Badge tone={report.projectProfile.status === 'complete' ? 'success' : 'medium'}>
-                  {report.projectProfile.status}
+                <Badge tone={projectProfile.status === 'complete' ? 'success' : 'medium'}>
+                  {projectProfile.status}
                 </Badge>
               </div>
               <div className="panel-body">
                 <div className="detail-row">
                   <span>Frameworks</span>
                   <strong>
-                    {report.projectProfile.frameworks.map((item) => item.name).join(', ') ||
+                    {projectProfile.frameworks.map((item) => item.name).join(', ') ||
                       'None detected'}
                   </strong>
                 </div>
                 <div className="detail-row">
                   <span>Entry points</span>
-                  <strong>{report.projectProfile.entrypoints.length}</strong>
+                  <strong>{projectProfile.entrypoints.length}</strong>
                 </div>
                 <div className="detail-row">
                   <span>Symbols / call edges</span>
                   <strong>
-                    {report.projectProfile.symbols.length} / {report.projectProfile.calls.length}
+                    {projectProfile.symbolCount} / {projectProfile.callCount}
                   </strong>
                 </div>
                 <div className="detail-row">
                   <span>Security facts</span>
-                  <strong>{report.projectProfile.facts.length}</strong>
+                  <strong>{projectProfile.factCount}</strong>
                 </div>
-                {report.projectProfile.issues.length > 0 && (
+                {projectProfile.issues.length > 0 && (
                   <p className="small muted">
-                    {report.projectProfile.issues.length} issue(s) keep structural coverage partial.
+                    {projectProfile.issues.length} issue(s) keep structural coverage partial.
                   </p>
                 )}
               </div>

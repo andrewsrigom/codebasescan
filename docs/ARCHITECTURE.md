@@ -74,6 +74,8 @@ collect_context -> assess
 
 Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
 
+The UI receives a compact project-map projection instead of the full symbol/import/call graph.
+
 ## Deterministic evidence
 
 `project-profile.ts` parses captured TypeScript/JavaScript as data and maps Next.js, Express, tRPC, Prisma, Drizzle, Supabase, Auth.js, GraphQL, Zod, Joi, Valibot, and billing signals plus entry points, symbols, imports, direct local call edges, and security facts under fixed limits. It resolves bounded TypeScript path aliases and contained workspace package exports from declarative JSON/JSONC without loading the target compiler or package. Imported workspace reexport bridges are followed for at most five steps. A root `traceward.config.json`/JSONC may extend fixed tenant/owner/role/billing/token vocabulary, security helper names, and constrained public-route patterns. It cannot add code, regex, scanner plugins, suppressions, or arbitrary paths; executable Traceward configuration is ignored.

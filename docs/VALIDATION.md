@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 248 passed                                                             |
+| npm test                      | 249 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
 | npm run benchmark             | TP 45, FP 1, FN 0; precision 0.9783, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
@@ -28,10 +28,10 @@ Environment:
 | SaaS benchmark subset         | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | npm run build                 | Passed                                                                 |
 | npm run test:e2e              | 7 passed in Chromium                                                   |
-| npm run test:package          | 57 files; 160,862 packed bytes; required CLI/rules present             |
+| npm run test:package          | 58 files; required CLI and scanner files present                       |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
-| Browser workspace             | Dependency plans rendered real data with no overlay or console error   |
+| Browser workspace             | Real `seusaas` report rendered with compact project-map data           |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |

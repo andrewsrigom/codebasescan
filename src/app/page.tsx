@@ -3,6 +3,7 @@ import { AuditWorkspace } from '../components/audit-workspace.tsx';
 import { NewAudit } from '../components/new-audit.tsx';
 import { EmptyState } from '../components/ui.tsx';
 import { buildRemediationPlan } from '../domain/remediation.ts';
+import { presentAudit } from '../domain/workspace-presentation.ts';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export default function HomePage() {
@@ -36,10 +37,12 @@ export default function HomePage() {
         </section>
       </>
     );
+  const presented = presentAudit(latest);
   return (
     <AuditWorkspace
       key={latest.id}
-      initialAudit={latest}
+      initialAudit={presented.audit}
+      initialProjectProfile={presented.projectProfile}
       initialEvents={database.events(latest.id)}
       initialWorkerOnline={database.workerOnline()}
       projects={projects}
