@@ -2,5 +2,15 @@
   "id": "saas-security-rules",
   "category": "saas",
   "scanners": ["saas"],
-  "expectedRuleIds": ["TW-SAAS001", "TW-SAAS002", "TW-SAAS003", "TW-SAAS004"]
+  "expectedRuleIds": [
+    "TW-SAAS001",
+    "TW-SAAS002",
+    "TW-SAAS003",
+    "TW-SAAS004",
+    "TW-SAAS005",
+    "TW-SAAS006",
+    "TW-SAAS007",
+    "TW-SAAS008",
+    "TW-SAAS009"
+  ]
 }
