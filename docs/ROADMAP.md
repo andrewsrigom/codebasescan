@@ -83,7 +83,7 @@ Run one economical and one explicitly configured stronger OpenAI model plus one 
 
 ## Public release
 
-The README now uses a verified runtime screenshot and the repository includes Apache-2.0, contribution/security policies, issue templates, CI, and dependency updates.
+The repository includes an MIT license, contribution and security policies, issue templates, CI, and dependency updates.
 
 Before publishing: record a short demo, run a fresh comprehensive accessibility audit, verify the CodebaseScan name/trademark, test a clean clone, choose any native-platform support, and enable a private vulnerability-reporting route. Publish CI status only from a real public workflow.
 

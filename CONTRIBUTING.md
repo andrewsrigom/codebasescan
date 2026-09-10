@@ -61,4 +61,4 @@ Keep changes reviewable and commits focused. Explain:
 
 Large architecture changes need a short entry in [Engineering decisions](docs/DECISIONS.md).
 
-By contributing, you confirm that you can license the change under Apache-2.0. Do not copy incompatible third-party scanner rules into configs.
+By contributing, you confirm that you can license the change under MIT. Do not copy incompatible third-party scanner rules into configs.

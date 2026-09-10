@@ -3,8 +3,16 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "A local-first, evidence-led security review workbench.",
-  "license": "Apache-2.0",
+  "description": "Local-first static auditing for Node.js, React, and Next.js codebases.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewsrigom/codebasescan.git"
+  },
+  "bugs": {
+    "url": "https://github.com/andrewsrigom/codebasescan/issues"
+  },
+  "homepage": "https://github.com/andrewsrigom/codebasescan#readme",
   "bin": {
     "codebasescan": "./bin/codebasescan.mjs"
   },
@@ -13,8 +21,7 @@
     "configs",
     "dist",
     "README.md",
-    "LICENSE",
-    "NOTICE"
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.16.0"
