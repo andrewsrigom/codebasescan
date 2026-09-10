@@ -40,6 +40,17 @@ test('applicable middleware and owner scope protect a dynamic read route', () =>
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT002'));
 });
 
+test('a scoped service helper protects a dynamic read route', () => {
+  const result = scan(`
+    export async function GET(_request: Request, { params }) {
+      const session = await getAppSession();
+      return Response.json(await getAccountForUser(session.user.id, params.accountId));
+    }
+  `);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT001'));
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT002'));
+});
+
 test('Next.js cache rule distinguishes request state from explicit cached input', () => {
   const vulnerableSnapshot = snapshotFromFiles({
     'package.json': '{"dependencies":{"next":"16.0.0"}}',
