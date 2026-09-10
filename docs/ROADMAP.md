@@ -28,6 +28,7 @@
 - Node.js supply-chain review now covers high-risk lifecycle scripts, unsafe/unpinned sources, lockfile URLs and integrity, registry hosts, and npm manifest/lock drift without installing packages.
 - Pinned Knip analysis runs against a script-free sanitized manifest with every target plugin disabled; reports retain bounded unused-file, dependency, export, and type candidates.
 - TypeScript quality metrics now retain function complexity, size, and parameter hotspots and import only bounded existing coverage aggregates.
+- Bounded architecture, quality, dead-code, and duplication reports now preserve exact totals alongside retained detail counts; Semgrep parser diagnostics expose only safe snapshot file/line locations.
 - Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
 - Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
 

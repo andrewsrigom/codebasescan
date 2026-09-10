@@ -32,3 +32,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added selected five-hop taint propagation and source rules for command injection, path traversal, NoSQL, unsafe deserialization, dynamic regex, prototype pollution, weak digests, and mass assignment.
 - Added tRPC procedure mapping and detection for Drizzle, Auth.js, GraphQL, Zod, Joi, and Valibot.
 - Added safe declarative Knip settings, workspace manifests, package-script entry hints, and TypeScript path aliases to reduce monorepo dead-code noise without executing target configuration.
+- Preserved exact totals for bounded architecture, quality, dead-code, and duplicate reports, and added safe file/line Semgrep parser diagnostics.
