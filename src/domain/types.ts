@@ -113,6 +113,7 @@ export interface Finding {
     | 'accessibility'
     | 'privacy'
     | 'reliability'
+    | 'environment'
     | 'supply-chain'
     | 'http-probe'
     | 'osv'
@@ -507,6 +508,46 @@ export interface RiskCorrelation {
     correlatedFindings: number;
     uncorrelatedFindings: number;
     factKinds: Partial<Record<ProjectFactKind, number>>;
+  };
+  truncated: boolean;
+  limitations: string[];
+}
+export interface EnvironmentContractLocation {
+  file: string;
+  line: number;
+  syntax: 'process.env' | 'import.meta.env';
+  context: 'server' | 'client';
+}
+export interface EnvironmentContractVariable {
+  name: string;
+  status: 'documented' | 'undocumented' | 'platform-provided' | 'unverified';
+  declaredIn: string[];
+  locations: EnvironmentContractLocation[];
+  truncated: boolean;
+}
+export interface EnvironmentDynamicAccess {
+  file: string;
+  line: number;
+  syntax: 'process.env' | 'import.meta.env';
+}
+export interface EnvironmentContractAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  templates: { file: string; variables: number }[];
+  variables: EnvironmentContractVariable[];
+  undocumented: string[];
+  unverified: string[];
+  unusedDeclarations: string[];
+  dynamicAccesses: EnvironmentDynamicAccess[];
+  summary: {
+    used: number;
+    documented: number;
+    undocumented: number;
+    platformProvided: number;
+    unverified: number;
+    unusedDeclarations: number;
+    dynamicAccesses: number;
   };
   truncated: boolean;
   limitations: string[];

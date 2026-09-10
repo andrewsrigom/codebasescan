@@ -75,6 +75,7 @@ const finding = z.looseObject({
     'accessibility',
     'privacy',
     'reliability',
+    'environment',
     'supply-chain',
     'http-probe',
     'osv',
