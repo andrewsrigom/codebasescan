@@ -49,6 +49,7 @@ export interface Evidence {
   file: string;
   startLine: number;
   endLine: number;
+  focusLine?: number;
   excerpt: string;
   fileDigest: string;
   observation: string;
@@ -325,6 +326,7 @@ export interface ProjectSymbol {
   id: string;
   file: string;
   line: number;
+  endLine?: number;
   name: string;
   kind: 'function' | 'arrow-function' | 'method';
   exported: boolean;
@@ -471,6 +473,43 @@ export interface ProjectProfilePresentation {
   nodesAnalyzed: number;
   issues: string[];
   truncated: boolean;
+}
+export type SourceRiskPathStepKind = 'entrypoint' | 'call' | 'sensitive-operation';
+export interface SourceRiskPathStep {
+  kind: SourceRiskPathStepKind;
+  referenceId: string;
+  file: string;
+  line: number;
+  label: string;
+}
+export interface SourceRiskPath {
+  id: string;
+  entrypointId: string;
+  route?: string;
+  methods: string[];
+  factId: string;
+  factKind: ProjectFactKind;
+  findingIds: string[];
+  priority: number;
+  confidence: 'high';
+  steps: SourceRiskPathStep[];
+  truncated: boolean;
+}
+export interface RiskCorrelation {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  paths: SourceRiskPath[];
+  summary: {
+    paths: number;
+    entrypoints: number;
+    eligibleFindings: number;
+    correlatedFindings: number;
+    uncorrelatedFindings: number;
+    factKinds: Partial<Record<ProjectFactKind, number>>;
+  };
+  truncated: boolean;
+  limitations: string[];
 }
 export interface ArchitectureHotspot {
   file: string;
@@ -641,7 +680,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -656,6 +695,7 @@ export interface AuditReport {
   dependencies: Dependency[];
   scopePreflight?: AuditScopePreflight;
   projectProfile?: ProjectProfile;
+  riskCorrelation?: RiskCorrelation;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;

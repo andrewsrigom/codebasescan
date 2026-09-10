@@ -70,7 +70,8 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   for (const scanner of ['accessibility-static', 'privacy-static', 'reliability-static'])
     assert.ok(store.audit(audit.id).report?.scanners.some((run) => run.id === scanner));
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
-  assert.equal(store.audit(audit.id).report?.schemaVersion, 6);
+  assert.equal(store.audit(audit.id).report?.schemaVersion, 7);
+  assert.ok(store.audit(audit.id).report?.riskCorrelation);
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.architecture);
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.duplication);
   assert.ok(store.audit(audit.id).report?.supplyChainAnalysis);

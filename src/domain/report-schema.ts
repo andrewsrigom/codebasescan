@@ -10,6 +10,7 @@ const evidence = z.looseObject({
   file: shortText,
   startLine: z.number().int().positive(),
   endLine: z.number().int().positive(),
+  focusLine: z.number().int().positive().optional(),
   excerpt: boundedText,
   fileDigest: shortText,
   observation: shortText,
@@ -324,6 +325,71 @@ const projectProfile = z.looseObject({
   truncated: z.boolean(),
 });
 
+const riskCorrelation = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  paths: z
+    .array(
+      z.object({
+        id: shortText,
+        entrypointId: shortText,
+        route: shortText.optional(),
+        methods: z.array(shortText).max(20),
+        factId: shortText,
+        factKind: z.enum([
+          'authentication',
+          'authorization',
+          'validation',
+          'database',
+          'billing',
+          'raw-sql',
+          'outbound-request',
+          'command-execution',
+          'file-access',
+          'redirect',
+          'cookie',
+          'browser-storage',
+          'response',
+          'secret-access',
+          'resource-scope',
+          'logging',
+          'error-handling',
+          'webhook-verification',
+          'rate-limit',
+          'idempotency',
+          'csrf',
+        ]),
+        findingIds: z.array(shortText).max(50),
+        priority: z.number().int().min(0).max(100),
+        confidence: z.literal('high'),
+        steps: z
+          .array(
+            z.object({
+              kind: z.enum(['entrypoint', 'call', 'sensitive-operation']),
+              referenceId: shortText,
+              file: shortText,
+              line: z.number().int().positive(),
+              label: shortText,
+            }),
+          )
+          .max(10),
+        truncated: z.boolean(),
+      }),
+    )
+    .max(300),
+  summary: z.object({
+    paths: z.number().int().nonnegative().max(300),
+    entrypoints: z.number().int().nonnegative().max(10_000),
+    eligibleFindings: z.number().int().nonnegative().max(10_000),
+    correlatedFindings: z.number().int().nonnegative().max(10_000),
+    uncorrelatedFindings: z.number().int().nonnegative().max(10_000),
+    factKinds: z.partialRecord(z.string(), z.number().int().nonnegative().max(300)),
+  }),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -518,6 +584,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(4),
     z.literal(5),
     z.literal(6),
+    z.literal(7),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -551,6 +618,7 @@ export const auditReportSchema = z.looseObject({
   dependencies: z.array(dependency).max(100_000),
   scopePreflight: scopePreflight.optional(),
   projectProfile: projectProfile.optional(),
+  riskCorrelation: riskCorrelation.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

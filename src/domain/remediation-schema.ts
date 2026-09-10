@@ -118,6 +118,7 @@ const planSchema = z.object({
       z.literal(4),
       z.literal(5),
       z.literal(6),
+      z.literal(7),
     ]),
   }),
   policy: stringList,

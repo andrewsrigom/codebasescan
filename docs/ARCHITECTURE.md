@@ -95,6 +95,10 @@ named storage/external boundaries, review-priority paths, report-only out-of-sco
 script names for a separately authorized correction executor. Script names are kept only when the
 root manifest declares them. They are never executed by the audit. The profiler derives a separate
 bounded data map from observed source facts and never treats declared context as observed flow.
+Every parsed function symbol retains its exact AST line range. After findings are normalized, the
+risk-correlation layer can therefore connect a finding to a reachable symbol, resolved call path,
+and sensitive-operation fact without guessing from filenames. The report also preserves eligible
+findings that could not be correlated and states that a static path is not runtime exploitability.
 
 `ast-security.ts` uses profile relationships for authentication, permission, and tenant/owner scope. It performs bounded local and selected five-hop request-flow checks for SQL/NoSQL, SSRF, redirects, process execution, filesystem paths, unsafe deserialization, dynamic regular expressions, property writes, mass assignment, uploads, webhook ordering, cookie attributes, and client/server configuration. `saas-security.ts` adds focused source-to-sink rules for billing trust, ownership/privilege assignment, token entropy/lifecycle, error responses, sensitive logs/URLs, and OAuth redirects. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target executable configuration, plugins, types, and dependencies are never loaded or executed.
 

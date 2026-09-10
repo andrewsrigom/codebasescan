@@ -62,6 +62,7 @@ export function sourceEvidence(
     file: file.path,
     startLine,
     endLine,
+    focusLine: line,
     excerpt: redact(lines.slice(startLine - 1, endLine).join('\n')).slice(0, 2200),
     fileDigest: file.digest,
     observation,

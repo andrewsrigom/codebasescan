@@ -21,6 +21,7 @@ import { attachProvenance } from '../domain/provenance.ts';
 import { buildSecurityChecklist } from '../domain/checklist.ts';
 import { auditModeSelections, modeEnabled, resolveAuditModes } from '../domain/audit-modes.ts';
 import { enrichFindingQuality } from '../domain/finding-quality.ts';
+import { buildRiskCorrelation } from '../domain/risk-paths.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
 import { scanExternal } from '../scanners/external.ts';
@@ -537,6 +538,9 @@ export function buildAuditGraph(options: {
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
         dependencies: state.dependencies,
       });
+      const riskCorrelation = state.projectProfile
+        ? buildRiskCorrelation(state.projectProfile, findings)
+        : undefined;
       const mechanicalAnalysis =
         state.architectureAnalysis || state.duplicationAnalysis
           ? {
@@ -546,7 +550,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 6,
+        schemaVersion: 7,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -561,6 +565,7 @@ export function buildAuditGraph(options: {
         dependencies: state.dependencies,
         ...(scopePreflight ? { scopePreflight } : {}),
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
+        ...(riskCorrelation ? { riskCorrelation } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
