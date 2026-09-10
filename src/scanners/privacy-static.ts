@@ -21,6 +21,15 @@ function stringValue(expression: ts.Expression | undefined): string | undefined 
   return expression && ts.isStringLiteralLike(expression) ? expression.text : undefined;
 }
 
+function loggedPayloadText(expression: ts.Expression): string {
+  if (ts.isStringLiteralLike(expression)) return '';
+  if (ts.isTemplateExpression(expression))
+    return expression.templateSpans
+      .map((span) => span.expression.getText(expression.getSourceFile()))
+      .join(' ');
+  return expression.getText(expression.getSourceFile());
+}
+
 function privacyFinding(
   file: SourceFile,
   source: ts.SourceFile,
@@ -60,7 +69,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
     if (ts.isCallExpression(node)) {
       const callee = callName(node.expression);
       const key = stringValue(node.arguments[0]);
-      const argumentText = node.arguments.map((argument) => argument.getText(source)).join(' ');
+      const loggedPayloads = node.arguments.map(loggedPayloadText);
       if (
         key &&
         sensitive.test(key) &&
@@ -82,8 +91,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
         );
       if (
         /(?:^|\.)(?:console|logger|log)\.(?:debug|info|log|warn|error)$/i.test(callee) &&
-        sensitive.test(argumentText) &&
-        !protectedValue.test(argumentText)
+        loggedPayloads.some((payload) => sensitive.test(payload) && !protectedValue.test(payload))
       )
         findings.push(
           privacyFinding(
@@ -146,7 +154,7 @@ export function scanPrivacyStatic(snapshot: Snapshot): { findings: Finding[]; ru
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded URL, logging, and browser-storage privacy candidates; ${parseFailures} parse failure(s). Data purpose, retention, consent, and runtime transfers remain unverified.`
         : 'No supported runtime source was available for static privacy review.',
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }

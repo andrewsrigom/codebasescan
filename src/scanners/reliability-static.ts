@@ -49,6 +49,11 @@ function hasTimeout(node: ts.CallExpression): boolean {
   return /\b(?:signal|timeout)\s*:|AbortSignal\.(?:timeout|any)\s*\(/.test(text);
 }
 
+function hasDocumentedRationale(source: ts.SourceFile, node: ts.CatchClause): boolean {
+  const blockText = node.block.getText(source).slice(1, -1);
+  return /\/\/[^\r\n]*\S|\/\*[\s\S]*?\S[\s\S]*?\*\//.test(blockText);
+}
+
 function scanFile(
   file: SourceFile,
   requestBoundary: boolean,
@@ -74,7 +79,11 @@ function scanFile(
           'Direct outbound call in a request boundary has no signal or timeout option.',
         ),
       );
-    if (ts.isCatchClause(node) && node.block.statements.length === 0)
+    if (
+      ts.isCatchClause(node) &&
+      node.block.statements.length === 0 &&
+      !hasDocumentedRationale(source, node)
+    )
       findings.push(
         reliabilityFinding(
           file,
@@ -82,10 +91,10 @@ function scanFile(
           node,
           'TW-REL002',
           'Caught failure is silently discarded',
-          'An empty catch block discards an exception with no recovery, observability, or explicit rationale.',
+          'An undocumented empty catch block discards an exception with no recovery, observability, or explicit rationale.',
           'Handle the expected failure, add bounded observability, rethrow it, or document a narrow intentional ignore next to explicit logic.',
           'CWE-390',
-          'Catch block contains no statements.',
+          'Catch block contains no statements or documented rationale.',
         ),
       );
     ts.forEachChild(node, visit);
@@ -131,7 +140,7 @@ export function scanReliabilityStatic(
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded request-timeout and swallowed-error candidates; ${parseFailures} parse failure(s). Platform timeouts, queues, retries, and runtime recovery remain unverified.`
         : 'No supported runtime source was available for static reliability review.',
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }

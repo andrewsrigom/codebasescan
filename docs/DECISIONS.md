@@ -53,6 +53,14 @@ left unverified because its accessible name may be supplied by the caller. Exact
 `htmlFor`/`id` expressions remain linkable. Scanner version 0.2.0 and workflow v14 prevent old
 results from being presented as current calibration.
 
+## 2026-09-10 — corpus-calibrated privacy and reliability semantics
+
+Privacy log analysis inspects payload expressions rather than matching sensitive words in static
+human-readable messages. Template interpolations remain analyzable. Reliability rule TW-REL002 now
+means an undocumented empty catch; a comment explaining a narrow intentional ignore is retained as
+review context without becoming a finding. The scanners and audit-mode pack move to 0.2.0 and the
+workflow moves to v15.
+
 ## 2026-09-10 — declared context and observed data map
 
 Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script

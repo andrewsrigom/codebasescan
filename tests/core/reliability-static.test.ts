@@ -30,3 +30,14 @@ test('bounded outbound calls and explicit failure handling avoid reliability can
   const result = scanReliabilityStatic(snapshot, profileProject(snapshot).profile);
   assert.deepEqual(result.findings, []);
 });
+
+test('a documented narrow ignore is not an undocumented empty catch', () => {
+  const snapshot = snapshotOf(`
+    export function remember(value) {
+      try { localStorage.setItem('preference', value); }
+      catch { /* Storage can be unavailable in a browser sandbox. */ }
+    }
+  `);
+  const result = scanReliabilityStatic(snapshot, profileProject(snapshot).profile);
+  assert.deepEqual(result.findings, []);
+});

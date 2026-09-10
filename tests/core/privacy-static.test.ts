@@ -27,3 +27,22 @@ test('non-sensitive keys and protected log values avoid privacy candidates', () 
   );
   assert.deepEqual(result.findings, []);
 });
+
+test('sensitive words in a static log message are not treated as logged data', () => {
+  const result = scanPrivacyStatic(
+    snapshotOf(`
+      logger.info('Session check finished without an authenticated user');
+      logger.warn('Never print passwords, tokens, email addresses, or raw logs');
+      logger.info(\`session state: \${sanitize(session)}\`);
+    `),
+  );
+  assert.deepEqual(result.findings, []);
+});
+
+test('sensitive template expressions remain privacy candidates', () => {
+  const result = scanPrivacyStatic(snapshotOf('logger.info(`signed in as ${email}`);'));
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-PRIV002'],
+  );
+});
