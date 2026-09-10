@@ -97,6 +97,9 @@ traceward task traceward-report/<audit-id> <task-id> --output traceward-task.jso
 The generated task is analysis input, not permission to edit files, run project commands, access
 the network, suppress findings, or publish a report.
 
+Repeated candidates from the same rule and primary file are grouped into one task while retaining
+every original finding and evidence reference.
+
 Use `traceward audit . --format agent-plan` when only the machine work queue is needed. Use
 `traceward audit . --format rule-quality` to inspect detector provenance, declared fixture status,
 observed dispositions, standards mappings, and limitations for the rules applied in that audit.

@@ -68,6 +68,13 @@ TW-SAAS004 now requires an AST value reference to the catch binding. A response 
 the same text. Direct objects, messages, stacks, causes, and helper calls receiving the caught value
 remain review candidates. SaaS scanner and mode-pack versions move to 0.3.0; workflow moves to v16.
 
+## 2026-09-10 — agent plan contract v3 grouping
+
+Agent-plan version 3 groups unresolved non-dependency findings that share task kind, source rule, and
+primary file. Every original finding, fingerprint, evidence ID, severity, and file stays referenced;
+only repetitive work items collapse. Task IDs now derive from the stable group key, so version 2
+consumers must regenerate plans from their immutable audit report rather than mixing task IDs.
+
 ## 2026-09-10 — declared context and observed data map
 
 Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script

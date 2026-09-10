@@ -51,7 +51,7 @@ test('remediation plan is deterministic, bounded, and contains references instea
   const first = buildRemediationPlan(report);
   const second = buildRemediationPlan(report);
   assert.deepEqual(first, second);
-  assert.equal(first.schemaVersion, 2);
+  assert.equal(first.schemaVersion, 3);
   assert.equal(first.tasks.length, 1);
   assert.equal(first.tasks[0]?.kind, 'upgrade_dependency');
   assert.equal(first.tasks[0]?.target.fixCandidate, '1.2.5');
@@ -78,7 +78,7 @@ test('agent plan JSON Schema describes the current required contract', () => {
     properties?: { schemaVersion?: { const?: number }; tasks?: unknown };
     required?: string[];
   };
-  assert.equal(schema.properties?.schemaVersion?.const, 2);
+  assert.equal(schema.properties?.schemaVersion?.const, 3);
   assert.ok(schema.required?.includes('tasks'));
 });
 
@@ -141,6 +141,22 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
       ['traceward', 'audit', '.', '--format', 'json'],
     ],
   );
+});
+
+test('same-rule findings in one file become one task without losing references', () => {
+  const report = sampleReport();
+  report.findings.push({
+    ...structuredClone(report.findings[0]!),
+    id: 'second-finding',
+    fingerprint: 'second-fingerprint',
+  });
+  const plan = buildRemediationPlan(report);
+  assert.equal(plan.tasks.length, 1);
+  assert.deepEqual(
+    plan.tasks[0]?.findings.map((finding) => finding.id),
+    [report.findings[0]?.id, 'second-finding'],
+  );
+  assert.equal(plan.summary.rootCauseGroups, 1);
 });
 
 test('remediation result separates resolved, remaining, and unexecuted checks', () => {

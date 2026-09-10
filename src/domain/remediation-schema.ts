@@ -104,7 +104,7 @@ const task = z.object({
 });
 
 const planSchema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   kind: z.literal('traceward-remediation-plan'),
   createdAt: shortText,
   audit: z.object({

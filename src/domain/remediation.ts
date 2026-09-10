@@ -17,7 +17,7 @@ import type {
 import { digest, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
-export const remediationPlanVersion = 2 as const;
+export const remediationPlanVersion = 3 as const;
 export const remediationResultVersion = 1 as const;
 const maximumTasks = 2_000;
 
@@ -485,21 +485,41 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
   });
 }
 
-function findingTask(report: AuditReport, finding: Finding): RemediationTask {
+function findingTaskKind(finding: Finding): RemediationTaskKind {
   const isConfiguration = finding.category === 'configuration' || finding.source === 'posture';
-  const kind: RemediationTaskKind =
-    finding.disposition === 'confirmed'
-      ? isConfiguration
-        ? 'review_configuration'
-        : 'patch_source'
-      : 'investigate_finding';
-  const id = taskId(kind, finding.fingerprint);
-  const files = unique(finding.evidence.map((item) => item.file));
-  const confidence = finding.confidence ?? 'medium';
-  const exposure = finding.exposure ?? 'unknown';
-  const ranking = priority(finding.severity, exposure, confidence);
-  const changeRisk: RemediationChangeRisk = ['authentication', 'authorization', 'secrets'].includes(
-    finding.category,
+  return finding.disposition === 'confirmed'
+    ? isConfiguration
+      ? 'review_configuration'
+      : 'patch_source'
+    : 'investigate_finding';
+}
+
+function findingGroupKey(finding: Finding): string {
+  const file = unique(finding.evidence.map((item) => item.file))[0] ?? 'unknown';
+  return `${findingTaskKind(finding)}:${finding.source}:${finding.ruleId}:${file}`;
+}
+
+function findingTask(report: AuditReport, groupedFindings: Finding[]): RemediationTask {
+  const findings = [...groupedFindings].sort(
+    (left, right) =>
+      severityRank(left.severity) - severityRank(right.severity) || left.id.localeCompare(right.id),
+  );
+  const finding = findings[0]!;
+  const isConfiguration = finding.category === 'configuration' || finding.source === 'posture';
+  const kind = findingTaskKind(finding);
+  const files = unique(findings.flatMap((item) => item.evidence.map((evidence) => evidence.file)));
+  const causeKey = `${finding.source}:${finding.ruleId}:${files[0] ?? 'unknown'}`;
+  const id = taskId(kind, causeKey);
+  const severity = findings.reduce(
+    (highest, item) =>
+      severityRank(item.severity) < severityRank(highest) ? item.severity : highest,
+    finding.severity,
+  );
+  const confidence = lowestConfidence(findings);
+  const exposure = highestExposure(findings);
+  const ranking = priority(severity, exposure, confidence);
+  const changeRisk: RemediationChangeRisk = findings.some((item) =>
+    ['authentication', 'authorization', 'secrets'].includes(item.category),
   )
     ? 'high'
     : isConfiguration
@@ -511,24 +531,27 @@ function findingTask(report: AuditReport, finding: Finding): RemediationTask {
     status: 'ready',
     priority: ranking.score,
     priorityFactors: ranking.factors,
-    severity: finding.severity,
+    severity,
     confidence,
     exposure,
-    title: finding.title,
-    rationale: finding.description,
+    title: findings.length > 1 ? `${finding.title} (${findings.length} candidates)` : finding.title,
+    rationale:
+      findings.length > 1
+        ? `${findings.length} candidates share the same rule and primary file. ${finding.description}`
+        : finding.description,
     rootCause: rootCause(
       'rule_location',
-      `${finding.source}:${finding.ruleId}:${files[0] ?? 'unknown'}`,
-      `${finding.ruleId} candidates in ${files[0] ?? 'an unknown location'}.`,
+      causeKey,
+      `${findings.length} ${finding.ruleId} candidate${findings.length === 1 ? '' : 's'} in ${files[0] ?? 'an unknown location'}.`,
     ),
-    findings: [findingRef(finding)],
+    findings: findings.map(findingRef),
     controlIds: [],
-    evidenceIds: unique(finding.evidence.map((item) => item.id)),
+    evidenceIds: unique(findings.flatMap((item) => item.evidence.map((evidence) => evidence.id))),
     files,
     dependsOn: [],
     target: { type: isConfiguration ? 'configuration' : 'source' },
     instructions: [
-      ...(finding.disposition === 'confirmed'
+      ...(findings.every((item) => item.disposition === 'confirmed')
         ? [finding.remediation]
         : [
             'Validate the candidate against its evidence and surrounding source before proposing a change.',
@@ -536,7 +559,7 @@ function findingTask(report: AuditReport, finding: Finding): RemediationTask {
       'Do not suppress, lower severity, or broaden the patch automatically.',
       'Add or update a focused regression test when the behavior can be exercised safely.',
     ],
-    expectedChanges: [finding.remediation],
+    expectedChanges: unique(findings.map((item) => item.remediation)),
     acceptanceChecks: standardChecks(id, 'finding'),
     verificationCommands: taskVerificationCommands(report, id),
     changeRisk,
@@ -551,11 +574,24 @@ function findingTask(report: AuditReport, finding: Finding): RemediationTask {
     },
     uncertainties: [
       'A static review candidate is not proof of exploitability.',
-      ...finding.evidence.flatMap((item) =>
-        item.kind === 'inferred' ? ['At least one linked observation is inferred.'] : [],
-      ),
+      ...findings
+        .flatMap((item) => item.evidence)
+        .flatMap((item) =>
+          item.kind === 'inferred' ? ['At least one linked observation is inferred.'] : [],
+        ),
     ],
   };
+}
+
+function findingTasks(report: AuditReport): RemediationTask[] {
+  const groups = new Map<string, Finding[]>();
+  for (const finding of report.findings.filter(
+    (item) => !item.vulnerability && unresolvedFinding(item),
+  )) {
+    const key = findingGroupKey(finding);
+    groups.set(key, [...(groups.get(key) ?? []), finding]);
+  }
+  return [...groups.values()].map((findings) => findingTask(report, findings));
 }
 
 function controlPriority(control: SecurityControlResult): number {
@@ -651,9 +687,7 @@ function emptyKinds(): Record<RemediationTaskKind, number> {
 
 export function buildRemediationPlan(report: AuditReport): RemediationPlan {
   const dependency = dependencyTasks(report);
-  const source = report.findings
-    .filter((finding) => !finding.vulnerability && unresolvedFinding(finding))
-    .map((finding) => findingTask(report, finding));
+  const source = findingTasks(report);
   const tasksByFinding = new Map(
     [...dependency, ...source].flatMap((task) =>
       task.findings.map((finding) => [finding.id, task.id]),
