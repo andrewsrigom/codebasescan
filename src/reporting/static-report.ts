@@ -123,6 +123,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.databaseContract
+      ? [
+          {
+            path: 'database-contract.json',
+            mediaType: 'application/json',
+            content: json(report.databaseContract),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

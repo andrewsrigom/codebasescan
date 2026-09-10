@@ -6,6 +6,7 @@ import type {
   AuditMode,
   AuditReport,
   CodeQualityAnalysis,
+  DatabaseContractAnalysis,
   Dependency,
   EnvironmentContractAnalysis,
   DuplicationAnalysis,
@@ -44,6 +45,7 @@ import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
 import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
 import { scanTestEvidence } from '../scanners/test-evidence.ts';
 import { scanApiContract } from '../scanners/api-contract.ts';
+import { scanDatabaseContract } from '../scanners/database-contract.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -109,6 +111,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   apiContract: Annotation<ApiContractAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  databaseContract: Annotation<DatabaseContractAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -381,6 +387,30 @@ export function buildAuditGraph(options: {
       );
       return { apiContract: result.analysis, scanners: [result.run] };
     })
+    .addNode('database_contract', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          databaseContract: null,
+          scanners: [
+            skippedByMode(
+              'database-contract',
+              'Database schema and migration consistency',
+              'release-readiness',
+            ),
+          ],
+        };
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to database contract analysis.');
+      const result = scanDatabaseContract(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'database_contract',
+        result.analysis.status === 'unsupported'
+          ? 'No captured database schema or migration declaration was available.'
+          : `${result.analysis.summary.linkedEntities} linked database entity record(s); ${result.analysis.summary.gapCandidates} consistency candidate(s).`,
+      );
+      return { databaseContract: result.analysis, scanners: [result.run] };
+    })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
         return {
@@ -631,7 +661,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 10,
+        schemaVersion: 11,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -650,6 +680,7 @@ export function buildAuditGraph(options: {
         ...(state.environmentContract ? { environmentContract: state.environmentContract } : {}),
         ...(state.testEvidence ? { testEvidence: state.testEvidence } : {}),
         ...(state.apiContract ? { apiContract: state.apiContract } : {}),
+        ...(state.databaseContract ? { databaseContract: state.databaseContract } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -779,6 +810,7 @@ export function buildAuditGraph(options: {
     .addEdge('snapshot', 'environment_contract')
     .addEdge('project_profile', 'test_evidence')
     .addEdge('project_profile', 'api_contract')
+    .addEdge('project_profile', 'database_contract')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -801,6 +833,7 @@ export function buildAuditGraph(options: {
         'environment_contract',
         'test_evidence',
         'api_contract',
+        'database_contract',
         'architecture',
         'duplication',
         'supply_chain',

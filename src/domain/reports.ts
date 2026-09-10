@@ -112,6 +112,7 @@ export function toInvestigationBundle(report: AuditReport): object {
     environmentContract: report.environmentContract ?? null,
     testEvidence: report.testEvidence ?? null,
     apiContract: report.apiContract ?? null,
+    databaseContract: report.databaseContract ?? null,
     mechanicalAnalysis: report.mechanicalAnalysis ?? null,
     supplyChainAnalysis: report.supplyChainAnalysis ?? null,
     codeQualityAnalysis: report.codeQualityAnalysis ?? null,
@@ -401,6 +402,28 @@ export function toMarkdown(report: AuditReport): string {
           'Machine-readable detail: api-contract.json.',
           '',
           ...report.apiContract.limitations.map((limitation) => `- ${m(limitation)}`),
+        ]
+      : []),
+    ...(report.databaseContract
+      ? [
+          '',
+          '## Database contract consistency',
+          '',
+          report.databaseContract.status === 'unsupported'
+            ? 'No captured Prisma, Drizzle, SQL schema, or migration declaration was available.'
+            : `Status: ${m(report.databaseContract.status)}. ${report.databaseContract.summary.declaredEntities} declared, ${report.databaseContract.summary.migrationEntities} migration-referenced, and ${report.databaseContract.summary.sourceEntities} source-referenced entity name(s); ${report.databaseContract.summary.gapCandidates} consistency candidate(s).`,
+          '',
+          ...report.databaseContract.entities
+            .filter((entity) => entity.gaps.length)
+            .slice(0, 50)
+            .map(
+              (entity) =>
+                `- ${m(entity.name)}: ${entity.gaps.map((gap) => m(gap.replaceAll('-', ' '))).join(', ')}`,
+            ),
+          '',
+          'Machine-readable detail: database-contract.json.',
+          '',
+          ...report.databaseContract.limitations.map((limitation) => `- ${m(limitation)}`),
         ]
       : []),
     ...(report.mechanicalAnalysis
@@ -1070,6 +1093,36 @@ export function toHtml(
       list('API contract limitations', report.apiContract.limitations) +
       '<p><a href="api-contract.json">Open the complete API contract map</a></p></section>'
     : '';
+  const databaseContract = report.databaseContract
+    ? '<section class="report-section"><div class="section-head"><div><span class="kicker">DATABASE CONTRACT</span><h2>Schema, migration, and source consistency</h2></div><span class="status ' +
+      (report.databaseContract.status === 'complete' ? 'complete' : 'gap') +
+      '">' +
+      e(report.databaseContract.status) +
+      '</span></div>' +
+      (report.databaseContract.status === 'unsupported'
+        ? '<p>No captured Prisma, Drizzle, SQL schema, or migration declaration was available. No clean result is implied.</p>'
+        : '<p>Captured declarations and SQL migration references are compared with statically mapped database call chains.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+          report.databaseContract.summary.declaredEntities +
+          '</strong><span>Declared entities</span></div><div class="summary-card"><strong>' +
+          report.databaseContract.summary.migrationEntities +
+          '</strong><span>Migration entities</span></div><div class="summary-card"><strong>' +
+          report.databaseContract.summary.sourceEntities +
+          '</strong><span>Source entities</span></div><div class="summary-card"><strong>' +
+          report.databaseContract.summary.gapCandidates +
+          '</strong><span>Consistency candidates</span></div></div>' +
+          list(
+            'Entities with incomplete captured relationships',
+            report.databaseContract.entities
+              .filter((entity) => entity.gaps.length)
+              .slice(0, 50)
+              .map(
+                (entity) =>
+                  `${entity.name}: ${entity.gaps.map((gap) => gap.replaceAll('-', ' ')).join(', ')}`,
+              ),
+          )) +
+      list('Database contract limitations', report.databaseContract.limitations) +
+      '<p><a href="database-contract.json">Open the complete database contract map</a></p></section>'
+    : '';
   const mechanical =
     report.mechanicalAnalysis || report.supplyChainAnalysis || report.codeQualityAnalysis
       ? '<section class="report-section"><span class="kicker">SOURCE REVIEW</span><h2>Supply chain, quality, structure, and duplication</h2>' +
@@ -1421,6 +1474,9 @@ export function toHtml(
       (report.apiContract
         ? '<li><a href="api-contract.json">API contract consistency</a></li>'
         : '') +
+      (report.databaseContract
+        ? '<li><a href="database-contract.json">Database contract consistency</a></li>'
+        : '') +
       '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
     : '';
   const css =
@@ -1486,6 +1542,7 @@ export function toHtml(
     environmentContract +
     testEvidence +
     apiContract +
+    databaseContract +
     dataMap +
     mechanical +
     dependencyRemediation +

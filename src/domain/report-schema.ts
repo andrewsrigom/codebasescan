@@ -583,6 +583,88 @@ const apiContract = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const databaseContract = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  schemaFiles: z
+    .array(
+      z.object({
+        file: shortText,
+        kind: z.enum(['prisma', 'drizzle', 'sql']),
+        entities: z.number().int().nonnegative().max(2_000),
+      }),
+    )
+    .max(100),
+  migrationFiles: z
+    .array(
+      z.object({
+        file: shortText,
+        references: z.number().int().nonnegative().max(2_000),
+      }),
+    )
+    .max(500),
+  entities: z
+    .array(
+      z.object({
+        id: shortText,
+        name: shortText,
+        normalizedName: shortText,
+        declarations: z
+          .array(
+            z.object({
+              file: shortText,
+              line: z.number().int().positive(),
+              kind: z.enum(['prisma-model', 'drizzle-table', 'sql-table']),
+              name: shortText,
+            }),
+          )
+          .max(100),
+        migrations: z
+          .array(
+            z.object({
+              file: shortText,
+              line: z.number().int().positive(),
+              operation: z.enum(['create', 'alter', 'drop']),
+              name: shortText,
+            }),
+          )
+          .max(100),
+        sourceReferences: z
+          .array(
+            z.object({
+              file: shortText,
+              line: z.number().int().positive(),
+              signal: shortText,
+            }),
+          )
+          .max(100),
+        gaps: z
+          .array(
+            z.enum([
+              'source-without-declaration',
+              'declaration-without-create-migration',
+              'migration-without-declaration',
+            ]),
+          )
+          .max(3),
+      }),
+    )
+    .max(2_000),
+  summary: z.object({
+    schemaFiles: z.number().int().nonnegative().max(100),
+    migrationFiles: z.number().int().nonnegative().max(500),
+    declaredEntities: z.number().int().nonnegative().max(2_000),
+    migrationEntities: z.number().int().nonnegative().max(2_000),
+    sourceEntities: z.number().int().nonnegative().max(2_000),
+    linkedEntities: z.number().int().nonnegative().max(2_000),
+    gapCandidates: z.number().int().nonnegative().max(2_000),
+  }),
+  parseFailures: z.number().int().nonnegative().max(100),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -781,6 +863,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(8),
     z.literal(9),
     z.literal(10),
+    z.literal(11),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -818,6 +901,7 @@ export const auditReportSchema = z.looseObject({
   environmentContract: environmentContract.optional(),
   testEvidence: testEvidence.optional(),
   apiContract: apiContract.optional(),
+  databaseContract: databaseContract.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

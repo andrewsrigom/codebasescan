@@ -180,7 +180,8 @@ export function AuditWorkspace({
       ) +
       (report.testEvidence?.withoutRelatedTests ?? 0) +
       (report.apiContract?.summary.declaredOnly ?? 0) +
-      (report.apiContract?.summary.sourceOnly ?? 0)
+      (report.apiContract?.summary.sourceOnly ?? 0) +
+      (report.databaseContract?.summary.gapCandidates ?? 0)
     : 0;
   const reviewSummary = active
     ? 'Audit in progress. Results update as scanners finish.'
@@ -854,6 +855,7 @@ export function AuditWorkspace({
           quality={report?.codeQualityAnalysis}
           testEvidence={report?.testEvidence}
           apiContract={report?.apiContract}
+          databaseContract={report?.databaseContract}
         />
       )}
       {tab === 'Checklist' && (

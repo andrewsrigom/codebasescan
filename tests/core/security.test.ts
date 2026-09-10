@@ -264,6 +264,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await mkdir(path.join(root, 'storybook-static'));
   await mkdir(path.join(root, 'test-results'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
+  await writeFile(path.join(root, 'schema.prisma'), 'model User { id String @id }');
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(
     path.join(root, '.env.example'),
@@ -282,7 +283,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   const snapshot = await captureSnapshot(root);
   assert.deepEqual(
     snapshot.files.map((file) => file.path),
-    ['.env.example', '.env.production.sample', 'source.ts'],
+    ['.env.example', '.env.production.sample', 'schema.prisma', 'source.ts'],
   );
   assert.equal(
     snapshot.files.find((file) => file.path === '.env.example')?.content,

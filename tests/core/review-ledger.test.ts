@@ -19,7 +19,7 @@ test('portable review applies only to the same finding and source-file digest', 
     }),
   );
   const reviewed = applyReviewLedger(structuredClone(source), ledger, '2026-09-10T13:00:00.000Z');
-  assert.equal(reviewed.schemaVersion, 10);
+  assert.equal(reviewed.schemaVersion, 11);
   assert.equal(reviewed.findings[0]?.disposition, 'false_positive');
   assert.equal(reviewed.reviewImport?.applied, 1);
   assert.equal(reviewed.reviewImport?.stale, 0);

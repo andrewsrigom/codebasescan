@@ -1,6 +1,7 @@
 import type {
   ApiContractAnalysis,
   CodeQualityAnalysis,
+  DatabaseContractAnalysis,
   MechanicalAnalysis,
   SupplyChainAnalysis,
   TestEvidenceAnalysis,
@@ -22,12 +23,14 @@ export function MechanicalReportPanel({
   quality,
   testEvidence,
   apiContract,
+  databaseContract,
 }: {
   analysis?: MechanicalAnalysis;
   supplyChain?: SupplyChainAnalysis;
   quality?: CodeQualityAnalysis;
   testEvidence?: TestEvidenceAnalysis;
   apiContract?: ApiContractAnalysis;
+  databaseContract?: DatabaseContractAnalysis;
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
@@ -52,6 +55,8 @@ export function MechanicalReportPanel({
     [];
   const sourceOnlyOperations =
     apiContract?.sourceOperations.filter((operation) => operation.status === 'source-only') ?? [];
+  const databaseGapEntities =
+    databaseContract?.entities.filter((entity) => entity.gaps.length) ?? [];
   const complete = Boolean(
     architecture &&
     !architecture.truncated &&
@@ -64,7 +69,9 @@ export function MechanicalReportPanel({
     testEvidence?.status === 'complete' &&
     !testEvidence.truncated &&
     apiContract?.status === 'complete' &&
-    !apiContract.truncated,
+    !apiContract.truncated &&
+    databaseContract?.status === 'complete' &&
+    !databaseContract.truncated,
   );
   return (
     <section
@@ -87,7 +94,8 @@ export function MechanicalReportPanel({
       !supplyChain &&
       !quality &&
       !testEvidence &&
-      !apiContract ? (
+      !apiContract &&
+      !databaseContract ? (
         <EmptyState title="Source analysis unavailable">
           <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
@@ -447,6 +455,84 @@ export function MechanicalReportPanel({
             </>
           )}
 
+          {databaseContract && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Database contract consistency</h2>
+                  <p>Captured schema, migration, and source entity relationships.</p>
+                </div>
+                <Badge tone={databaseGapEntities.length ? 'medium' : 'success'}>
+                  {databaseGapEntities.length} candidates
+                </Badge>
+              </div>
+              <div className="panel-body">
+                {databaseContract.status === 'unsupported' ? (
+                  <p className="small muted">
+                    No captured Prisma, Drizzle, SQL schema, or migration declaration was found. No
+                    clean result is implied.
+                  </p>
+                ) : (
+                  <div className="stat-grid">
+                    <div className="stat-card">
+                      <div className="stat-label">Declared entities</div>
+                      <div className="stat-number">{databaseContract.summary.declaredEntities}</div>
+                      <div className="stat-foot">
+                        {databaseContract.summary.schemaFiles} schema files
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Migration entities</div>
+                      <div className="stat-number">
+                        {databaseContract.summary.migrationEntities}
+                      </div>
+                      <div className="stat-foot">
+                        {databaseContract.summary.migrationFiles} migration files
+                      </div>
+                    </div>
+                    <div className="stat-card">
+                      <div className="stat-label">Source entities</div>
+                      <div className="stat-number">{databaseContract.summary.sourceEntities}</div>
+                      <div className="stat-foot">
+                        {databaseContract.summary.linkedEntities} linked records
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <p className="small muted">
+                  Missing captured relationships are review candidates, not proof of runtime schema
+                  drift.
+                </p>
+              </div>
+              {databaseGapEntities.length > 0 && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Entity</th>
+                        <th>Candidate</th>
+                        <th>Declarations</th>
+                        <th>Migrations</th>
+                        <th>Source refs</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {databaseGapEntities.slice(0, 100).map((entity) => (
+                        <tr key={entity.id}>
+                          <td className="strong mono">{entity.name}</td>
+                          <td>{entity.gaps.join(', ')}</td>
+                          <td>{entity.declarations.length}</td>
+                          <td>{entity.migrations.length}</td>
+                          <td>{entity.sourceReferences.length}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
           {architecture && (
             <>
               <div className="panel-header">
@@ -557,7 +643,8 @@ export function MechanicalReportPanel({
             supplyChain?.truncated ||
             quality?.truncated ||
             testEvidence?.truncated ||
-            apiContract?.truncated) && (
+            apiContract?.truncated ||
+            databaseContract?.truncated) && (
             <div className="panel-footer">
               Totals are exact where shown; detailed rows are bounded. Review Coverage for the
               specific scanner limitation.

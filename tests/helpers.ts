@@ -2,6 +2,7 @@ import { digest } from '../src/domain/findings.ts';
 import { scanPatterns } from '../src/scanners/builtin.ts';
 import type {
   ApiContractAnalysis,
+  DatabaseContractAnalysis,
   AuditReport,
   EnvironmentContractAnalysis,
   RiskCorrelation,
@@ -199,6 +200,46 @@ export function sampleApiContract(): ApiContractAnalysis {
     unresolvedPathReferences: 0,
     truncated: false,
     limitations: ['A difference is not proof that an endpoint is missing or exposed.'],
+  };
+}
+
+export function sampleDatabaseContract(): DatabaseContractAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    schemaFiles: [{ file: 'prisma/schema.prisma', kind: 'prisma', entities: 1 }],
+    migrationFiles: [{ file: 'prisma/migrations/001/migration.sql', references: 0 }],
+    entities: [
+      {
+        id: 'database-entity-1',
+        name: 'users',
+        normalizedName: 'users',
+        declarations: [
+          {
+            file: 'prisma/schema.prisma',
+            line: 1,
+            kind: 'prisma-model',
+            name: 'users',
+          },
+        ],
+        migrations: [],
+        sourceReferences: [],
+        gaps: ['declaration-without-create-migration'],
+      },
+    ],
+    summary: {
+      schemaFiles: 1,
+      migrationFiles: 1,
+      declaredEntities: 1,
+      migrationEntities: 0,
+      sourceEntities: 0,
+      linkedEntities: 0,
+      gapCandidates: 1,
+    },
+    parseFailures: 0,
+    truncated: false,
+    limitations: ['A gap is not proof that a database object is missing.'],
   };
 }
 

@@ -38,6 +38,7 @@ const extensions = new Set([
   '.yml',
   '.toml',
   '.sql',
+  '.prisma',
 ]);
 const excludedFiles = new Set([
   '.gitleaks.toml',

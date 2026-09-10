@@ -79,6 +79,10 @@ API contract differences may be used as bounded supporting context, but remain m
 documentation candidates. AI must not relabel a declared-only or source-only record as a deployed
 security vulnerability without separately cited source and runtime evidence.
 
+Database contract differences are also bounded supporting context only. AI must preserve missing
+schema, migration, and runtime evidence as unknown and may not recommend executing a migration as
+part of review.
+
 ## Expansion gate
 
 Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled

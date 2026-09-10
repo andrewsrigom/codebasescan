@@ -279,6 +279,7 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Roadmap](docs/ROADMAP.md)
 - [Security-critical test evidence](docs/TEST_EVIDENCE.md)
 - [API contract consistency](docs/API_CONTRACT.md)
+- [Database contract consistency](docs/DATABASE_CONTRACT.md)
 - [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)
 

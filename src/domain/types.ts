@@ -669,6 +669,56 @@ export interface ApiContractAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+export interface DatabaseContractLocation {
+  file: string;
+  line: number;
+  kind: 'prisma-model' | 'drizzle-table' | 'sql-table';
+  name: string;
+}
+export interface DatabaseMigrationReference {
+  file: string;
+  line: number;
+  operation: 'create' | 'alter' | 'drop';
+  name: string;
+}
+export interface DatabaseSourceReference {
+  file: string;
+  line: number;
+  signal: string;
+}
+export interface DatabaseContractEntity {
+  id: string;
+  name: string;
+  normalizedName: string;
+  declarations: DatabaseContractLocation[];
+  migrations: DatabaseMigrationReference[];
+  sourceReferences: DatabaseSourceReference[];
+  gaps: (
+    | 'source-without-declaration'
+    | 'declaration-without-create-migration'
+    | 'migration-without-declaration'
+  )[];
+}
+export interface DatabaseContractAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  schemaFiles: { file: string; kind: 'prisma' | 'drizzle' | 'sql'; entities: number }[];
+  migrationFiles: { file: string; references: number }[];
+  entities: DatabaseContractEntity[];
+  summary: {
+    schemaFiles: number;
+    migrationFiles: number;
+    declaredEntities: number;
+    migrationEntities: number;
+    sourceEntities: number;
+    linkedEntities: number;
+    gapCandidates: number;
+  };
+  parseFailures: number;
+  truncated: boolean;
+  limitations: string[];
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;
@@ -838,7 +888,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -857,6 +907,7 @@ export interface AuditReport {
   environmentContract?: EnvironmentContractAnalysis;
   testEvidence?: TestEvidenceAnalysis;
   apiContract?: ApiContractAnalysis;
+  databaseContract?: DatabaseContractAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;

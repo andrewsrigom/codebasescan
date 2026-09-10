@@ -156,3 +156,11 @@ documentation-consistency candidates rather than vulnerability findings. Unmatch
 count only inside the common static path scope of a captured specification; all others remain
 visible but unassessed. Report schema v10, workflow v24, and audit-mode pack 0.6.0 make the new
 persisted output explicit.
+
+## 2026-09-10 — inert database contract correlation
+
+Prisma model blocks, literal Drizzle table declarations, SQL table statements, and mapped source
+call chains are correlated without loading an ORM or database. A comparison gap is created only
+when the corresponding captured schema or migration side exists; otherwise coverage remains
+unsupported. Files ending in .prisma join the bounded text snapshot. Report schema v11, workflow
+v25, and audit-mode pack 0.7.0 preserve the new output for consumers.
