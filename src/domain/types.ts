@@ -587,6 +587,36 @@ export interface EnvironmentContractAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+
+export interface TestEvidenceReference {
+  file: string;
+  relation: 'direct-import' | 'transitive-import';
+  depth: number;
+}
+export interface TestEvidenceTarget {
+  file: string;
+  componentId?: string;
+  entrypointIds: string[];
+  sensitiveFactIds: string[];
+  sensitiveFactKinds: ProjectFactKind[];
+  status: 'observed' | 'not-observed';
+  relatedTests: TestEvidenceReference[];
+  truncated: boolean;
+}
+export interface TestEvidenceAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  testFiles: number;
+  criticalFiles: number;
+  withRelatedTests: number;
+  withoutRelatedTests: number;
+  targets: TestEvidenceTarget[];
+  parseFailures: number;
+  unresolvedImports: number;
+  truncated: boolean;
+  limitations: string[];
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;
@@ -756,7 +786,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -773,6 +803,7 @@ export interface AuditReport {
   projectProfile?: ProjectProfile;
   riskCorrelation?: RiskCorrelation;
   environmentContract?: EnvironmentContractAnalysis;
+  testEvidence?: TestEvidenceAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;

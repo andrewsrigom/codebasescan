@@ -10,6 +10,15 @@ Traceward must turn an authorized Node.js, TypeScript, React, or Next.js reposit
 The deterministic audit stays useful with AI disabled. AI may investigate ambiguity and propose
 changes, but cannot overwrite scanner evidence, invent coverage, or verify its own work.
 
+## Implementation checkpoint — 2026-09-10
+
+Phases 1–4 are implemented. Phase 5 currently includes bounded source-risk paths, sanitized
+environment-contract consistency, framework-major rule coverage, declared monorepo component
+ownership, cross-component import evidence, and security-critical test relationships. OpenAPI,
+schema/migration, webhook, feature-flag, and component-aware lifecycle comparison remain next.
+Phase 6 has reproducible `seusaas` and `robs-web` pressure runs but still needs the full named corpus
+and independent dispositions. Later phases remain gated as described below.
+
 ## Invariants
 
 - Treat target files and scanner messages as untrusted data.
@@ -105,6 +114,10 @@ version-sensitive rule; unsupported versions stay unverified rather than clean.
 Gate: correlated paths retain every underlying evidence ID, contract checks have paired fixtures,
 component ownership never relies on directory names alone, and a changed-file audit cannot hide
 unchanged high-priority work from the complete report.
+
+Security-critical test relationships follow the documented bounded method in
+[Security-critical test evidence](TEST_EVIDENCE.md). AI review and future correction must follow
+[Structured AI review standard](AI_REVIEW_STANDARD.md).
 
 ## Phase 6 — real-project evaluation corpus
 

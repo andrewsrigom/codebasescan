@@ -1,6 +1,6 @@
 import { auditModes, type AuditMode, type AuditModeSelection } from './types.ts';
 
-export const auditModePackVersion = '0.4.0';
+export const auditModePackVersion = '0.5.0';
 
 export function resolveAuditModes(selected?: AuditMode[]): AuditMode[] {
   return selected?.length ? [...new Set(selected)] : [...auditModes];

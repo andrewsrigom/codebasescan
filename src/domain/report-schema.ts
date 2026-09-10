@@ -485,6 +485,42 @@ const environmentContract = z.object({
   limitations: z.array(shortText).max(20),
 });
 
+const testEvidence = z.object({
+  schemaVersion: z.literal(1),
+  version: shortText,
+  status: z.enum(['complete', 'partial', 'unsupported']),
+  testFiles: z.number().int().nonnegative(),
+  criticalFiles: z.number().int().nonnegative(),
+  withRelatedTests: z.number().int().nonnegative(),
+  withoutRelatedTests: z.number().int().nonnegative(),
+  targets: z
+    .array(
+      z.object({
+        file: shortText,
+        componentId: shortText.optional(),
+        entrypointIds: z.array(shortText).max(100),
+        sensitiveFactIds: z.array(shortText).max(100),
+        sensitiveFactKinds: z.array(shortText).max(30),
+        status: z.enum(['observed', 'not-observed']),
+        relatedTests: z
+          .array(
+            z.object({
+              file: shortText,
+              relation: z.enum(['direct-import', 'transitive-import']),
+              depth: z.number().int().positive().max(5),
+            }),
+          )
+          .max(20),
+        truncated: z.boolean(),
+      }),
+    )
+    .max(500),
+  parseFailures: z.number().int().nonnegative(),
+  unresolvedImports: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  limitations: z.array(shortText).max(20),
+});
+
 const mechanicalAnalysis = z.looseObject({
   schemaVersion: z.literal(1),
   architecture: z
@@ -681,6 +717,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(6),
     z.literal(7),
     z.literal(8),
+    z.literal(9),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -716,6 +753,7 @@ export const auditReportSchema = z.looseObject({
   projectProfile: projectProfile.optional(),
   riskCorrelation: riskCorrelation.optional(),
   environmentContract: environmentContract.optional(),
+  testEvidence: testEvidence.optional(),
   mechanicalAnalysis: mechanicalAnalysis.optional(),
   supplyChainAnalysis: supplyChainAnalysis.optional(),
   codeQualityAnalysis: codeQualityAnalysis.optional(),

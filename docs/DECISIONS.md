@@ -46,6 +46,14 @@ This is package ownership evidence, not proof of process, network, tenant, or de
 Opaque component IDs remain stable for the same manifest/name pair, while reports resolve them to
 human-readable package names. Workflow v22 prevents incompatible checkpoint reuse.
 
+## 2026-09-10 — security-critical test relationships
+
+Captured test imports are followed through at most five resolved source hops to entry-point and
+sensitive-operation files. This is prioritization evidence, never a coverage percentage or proof of
+an assertion. URL-only end-to-end tests remain unattributed. The result is a separate bounded JSON
+artifact and creates no vulnerability finding. Report schema v9, release-readiness pack 0.5.0, and
+workflow v23 preserve the new state and its limitations.
+
 ## 2026-09-10 — agent plan contract v2
 
 The remediation plan is now also emitted as the primary `agent-plan.json`, with a generated JSON

@@ -5,6 +5,7 @@ import type {
   EnvironmentContractAnalysis,
   RiskCorrelation,
   Snapshot,
+  TestEvidenceAnalysis,
 } from '../src/domain/types.ts';
 export function snapshotOf(content: string, file = 'src/example.ts'): Snapshot {
   return {
@@ -113,6 +114,33 @@ export function sampleRiskCorrelation(findingId: string): RiskCorrelation {
     },
     truncated: false,
     limitations: ['Static source path only.'],
+  };
+}
+
+export function sampleTestEvidence(): TestEvidenceAnalysis {
+  return {
+    schemaVersion: 1,
+    version: '1.0.0',
+    status: 'complete',
+    testFiles: 1,
+    criticalFiles: 1,
+    withRelatedTests: 0,
+    withoutRelatedTests: 1,
+    targets: [
+      {
+        file: 'src/app/api/example/route.ts',
+        entrypointIds: ['entrypoint-1'],
+        sensitiveFactIds: ['fact-1'],
+        sensitiveFactKinds: ['database'],
+        status: 'not-observed',
+        relatedTests: [],
+        truncated: false,
+      },
+    ],
+    parseFailures: 0,
+    unresolvedImports: 0,
+    truncated: false,
+    limitations: ['Source-reference evidence does not prove a security assertion.'],
   };
 }
 

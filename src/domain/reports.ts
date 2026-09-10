@@ -110,6 +110,7 @@ export function toInvestigationBundle(report: AuditReport): object {
     },
     coverage: report.coverage ?? report.scanners,
     environmentContract: report.environmentContract ?? null,
+    testEvidence: report.testEvidence ?? null,
     mechanicalAnalysis: report.mechanicalAnalysis ?? null,
     supplyChainAnalysis: report.supplyChainAnalysis ?? null,
     codeQualityAnalysis: report.codeQualityAnalysis ?? null,
@@ -350,6 +351,26 @@ export function toMarkdown(report: AuditReport): string {
           'Machine-readable detail: environment-contract.json. Values are not retained.',
           '',
           ...report.environmentContract.limitations.map((limitation) => `- ${m(limitation)}`),
+        ]
+      : []),
+    ...(report.testEvidence
+      ? [
+          '',
+          '## Security-critical test evidence',
+          '',
+          `Status: ${m(report.testEvidence.status)}. ${report.testEvidence.withRelatedTests} of ${report.testEvidence.criticalFiles} critical source file(s) have a related captured test import; ${report.testEvidence.withoutRelatedTests} do not. ${report.testEvidence.testFiles} test file(s) were inspected without execution.`,
+          '',
+          ...report.testEvidence.targets
+            .filter((target) => target.status === 'not-observed')
+            .slice(0, 50)
+            .map(
+              (target) =>
+                `- ${m(target.file)}: no related captured test import; ${target.entrypointIds.length} entry point(s), ${target.sensitiveFactKinds.map(m).join(', ') || 'no retained sensitive fact kind'}.`,
+            ),
+          '',
+          'Machine-readable detail: test-evidence.json.',
+          '',
+          ...report.testEvidence.limitations.map((limitation) => `- ${m(limitation)}`),
         ]
       : []),
     ...(report.mechanicalAnalysis
@@ -952,6 +973,30 @@ export function toHtml(
       list('Contract limitations', report.environmentContract.limitations) +
       '<p><a href="environment-contract.json">Open the complete environment contract</a></p></section>'
     : '';
+  const testEvidence = report.testEvidence
+    ? '<section class="report-section"><div class="section-head"><div><span class="kicker">TEST RELATIONSHIPS</span><h2>Security-critical test evidence</h2></div><span class="status ' +
+      (report.testEvidence.status === 'complete' ? 'complete' : 'gap') +
+      '">' +
+      e(report.testEvidence.status) +
+      '</span></div><p>Captured test imports are traced to source entry points and sensitive operations without executing tests.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      report.testEvidence.testFiles +
+      '</strong><span>Test files inspected</span></div><div class="summary-card"><strong>' +
+      report.testEvidence.criticalFiles +
+      '</strong><span>Critical source files</span></div><div class="summary-card"><strong>' +
+      report.testEvidence.withRelatedTests +
+      '</strong><span>Related imports observed</span></div><div class="summary-card"><strong>' +
+      report.testEvidence.withoutRelatedTests +
+      '</strong><span>Not observed</span></div></div>' +
+      list(
+        'Critical files without a related captured test import',
+        report.testEvidence.targets
+          .filter((target) => target.status === 'not-observed')
+          .slice(0, 50)
+          .map((target) => target.file),
+      ) +
+      list('Test evidence limitations', report.testEvidence.limitations) +
+      '<p><a href="test-evidence.json">Open the complete test evidence map</a></p></section>'
+    : '';
   const mechanical =
     report.mechanicalAnalysis || report.supplyChainAnalysis || report.codeQualityAnalysis
       ? '<section class="report-section"><span class="kicker">SOURCE REVIEW</span><h2>Supply chain, quality, structure, and duplication</h2>' +
@@ -1282,6 +1327,9 @@ export function toHtml(
       (report.environmentContract
         ? '<li><a href="environment-contract.json">Environment contract</a></li>'
         : '') +
+      (report.testEvidence
+        ? '<li><a href="test-evidence.json">Security-critical test evidence</a></li>'
+        : '') +
       '<li><a href="codex-bundle.json">Codex evidence bundle</a></li><li><a href="report.md">Markdown report</a></li><li><a href="report.sarif">SARIF report</a></li><li><a href="sbom.cdx.json">CycloneDX SBOM</a></li><li><a href="manifest.json">Artifact manifest</a></li></ul></section>'
     : '';
   const css =
@@ -1345,6 +1393,7 @@ export function toHtml(
     profile +
     riskPaths +
     environmentContract +
+    testEvidence +
     dataMap +
     mechanical +
     dependencyRemediation +

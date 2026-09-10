@@ -625,6 +625,22 @@ function resolveImport(
   return [...candidates].find((candidate) => paths.has(candidate));
 }
 
+export function createCapturedImportResolver(
+  snapshot: Snapshot,
+): (file: string, specifier: string) => string | undefined {
+  const paths = new Set(
+    snapshot.files.filter((file) => sourcePattern.test(file.path)).map((file) => file.path),
+  );
+  const aliases = typeScriptPathAliases(snapshot).aliases;
+  const workspacePackages = new Map(
+    declarativeWorkspacePackageEntrypoints(snapshot).entries.map((entry) => [
+      entry.name,
+      entry.file,
+    ]),
+  );
+  return (file, specifier) => resolveImport(file, specifier, paths, aliases, workspacePackages);
+}
+
 function hasUseServerDirective(statements: ts.NodeArray<ts.Statement>): boolean {
   for (const statement of statements) {
     if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression))

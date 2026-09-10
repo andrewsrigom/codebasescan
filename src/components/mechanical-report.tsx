@@ -2,6 +2,7 @@ import type {
   CodeQualityAnalysis,
   MechanicalAnalysis,
   SupplyChainAnalysis,
+  TestEvidenceAnalysis,
 } from '../domain/types.ts';
 import { Badge, EmptyState } from './ui.tsx';
 
@@ -18,10 +19,12 @@ export function MechanicalReportPanel({
   analysis,
   supplyChain,
   quality,
+  testEvidence,
 }: {
   analysis?: MechanicalAnalysis;
   supplyChain?: SupplyChainAnalysis;
   quality?: CodeQualityAnalysis;
+  testEvidence?: TestEvidenceAnalysis;
 }) {
   const architecture = analysis?.architecture;
   const duplication = analysis?.duplication;
@@ -39,6 +42,8 @@ export function MechanicalReportPanel({
     ? (quality.deadCode.unusedExportCount ?? quality.deadCode.unusedExports.length) +
       (quality.deadCode.unusedTypeCount ?? quality.deadCode.unusedTypes.length)
     : undefined;
+  const targetsWithoutRelatedTests =
+    testEvidence?.targets.filter((target) => target.status === 'not-observed') ?? [];
   const complete = Boolean(
     architecture &&
     !architecture.truncated &&
@@ -47,7 +52,9 @@ export function MechanicalReportPanel({
     supplyChain &&
     !supplyChain.truncated &&
     quality?.deadCode &&
-    !quality.truncated,
+    !quality.truncated &&
+    testEvidence?.status === 'complete' &&
+    !testEvidence.truncated,
   );
   return (
     <section
@@ -59,13 +66,13 @@ export function MechanicalReportPanel({
       <div className="panel-header">
         <div>
           <h2>Source analysis</h2>
-          <p>Supply chain, code quality, dependency structure, and duplication.</p>
+          <p>Supply chain, code quality, tests, dependency structure, and duplication.</p>
         </div>
         <Badge tone={complete ? 'success' : 'medium'}>
           {complete ? 'COMPLETE DATA' : 'PARTIAL DATA'}
         </Badge>
       </div>
-      {!architecture && !duplication && !supplyChain && !quality ? (
+      {!architecture && !duplication && !supplyChain && !quality && !testEvidence ? (
         <EmptyState title="Source analysis unavailable">
           <p>Check scanner status in Coverage. No clean result is implied.</p>
         </EmptyState>
@@ -275,6 +282,62 @@ export function MechanicalReportPanel({
             </>
           )}
 
+          {testEvidence && (
+            <>
+              <div className="panel-header">
+                <div>
+                  <h2>Security-critical test evidence</h2>
+                  <p>Import relationships only. Tests were not executed.</p>
+                </div>
+                <Badge tone={testEvidence.withoutRelatedTests ? 'medium' : 'success'}>
+                  {testEvidence.withoutRelatedTests} not observed
+                </Badge>
+              </div>
+              <div className="panel-body">
+                <div className="stat-grid">
+                  <div className="stat-card">
+                    <div className="stat-label">Test files inspected</div>
+                    <div className="stat-number">{testEvidence.testFiles}</div>
+                    <div className="stat-foot">No execution</div>
+                  </div>
+                  <div className="stat-card">
+                    <div className="stat-label">Critical source files</div>
+                    <div className="stat-number">{testEvidence.criticalFiles}</div>
+                    <div className="stat-foot">
+                      {testEvidence.withRelatedTests} with related imports
+                    </div>
+                  </div>
+                </div>
+                <p className="small muted">
+                  Not observed means no related captured test import was found. It does not prove
+                  that a source file is untested.
+                </p>
+              </div>
+              {targetsWithoutRelatedTests.length > 0 && (
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Critical source file</th>
+                        <th>Entry points</th>
+                        <th>Sensitive facts</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {targetsWithoutRelatedTests.slice(0, 100).map((target) => (
+                        <tr key={target.file}>
+                          <td className="strong mono">{target.file}</td>
+                          <td>{target.entrypointIds.length}</td>
+                          <td>{target.sensitiveFactKinds.join(', ') || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+
           {architecture && (
             <>
               <div className="panel-header">
@@ -383,7 +446,8 @@ export function MechanicalReportPanel({
           {(architecture?.truncated ||
             duplication?.truncated ||
             supplyChain?.truncated ||
-            quality?.truncated) && (
+            quality?.truncated ||
+            testEvidence?.truncated) && (
             <div className="panel-footer">
               Totals are exact where shown; detailed rows are bounded. Review Coverage for the
               specific scanner limitation.

@@ -277,6 +277,8 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Validation](docs/VALIDATION.md)
 - [Real-project evaluation](docs/REAL_PROJECT_EVALUATION.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Security-critical test evidence](docs/TEST_EVIDENCE.md)
+- [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)
 
 ## License

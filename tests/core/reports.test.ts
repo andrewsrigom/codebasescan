@@ -9,7 +9,12 @@ import {
   toMarkdown,
   toSarif,
 } from '../../src/domain/reports.ts';
-import { sampleEnvironmentContract, sampleReport, sampleRiskCorrelation } from '../helpers.ts';
+import {
+  sampleEnvironmentContract,
+  sampleReport,
+  sampleRiskCorrelation,
+  sampleTestEvidence,
+} from '../helpers.ts';
 import { buildCoverage } from '../../src/domain/coverage.ts';
 import { profileProject } from '../../src/scanners/project-profile.ts';
 import { buildSecurityChecklist } from '../../src/domain/checklist.ts';
@@ -49,6 +54,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.riskCorrelation.paths[0]!.steps[0]!.label = '<unsafe-path>';
   report.environmentContract = sampleEnvironmentContract();
+  report.testEvidence = sampleTestEvidence();
+  report.testEvidence.targets[0]!.file = '<unsafe-test-target>';
   report.environmentContract.variables[0]!.name = '<unsafe-env-name>';
   const output = toHtml(report);
   assert.ok(!output.includes('<script>'));
@@ -74,6 +81,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Environment configuration'));
   assert.ok(output.includes('&lt;unsafe-env-name&gt;'));
   assert.ok(!output.includes('<unsafe-env-name>'));
+  assert.ok(output.includes('&lt;unsafe-test-target&gt;'));
+  assert.ok(!output.includes('<unsafe-test-target>'));
 });
 test('SARIF export retains unresolved status and valid local locations', () => {
   const result = toSarif(sampleReport()) as {
@@ -220,6 +229,7 @@ test('Markdown includes scope and limitations', () => {
   };
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.environmentContract = sampleEnvironmentContract();
+  report.testEvidence = sampleTestEvidence();
   report.projectProfile.components = [
     {
       id: 'component-web',
@@ -253,6 +263,7 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
+  assert.ok(output.includes('## Security-critical test evidence'));
   assert.ok(output.includes('Declared package boundaries:'));
   assert.ok(output.includes('@fixture/web → @fixture/auth: 3 import'));
   assert.ok(output.includes('## Mechanical analysis'));

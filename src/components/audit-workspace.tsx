@@ -177,7 +177,8 @@ export function AuditWorkspace({
       Object.values(report.supplyChainAnalysis?.issueCounts ?? {}).reduce(
         (total, count) => total + count,
         0,
-      )
+      ) +
+      (report.testEvidence?.withoutRelatedTests ?? 0)
     : 0;
   const reviewSummary = active
     ? 'Audit in progress. Results update as scanners finish.'
@@ -213,6 +214,10 @@ export function AuditWorkspace({
         };
       });
   }, [mapQuery, projectProfile]);
+  const projectComponentNames = useMemo(
+    () => new Map(projectProfile?.components.map((component) => [component.id, component.name])),
+    [projectProfile],
+  );
   const osvRun = report?.scanners.find((scanner) => scanner.id === 'osv');
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex: number | null = null;
@@ -727,14 +732,9 @@ export function AuditWorkspace({
                     <ul className="limitations">
                       {projectProfile.componentEdges.slice(0, 20).map((edge) => (
                         <li key={edge.id}>
-                          {projectProfile.components.find(
-                            (component) => component.id === edge.fromComponentId,
-                          )?.name ?? edge.fromComponentId}{' '}
-                          →{' '}
-                          {projectProfile.components.find(
-                            (component) => component.id === edge.toComponentId,
-                          )?.name ?? edge.toComponentId}
-                          : {edge.imports} import(s)
+                          {projectComponentNames.get(edge.fromComponentId) ?? edge.fromComponentId}{' '}
+                          → {projectComponentNames.get(edge.toComponentId) ?? edge.toComponentId}:{' '}
+                          {edge.imports} import(s)
                         </li>
                       ))}
                     </ul>
@@ -850,6 +850,7 @@ export function AuditWorkspace({
           analysis={report?.mechanicalAnalysis}
           supplyChain={report?.supplyChainAnalysis}
           quality={report?.codeQualityAnalysis}
+          testEvidence={report?.testEvidence}
         />
       )}
       {tab === 'Checklist' && (

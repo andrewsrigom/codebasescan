@@ -7,7 +7,12 @@ import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
-import { sampleEnvironmentContract, sampleReport, sampleRiskCorrelation } from '../helpers.ts';
+import {
+  sampleEnvironmentContract,
+  sampleReport,
+  sampleRiskCorrelation,
+  sampleTestEvidence,
+} from '../helpers.ts';
 
 test('static report writes a self-contained versioned artifact directory', async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-static-report-'));
@@ -15,6 +20,7 @@ test('static report writes a self-contained versioned artifact directory', async
   const report = sampleReport();
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.environmentContract = sampleEnvironmentContract();
+  report.testEvidence = sampleTestEvidence();
   const result = await writeStaticReport(report, temporary);
   assert.equal(result.directory, path.join(temporary, report.auditId));
   assert.deepEqual(
@@ -24,6 +30,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'audit-report.json',
       'risk-paths.json',
       'environment-contract.json',
+      'test-evidence.json',
       'agent-plan.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
@@ -40,6 +47,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes("default-src 'none'"));
   assert.ok(html.includes('href="risk-paths.json"'));
   assert.ok(html.includes('href="environment-contract.json"'));
+  assert.ok(html.includes('href="test-evidence.json"'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -59,6 +67,10 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'environment-contract.json'), 'utf8'),
   ) as { summary: { undocumented: number } };
   assert.equal(environmentContract.summary.undocumented, 1);
+  const testEvidence = JSON.parse(
+    await readFile(path.join(result.directory, 'test-evidence.json'), 'utf8'),
+  ) as { withoutRelatedTests: number };
+  assert.equal(testEvidence.withoutRelatedTests, 1);
   assert.equal(
     agentPlan,
     await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8'),

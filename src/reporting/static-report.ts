@@ -105,6 +105,15 @@ export async function writeStaticReport(
           },
         ]
       : []),
+    ...(report.testEvidence
+      ? [
+          {
+            path: 'test-evidence.json',
+            mediaType: 'application/json',
+            content: json(report.testEvidence),
+          },
+        ]
+      : []),
     {
       path: 'agent-plan.json',
       mediaType: 'application/json',

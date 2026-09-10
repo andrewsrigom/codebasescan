@@ -15,6 +15,7 @@ import type {
   ScannerRun,
   Snapshot,
   SupplyChainAnalysis,
+  TestEvidenceAnalysis,
 } from '../domain/types.ts';
 import { mergeFindings } from '../domain/findings.ts';
 import { buildCoverage } from '../domain/coverage.ts';
@@ -40,6 +41,7 @@ import { scanAccessibilityStatic } from '../scanners/accessibility-static.ts';
 import { scanPrivacyStatic } from '../scanners/privacy-static.ts';
 import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
 import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
+import { scanTestEvidence } from '../scanners/test-evidence.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -97,6 +99,10 @@ export const AuditState = Annotation.Root({
     default: () => null,
   }),
   environmentContract: Annotation<EnvironmentContractAnalysis | null>({
+    reducer: (_, value) => value,
+    default: () => null,
+  }),
+  testEvidence: Annotation<TestEvidenceAnalysis | null>({
     reducer: (_, value) => value,
     default: () => null,
   }),
@@ -330,6 +336,24 @@ export function buildAuditGraph(options: {
         environmentContract: result.analysis,
         scanners: [result.run],
       };
+    })
+    .addNode('test_evidence', async (state) => {
+      if (!modeEnabled(enabledModes, 'release-readiness'))
+        return {
+          testEvidence: null,
+          scanners: [
+            skippedByMode('test-evidence', 'Security-critical test evidence', 'release-readiness'),
+          ],
+        };
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to test evidence analysis.');
+      const result = scanTestEvidence(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'test_evidence',
+        `${result.analysis.withRelatedTests} of ${result.analysis.criticalFiles} critical source file(s) have related captured test imports.`,
+      );
+      return { testEvidence: result.analysis, scanners: [result.run] };
     })
     .addNode('architecture', async (state) => {
       if (!modeEnabled(enabledModes, 'maintainability'))
@@ -581,7 +605,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 8,
+        schemaVersion: 9,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -598,6 +622,7 @@ export function buildAuditGraph(options: {
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         ...(riskCorrelation ? { riskCorrelation } : {}),
         ...(state.environmentContract ? { environmentContract: state.environmentContract } : {}),
+        ...(state.testEvidence ? { testEvidence: state.testEvidence } : {}),
         ...(mechanicalAnalysis ? { mechanicalAnalysis } : {}),
         ...(state.supplyChainAnalysis ? { supplyChainAnalysis: state.supplyChainAnalysis } : {}),
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
@@ -725,6 +750,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'privacy_static')
     .addEdge('project_profile', 'reliability_static')
     .addEdge('snapshot', 'environment_contract')
+    .addEdge('project_profile', 'test_evidence')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -745,6 +771,7 @@ export function buildAuditGraph(options: {
         'privacy_static',
         'reliability_static',
         'environment_contract',
+        'test_evidence',
         'architecture',
         'duplication',
         'supply_chain',
