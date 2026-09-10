@@ -74,6 +74,7 @@ const task = z.object({
   rationale: shortText,
   rootCause,
   findings: z.array(findingRef).max(10_000),
+  riskPathIds: stringList,
   controlIds: stringList,
   evidenceIds: stringList,
   files: stringList,
@@ -104,7 +105,7 @@ const task = z.object({
 });
 
 const planSchema = z.object({
-  schemaVersion: z.literal(3),
+  schemaVersion: z.literal(4),
   kind: z.literal('traceward-remediation-plan'),
   createdAt: shortText,
   audit: z.object({

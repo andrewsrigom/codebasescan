@@ -10,7 +10,7 @@ import {
   parseRemediationResult,
   remediationPlanJsonSchema,
 } from '../../src/domain/remediation-schema.ts';
-import { sampleReport } from '../helpers.ts';
+import { sampleReport, sampleRiskCorrelation } from '../helpers.ts';
 
 function dependencyReport() {
   const report = sampleReport();
@@ -51,7 +51,7 @@ test('remediation plan is deterministic, bounded, and contains references instea
   const first = buildRemediationPlan(report);
   const second = buildRemediationPlan(report);
   assert.deepEqual(first, second);
-  assert.equal(first.schemaVersion, 3);
+  assert.equal(first.schemaVersion, 4);
   assert.equal(first.tasks.length, 1);
   assert.equal(first.tasks[0]?.kind, 'upgrade_dependency');
   assert.equal(first.tasks[0]?.target.fixCandidate, '1.2.5');
@@ -78,12 +78,13 @@ test('agent plan JSON Schema describes the current required contract', () => {
     properties?: { schemaVersion?: { const?: number }; tasks?: unknown };
     required?: string[];
   };
-  assert.equal(schema.properties?.schemaVersion?.const, 3);
+  assert.equal(schema.properties?.schemaVersion?.const, 4);
   assert.ok(schema.required?.includes('tasks'));
 });
 
 test('unconfirmed source candidates become analysis tasks rather than automatic patches', () => {
   const report = sampleReport();
+  report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.projectProfile = {
     schemaVersion: 1,
     status: 'complete',
@@ -133,6 +134,7 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
   assert.equal(plan.tasks[0]?.constraints.network, 'denied');
   assert.equal(plan.tasks[0]?.autoFixable, false);
   assert.equal(plan.tasks[0]?.requiresHuman, true);
+  assert.deepEqual(plan.tasks[0]?.riskPathIds, ['risk-path-1']);
   assert.deepEqual(
     plan.tasks[0]?.verificationCommands.map((command) => command.argv),
     [
@@ -206,6 +208,25 @@ test('task bundle contains only the selected task and its bounded evidence', () 
   );
   assert.equal(JSON.stringify(bundle).includes('unrelated-finding'), false);
   assert.equal('root' in bundle.audit, false);
+});
+
+test('task bundle includes only source paths related to the selected findings', () => {
+  const report = sampleReport();
+  report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
+  report.riskCorrelation.paths.push({
+    ...structuredClone(report.riskCorrelation.paths[0]!),
+    id: 'unrelated-risk-path',
+    findingIds: ['another-finding'],
+  });
+  const plan = buildRemediationPlan(report);
+  const bundle = buildRemediationTaskBundle(report, plan.tasks[0]!.id);
+  assert.equal(bundle.schemaVersion, 2);
+  assert.deepEqual(bundle.task.riskPathIds, ['risk-path-1']);
+  assert.deepEqual(
+    bundle.riskPaths.map((path) => path.id),
+    ['risk-path-1'],
+  );
+  assert.equal(JSON.stringify(bundle).includes('unrelated-risk-path'), false);
 });
 
 test('task bundle rejects an unknown task id', () => {

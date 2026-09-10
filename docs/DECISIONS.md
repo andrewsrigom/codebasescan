@@ -96,3 +96,11 @@ All eight offline modes run when no selection is supplied. CLI/API callers may c
 subset; unrelated graph nodes still publish explicit skipped runs so coverage becomes `DISABLED`
 rather than clean. Reports store the versioned selection. Stored options and reports gain optional
 fields only, while workflow v13 protects in-progress checkpoint compatibility.
+
+## 2026-09-10 — agent plan contract v4 risk paths
+
+Agent-plan tasks carry bounded `riskPathIds` when their findings belong to a statically resolved
+entrypoint-to-operation path. A version 2 task bundle embeds only those related paths and expands
+its bounded project context with their files. The links are navigation evidence, not runtime or
+exploitability claims. Version 3 plan and version 1 bundle consumers must regenerate artifacts from
+the immutable audit report.

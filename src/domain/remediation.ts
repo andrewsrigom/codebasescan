@@ -13,13 +13,15 @@ import type {
   ScannerRun,
   SecurityControlResult,
   Severity,
+  SourceRiskPath,
 } from './types.ts';
 import { digest, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
-export const remediationPlanVersion = 3 as const;
+export const remediationPlanVersion = 4 as const;
 export const remediationResultVersion = 1 as const;
 const maximumTasks = 2_000;
+const maximumRiskPathsPerTask = 50;
 
 export type RemediationTaskKind =
   | 'upgrade_dependency'
@@ -86,6 +88,7 @@ export interface RemediationTask {
   rationale: string;
   rootCause: RemediationRootCause;
   findings: RemediationFindingRef[];
+  riskPathIds: string[];
   controlIds: string[];
   evidenceIds: string[];
   files: string[];
@@ -173,13 +176,14 @@ export interface RemediationResult {
 }
 
 export interface RemediationTaskBundle {
-  schemaVersion: 1;
+  schemaVersion: 2;
   kind: 'traceward-remediation-task-bundle';
   createdAt: string;
   audit: RemediationPlan['audit'];
   policy: string[];
   task: RemediationTask;
   findings: Finding[];
+  riskPaths: SourceRiskPath[];
   controls: SecurityControlResult[];
   dependencies: Dependency[];
   coverage: (CoverageCapability | ScannerRun)[];
@@ -362,6 +366,15 @@ function unresolvedFinding(finding: Finding): boolean {
   return !['fixed', 'false_positive', 'accepted_risk'].includes(finding.disposition);
 }
 
+function relatedRiskPathIds(report: AuditReport, findingIds: string[]): string[] {
+  const relatedFindings = new Set(findingIds);
+  return (report.riskCorrelation?.paths ?? [])
+    .filter((path) => path.findingIds.some((findingId) => relatedFindings.has(findingId)))
+    .sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id))
+    .slice(0, maximumRiskPathsPerTask)
+    .map((path) => path.id);
+}
+
 function dependencyTasks(report: AuditReport): RemediationTask[] {
   return groupDependencyAdvisories(
     report.findings.filter(unresolvedFinding),
@@ -426,6 +439,10 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
         `Advisories affecting the resolved ${group.package} dependency.`,
       ),
       findings: group.findings.map(findingRef),
+      riskPathIds: relatedRiskPathIds(
+        report,
+        group.findings.map((finding) => finding.id),
+      ),
       controlIds: [],
       evidenceIds: unique(
         group.findings.flatMap((finding) => finding.evidence.map((item) => item.id)),
@@ -545,6 +562,10 @@ function findingTask(report: AuditReport, groupedFindings: Finding[]): Remediati
       `${findings.length} ${finding.ruleId} candidate${findings.length === 1 ? '' : 's'} in ${files[0] ?? 'an unknown location'}.`,
     ),
     findings: findings.map(findingRef),
+    riskPathIds: relatedRiskPathIds(
+      report,
+      findings.map((item) => item.id),
+    ),
     controlIds: [],
     evidenceIds: unique(findings.flatMap((item) => item.evidence.map((evidence) => evidence.id))),
     files,
@@ -643,6 +664,7 @@ function controlTasks(report: AuditReport, tasksByFinding: Map<string, string>):
           `Missing or partial evidence for ${control.id}.`,
         ),
         findings: [],
+        riskPathIds: relatedRiskPathIds(report, linkedFindings),
         controlIds: [control.id],
         evidenceIds: unique(control.evidence.map((item) => item.id)),
         files: [],
@@ -847,10 +869,15 @@ export function buildRemediationTaskBundle(
   const task = plan.tasks.find((candidate) => candidate.id === taskId);
   if (!task) throw new Error(`Remediation task not found: ${taskId}`);
   const findingIds = new Set(task.findings.map((finding) => finding.id));
+  const riskPathIds = new Set(task.riskPathIds);
   const controlIds = new Set(task.controlIds);
   const files = new Set(task.files);
   const findings = report.findings.filter((finding) => findingIds.has(finding.id));
   for (const finding of findings) for (const evidence of finding.evidence) files.add(evidence.file);
+  const riskPaths = (report.riskCorrelation?.paths ?? []).filter((path) =>
+    riskPathIds.has(path.id),
+  );
+  for (const path of riskPaths) for (const step of path.steps) files.add(step.file);
   const controls = (report.checklist?.controls ?? []).filter((control) =>
     controlIds.has(control.id),
   );
@@ -874,13 +901,14 @@ export function buildRemediationTaskBundle(
   for (const entry of relevantDataEntries ?? [])
     dataMapSummary[entry.operation] = (dataMapSummary[entry.operation] ?? 0) + 1;
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     kind: 'traceward-remediation-task-bundle',
     createdAt: report.createdAt,
     audit: plan.audit,
     policy: plan.policy,
     task,
     findings,
+    riskPaths,
     controls,
     dependencies,
     coverage: report.coverage ?? report.scanners,
@@ -913,6 +941,7 @@ export function buildRemediationTaskBundle(
     limitations: [
       ...plan.limitations,
       ...task.uncertainties,
+      ...(riskPaths.length ? (report.riskCorrelation?.limitations ?? []) : []),
       'The bundle contains only evidence already captured by the audit and does not contain the repository source tree.',
     ],
   };
