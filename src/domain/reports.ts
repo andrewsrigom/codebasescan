@@ -259,7 +259,8 @@ export function toMarkdown(
     `${report.filesAnalyzed} files analyzed. ${report.truncated ? 'Snapshot was truncated.' : 'Snapshot stayed within configured limits.'}`,
     '',
     ...report.scanners.map(
-      (scanner) => `- ${m(scanner.name)}: ${m(scanner.status)}. ${m(scanner.detail)}`,
+      (scanner) =>
+        `- ${m(scanner.name)}: ${m(scanner.status)}${scanner.cache ? `; cache ${m(scanner.cache.status)}` : ''}. ${m(scanner.detail)}`,
     ),
     ...(report.coverage
       ? [

@@ -188,6 +188,14 @@ const scanner = z.looseObject({
   findings: z.number().int().nonnegative(),
   detail: shortText,
   version: shortText.optional(),
+  cache: z
+    .object({
+      status: z.enum(['hit', 'miss']),
+      key: z.string().regex(/^[a-f0-9]{64}$/),
+      storedAt: z.iso.datetime({ offset: true }).optional(),
+      sourceDurationMs: z.number().nonnegative().optional(),
+    })
+    .optional(),
 });
 
 const dependency = z.looseObject({

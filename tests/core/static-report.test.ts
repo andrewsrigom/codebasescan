@@ -141,7 +141,7 @@ test('static report writes a self-contained versioned artifact directory', async
   const runManifestSchema = JSON.parse(
     await readFile(path.join(result.directory, 'run-manifest.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
-  assert.equal(runManifestSchema.properties?.schemaVersion?.const, 1);
+  assert.equal(runManifestSchema.properties?.schemaVersion?.const, 2);
   const policyResult = parsePolicyResult(
     JSON.parse(await readFile(path.join(result.directory, 'policy-result.json'), 'utf8')),
   );

@@ -191,6 +191,12 @@ export interface ScannerRun {
   findings: number;
   detail: string;
   version?: string;
+  cache?: {
+    status: 'hit' | 'miss';
+    key: string;
+    storedAt?: string;
+    sourceDurationMs?: number;
+  };
 }
 export interface Dependency {
   name: string;

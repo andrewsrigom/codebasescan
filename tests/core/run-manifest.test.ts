@@ -18,6 +18,14 @@ test('run manifest keeps execution, coverage, and artifact integrity explicit', 
   ];
   report.truncated = true;
   report.skipped = { 'file-count-limit': 2 };
+  const scanner = report.scanners[0];
+  assert.ok(scanner);
+  scanner.cache = {
+    status: 'hit',
+    key: 'b'.repeat(64),
+    storedAt: '2026-09-10T12:00:00.000Z',
+    sourceDurationMs: 25,
+  };
 
   const manifest = parseRunManifest(
     buildRunManifest(report, [
@@ -33,6 +41,7 @@ test('run manifest keeps execution, coverage, and artifact integrity explicit', 
   assert.deepEqual(manifest.modes.requested, ['security']);
   assert.equal(manifest.modes.selectionAvailable, true);
   assert.equal(manifest.execution.scannerStatus.completed, 1);
+  assert.deepEqual(manifest.execution.cache, { eligible: 1, hits: 1, misses: 0 });
   assert.equal(manifest.coverage.status.COMPLETE, 1);
   assert.equal(manifest.coverage.status['NOT PERFORMED'], 1);
   assert.equal(manifest.scope.truncated, true);

@@ -31,6 +31,10 @@ unmatched records remain counted; reviewer identity/signature policy is still fu
 
 The versioned run manifest is implemented and publishes mode selection, snapshot limits, scanner
 status/duration, explicit coverage state, limitations, and output digests with a JSON Schema.
+Deterministic scanners now use a bounded local cache keyed by the exact snapshot, scanner version,
+workflow version, and safe variant. Runtime, advisory, Git-history, and external scanner evidence
+is intentionally refreshed instead of replayed. Entries are atomically written with per-entry,
+entry-count, and total-size limits.
 
 ## Invariants
 
@@ -235,7 +239,8 @@ comparisons require explicit credential, spend, or download approval and measure
 ## Phase 10 — release hardening
 
 - clean-clone installation and package-content checks on supported platforms;
-- incremental/cache behavior keyed by snapshot and scanner versions;
+- incremental/cache behavior keyed by snapshot and scanner versions (implemented for deterministic
+  scanners; cross-snapshot file-level incrementality remains future work);
 - abrupt-failure and resource-limit matrix for external scanners;
 - CLI reference, JSON Schemas, rule-pack changelog, and correction-flow guide;
 - versioned run manifest, coverage manifest, policy-result schema, policy profiles, and stable exit

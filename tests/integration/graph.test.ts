@@ -73,7 +73,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     store.audit(audit.id).report?.scanners.some((run) => run.id === 'environment-contract'),
   );
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
-  assert.equal(store.audit(audit.id).report?.schemaVersion, 13);
+  assert.equal(store.audit(audit.id).report?.schemaVersion, 14);
   assert.ok(store.audit(audit.id).report?.environmentContract);
   assert.ok(store.audit(audit.id).report?.testEvidence);
   assert.ok(store.audit(audit.id).report?.webhookContract);
@@ -162,6 +162,63 @@ test('a focused audit mode skips unrelated scanners without reporting them clean
     'COMPLETE',
   );
   assert.equal(report?.mechanicalAnalysis, undefined);
+});
+test('identical focused audits reuse deterministic scanner results only', async (context) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-cache-graph-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const store = new AuditStore(':memory:');
+  context.after(() => store.close());
+  const root = path.resolve('fixtures/hardened-saas');
+  const project = store.registerProject('Cache fixture', root);
+  const config = {
+    ...configuration(),
+    dataDirectory: directory,
+    temporaryDirectory: path.join(directory, 'temporary'),
+    scannerCacheDirectory: path.join(directory, 'scanner-cache'),
+    aiMode: 'disabled' as const,
+    semgrep: false,
+    gitleaks: false,
+  };
+
+  const run = async () => {
+    const audit = store.enqueue(project.id, { modes: ['accessibility-static'] });
+    store.claim(audit.id);
+    const graph = buildAuditGraph({
+      root,
+      projectName: project.name,
+      config,
+      store,
+      checkpointer: new MemorySaver(),
+      reviewer: null,
+      modes: audit.options.modes,
+      humanReview: false,
+    });
+    await graph.invoke(
+      { auditId: audit.id },
+      { configurable: { thread_id: audit.id }, recursionLimit: 100 },
+    );
+    const report = store.audit(audit.id).report;
+    store.transition(audit.id, 'completed');
+    return report;
+  };
+
+  const first = await run();
+  const second = await run();
+  for (const scannerId of ['project-profile', 'accessibility-static']) {
+    assert.equal(
+      first?.scanners.find((scanner) => scanner.id === scannerId)?.cache?.status,
+      'miss',
+    );
+    assert.equal(
+      second?.scanners.find((scanner) => scanner.id === scannerId)?.cache?.status,
+      'hit',
+    );
+  }
+  assert.equal(second?.scanners.find((scanner) => scanner.id === 'http-probe')?.cache, undefined);
+  assert.deepEqual(
+    second?.findings.map((finding) => finding.fingerprint),
+    first?.findings.map((finding) => finding.fingerprint),
+  );
 });
 test('the context loop terminates after two rounds with an injected reviewer', async () => {
   const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));

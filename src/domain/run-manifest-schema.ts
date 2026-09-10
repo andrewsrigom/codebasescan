@@ -38,7 +38,7 @@ const scopePreflight = z.object({
 });
 
 const schema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   kind: z.literal('traceward-audit-run'),
   tracewardVersion: shortText,
   workflowVersion: shortText,
@@ -68,6 +68,11 @@ const schema = z.object({
   execution: z.object({
     scannerDurationMs: nonnegative,
     scannerStatus: z.record(scannerStatus, nonnegative),
+    cache: z.object({
+      eligible: nonnegative,
+      hits: nonnegative,
+      misses: nonnegative,
+    }),
     scanners: z
       .array(
         z.object({
@@ -78,6 +83,14 @@ const schema = z.object({
           findings: nonnegative,
           detail: shortText,
           version: shortText.optional(),
+          cache: z
+            .object({
+              status: z.enum(['hit', 'miss']),
+              key: digest,
+              storedAt: z.iso.datetime({ offset: true }).optional(),
+              sourceDurationMs: nonnegative.optional(),
+            })
+            .optional(),
         }),
       )
       .max(1_000),

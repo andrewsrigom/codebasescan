@@ -319,6 +319,7 @@ try {
         databasePath: ':memory:',
         checkpointPath: path.join(temporary, 'checkpoints.sqlite'),
         temporaryDirectory: path.join(temporary, 'scanner-staging'),
+        scannerCacheDirectory: path.join(config.dataDirectory, 'scanner-cache'),
       };
       const auditTarget = target && !target.startsWith('--') ? target : '.';
       const root = await validateProjectRoot(auditTarget, temporary);

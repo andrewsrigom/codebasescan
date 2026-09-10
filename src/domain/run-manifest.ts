@@ -10,7 +10,7 @@ import type {
 } from './types.ts';
 import { auditWorkflowVersion, tracewardVersion } from './versions.ts';
 
-export const runManifestVersion = 1 as const;
+export const runManifestVersion = 2 as const;
 
 export interface RunManifestOutput {
   path: string;
@@ -48,6 +48,11 @@ export interface RunManifest {
   execution: {
     scannerDurationMs: number;
     scannerStatus: Record<ScannerStatus, number>;
+    cache: {
+      eligible: number;
+      hits: number;
+      misses: number;
+    };
     scanners: ScannerRun[];
   };
   coverage: {
@@ -78,6 +83,7 @@ const emptyCoverageStatus = (): Record<CoverageStatus, number> => ({
 export function buildRunManifest(report: AuditReport, outputs: RunManifestOutput[]): RunManifest {
   const scannerStatus = emptyScannerStatus();
   for (const scanner of report.scanners) scannerStatus[scanner.status] += 1;
+  const cachedScanners = report.scanners.filter((scanner) => scanner.cache);
 
   const capabilities = report.coverage ?? [];
   const coverageStatus = emptyCoverageStatus();
@@ -113,6 +119,11 @@ export function buildRunManifest(report: AuditReport, outputs: RunManifestOutput
     execution: {
       scannerDurationMs: report.scanners.reduce((total, scanner) => total + scanner.durationMs, 0),
       scannerStatus,
+      cache: {
+        eligible: cachedScanners.length,
+        hits: cachedScanners.filter((scanner) => scanner.cache?.status === 'hit').length,
+        misses: cachedScanners.filter((scanner) => scanner.cache?.status === 'miss').length,
+      },
       scanners: structuredClone(report.scanners),
     },
     coverage: {

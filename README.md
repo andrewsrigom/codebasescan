@@ -253,6 +253,12 @@ Portable exceptions require an exact fingerprint, rule, evidence paths and sourc
 owner, justification, supporting evidence, and optional expiry. See
 [Portable suppressions](docs/SUPPRESSIONS.md).
 
+Repeated audits reuse bounded local results only for deterministic scanners when the snapshot,
+scanner version, and workflow version match exactly. Set `TRACEWARD_SCANNER_CACHE=false` to force a
+fresh deterministic run. HTTP, advisories, Git history, Semgrep, and Gitleaks are never replayed by
+this cache. Each entry is limited to 12 MiB and best-effort pruning keeps at most 256 entries or
+256 MiB.
+
 ## What is intentionally out of scope
 
 - whole-program path-sensitive taint or dependency reachability proof;

@@ -31,6 +31,8 @@ export interface Configuration {
   osv: boolean;
   osvCacheHours: number;
   advisoryDatabasePath: string;
+  scannerCache?: boolean;
+  scannerCacheDirectory?: string;
 }
 function boundedInteger(
   value: string | undefined,
@@ -114,5 +116,6 @@ export function configuration(): Configuration {
       /* turbopackIgnore: true */
       process.env.TRACEWARD_ADVISORY_DB || path.join(dataDirectory, 'advisory-database.json'),
     ),
+    scannerCache: process.env.TRACEWARD_SCANNER_CACHE !== 'false',
   };
 }

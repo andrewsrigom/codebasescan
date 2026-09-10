@@ -46,3 +46,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Replaced the multi-megabyte browser graph payload with a compact project-map projection.
 - Added an exact-host local relay boundary for WSL while retaining browser-facing loopback checks.
 - Added portable, schema-validated suppression ledgers with exact evidence targets, ownership, justification, expiry, stale-entry detection, and policy/report integration.
+- Added bounded deterministic scanner caching with exact snapshot and scanner/workflow version keys, explicit hit/miss provenance, and fresh runtime/advisory/external scans.
