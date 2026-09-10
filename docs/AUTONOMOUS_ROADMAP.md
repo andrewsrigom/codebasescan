@@ -6,6 +6,8 @@ Traceward must turn an authorized Node.js, TypeScript, React, or Next.js reposit
 
 1. a human report explaining risks, evidence, uncertainty, coverage, and progress;
 2. a versioned agent contract containing a bounded, testable work queue.
+3. a machine-readable coverage and policy result that distinguishes a clean check from one that
+   was disabled, unsupported, truncated, skipped, or failed.
 
 The deterministic audit stays useful with AI disabled. AI may investigate ambiguity and propose
 changes, but cannot overwrite scanner evidence, invent coverage, or verify its own work.
@@ -27,6 +29,8 @@ and independent dispositions. Later phases remain gated as described below.
 - Never install, import, build, test, or execute an audited repository.
 - Keep observations, inferences, missing evidence, AI assessments, and human decisions distinct.
 - Do not turn absent source evidence into proof that a runtime control is missing.
+- Never collapse disabled, unsupported, not-applicable, truncated, and failed analysis into zero
+  findings; publish the exact reason and affected scope.
 - Keep task IDs and finding fingerprints stable across unchanged snapshots.
 - Require independent checks and a fresh audit before reporting a task resolved.
 - Add vulnerable and structurally similar benign fixtures for every source rule.
@@ -46,6 +50,10 @@ Publish a JSON Schema and validate every plan before disk. A task bundle contain
 task and referenced evidence. Contract v5 identifies the owning workspace components and matching
 security-critical test targets; bundle v3 includes the selected component boundary, neighboring
 component edges, and bounded related-test references.
+
+Publish a versioned run manifest beside the report. It records repository/snapshot identity,
+Traceward and pack versions, requested and effective modes, scanner status, supported/unsupported
+scope, truncation, elapsed time, and output digests without copying source or secrets.
 
 Gate: schema, determinism, path containment, command allowlist, compatibility alias, manifest, and
 baseline-result tests pass.
@@ -94,6 +102,10 @@ WCAG mappings, fixture TP/FP/FN, real-project dispositions, projects tested, cal
 and suppression/downgrade rationale. Dependency review also separates license candidates,
 abandonment signals backed by captured metadata, duplicate versions, scope, and parent paths.
 
+Support scoped suppressions with owner, justification, evidence, creation date, optional expiry,
+and exact rule/path/fingerprint targeting. Expired, stale, and overly broad suppressions remain
+visible; suppression never changes scanner coverage or deletes the underlying observation.
+
 Gate: priority is reproducible, grouping loses no source finding, and standards mapping makes no
 compliance or exploitability claim.
 
@@ -136,6 +148,10 @@ findings by source/rule/priority/confidence/root cause, checklist/data-map cover
 unknown/accepted/fixed decisions when available, manual misses, duplicate rate, review time, and
 before/after changes.
 
+Calibrate rules against structurally different repositories, including benign near-misses, before
+raising confidence or enabling a policy failure. Project-specific patterns may become generic rules
+only after the same invariant is demonstrated independently.
+
 Raw private source and secrets stay outside this repository. Generic fixtures may be derived only
 after removing project-specific identifiers and sensitive content.
 
@@ -173,6 +189,10 @@ Lead with confirmed candidates, important unknowns, and failed/partial coverage;
 causes; applicable checklist and data map; separated dependency/maintenance sections; before/after
 progress; verification provenance; and links to JSON, SARIF, SBOM, agent plan, bundles, and schemas.
 
+Add configurable policy profiles (`advisory`, `balanced`, and `strict`) with deterministic CLI exit
+codes. Policy evaluates severity, confidence, novelty, coverage health, and accepted/suppressed
+state; it does not reinterpret evidence or claim compliance. Publish the policy decision as JSON.
+
 Keep raw detail lazy and bounded. Accessibility, mobile layout, script-free static output, and
 truthful empty/error states are release gates.
 
@@ -189,6 +209,11 @@ remediation choices, verification plan, confidence, limitations, provider/model,
 cost, cache state, and redaction state. Invalid citations or schema fail closed. AI never creates a
 verified finding or completion state by itself.
 
+Before any provider call, a deterministic redaction gate removes secret values, credentials,
+personal data candidates, absolute private paths when unnecessary, and unrelated source. The
+request manifest records redaction rules, retained evidence IDs, byte/token budget, and digest;
+raw prompts and responses remain local unless the user explicitly authorizes retention.
+
 Gate: disabled mode makes zero calls; mocks cover failures and budgets; live economical/strong/local
 comparisons require explicit credential, spend, or download approval and measure accepted value.
 
@@ -198,6 +223,9 @@ comparisons require explicit credential, spend, or download approval and measure
 - incremental/cache behavior keyed by snapshot and scanner versions;
 - abrupt-failure and resource-limit matrix for external scanners;
 - CLI reference, JSON Schemas, rule-pack changelog, and correction-flow guide;
+- versioned run manifest, coverage manifest, policy-result schema, policy profiles, and stable exit
+  code contract;
+- scoped suppression file with expiry/staleness checks and an audit trail;
 - reviewer identity/signature policy above the current unauthenticated portable ledger;
 - explicit finding lifecycle for new, confirmed, accepted, fixed, stale, and reappearing work;
 - parser fuzzing, malformed-repository tests, deterministic replay, and hostile-input containment;
