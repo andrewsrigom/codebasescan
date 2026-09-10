@@ -96,6 +96,28 @@ test('cross-origin requests and DNS-rebinding hosts are rejected', () => {
     ),
   );
 });
+test('an explicit internal relay host still requires a loopback browser host', () => {
+  const internalHost = '172.19.23.77:3000';
+  assert.equal(
+    localRequestError(
+      new Request(`http://${internalHost}/api/audits`, {
+        headers: { host: '127.0.0.1:3000' },
+      }),
+      '3000',
+      internalHost,
+    ),
+    null,
+  );
+  assert.ok(
+    localRequestError(
+      new Request(`http://${internalHost}/api/audits`, {
+        headers: { host: internalHost },
+      }),
+      '3000',
+      internalHost,
+    ),
+  );
+});
 test('mutations without the explicit UI header are rejected', () => {
   assert.ok(
     localRequestError(

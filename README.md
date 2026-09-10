@@ -38,6 +38,9 @@ npm run dev
 
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
+The default server accepts loopback hosts only. A WSL-to-Windows loopback relay may set an exact
+`TRACEWARD_INTERNAL_HOST`; the browser-facing host and Origin must still be loopback.
+
 For queued audits, run the worker in another terminal:
 
 ```bash

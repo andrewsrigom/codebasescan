@@ -19,7 +19,7 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 249 passed                                                             |
+| npm test                      | 250 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
 | npm run benchmark             | TP 45, FP 1, FN 0; precision 0.9783, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |

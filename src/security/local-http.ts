@@ -1,8 +1,12 @@
-export function localRequestError(request: Request, port = '3000'): string | null {
+export function localRequestError(
+  request: Request,
+  port = '3000',
+  internalHost?: string,
+): string | null {
   const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`]);
   const url = new URL(request.url);
   const host = request.headers.get('host') ?? url.host;
-  if (!allowedHosts.has(host) || !allowedHosts.has(url.host))
+  if (!allowedHosts.has(host) || (!allowedHosts.has(url.host) && url.host !== internalHost))
     return 'Only loopback requests are accepted.';
   const origin = request.headers.get('origin');
   if (origin && origin !== `http://${host}`) return 'Cross-origin requests are not accepted.';

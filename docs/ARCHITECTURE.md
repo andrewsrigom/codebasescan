@@ -74,7 +74,9 @@ collect_context -> assess
 
 Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
 
-The UI receives a compact project-map projection instead of the full symbol/import/call graph.
+The UI receives a compact project-map projection instead of the full symbol/import/call graph. An
+optional exact `TRACEWARD_INTERNAL_HOST` supports a local OS relay; browser-facing Host and Origin
+checks remain restricted to loopback.
 
 ## Deterministic evidence
 

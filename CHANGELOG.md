@@ -44,3 +44,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added explicit Next.js posture candidates for wildcard Server Action origins and broad/insecure remote image policy.
 - Added bounded resolution for captured workspace package exports and imported reexport bridges in the project graph.
 - Replaced the multi-megabyte browser graph payload with a compact project-map projection.
+- Added an exact-host local relay boundary for WSL while retaining browser-facing loopback checks.

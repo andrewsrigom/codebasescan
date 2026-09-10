@@ -18,7 +18,11 @@ type Context = {
   }>;
 };
 export async function GET(request: Request, context: Context) {
-  const error = localRequestError(request, process.env.TRACEWARD_PORT ?? '3000');
+  const error = localRequestError(
+    request,
+    process.env.TRACEWARD_PORT ?? '3000',
+    process.env.TRACEWARD_INTERNAL_HOST,
+  );
   if (error) return Response.json({ error }, { status: 403 });
   try {
     const id = uuid((await context.params).id);
@@ -40,7 +44,11 @@ export async function GET(request: Request, context: Context) {
   }
 }
 export async function POST(request: Request, context: Context) {
-  const error = localRequestError(request, process.env.TRACEWARD_PORT ?? '3000');
+  const error = localRequestError(
+    request,
+    process.env.TRACEWARD_PORT ?? '3000',
+    process.env.TRACEWARD_INTERNAL_HOST,
+  );
   if (error) return Response.json({ error }, { status: 403 });
   try {
     const id = uuid((await context.params).id);

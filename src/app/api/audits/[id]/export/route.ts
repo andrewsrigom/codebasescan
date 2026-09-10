@@ -21,7 +21,11 @@ export async function GET(
     }>;
   },
 ) {
-  const error = localRequestError(request, process.env.TRACEWARD_PORT ?? '3000');
+  const error = localRequestError(
+    request,
+    process.env.TRACEWARD_PORT ?? '3000',
+    process.env.TRACEWARD_INTERNAL_HOST,
+  );
   if (error) return new Response(error, { status: 403 });
   try {
     const id = uuid((await params).id);
