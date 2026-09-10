@@ -18,7 +18,7 @@ test('report comparison separates new, resolved, unchanged, and severity changes
   current.auditId = '00000000-0000-4000-8000-000000000002';
   current.findings = [unchanged, added];
   const comparison = compareReports(base, current);
-  assert.equal(comparison.schemaVersion, 2);
+  assert.equal(comparison.schemaVersion, 3);
   assert.equal(comparison.historyReports, 0);
   assert.equal(comparison.newFindings.length, 1);
   assert.equal(comparison.resolvedFindings.length, 0);
@@ -39,6 +39,33 @@ test('report comparison separates new, resolved, unchanged, and severity changes
 
   current.findings = [added];
   assert.equal(compareReports(base, current).resolvedFindings.length, 1);
+});
+
+test('dependency lifecycle ignores lockfile line churn for the same advisory instance', () => {
+  const base = sampleReport();
+  const finding = base.findings[0]!;
+  finding.source = 'osv';
+  finding.ruleId = 'GHSA-example';
+  finding.vulnerability = {
+    id: 'GHSA-example',
+    aliases: [],
+    package: 'postcss',
+    version: '8.5.8',
+    fixedVersions: ['8.5.23'],
+    severity: [],
+    relationship: 'transitive',
+    reachability: 'referenced',
+    lockfile: 'pnpm-lock.yaml',
+  };
+  const current = structuredClone(base);
+  current.auditId = '00000000-0000-4000-8000-000000000002';
+  current.findings[0]!.id = 'moved-finding';
+  current.findings[0]!.fingerprint = 'moved-lockfile-line-fingerprint';
+
+  const comparison = compareReports(base, current);
+  assert.equal(comparison.newFindings.length, 0);
+  assert.equal(comparison.resolvedFindings.length, 0);
+  assert.equal(comparison.unchangedFindings.length, 1);
 });
 
 test('comparison attributes lifecycle to components and identifies reappearing fingerprints', () => {

@@ -1122,7 +1122,7 @@ export interface ComponentLifecycleSummary {
   dispositionChanges: number;
 }
 export interface AuditComparison {
-  schemaVersion: 2;
+  schemaVersion: 3;
   baseAuditId: string;
   currentAuditId: string;
   historyReports: number;

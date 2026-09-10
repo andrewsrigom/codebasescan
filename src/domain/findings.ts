@@ -4,6 +4,22 @@ import { redact } from '../security/redact.ts';
 export function digest(value: string): string {
   return createHash('sha256').update(value).digest('hex');
 }
+
+export function findingLifecycleKey(
+  finding: Pick<Finding, 'fingerprint' | 'source' | 'vulnerability'>,
+): string {
+  const vulnerability = finding.vulnerability;
+  if (!vulnerability) return JSON.stringify(['fingerprint', finding.fingerprint]);
+  return JSON.stringify([
+    'vulnerability',
+    finding.source,
+    vulnerability.id,
+    vulnerability.package,
+    vulnerability.version,
+    vulnerability.lockfile,
+  ]);
+}
+
 export function makeFinding(input: Omit<Finding, 'id' | 'fingerprint' | 'disposition'>): Finding {
   const location = input.evidence[0];
   const fingerprint = digest(

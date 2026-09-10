@@ -6,6 +6,7 @@ import type {
   FindingReference,
   ProjectComponent,
 } from './types.ts';
+import { findingLifecycleKey } from './findings.ts';
 
 function belongsToComponent(file: string, component: ProjectComponent): boolean {
   if (file === component.manifest) return true;
@@ -135,25 +136,33 @@ export function compareReports(
 ): AuditComparison {
   const baseComponents = componentResolver(base);
   const currentComponents = componentResolver(current);
-  const previous = new Map(base.findings.map((finding) => [finding.fingerprint, finding]));
-  const latest = new Map(current.findings.map((finding) => [finding.fingerprint, finding]));
-  const newFindings = current.findings.filter((finding) => !previous.has(finding.fingerprint));
-  const resolvedFindings = base.findings.filter((finding) => !latest.has(finding.fingerprint));
-  const unchangedFindings = current.findings.filter((finding) => previous.has(finding.fingerprint));
+  const previous = new Map(base.findings.map((finding) => [findingLifecycleKey(finding), finding]));
+  const latest = new Map(
+    current.findings.map((finding) => [findingLifecycleKey(finding), finding]),
+  );
+  const newFindings = current.findings.filter(
+    (finding) => !previous.has(findingLifecycleKey(finding)),
+  );
+  const resolvedFindings = base.findings.filter(
+    (finding) => !latest.has(findingLifecycleKey(finding)),
+  );
+  const unchangedFindings = current.findings.filter((finding) =>
+    previous.has(findingLifecycleKey(finding)),
+  );
   const severityChanges = unchangedFindings.flatMap((finding) => {
-    const before = previous.get(finding.fingerprint)?.severity;
+    const before = previous.get(findingLifecycleKey(finding))?.severity;
     return before && before !== finding.severity
       ? [{ finding: reference(finding, currentComponents), before, after: finding.severity }]
       : [];
   });
   const dispositionChanges = unchangedFindings.flatMap((finding) => {
-    const before = previous.get(finding.fingerprint)?.disposition;
+    const before = previous.get(findingLifecycleKey(finding))?.disposition;
     return before && before !== finding.disposition
       ? [{ finding: reference(finding, currentComponents), before, after: finding.disposition }]
       : [];
   });
   const componentChanges = unchangedFindings.flatMap((finding) => {
-    const beforeFinding = previous.get(finding.fingerprint);
+    const beforeFinding = previous.get(findingLifecycleKey(finding));
     if (!beforeFinding) return [];
     const before = baseComponents(beforeFinding);
     const after = currentComponents(finding);
@@ -168,21 +177,21 @@ export function compareReports(
         .map((report) => [report.auditId, report]),
     ).values(),
   ];
-  const historicalFingerprints = new Set(
-    historicalReports.flatMap((report) => report.findings.map((finding) => finding.fingerprint)),
+  const historicalLifecycleKeys = new Set(
+    historicalReports.flatMap((report) => report.findings.map(findingLifecycleKey)),
   );
   const references = {
     newFindings: newFindings.map((finding) => reference(finding, currentComponents)),
     resolvedFindings: resolvedFindings.map((finding) => reference(finding, baseComponents)),
     unchangedFindings: unchangedFindings.map((finding) => reference(finding, currentComponents)),
     reappearedFindings: newFindings
-      .filter((finding) => historicalFingerprints.has(finding.fingerprint))
+      .filter((finding) => historicalLifecycleKeys.has(findingLifecycleKey(finding)))
       .map((finding) => reference(finding, currentComponents)),
     severityChanges,
     dispositionChanges,
   };
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     baseAuditId: base.auditId,
     currentAuditId: current.auditId,
     historyReports: historicalReports.length,
@@ -190,9 +199,10 @@ export function compareReports(
     componentChanges,
     components: componentSummaries([base, current, ...historicalReports], references),
     limitations: [
-      'Finding lifecycle uses stable fingerprints; line-sensitive moves can appear as one resolved and one new finding.',
+      'Dependency advisories use source, advisory ID, package, resolved version, and lockfile as lifecycle identity; other findings use exact fingerprints.',
+      'Line-sensitive moves of non-dependency findings can appear as one resolved and one new finding.',
       'Resolved means absent from the current report, not proof that the underlying risk was remediated.',
-      'Reappeared requires the same fingerprint in an explicitly supplied earlier report and absence from the selected base.',
+      'Reappeared requires the same lifecycle identity in an explicitly supplied earlier report and absence from the selected base.',
       'A finding with evidence in multiple components contributes to each component summary.',
     ],
   };

@@ -1513,7 +1513,7 @@ export function toHtml(
       options.remediationResult.summary.remaining +
       '</strong><span>Tasks remaining</span></div><div class="summary-card"><strong>' +
       options.remediationResult.summary.newFindings +
-      '</strong><span>New findings</span></div></div><p class="muted">Test and build checks stay not run unless a trusted executor supplies them. A missing fingerprint is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a></p></section>'
+      '</strong><span>New findings</span></div></div><p class="muted">Test and build checks stay not run unless a trusted executor supplies them. A missing lifecycle identity is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a></p></section>'
     : '';
   const remediationPlan = options.remediationPlan
     ? '<section class="report-section"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +

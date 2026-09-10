@@ -183,6 +183,28 @@ test('remediation result separates resolved, remaining, and unexecuted checks', 
   assert.deepEqual(parseRemediationResult(result), result);
 });
 
+test('remediation keeps an advisory open when only its lockfile-line fingerprint changes', () => {
+  const before = dependencyReport();
+  const plan = buildRemediationPlan(before);
+  const after = structuredClone(before);
+  after.auditId = '00000000-0000-4000-8000-000000000002';
+  after.snapshotDigest = 'changed-snapshot';
+  after.findings[0]!.id = 'moved-finding';
+  after.findings[0]!.fingerprint = 'moved-lockfile-line-fingerprint';
+
+  const result = buildRemediationResult(plan, before, after);
+  assert.equal(result.schemaVersion, 2);
+  assert.equal(result.summary.resolved, 0);
+  assert.equal(result.summary.remaining, 1);
+  assert.equal(result.summary.newFindings, 0);
+  assert.equal(result.taskResults[0]?.outcome, 'remaining');
+  assert.equal(
+    result.taskResults[0]?.verification.find((item) => item.checkId.endsWith('finding_absent'))
+      ?.status,
+    'failed',
+  );
+});
+
 test('remediation result rejects a plan for another audit', () => {
   const before = dependencyReport();
   const plan = buildRemediationPlan(before);

@@ -19,26 +19,26 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 250 passed                                                             |
-| npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
-| npm run benchmark             | TP 45, FP 1, FN 0; precision 0.9783, recall 1.00                       |
+| npm test                      | 319 passed                                                             |
+| npm run test:graph            | 13 passed, including real scanners, cache, and worker recovery         |
+| npm run benchmark             | TP 55, FP 1, FN 0; precision 0.9821, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
 | Next.js benchmark subset      | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | SaaS benchmark subset         | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | npm run build                 | Passed                                                                 |
 | npm run test:e2e              | 7 passed in Chromium                                                   |
-| npm run test:package          | 58 files; required CLI and scanner files present                       |
+| npm run test:package          | 81 files; 225,895 packed bytes; required CLI/scanner files present     |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
 | Browser workspace             | Real `seusaas` report rendered with compact project-map data           |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,196 files, 1,094 dependencies, 124 candidates, 70 remediation tasks  |
+| Latest `seusaas` offline run  | 1,200 files, 108 candidates, 61 remediation tasks, 0 comparison churn  |
 | `robs-web` portability run    | 1,070 files, 6 candidates, 0 dedicated SaaS-rule candidates            |
 
-The latest full offline `seusaas-platform` run (`640cc6fb-771c-49e9-9072-c87fc53ad94e`) included Semgrep, Gitleaks, OSV,
+The earlier full offline `seusaas-platform` calibration run (`640cc6fb-771c-49e9-9072-c87fc53ad94e`) included Semgrep, Gitleaks, OSV,
 dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
 the project profile, and the built-in AST/Next.js/React/SaaS rules. It captured 1,196 files and
 mapped 739 runtime modules, 295 local dependencies, one cycle, 50 orphan candidates, and 188
@@ -62,6 +62,14 @@ focused Codex task bundles. The terminal flow also passed static-directory gener
 before/after output, packed-content validation, and a real 17 KiB focused task export. Calibration against this run
 removed 45 reproducible false positives without weakening the declared benchmark. No target code,
 configuration module, test, or package lifecycle script ran.
+
+The correction run (`400022d9-50e6-4e1f-a8c6-8d20ad402d27`) captured 1,200 files and retained 108
+candidates: 3 critical, 48 high, 29 medium, and 28 low. It produced 61 remaining tasks and no
+failed scanner. A real baseline comparison after the authorized `better-auth` and `postcss`
+upgrades reported 22 resolved advisory instances, 108 unchanged findings, and zero new findings.
+The resolved set included 10 `better-auth`, 8 `postcss`, 3 `nanoid`, and 1 `kysely` advisory
+instances. This run proved comparison schema v3 and remediation-result schema v2 against lockfile
+line churn: unchanged advisories no longer appeared as false resolved/new pairs.
 
 The structurally different `robs-web` portability run captured 1,070 files and completed its
 project profile. It produced 6 total candidates and no dedicated SaaS-rule candidate. Different

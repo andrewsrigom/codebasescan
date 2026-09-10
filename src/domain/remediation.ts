@@ -19,11 +19,11 @@ import type {
   TestEvidenceAnalysis,
   TestEvidenceTarget,
 } from './types.ts';
-import { digest, severityRank } from './findings.ts';
+import { digest, findingLifecycleKey, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
 export const remediationPlanVersion = 5 as const;
-export const remediationResultVersion = 1 as const;
+export const remediationResultVersion = 2 as const;
 const maximumTasks = 2_000;
 const maximumRiskPathsPerTask = 50;
 
@@ -368,7 +368,7 @@ function standardChecks(id: string, target: 'finding' | 'control'): RemediationC
       id,
       target === 'finding' ? 'finding_absent' : 'control_evidenced',
       target === 'finding'
-        ? 'The linked finding fingerprints are absent from a fresh Traceward audit.'
+        ? 'The linked finding lifecycle identities are absent from a fresh Traceward audit.'
         : 'The linked control has deterministic evidence or an explicit human disposition.',
     ),
     check(id, 'project_tests', 'The project test command passes when one is safely available.'),
@@ -857,13 +857,22 @@ export function buildRemediationResult(
     throw new Error('Remediation plan does not belong to the before audit.');
   if (before.projectName !== after.projectName)
     throw new Error('Before and after reports belong to different projects.');
-  const currentFindings = new Map(after.findings.map((finding) => [finding.fingerprint, finding]));
+  const beforeFindings = new Map(before.findings.map((finding) => [finding.fingerprint, finding]));
+  const currentLifecycleKeys = new Set(after.findings.map(findingLifecycleKey));
+  const remains = (finding: RemediationFindingRef) => {
+    const beforeFinding = beforeFindings.get(finding.fingerprint);
+    return currentLifecycleKeys.has(
+      beforeFinding
+        ? findingLifecycleKey(beforeFinding)
+        : JSON.stringify(['fingerprint', finding.fingerprint]),
+    );
+  };
   const currentControls = new Map(
     (after.checklist?.controls ?? []).map((control) => [control.id, control]),
   );
   const taskResults = plan.tasks.map((task): RemediationTaskResult => {
-    const remaining = task.findings.filter((finding) => currentFindings.has(finding.fingerprint));
-    const resolved = task.findings.filter((finding) => !currentFindings.has(finding.fingerprint));
+    const remaining = task.findings.filter(remains);
+    const resolved = task.findings.filter((finding) => !remains(finding));
     const controlsResolved = task.controlIds.every((id) => {
       const status = currentControls.get(id)?.status;
       return status === 'EVIDENCED' || status === 'NOT_APPLICABLE';
@@ -888,8 +897,8 @@ export function buildRemediationResult(
             status: remaining.length === 0 ? ('passed' as const) : ('failed' as const),
             detail:
               remaining.length === 0
-                ? 'Linked finding fingerprints were absent from the after audit.'
-                : `${remaining.length} linked finding fingerprint(s) remain.`,
+                ? 'Linked finding lifecycle identities were absent from the after audit.'
+                : `${remaining.length} linked finding lifecycle identity or identities remain.`,
           };
         if (item.kind === 'control_evidenced')
           return {
@@ -913,9 +922,9 @@ export function buildRemediationResult(
       }),
     };
   });
-  const beforeFingerprints = new Set(before.findings.map((finding) => finding.fingerprint));
+  const beforeLifecycleKeys = new Set(before.findings.map(findingLifecycleKey));
   const newFindings = after.findings.filter(
-    (finding) => !beforeFingerprints.has(finding.fingerprint),
+    (finding) => !beforeLifecycleKeys.has(findingLifecycleKey(finding)),
   );
   const summary = {
     resolved: taskResults.filter((item) => item.outcome === 'resolved').length,
@@ -939,7 +948,7 @@ export function buildRemediationResult(
     limitations: [
       'Changed files are unavailable because audit reports contain evidence snapshots, not source-control diffs.',
       'Project test and build checks remain not_run until a trusted executor supplies results.',
-      'A missing fingerprint is evidence of report change, not proof that the underlying risk is eliminated.',
+      'A missing lifecycle identity is evidence of report change, not proof that the underlying risk is eliminated.',
     ],
   };
 }

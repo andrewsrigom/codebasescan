@@ -149,7 +149,7 @@ const planSchema = z.object({
 });
 
 const resultSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   kind: z.literal('traceward-remediation-result'),
   generatedAt: shortText,
   planDigest: shortText,

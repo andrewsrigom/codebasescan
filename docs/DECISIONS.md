@@ -211,3 +211,13 @@ They match project, fingerprint, rule, paths, and evidence-file digests; expired
 targets remain counted without changing the finding. Owner, justification, supporting evidence,
 creation, and optional expiry are required/preserved. Identity remains unauthenticated and visible
 as a limitation until signed reviewer policy exists.
+
+## 2026-09-10 — dependency lifecycle identity v3
+
+Comparison schema v3 and remediation-result schema v2 stop using lockfile source lines to decide
+whether a dependency advisory remained present. Dependency lifecycle identity is now the advisory
+source and ID, package, resolved version, and lockfile. This keeps the exact finding fingerprint for
+evidence, AI cache, review, and suppression boundaries while preventing an unrelated lockfile line
+shift from inventing resolved and new advisories. Other findings retain exact fingerprint matching;
+old comparison and remediation-result artifacts remain immutable and are not mixed with the new
+counts.
