@@ -28,6 +28,7 @@ import { profileProject } from '../scanners/project-profile.ts';
 import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
 import { scanReactSecurity } from '../scanners/react-security.ts';
 import { scanNextSecurity } from '../scanners/next-security.ts';
+import { scanSaasSecurity } from '../scanners/saas-security.ts';
 import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
 import { scanSupplyChain } from '../scanners/supply-chain.ts';
 import { scanCodeQuality } from '../scanners/quality.ts';
@@ -184,6 +185,13 @@ export function buildAuditGraph(options: {
         'ast_security',
         `${result.findings.length} framework-aware structural candidate(s).`,
       );
+      return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('saas_security', async (state) => {
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to SaaS security analysis.');
+      const result = scanSaasSecurity(await checkedSnapshot(state), state.projectProfile);
+      event(state, 'saas_security', `${result.findings.length} SaaS security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('react_security', async (state) => {
@@ -520,6 +528,7 @@ export function buildAuditGraph(options: {
     .addEdge('snapshot', 'patterns')
     .addEdge('snapshot', 'project_profile')
     .addEdge('project_profile', 'ast_security')
+    .addEdge('project_profile', 'saas_security')
     .addEdge('project_profile', 'next_security')
     .addEdge('project_profile', 'react_security')
     .addEdge('project_profile', 'architecture')
@@ -535,6 +544,7 @@ export function buildAuditGraph(options: {
       [
         'patterns',
         'ast_security',
+        'saas_security',
         'next_security',
         'react_security',
         'architecture',

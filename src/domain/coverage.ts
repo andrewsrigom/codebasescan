@@ -63,6 +63,7 @@ export function buildCoverage(
   return [
     scannerCapability(runs, 'project-profile', 'Project structure profile', 'NOT RUN'),
     scannerCapability(runs, 'ast-security', 'Framework-aware authorization', 'NOT RUN'),
+    scannerCapability(runs, 'saas-security', 'SaaS application security', 'NOT RUN'),
     scannerCapability(runs, 'next-security', 'Next.js application security', 'NOT RUN'),
     scannerCapability(runs, 'react-security', 'React client security', 'NOT RUN'),
     scannerCapability(runs, 'supply-chain', 'Node.js supply-chain integrity', 'NOT RUN'),
