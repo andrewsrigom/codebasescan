@@ -137,7 +137,7 @@ test('human control review is appended without changing deterministic checklist 
   const report = sampleReport();
   report.checklist = {
     schemaVersion: 1,
-    packId: 'traceward-web-application',
+    packId: 'codebasescan-web-application',
     packVersion: 'fixture',
     controls: [
       {

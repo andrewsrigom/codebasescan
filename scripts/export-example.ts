@@ -24,7 +24,7 @@ const rawFindings = mergeFindings(
   supplyChainResult.findings,
 );
 const profileResult = profileProject(source);
-const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-example-'));
+const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-example-'));
 const [architectureResult, duplicationResult, qualityResult] = await Promise.all([
   scanArchitecture(source, profileResult.profile, temporary),
   scanDuplication(source, temporary),

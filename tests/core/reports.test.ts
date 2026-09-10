@@ -410,7 +410,7 @@ test('investigation bundle is bounded, evidence-led, and ready for manual AI rev
     environmentContract: { summary: { undocumented: number } };
   };
   assert.equal(bundle.schemaVersion, 4);
-  assert.equal(bundle.kind, 'traceward-investigation-bundle');
+  assert.equal(bundle.kind, 'codebasescan-investigation-bundle');
   assert.ok(bundle.policy.some((item) => item.includes('untrusted evidence')));
   assert.equal(bundle.findings[0]?.id, report.findings[0]?.id);
   assert.equal(bundle.findings[0]?.evidence[0]?.id, report.findings[0]?.evidence[0]?.id);

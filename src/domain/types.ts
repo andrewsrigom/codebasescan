@@ -169,7 +169,11 @@ export interface Finding {
   };
   provenance?: {
     detector:
-      'traceward-heuristic' | 'traceward-ast' | 'scanner' | 'runtime-probe' | 'advisory-database';
+      | 'codebasescan-heuristic'
+      | 'codebasescan-ast'
+      | 'scanner'
+      | 'runtime-probe'
+      | 'advisory-database';
     scanner: string;
     ruleId: string;
     scannerVersion?: string;
@@ -999,7 +1003,7 @@ export interface SecurityControlResult {
 }
 export interface SecurityChecklist {
   schemaVersion: 1;
-  packId: 'traceward-web-application';
+  packId: 'codebasescan-web-application';
   packVersion: string;
   controls: SecurityControlResult[];
   summary: Record<SecurityControlStatus, number>;

@@ -1,6 +1,6 @@
 # Security-critical test evidence
 
-Traceward maps captured test imports to security-relevant source files without loading project
+CodebaseScan maps captured test imports to security-relevant source files without loading project
 configuration or executing the audited repository. The result is written to `test-evidence.json`
 and embedded in the audit report and investigation bundle.
 
@@ -12,7 +12,7 @@ set is:
 
 `C = unique(E union S)`
 
-Traceward parses captured JavaScript and TypeScript imports as data and constructs a directed graph
+CodebaseScan parses captured JavaScript and TypeScript imports as data and constructs a directed graph
 `G(file -> resolved captured file)`. For each captured test file `t` and critical file `c`, related
 evidence is observed when a path exists in `G`:
 

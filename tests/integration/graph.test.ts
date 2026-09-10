@@ -15,7 +15,7 @@ import { executeAudit } from '../../src/engine/run.ts';
 import { disableRemoteTracing } from '../../src/security/privacy.ts';
 disableRemoteTracing();
 test('LangGraph fans in scanner results and pauses for publication review', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-graph-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-graph-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(':memory:');
   context.after(() => store.close());
@@ -83,7 +83,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.duplication);
   assert.ok(store.audit(audit.id).report?.supplyChainAnalysis);
   assert.ok(store.audit(audit.id).report?.codeQualityAnalysis);
-  assert.equal(store.audit(audit.id).report?.checklist?.packId, 'traceward-web-application');
+  assert.equal(store.audit(audit.id).report?.checklist?.packId, 'codebasescan-web-application');
   const reviewedControl = store.audit(audit.id).report?.checklist?.controls[0];
   assert.ok(reviewedControl);
   store.transition(audit.id, 'awaiting_review');
@@ -121,7 +121,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   assert.equal(store.events(audit.id).filter((item) => item.stage === 'investigate').length, 0);
 });
 test('a focused audit mode skips unrelated scanners without reporting them clean', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-modes-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-modes-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(':memory:');
   context.after(() => store.close());
@@ -164,7 +164,7 @@ test('a focused audit mode skips unrelated scanners without reporting them clean
   assert.equal(report?.mechanicalAnalysis, undefined);
 });
 test('identical focused audits reuse deterministic scanner results only', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-cache-graph-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-cache-graph-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(':memory:');
   context.after(() => store.close());
@@ -257,7 +257,7 @@ test('the context loop terminates after two rounds with an injected reviewer', a
   assert.equal(result.rounds, 2);
 });
 test('SQLite checkpoints survive graph reconstruction between review and resume', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-persistence-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-persistence-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(path.join(directory, 'app.sqlite'));
   context.after(() => store.close());
@@ -283,7 +283,7 @@ test('SQLite checkpoints survive graph reconstruction between review and resume'
   assert.equal(store.audit(audit.id).status, 'completed');
 });
 test('checkpoint resume rejects changed execution config and workflow versions', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-checkpoint-version-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-checkpoint-version-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(path.join(directory, 'app.sqlite'));
   context.after(() => store.close());
@@ -316,14 +316,14 @@ test('checkpoint resume rejects changed execution config and workflow versions',
   store.claim(incompatible.id);
   store.db
     .prepare('UPDATE audits SET workflow_version = ? WHERE id = ?')
-    .run('traceward-audit-legacy', incompatible.id);
+    .run('codebasescan-audit-legacy', incompatible.id);
   await assert.rejects(
     () => executeAudit(store, incompatible.id, config),
     /workflow .* incompatible/,
   );
 });
 test('AI-disabled audits make zero AI or advisory network calls', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-no-network-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-no-network-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = new AuditStore(path.join(directory, 'app.sqlite'));
   context.after(() => store.close());

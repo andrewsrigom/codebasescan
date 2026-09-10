@@ -33,7 +33,7 @@ const retainedHeaders = [
   'vary',
 ] as const;
 
-const passiveProbeOrigin = 'https://traceward.invalid';
+const passiveProbeOrigin = 'https://codebasescan.invalid';
 
 interface ProbeResponse {
   statusCode: number;
@@ -90,7 +90,7 @@ async function requestOnce(
         headers: {
           Accept: '*/*',
           Origin: passiveProbeOrigin,
-          'User-Agent': 'Traceward-Security-Probe/0.2',
+          'User-Agent': 'CodebaseScan-Security-Probe/0.2',
           Connection: 'close',
         },
       },
@@ -266,7 +266,7 @@ function normalizeFindings(report: HttpProbeReport): Finding[] {
         severity: 'high',
         sourceSeverity: 'high',
         description:
-          'The approved target reflected Traceward’s synthetic external Origin and allowed credentials. Endpoint sensitivity and browser behavior still require contextual review.',
+          'The approved target reflected CodebaseScan’s synthetic external Origin and allowed credentials. Endpoint sensitivity and browser behavior still require contextual review.',
         remediation:
           'Compare the Origin against an exact maintained allowlist before returning it, and enforce server-side authorization independently.',
         cwe: ['CWE-942'],
@@ -294,7 +294,7 @@ function normalizeFindings(report: HttpProbeReport): Finding[] {
         severity: 'medium',
         sourceSeverity: 'medium',
         description:
-          'The approved target reflected Traceward’s synthetic external Origin without an observed Vary: Origin header. Shared caches can reuse an origin-specific response incorrectly.',
+          'The approved target reflected CodebaseScan’s synthetic external Origin without an observed Vary: Origin header. Shared caches can reuse an origin-specific response incorrectly.',
         remediation:
           'Return Vary: Origin whenever Access-Control-Allow-Origin changes by request, and verify intermediary cache behavior.',
         cwe: ['CWE-942', 'CWE-524'],

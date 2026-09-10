@@ -1,6 +1,6 @@
 # Feature flag consistency
 
-Traceward correlates captured feature-flag declarations with literal source evaluation calls. JSON
+CodebaseScan correlates captured feature-flag declarations with literal source evaluation calls. JSON
 is parsed as inert data and TypeScript/JavaScript as inert syntax. Target configuration, generated
 modules, application code, and provider SDKs are never imported or executed.
 

@@ -1,6 +1,6 @@
 # API contract consistency
 
-Traceward compares captured OpenAPI or Swagger operations with statically mapped Next.js and
+CodebaseScan compares captured OpenAPI or Swagger operations with statically mapped Next.js and
 Express route operations. It parses JSON and YAML as inert data. It does not import generators,
 resolve external references, start the target application, or execute configuration.
 
@@ -20,7 +20,7 @@ Each operation is keyed by uppercase HTTP method plus normalized path. Normaliza
 query/fragment text and trailing slashes, ignores Next.js route groups and parallel-route
 segments, and maps OpenAPI {id}, Express :id, and Next.js [id] or catch-all segments to {}.
 
-For each specification, Traceward derives the common static path prefix of its declared operations.
+For each specification, CodebaseScan derives the common static path prefix of its declared operations.
 An unmatched source route is source-only only when it falls inside one of those path scopes.
 Unmatched routes outside them are retained as outside-contract-scope and are not counted as
 differences. This avoids treating a deliberately partial specification as a promise to document

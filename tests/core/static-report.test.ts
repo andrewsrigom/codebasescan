@@ -23,7 +23,7 @@ import {
 } from '../helpers.ts';
 
 test('static report writes a self-contained versioned artifact directory', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-static-report-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const report = sampleReport();
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
@@ -197,12 +197,12 @@ test('static report writes a self-contained versioned artifact directory', async
   const manifest = JSON.parse(
     await readFile(path.join(result.directory, 'manifest.json'), 'utf8'),
   ) as { kind: string; files: { sha256: string }[] };
-  assert.equal(manifest.kind, 'traceward-static-report');
+  assert.equal(manifest.kind, 'codebasescan-static-report');
   assert.match(manifest.files[0]?.sha256 ?? '', /^[a-f0-9]{64}$/);
 });
 
 test('static report refuses to overwrite an existing audit directory', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-static-report-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const report = sampleReport();
   await writeStaticReport(report, temporary);
@@ -210,7 +210,7 @@ test('static report refuses to overwrite an existing audit directory', async (co
 });
 
 test('static report records remediation progress when a baseline is supplied', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-static-report-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const baseline = sampleReport();
   const current: typeof baseline = {
@@ -222,7 +222,7 @@ test('static report records remediation progress when a baseline is supplied', a
   };
   const verificationLedger = {
     schemaVersion: 1 as const,
-    kind: 'traceward-verification-ledger' as const,
+    kind: 'codebasescan-verification-ledger' as const,
     createdAt: '2026-09-08T12:59:00.000Z',
     project: {
       name: baseline.projectName,

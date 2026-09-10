@@ -125,7 +125,7 @@ test('Knip normalization marks individually bounded result categories as partial
 });
 
 test('dead-code scan disables target configuration loaders', async () => {
-  const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-test-'));
+  const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-quality-test-'));
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({ dependencies: { next: '16.3.4', unused: '1.0.0' } }),
     'src/app/page.tsx': `import { used } from './used'; export default function Page() { return <main>{used}</main>; }`,
@@ -152,7 +152,7 @@ test('dead-code scan disables target configuration loaders', async () => {
 });
 
 test('dead-code scan applies safe declarative Knip exclusions', async () => {
-  const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'traceward-quality-config-'));
+  const temporaryDirectory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-quality-config-'));
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({
       dependencies: {

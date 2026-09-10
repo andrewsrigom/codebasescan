@@ -141,7 +141,7 @@ async function loadBaseline(file: string): Promise<AuditReport> {
     return parseAuditReport(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Baseline report')) throw error;
-    throw new Error('Baseline report is not valid Traceward JSON.');
+    throw new Error('Baseline report is not valid CodebaseScan JSON.');
   }
 }
 
@@ -155,7 +155,7 @@ async function loadReportArtifact(location: string): Promise<AuditReport> {
   try {
     return parseAuditReport(JSON.parse(await readFile(file, 'utf8')) as unknown);
   } catch {
-    throw new Error('Audit report is not valid Traceward JSON.');
+    throw new Error('Audit report is not valid CodebaseScan JSON.');
   }
 }
 
@@ -167,7 +167,7 @@ async function loadReviewLedger(file: string) {
   try {
     return parseReviewLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch {
-    throw new Error('Review ledger is not valid Traceward JSON.');
+    throw new Error('Review ledger is not valid CodebaseScan JSON.');
   }
 }
 
@@ -179,7 +179,7 @@ async function loadSuppressionLedger(file: string): Promise<SuppressionLedger> {
   try {
     return parseSuppressionLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch {
-    throw new Error('Suppression ledger is not valid Traceward JSON.');
+    throw new Error('Suppression ledger is not valid CodebaseScan JSON.');
   }
 }
 
@@ -191,7 +191,7 @@ async function loadVerificationLedger(file: string): Promise<VerificationLedger>
   try {
     return parseVerificationLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch {
-    throw new Error('Verification ledger is not valid Traceward JSON.');
+    throw new Error('Verification ledger is not valid CodebaseScan JSON.');
   }
 }
 
@@ -262,7 +262,7 @@ async function preflight(root: string, requireApproval: boolean) {
 let store: AuditStore | null = null;
 try {
   if (command === 'open') {
-    await openReport(target && !target.startsWith('--') ? target : 'traceward-report');
+    await openReport(target && !target.startsWith('--') ? target : 'codebasescan-report');
   } else if (command === 'doctor') {
     const checks = await runDoctor(config);
     console.log(renderDoctor(checks));
@@ -363,7 +363,7 @@ try {
     );
     const staticReport = await writeStaticReport(
       after,
-      option('--report-dir') ?? path.resolve('traceward-final-report'),
+      option('--report-dir') ?? path.resolve('codebasescan-final-report'),
       { baseline, policyResult, verificationLedger },
     );
     console.log(`Saved finalized report ${staticReport.directory}`);
@@ -374,7 +374,7 @@ try {
     process.exitCode = policyResult.exitCode;
     if (arguments_.includes('--open')) await openReport(staticReport.directory);
   } else if (command === 'audit') {
-    const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
+    const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-ci-'));
     const ciStore = new AuditStore(':memory:');
     try {
       const ciConfig = {
@@ -434,7 +434,7 @@ try {
       if (!requestedFormat && !destination) {
         const staticReport = await writeStaticReport(
           report,
-          option('--report-dir') ?? path.resolve('traceward-report'),
+          option('--report-dir') ?? path.resolve('codebasescan-report'),
           {
             ...(baseline ? { baseline } : {}),
             policyResult,
@@ -505,7 +505,7 @@ try {
       const extension = ['bundle', 'sbom', 'plan', 'agent-plan', 'rule-quality'].includes(format)
         ? `${format}.json`
         : format;
-      const destination = path.resolve(`traceward-${report.auditId}.${extension}`);
+      const destination = path.resolve(`codebasescan-${report.auditId}.${extension}`);
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
     } else if (command === 'compare' && target && arguments_[2]) {
@@ -536,7 +536,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--open] [--port 4173] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- open [report-directory|report-root] [--port 4173]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir traceward-final-report] [--policy advisory|balanced|strict] [--open]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'CodebaseScan\n\n  npm run cli -- audit [project] [--report-dir codebasescan-report] [--open] [--port 4173] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- open [report-directory|report-root] [--port 4173]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir codebasescan-final-report] [--policy advisory|balanced|strict] [--open]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }

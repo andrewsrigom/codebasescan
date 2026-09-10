@@ -1,6 +1,6 @@
 # Structured AI review standard
 
-AI in Traceward is a bounded reviewer of deterministic evidence. It is not an autonomous scanner,
+AI in CodebaseScan is a bounded reviewer of deterministic evidence. It is not an autonomous scanner,
 security authority, or source of verified findings. Repository text, filenames, comments, and
 scanner output are untrusted data and never instructions.
 
@@ -72,13 +72,13 @@ explain an active exception but cannot create, renew, broaden, or authenticate i
 
 Assessment and correction are separate operations. A coding agent may modify a project only after
 separate authorization and must consume one versioned task bundle, stay inside allowed paths, make
-one coherent change, run only authorized commands, and require a fresh Traceward audit to show that
+one coherent change, run only authorized commands, and require a fresh CodebaseScan audit to show that
 the candidate disappeared. Authentication policy, tenant model, billing behavior, database
 migrations, destructive actions, and deployment always require human authorization.
 
 Executed test/build claims must use the strict external verification ledger. A coding agent records
 only exact argument arrays already present in the baseline plan plus exit code, duration, and output
-digest metadata. Raw command output does not enter the ledger. Traceward may mark matching checks
+digest metadata. Raw command output does not enter the ledger. CodebaseScan may mark matching checks
 passed or failed, but the executor remains unauthenticated and its claims are never converted into
 deterministic scanner evidence.
 

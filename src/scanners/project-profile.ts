@@ -419,7 +419,7 @@ function frameworkVersionCoverage(
       ...(requested ? { requested } : {}),
       ...(detectedMajor !== undefined ? { detectedMajor } : {}),
       status: 'unverified',
-      detail: 'Traceward has no version-specific rule coverage declaration for this framework.',
+      detail: 'CodebaseScan has no version-specific rule coverage declaration for this framework.',
     };
   if (detectedMajor === undefined)
     return {
@@ -437,8 +437,8 @@ function frameworkVersionCoverage(
     status: supported ? 'supported' : 'partial',
     supportedMajors: [...supportedMajors],
     detail: supported
-      ? `Framework major ${detectedMajor} is inside Traceward's declared static-rule support matrix.`
-      : `Framework major ${detectedMajor} is outside Traceward's declared static-rule support matrix; generic syntax checks may still apply.`,
+      ? `Framework major ${detectedMajor} is inside CodebaseScan's declared static-rule support matrix.`
+      : `Framework major ${detectedMajor} is outside CodebaseScan's declared static-rule support matrix; generic syntax checks may still apply.`,
   };
 }
 

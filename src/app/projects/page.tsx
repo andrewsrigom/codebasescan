@@ -49,7 +49,7 @@ export default function ProjectsPage() {
           <pre className="command">npm run cli -- register /absolute/path/to/project</pre>
           <p className="small muted">
             Home directories, filesystem roots and audit storage overlap are rejected. To audit
-            Traceward itself, place TRACEWARD_DATA_DIR outside this repository.
+            CodebaseScan itself, place CODEBASESCAN_DATA_DIR outside this repository.
           </p>
         </div>
       </section>

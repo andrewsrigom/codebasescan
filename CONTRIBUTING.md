@@ -1,6 +1,6 @@
 # Contributing
 
-Traceward welcomes focused fixes, rules, fixtures, documentation, and usability improvements.
+CodebaseScan welcomes focused fixes, rules, fixtures, documentation, and usability improvements.
 
 ## Setup
 

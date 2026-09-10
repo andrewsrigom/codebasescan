@@ -1,11 +1,11 @@
 # Policy profiles and exit codes
 
-`traceward audit` can apply one deterministic policy profile:
+`codebasescan audit` can apply one deterministic policy profile:
 
 ```bash
-traceward audit . --policy advisory
-traceward audit . --policy balanced
-traceward audit . --policy strict
+codebasescan audit . --policy advisory
+codebasescan audit . --policy balanced
+codebasescan audit . --policy strict
 ```
 
 Every static report publishes `policy-result.json` plus a Draft 7 JSON Schema. With no explicit

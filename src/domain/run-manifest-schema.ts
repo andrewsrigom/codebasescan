@@ -39,8 +39,8 @@ const scopePreflight = z.object({
 
 const schema = z.object({
   schemaVersion: z.literal(2),
-  kind: z.literal('traceward-audit-run'),
-  tracewardVersion: shortText,
+  kind: z.literal('codebasescan-audit-run'),
+  codebasescanVersion: shortText,
   workflowVersion: shortText,
   packVersion: shortText,
   audit: z.object({

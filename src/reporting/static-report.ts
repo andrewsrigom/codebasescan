@@ -31,7 +31,7 @@ export const staticReportVersion = 1 as const;
 
 export interface StaticReportManifest {
   schemaVersion: typeof staticReportVersion;
-  kind: 'traceward-static-report';
+  kind: 'codebasescan-static-report';
   auditId: string;
   snapshotDigest: string;
   generatedAt: string;
@@ -299,7 +299,7 @@ export async function writeStaticReport(
   );
   const manifest: StaticReportManifest = {
     schemaVersion: staticReportVersion,
-    kind: 'traceward-static-report',
+    kind: 'codebasescan-static-report',
     auditId: report.auditId,
     snapshotDigest: report.snapshotDigest,
     generatedAt: report.createdAt,

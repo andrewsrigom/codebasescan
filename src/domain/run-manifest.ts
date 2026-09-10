@@ -8,7 +8,7 @@ import type {
   ScannerRun,
   ScannerStatus,
 } from './types.ts';
-import { auditWorkflowVersion, tracewardVersion } from './versions.ts';
+import { auditWorkflowVersion, codebasescanVersion } from './versions.ts';
 
 export const runManifestVersion = 2 as const;
 
@@ -21,8 +21,8 @@ export interface RunManifestOutput {
 
 export interface RunManifest {
   schemaVersion: typeof runManifestVersion;
-  kind: 'traceward-audit-run';
-  tracewardVersion: string;
+  kind: 'codebasescan-audit-run';
+  codebasescanVersion: string;
   workflowVersion: string;
   packVersion: string;
   audit: {
@@ -92,8 +92,8 @@ export function buildRunManifest(report: AuditReport, outputs: RunManifestOutput
   const effective = report.auditModes ?? [];
   return {
     schemaVersion: runManifestVersion,
-    kind: 'traceward-audit-run',
-    tracewardVersion,
+    kind: 'codebasescan-audit-run',
+    codebasescanVersion,
     workflowVersion: auditWorkflowVersion,
     packVersion: auditModePackVersion,
     audit: {

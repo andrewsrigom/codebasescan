@@ -21,7 +21,7 @@ export interface SuppressionLedgerEntry {
 
 export interface SuppressionLedger {
   schemaVersion: typeof suppressionLedgerVersion;
-  kind: 'traceward-suppression-ledger';
+  kind: 'codebasescan-suppression-ledger';
   projectName: string;
   updatedAt: string;
   entries: SuppressionLedgerEntry[];
@@ -88,7 +88,7 @@ export function upsertSuppressionLedger(
   };
   return {
     schemaVersion: suppressionLedgerVersion,
-    kind: 'traceward-suppression-ledger',
+    kind: 'codebasescan-suppression-ledger',
     projectName: report.projectName,
     updatedAt: createdAt,
     entries: [
@@ -177,7 +177,7 @@ export function applySuppressionLedger(
     limitations: [
       ...new Set([
         ...report.limitations,
-        'Portable suppressions came from an explicitly supplied ledger. Traceward matched fingerprint, rule, paths, and source-file digests but did not authenticate the owner.',
+        'Portable suppressions came from an explicitly supplied ledger. CodebaseScan matched fingerprint, rule, paths, and source-file digests but did not authenticate the owner.',
       ]),
     ],
   };

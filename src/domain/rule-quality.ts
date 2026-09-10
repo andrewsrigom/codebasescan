@@ -27,7 +27,7 @@ export interface RuleQualityEntry {
 
 export interface RuleQualityReport {
   schemaVersion: typeof ruleQualityVersion;
-  kind: 'traceward-rule-quality';
+  kind: 'codebasescan-rule-quality';
   generatedAt: string;
   auditId: string;
   summary: {
@@ -103,7 +103,7 @@ const limitations: Partial<Record<Finding['source'], string[]>> = {
   'supply-chain': ['A declaration is a review candidate, not proof of compromise.'],
   'http-probe': ['One response does not establish whole-application runtime behavior.'],
   osv: ['Package presence and source-reference hints do not prove vulnerable code execution.'],
-  semgrep: ['Coverage depends on the installed scanner and selected fixed Traceward rules.'],
+  semgrep: ['Coverage depends on the installed scanner and selected fixed CodebaseScan rules.'],
   gitleaks: ['Secret-shaped matches require validity and exposure review.'],
 };
 
@@ -171,7 +171,7 @@ export function buildRuleQualityReport(report: AuditReport): RuleQualityReport {
         ruleId: first.ruleId,
         scanner,
         ...(scannerVersion ? { scannerVersion } : {}),
-        detector: first.provenance?.detector ?? 'traceward-heuristic',
+        detector: first.provenance?.detector ?? 'codebasescan-heuristic',
         categories: [...new Set(findings.map((finding) => finding.category))],
         supportedFrameworks: frameworks[first.source] ?? ['JavaScript/TypeScript source'],
         standards: [...new Set(findings.flatMap((finding) => finding.cwe))].map((id) => ({
@@ -195,7 +195,7 @@ export function buildRuleQualityReport(report: AuditReport): RuleQualityReport {
     .sort((left, right) => left.id.localeCompare(right.id));
   return {
     schemaVersion: ruleQualityVersion,
-    kind: 'traceward-rule-quality',
+    kind: 'codebasescan-rule-quality',
     generatedAt: report.createdAt,
     auditId: report.auditId,
     summary: {

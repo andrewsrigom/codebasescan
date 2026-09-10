@@ -68,7 +68,7 @@ test('remediation plan is deterministic, bounded, and contains references instea
   assert.match(first.tasks[0]?.rootCause.id ?? '', /^cause-[a-f0-9]{16}$/);
   assert.equal(first.tasks[0]?.priorityFactors.length, 4);
   assert.deepEqual(first.tasks[0]?.verificationCommands[0]?.argv, [
-    'traceward',
+    'codebasescan',
     'audit',
     '.',
     '--format',
@@ -111,7 +111,7 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
     truncated: false,
     saasSemantics: {
       schemaVersion: 1,
-      sources: ['traceward.config.json'],
+      sources: ['codebasescan.config.json'],
       vocabulary: {
         tenantKeys: [],
         ownerKeys: [],
@@ -150,7 +150,7 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
     [
       ['pnpm', 'run', 'test:unit'],
       ['pnpm', 'run', 'build'],
-      ['traceward', 'audit', '.', '--format', 'json'],
+      ['codebasescan', 'audit', '.', '--format', 'json'],
     ],
   );
 });
@@ -244,7 +244,7 @@ test('remediation result applies exact external test and build evidence', () => 
   after.findings = [];
   const ledger: VerificationLedger = {
     schemaVersion: 1,
-    kind: 'traceward-verification-ledger',
+    kind: 'codebasescan-verification-ledger',
     createdAt: '2026-09-10T09:59:00.000Z',
     project: {
       name: before.projectName,
@@ -347,7 +347,7 @@ test('verification ledger schema is strict and versioned', () => {
   assert.throws(() =>
     parseVerificationLedger({
       schemaVersion: 1,
-      kind: 'traceward-verification-ledger',
+      kind: 'codebasescan-verification-ledger',
       createdAt: '2026-09-10T09:59:00.000Z',
       project: {
         name: 'example',
@@ -417,7 +417,7 @@ test('task bundle contains only the selected task and its bounded evidence', () 
   unrelated.vulnerability!.package = 'other-package';
   report.findings.push(unrelated);
   const bundle = buildRemediationTaskBundle(report, plan.tasks[0]!.id);
-  assert.equal(bundle.kind, 'traceward-remediation-task-bundle');
+  assert.equal(bundle.kind, 'codebasescan-remediation-task-bundle');
   assert.equal(bundle.task.id, plan.tasks[0]!.id);
   assert.deepEqual(
     bundle.findings.map((finding) => finding.id),

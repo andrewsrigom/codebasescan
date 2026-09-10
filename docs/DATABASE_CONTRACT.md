@@ -1,6 +1,6 @@
 # Database contract consistency
 
-Traceward correlates captured database declarations, SQL migration references, and statically
+CodebaseScan correlates captured database declarations, SQL migration references, and statically
 mapped database call chains. It reads them as inert data and never loads an ORM, connects to a
 database, runs a migration, or executes target code.
 

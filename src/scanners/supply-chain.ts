@@ -130,7 +130,7 @@ function manifestCandidates(manifests: Manifest[]): Candidate[] {
         ruleId: 'TW-SC001',
         title: 'Package lifecycle script performs a high-risk shell action',
         severity: 'high',
-        description: `The ${name} script contains a download-and-execute, dynamic evaluation, or permission-and-execute pattern. Traceward inspected the declaration and did not run it.`,
+        description: `The ${name} script contains a download-and-execute, dynamic evaluation, or permission-and-execute pattern. CodebaseScan inspected the declaration and did not run it.`,
         remediation:
           'Remove the network or dynamic execution step, pin and verify any downloaded artifact, and keep installation deterministic. Review the publisher and exact script before installing dependencies.',
         cwe: ['CWE-494', 'CWE-829'],

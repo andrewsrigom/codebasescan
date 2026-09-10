@@ -19,7 +19,7 @@ body:
   - type: input
     id: versions
     attributes:
-      label: OS, Node, Traceward, and relevant scanner/model versions
+      label: OS, Node, CodebaseScan, and relevant scanner/model versions
     validations:
       required: true
   - type: textarea

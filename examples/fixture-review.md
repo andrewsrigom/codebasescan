@@ -1,4 +1,4 @@
-# Traceward security review
+# CodebaseScan security review
 
 Project: Review\-worthy SaaS — fixture export
 Audit: 00000000-0000-4000-8000-000000000001
@@ -18,11 +18,11 @@ AI mode: disabled
 - Semgrep: skipped. Not executed for this fixture export.
 - Gitleaks: skipped. Not executed for this fixture export.
 - Dependency vulnerabilities: skipped. OSV lookup was disabled for this reproducible fixture export.
-- Dependency structure: completed. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.
-- Code duplication: completed. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.
+- Dependency structure: completed. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
+- Code duplication: completed. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
 - Node.js supply\-chain integrity: completed. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
 - TypeScript and JavaScript quality metrics: completed. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
-- Dead code and dependency usage: completed. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.
+- Dead code and dependency usage: completed. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
 
 ### Capability summary
 
@@ -31,10 +31,10 @@ AI mode: disabled
 - Next.js application security: NOT RUN. No scanner run was recorded for this capability.
 - React client security: NOT RUN. No scanner run was recorded for this capability.
 - Node.js supply\-chain integrity: COMPLETE. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
-- JavaScript/TypeScript dependency structure: COMPLETE. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the Traceward scanner compatibility fixtures.
-- JavaScript/TypeScript code duplication: COMPLETE. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the Traceward scanner compatibility fixtures.
+- JavaScript/TypeScript dependency structure: COMPLETE. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
+- JavaScript/TypeScript code duplication: COMPLETE. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
 - Code quality metrics: COMPLETE. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
-- Dead code and dependency usage: COMPLETE. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the Traceward scanner compatibility fixtures.
+- Dead code and dependency usage: COMPLETE. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
 - Built\-in static patterns: COMPLETE. Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.
 - Static code analysis: DISABLED. Not executed for this fixture export.
 - Secret scanning: DISABLED. Not executed for this fixture export.
@@ -44,7 +44,7 @@ AI mode: disabled
 - AI contextual analysis: DISABLED. Model inference was disabled. Deterministic findings remain available.
 - Infrastructure as Code: NOT SUPPORTED. No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented.
 - Cloud IAM: NOT SUPPORTED. Cloud account and effective IAM policy analysis are outside this release.
-- Dynamic exploitation: NOT PERFORMED. Traceward does not exploit targets, brute\-force authentication, or crawl applications.
+- Dynamic exploitation: NOT PERFORMED. CodebaseScan does not exploit targets, brute\-force authentication, or crawl applications.
 
 ## Project structure
 
@@ -80,7 +80,7 @@ These are bounded maintenance and test signals, not vulnerabilities or proof of 
 
 ## Security checklist
 
-Pack: traceward\-web\-application 0.4.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 8.
+Pack: codebasescan\-web\-application 0.4.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 8.
 
 ### NOT\_APPLICABLE: Sensitive mutations authenticate a principal
 

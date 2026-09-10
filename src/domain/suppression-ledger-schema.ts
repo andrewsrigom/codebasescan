@@ -23,7 +23,7 @@ const entry = z.object({
 });
 const schema = z.object({
   schemaVersion: z.literal(1),
-  kind: z.literal('traceward-suppression-ledger'),
+  kind: z.literal('codebasescan-suppression-ledger'),
   projectName: shortText,
   updatedAt: z.iso.datetime(),
   entries: z.array(entry).max(100_000),

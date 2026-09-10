@@ -73,7 +73,7 @@ test('same-origin JSON mutation is permitted', () => {
       host: '127.0.0.1:3000',
       origin: 'http://127.0.0.1:3000',
       'content-type': 'application/json',
-      'x-traceward-client': 'local-ui',
+      'x-codebasescan-client': 'local-ui',
     },
     body: '{}',
   });
@@ -253,11 +253,11 @@ test('repository prompt injection cannot read outside the captured snapshot', ()
   assert.deepEqual(broker.collect(['../../.ssh/id_rsa', '.env']).deliveredIds, []);
 });
 test('snapshot skips sensitive files, symlinks and generated trees', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-source-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-source-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'node_modules'));
   await mkdir(path.join(root, '.next-dev'));
-  await mkdir(path.join(root, 'traceward-report'));
+  await mkdir(path.join(root, 'codebasescan-report'));
   await mkdir(path.join(root, '.pnpm-store'));
   await mkdir(path.join(root, 'out'));
   await mkdir(path.join(root, 'output'));
@@ -273,7 +273,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await writeFile(path.join(root, '.env.production.sample'), 'DATABASE_URL=private-value\n');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
   await writeFile(path.join(root, '.next-dev', 'generated.js'), 'eval(input)');
-  await writeFile(path.join(root, 'traceward-report', 'audit-report.json'), '{"ignored":true}');
+  await writeFile(path.join(root, 'codebasescan-report', 'audit-report.json'), '{"ignored":true}');
   await writeFile(path.join(root, '.pnpm-store', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'out', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');
@@ -299,7 +299,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   if (process.platform !== 'win32') assert.equal(snapshot.skipped['symbolic-link'], 1);
 });
 test('snapshot records source scope without excluding secret-bearing test code', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-scope-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-scope-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'tests'));
   await mkdir(path.join(root, 'examples'));
@@ -316,7 +316,7 @@ test('snapshot records source scope without excluding secret-bearing test code',
   assert.deepEqual(estimate.scopeFiles, { runtime: 1, test: 1, example: 1 });
 });
 test('project gitignore rules exclude local artifacts while preserving exceptions', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-gitignore-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-gitignore-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'ignored'));
   await writeFile(
@@ -338,7 +338,7 @@ test('project gitignore rules exclude local artifacts while preserving exception
   assert.equal(estimate.predictedTruncated, false);
 });
 test('large files are excluded and coverage is marked truncated', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-large-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(path.join(root, 'large.ts'), 'a'.repeat(600_000));
   const snapshot = await captureSnapshot(root);
@@ -351,7 +351,7 @@ test('large files are excluded and coverage is marked truncated', async (context
   assert.deepEqual(estimate.reasons, ['per-file-byte-limit']);
 });
 test('large generated TypeScript modules within the bounded limit are retained', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-large-source-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-large-source-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await writeFile(
     path.join(root, 'generated.ts'),
@@ -365,7 +365,7 @@ test('large generated TypeScript modules within the bounded limit are retained',
   assert.equal(estimate.limits.bytesPerFile, 512 * 1024);
 });
 test('realistic lockfiles use a separate bounded size allowance', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-lockfile-size-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-lockfile-size-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   const content = JSON.stringify({
     lockfileVersion: 3,
@@ -382,7 +382,7 @@ test('realistic lockfiles use a separate bounded size allowance', async (context
   assert.equal(estimate.limits.lockfileBytes, 4 * 1024 * 1024);
 });
 test('bounded coverage summaries are captured without traversing generated coverage output', async (context) => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-coverage-artifact-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-coverage-artifact-'));
   context.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'coverage'));
   await writeFile(path.join(root, 'coverage', 'coverage-summary.json'), '{"total":{}}');
@@ -399,7 +399,10 @@ test('bounded coverage summaries are captured without traversing generated cover
 });
 test('registration rejects home and overlapping audit storage', async (context) => {
   await assert.rejects(() => validateProjectRoot(os.homedir(), path.join(os.tmpdir(), 'tw-state')));
-  const root = await mkdtemp(path.join(os.tmpdir(), 'traceward-root-'));
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-root-'));
   context.after(() => rm(root, { recursive: true, force: true }));
-  await assert.rejects(() => validateProjectRoot(root, path.join(root, '.traceward')), /overlap/);
+  await assert.rejects(
+    () => validateProjectRoot(root, path.join(root, '.codebasescan')),
+    /overlap/,
+  );
 });

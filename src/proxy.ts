@@ -3,8 +3,8 @@ import { localRequestError } from './security/local-http.ts';
 export function proxy(request: NextRequest) {
   const error = localRequestError(
     request,
-    process.env.TRACEWARD_PORT ?? '3000',
-    process.env.TRACEWARD_INTERNAL_HOST,
+    process.env.CODEBASESCAN_PORT ?? '3000',
+    process.env.CODEBASESCAN_INTERNAL_HOST,
   );
   if (error) return new NextResponse(error, { status: 403 });
   return NextResponse.next();

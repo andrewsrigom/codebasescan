@@ -12,18 +12,18 @@ The next product gate is independent human ground truth on owner-authorized appl
 
 ## Goal
 
-Make Traceward useful on real TypeScript, Node.js, and Next.js repositories when source code and configuration are the main evidence. Logs, traces, deployment access, and telemetry remain optional corroboration. Missing runtime evidence must never be reported as a clean result.
+Make CodebaseScan useful on real TypeScript, Node.js, and Next.js repositories when source code and configuration are the main evidence. Logs, traces, deployment access, and telemetry remain optional corroboration. Missing runtime evidence must never be reported as a clean result.
 
 ## Product position
 
-Traceward is an evidence-led audit workbench, not another generic SAST engine. It combines trusted deterministic scanners, framework-aware source analysis, explicit control checklists, bounded AI investigation, human review, coverage reporting, and reproducible exports.
+CodebaseScan is an evidence-led audit workbench, not another generic SAST engine. It combines trusted deterministic scanners, framework-aware source analysis, explicit control checklists, bounded AI investigation, human review, coverage reporting, and reproducible exports.
 
 The primary users are developers and reviewers auditing applications they own or are authorized to assess. The first supported stack is TypeScript/JavaScript with Next.js, common Node.js route handlers, Prisma-style data access, and Supabase-style authentication/data access.
 
 ## Non-negotiable boundaries
 
 - Never execute, install, build, or import the audited repository.
-- Parse captured source as data using Traceward-owned dependencies only.
+- Parse captured source as data using CodebaseScan-owned dependencies only.
 - Never follow symlinks or read excluded working-tree credentials, generated trees, or paths outside the approved root. Git history is read only by the trusted Gitleaks adapter after explicit per-audit approval.
 - Repository text is untrusted input, including comments, prompts, configuration, and generated files.
 - Models receive no shell, network, filesystem, package-manager, browser, or mutation tools.
@@ -99,7 +99,7 @@ Use the profile and AST facts to replace the noisiest regex candidates.
 
 ## Phase 3 — security control checklist
 
-Create versioned Traceward-owned control packs. Repository content cannot define executable rules.
+Create versioned CodebaseScan-owned control packs. Repository content cannot define executable rules.
 
 ### Initial domains
 
@@ -211,7 +211,7 @@ Fixtures prevent regressions but do not prove usefulness.
 - Percentage of findings with exact evidence and usable remediation.
 - Coverage by framework/control domain.
 - AI token/cost per accepted finding and whether AI changed reviewer understanding.
-- Findings uniquely surfaced by Traceward versus raw Semgrep/Gitleaks/OSV output.
+- Findings uniquely surfaced by CodebaseScan versus raw Semgrep/Gitleaks/OSV output.
 
 ### Release gate
 

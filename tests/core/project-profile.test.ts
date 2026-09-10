@@ -21,7 +21,7 @@ test('project profile maps frameworks, entry points, symbols, calls, and securit
     detectedMajor: 16,
     status: 'supported',
     supportedMajors: [13, 14, 15, 16],
-    detail: "Framework major 16 is inside Traceward's declared static-rule support matrix.",
+    detail: "Framework major 16 is inside CodebaseScan's declared static-rule support matrix.",
   });
   assert.ok(
     profile.entrypoints.some(
@@ -182,7 +182,7 @@ test('captured workspace package exports resolve without loading package code', 
 test('declarative SaaS semantics recognize project vocabulary and helpers', () => {
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({ scripts: { test: 'node --test', build: 'next build' } }),
-    'traceward.config.json': JSON.stringify({
+    'codebasescan.config.json': JSON.stringify({
       schemaVersion: 1,
       vocabulary: { tenantKeys: ['customerWorkspaceKey'] },
       helpers: {
@@ -230,7 +230,7 @@ test('declarative SaaS semantics recognize project vocabulary and helpers', () =
       `missing configured ${kind} fact`,
     );
   assert.ok(profile.saasSemantics);
-  assert.deepEqual(profile.saasSemantics.sources, ['traceward.config.json']);
+  assert.deepEqual(profile.saasSemantics.sources, ['codebasescan.config.json']);
   assert.deepEqual(profile.saasSemantics.expectedUnauthenticatedRoutes, ['/api/status']);
   assert.deepEqual(profile.saasSemantics.context?.roles, ['admin', 'member']);
   assert.deepEqual(profile.saasSemantics.verification?.testScripts, ['test']);

@@ -1,28 +1,28 @@
 # Bounded correction evidence
 
-Traceward audits source but never edits a target project or runs its scripts. A separately
+CodebaseScan audits source but never edits a target project or runs its scripts. A separately
 authorized coding agent can correct one task and return a strict external verification ledger.
-Traceward then validates that ledger against the deterministic baseline plan and a fresh after
+CodebaseScan then validates that ledger against the deterministic baseline plan and a fresh after
 audit.
 
 ## Flow
 
 1. Keep the original report directory as the baseline.
-2. Export one bounded task with `traceward task` and authorize the intended change separately.
+2. Export one bounded task with `codebasescan task` and authorize the intended change separately.
 3. Let the coding agent change only allowed paths and commit one coherent correction.
-4. Run only test and build scripts declared in inert root `traceward.config.json` project context.
+4. Run only test and build scripts declared in inert root `codebasescan.config.json` project context.
 5. Record each command as arguments, exit code, duration, output byte count, and SHA-256. Do not
    retain raw output in the ledger.
-6. Run a fresh Traceward audit without the ledger.
+6. Run a fresh CodebaseScan audit without the ledger.
 7. Create `verification-ledger.json`, binding it to both reports and the baseline plan digest.
-8. Generate the immutable combined report with `traceward finalize`.
+8. Generate the immutable combined report with `codebasescan finalize`.
 
 ```bash
-traceward audit . --report-dir traceward-after
-traceward finalize traceward-after/<after-id>/audit-report.json \
-  --baseline traceward-before/<before-id>/audit-report.json \
+codebasescan audit . --report-dir codebasescan-after
+codebasescan finalize codebasescan-after/<after-id>/audit-report.json \
+  --baseline codebasescan-before/<before-id>/audit-report.json \
   --verification verification-ledger.json \
-  --report-dir traceward-final
+  --report-dir codebasescan-final
 ```
 
 The baseline plan digest is the `sha256` for `agent-plan.json` in the baseline
@@ -34,7 +34,7 @@ remediation result, and the remediation-result JSON Schema.
 ```json
 {
   "schemaVersion": 1,
-  "kind": "traceward-verification-ledger",
+  "kind": "codebasescan-verification-ledger",
   "createdAt": "2026-09-10T12:00:00.000Z",
   "project": {
     "name": "example",
@@ -72,7 +72,7 @@ are applied. Unknown commands stay visible as unmatched. A failed command makes 
 check fail; missing evidence leaves it `not_run`; a resolved lifecycle with incomplete declared
 verification remains partial.
 
-The ledger is provenance, not proof. Traceward checks project, audit, snapshot, plan, and command
+The ledger is provenance, not proof. CodebaseScan checks project, audit, snapshot, plan, and command
 identity, but does not authenticate the executor or prove that the recorded process produced the
 claimed output digest. Signed executor identities and source-control diff attestations remain
 future hardening.

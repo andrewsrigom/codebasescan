@@ -13,7 +13,7 @@ test(
   'trusted Semgrep rules cover supplemental Node security mechanics',
   { skip: !hasSemgrep },
   async (context) => {
-    const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-semgrep-rules-'));
+    const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-semgrep-rules-'));
     context.after(() => rm(temporary, { recursive: true, force: true }));
     const source = `
     import jwt from 'jsonwebtoken';
@@ -49,29 +49,29 @@ test(
     );
     const rules = new Set(result.findings.map((finding) => finding.ruleId));
     for (const rule of [
-      'traceward.jwt-decode-review',
-      'traceward.jwt-ignore-expiration',
-      'traceward.node-vm-execution',
-      'traceward.disabled-tls-verification',
-      'traceward.mongodb-where-review',
-      'traceward.error-stack-response',
-      'traceward.sensitive-log-field',
-      'traceward.unsafe-deserialization-review',
-      'traceward.token-in-url',
+      'codebasescan.jwt-decode-review',
+      'codebasescan.jwt-ignore-expiration',
+      'codebasescan.node-vm-execution',
+      'codebasescan.disabled-tls-verification',
+      'codebasescan.mongodb-where-review',
+      'codebasescan.error-stack-response',
+      'codebasescan.sensitive-log-field',
+      'codebasescan.unsafe-deserialization-review',
+      'codebasescan.token-in-url',
     ])
       assert.ok(rules.has(rule), `${rule} was not reported: ${JSON.stringify(result)}`);
     assert.equal(
-      result.findings.filter((finding) => finding.ruleId === 'traceward.sensitive-log-field')
+      result.findings.filter((finding) => finding.ruleId === 'codebasescan.sensitive-log-field')
         .length,
       2,
     );
     assert.equal(
-      result.findings.find((finding) => finding.ruleId === 'traceward.jwt-ignore-expiration')
+      result.findings.find((finding) => finding.ruleId === 'codebasescan.jwt-ignore-expiration')
         ?.category,
       'authentication',
     );
     assert.deepEqual(
-      result.findings.find((finding) => finding.ruleId === 'traceward.disabled-tls-verification')
+      result.findings.find((finding) => finding.ruleId === 'codebasescan.disabled-tls-verification')
         ?.cwe,
       ['CWE-295'],
     );
@@ -105,7 +105,7 @@ test(
     );
     assert.equal(safeResult.run.status, 'completed');
     assert.deepEqual(
-      safeResult.findings.filter((finding) => finding.ruleId.startsWith('traceward.')),
+      safeResult.findings.filter((finding) => finding.ruleId.startsWith('codebasescan.')),
       [],
     );
   },

@@ -55,11 +55,11 @@ function optionalNumber(value: string | undefined): number | undefined {
 }
 export function configuration(): Configuration {
   const dataDirectory = path.resolve(
-    /* turbopackIgnore: true */ process.env.TRACEWARD_DATA_DIR || '.traceward',
+    /* turbopackIgnore: true */ process.env.CODEBASESCAN_DATA_DIR || '.codebasescan',
   );
-  const requestedAiMode = process.env.TRACEWARD_AI ?? 'disabled';
+  const requestedAiMode = process.env.CODEBASESCAN_AI ?? 'disabled';
   if (!['disabled', 'ollama', 'openai'].includes(requestedAiMode))
-    throw new Error('TRACEWARD_AI must be disabled, ollama, or openai.');
+    throw new Error('CODEBASESCAN_AI must be disabled, ollama, or openai.');
   const aiMode = requestedAiMode as Configuration['aiMode'];
   const model =
     aiMode === 'ollama'
@@ -77,45 +77,50 @@ export function configuration(): Configuration {
     databasePath: path.join(dataDirectory, 'application.sqlite'),
     checkpointPath: path.join(dataDirectory, 'checkpoints.sqlite'),
     temporaryDirectory: path.join(dataDirectory, 'temporary'),
-    rulesDirectory: process.env.TRACEWARD_RULES_DIR
-      ? path.resolve(process.env.TRACEWARD_RULES_DIR)
+    rulesDirectory: process.env.CODEBASESCAN_RULES_DIR
+      ? path.resolve(process.env.CODEBASESCAN_RULES_DIR)
       : bundledRulesDirectory,
     aiMode,
     model,
     strongModel: process.env.OPENAI_STRONG_MODEL?.trim() ?? '',
     ...(openaiApiKey ? { openaiApiKey } : {}),
-    aiTimeoutMs: boundedInteger(process.env.TRACEWARD_AI_TIMEOUT_MS, 30000, 1000, 120000),
-    aiMaxRetries: boundedInteger(process.env.TRACEWARD_AI_MAX_RETRIES, 1, 0, 3),
-    aiMaxCalls: boundedInteger(process.env.TRACEWARD_AI_MAX_CALLS, 12, 1, 100),
-    aiMaxCallsPerFinding: boundedInteger(process.env.TRACEWARD_AI_MAX_CALLS_PER_FINDING, 2, 1, 3),
+    aiTimeoutMs: boundedInteger(process.env.CODEBASESCAN_AI_TIMEOUT_MS, 30000, 1000, 120000),
+    aiMaxRetries: boundedInteger(process.env.CODEBASESCAN_AI_MAX_RETRIES, 1, 0, 3),
+    aiMaxCalls: boundedInteger(process.env.CODEBASESCAN_AI_MAX_CALLS, 12, 1, 100),
+    aiMaxCallsPerFinding: boundedInteger(
+      process.env.CODEBASESCAN_AI_MAX_CALLS_PER_FINDING,
+      2,
+      1,
+      3,
+    ),
     aiInputTokenBudget: boundedInteger(
-      process.env.TRACEWARD_AI_INPUT_TOKEN_BUDGET,
+      process.env.CODEBASESCAN_AI_INPUT_TOKEN_BUDGET,
       120000,
       1000,
       2000000,
     ),
     aiOutputTokenBudget: boundedInteger(
-      process.env.TRACEWARD_AI_OUTPUT_TOKEN_BUDGET,
+      process.env.CODEBASESCAN_AI_OUTPUT_TOKEN_BUDGET,
       10000,
       100,
       200000,
     ),
     aiMaxOutputTokensPerCall: boundedInteger(
-      process.env.TRACEWARD_AI_MAX_OUTPUT_TOKENS_PER_CALL,
+      process.env.CODEBASESCAN_AI_MAX_OUTPUT_TOKENS_PER_CALL,
       900,
       100,
       10000,
     ),
     openaiInputCostPerMillion: optionalNumber(process.env.OPENAI_INPUT_COST_PER_MTOK),
     openaiOutputCostPerMillion: optionalNumber(process.env.OPENAI_OUTPUT_COST_PER_MTOK),
-    semgrep: process.env.TRACEWARD_SEMGREP === 'true',
-    gitleaks: process.env.TRACEWARD_GITLEAKS === 'true',
-    osv: process.env.TRACEWARD_OSV === 'true',
-    osvCacheHours: boundedInteger(process.env.TRACEWARD_OSV_CACHE_HOURS, 24, 1, 720),
+    semgrep: process.env.CODEBASESCAN_SEMGREP === 'true',
+    gitleaks: process.env.CODEBASESCAN_GITLEAKS === 'true',
+    osv: process.env.CODEBASESCAN_OSV === 'true',
+    osvCacheHours: boundedInteger(process.env.CODEBASESCAN_OSV_CACHE_HOURS, 24, 1, 720),
     advisoryDatabasePath: path.resolve(
       /* turbopackIgnore: true */
-      process.env.TRACEWARD_ADVISORY_DB || path.join(dataDirectory, 'advisory-database.json'),
+      process.env.CODEBASESCAN_ADVISORY_DB || path.join(dataDirectory, 'advisory-database.json'),
     ),
-    scannerCache: process.env.TRACEWARD_SCANNER_CACHE !== 'false',
+    scannerCache: process.env.CODEBASESCAN_SCANNER_CACHE !== 'false',
   };
 }

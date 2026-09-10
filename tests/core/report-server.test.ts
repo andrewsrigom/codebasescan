@@ -8,7 +8,7 @@ import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { sampleReport } from '../helpers.ts';
 
 test('report package loader resolves the newest audit from a report root', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-report-server-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-report-server-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const older = sampleReport();
   const newer = {
@@ -25,7 +25,7 @@ test('report package loader resolves the newest audit from a report root', async
 });
 
 test('report server exposes only verified manifest artifacts on loopback', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-report-server-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-report-server-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const report = sampleReport();
   const output = await writeStaticReport(report, temporary);
@@ -49,7 +49,7 @@ test('report server exposes only verified manifest artifacts on loopback', async
 });
 
 test('report package loader rejects modified artifacts', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-report-server-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-report-server-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const output = await writeStaticReport(sampleReport(), temporary);
   const auditFile = path.join(output.directory, 'audit-report.json');

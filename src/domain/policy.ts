@@ -7,7 +7,7 @@ export const policyResultVersion = 1 as const;
 
 export interface PolicyResult {
   schemaVersion: typeof policyResultVersion;
-  kind: 'traceward-policy-result';
+  kind: 'codebasescan-policy-result';
   generatedAt: string;
   auditId: string;
   snapshotDigest: string;
@@ -151,7 +151,7 @@ export function buildPolicyResult(
     profile === 'advisory' ? 0 : blockingCoverageIssues ? 2 : gated.length ? 1 : 0;
   return {
     schemaVersion: policyResultVersion,
-    kind: 'traceward-policy-result',
+    kind: 'codebasescan-policy-result',
     generatedAt: report.createdAt,
     auditId: report.auditId,
     snapshotDigest: report.snapshotDigest,

@@ -5,7 +5,7 @@
     {
       "tool": {
         "driver": {
-          "name": "Traceward",
+          "name": "CodebaseScan",
           "version": "0.2.0",
           "rules": [
             {
@@ -108,7 +108,7 @@
             "text": "Sensitive configuration uses a public environment name. Disposition: needs_review. A sensitive-looking setting has a browser-public naming convention. No active credential or actual browser bundle exposure has been verified."
           },
           "partialFingerprints": {
-            "traceward/v1": "5d64fe05ea9fd94901383a35c1489ac862434ba9d70726f4d9593b2e0fcebb97"
+            "codebasescan/v1": "5d64fe05ea9fd94901383a35c1489ac862434ba9d70726f4d9593b2e0fcebb97"
           },
           "locations": [
             {
@@ -137,7 +137,7 @@
             "text": "Destructive agent tool needs permission review. Disposition: needs_review. A potentially destructive operation appears in an agent tool list. The pattern cannot determine whether approval and authorization are enforced inside the tool."
           },
           "partialFingerprints": {
-            "traceward/v1": "779fa2b80f12cb145091bbbe36392b456175611da19e7ac323b56838dfaaf8a5"
+            "codebasescan/v1": "779fa2b80f12cb145091bbbe36392b456175611da19e7ac323b56838dfaaf8a5"
           },
           "locations": [
             {
@@ -166,7 +166,7 @@
             "text": "Dynamic code execution needs trust-boundary review. Disposition: needs_review. A dynamic execution sink was detected. This is a pattern match, not proof of attacker-controlled execution."
           },
           "partialFingerprints": {
-            "traceward/v1": "a624c10ee19efc8358689f335051b39417aa1fe549fd565036d68c139ca0ec2d"
+            "codebasescan/v1": "a624c10ee19efc8358689f335051b39417aa1fe549fd565036d68c139ca0ec2d"
           },
           "locations": [
             {
@@ -195,7 +195,7 @@
             "text": "Raw SQL execution needs input tracing. Disposition: needs_review. An unsafe SQL execution API is present. User control of the query and runtime reachability have not been established."
           },
           "partialFingerprints": {
-            "traceward/v1": "c7eebdb7ae0d43ddd1f2393ba0410ccf9ca0fb20f730ebfefb8930e8f4e09a5a"
+            "codebasescan/v1": "c7eebdb7ae0d43ddd1f2393ba0410ccf9ca0fb20f730ebfefb8930e8f4e09a5a"
           },
           "locations": [
             {
@@ -224,7 +224,7 @@
             "text": "Object lookup needs tenant authorization review. Disposition: needs_review. An object lookup begins with an ID filter. This is a review hotspot, not evidence of a missing authorization check; inspect middleware, service policy, RLS and the complete call path."
           },
           "partialFingerprints": {
-            "traceward/v1": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2"
+            "codebasescan/v1": "5bffd93b08bf04fd705dae33dc7aee8c0e3bc5972ed0e75a77d966746f5942e2"
           },
           "locations": [
             {
@@ -253,7 +253,7 @@
             "text": "HTML rendering bypass needs sanitization review. Disposition: needs_review. Raw HTML reaches a React rendering sink. The scanner does not prove that the value is attacker-controlled or unsanitized."
           },
           "partialFingerprints": {
-            "traceward/v1": "8333a67950b076e8a915d3a67c30077d10449fbee8721eda52bc1d94902a769b"
+            "codebasescan/v1": "8333a67950b076e8a915d3a67c30077d10449fbee8721eda52bc1d94902a769b"
           },
           "locations": [
             {
@@ -282,7 +282,7 @@
             "text": "Wildcard cross-origin policy needs context review. Disposition: needs_review. A wildcard CORS origin was found. Public endpoints may intentionally permit it; authentication and exposed data determine the risk."
           },
           "partialFingerprints": {
-            "traceward/v1": "c534df31cabaf38e8405ef4f5752186720b8038afe7d1d50b2fd6e0967bb2286"
+            "codebasescan/v1": "c534df31cabaf38e8405ef4f5752186720b8038afe7d1d50b2fd6e0967bb2286"
           },
           "locations": [
             {

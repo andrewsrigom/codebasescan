@@ -163,7 +163,7 @@ test('SaaS error rule proves imported normalizers return only fixed public codes
 
 test('custom SaaS vocabulary is applied without executable configuration', () => {
   const snapshot = snapshotFromFiles({
-    'traceward.config.json': JSON.stringify({
+    'codebasescan.config.json': JSON.stringify({
       schemaVersion: 1,
       vocabulary: { roleKeys: ['membershipLevel'] },
     }),

@@ -21,7 +21,7 @@ export function normalizeUser(input: Record<string, unknown>) {
 `;
 
 test('bundled mechanical scanners run against an inert staged snapshot', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-mechanical-test-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-mechanical-test-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const snapshot = snapshotFromFiles({
     'src/a.ts': `import { b } from './b';\n${repeatedBlock}\nexport const a = b;\nthrow new Error('target code must not execute');`,

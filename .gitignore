@@ -1,6 +1,9 @@
 node_modules/
 .next/
 out/
+.codebasescan/
+codebasescan-report/
+# Pre-rename local artifacts. Keep ignored so upgrading never stages private audit data.
 .traceward/
 traceward-report/
 dist/
@@ -17,6 +20,10 @@ playwright-report/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+/codebasescan-*.json
+/codebasescan-*.md
+/codebasescan-*.html
+/codebasescan-*.sarif
 /traceward-*.json
 /traceward-*.md
 /traceward-*.html

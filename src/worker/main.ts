@@ -20,7 +20,9 @@ const heartbeat = setInterval(() => {
   store.heartbeat(token);
   if (activeId && store.audit(activeId).status === 'cancelled') active?.abort();
 }, 2000);
-console.log(`Traceward worker ready. Read-only scans, AI ${config.aiMode}, one audit at a time.`);
+console.log(
+  `CodebaseScan worker ready. Read-only scans, AI ${config.aiMode}, one audit at a time.`,
+);
 try {
   const removedStagingDirectories = await cleanupStaleScannerStaging(config.temporaryDirectory);
   if (removedStagingDirectories)

@@ -8,9 +8,9 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120000,
     env: {
-      TRACEWARD_DATA_DIR: '.traceward/e2e-code-first',
-      TRACEWARD_PORT: '3000',
-      TRACEWARD_AI: 'disabled',
+      CODEBASESCAN_DATA_DIR: '.codebasescan/e2e-code-first',
+      CODEBASESCAN_PORT: '3000',
+      CODEBASESCAN_AI: 'disabled',
     },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

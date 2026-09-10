@@ -28,5 +28,5 @@
     ".next/dev/types/**/*.ts",
     "*.ts"
   ],
-  "exclude": ["node_modules", "fixtures", "reports", ".traceward"]
+  "exclude": ["node_modules", "fixtures", "reports", ".codebasescan"]
 }

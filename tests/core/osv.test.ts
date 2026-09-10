@@ -176,7 +176,7 @@ test('CVSS v3 vectors are scored without understating critical advisories', () =
 });
 
 test('OSV normalizes aliases, fixed versions, and provenance without exploitability claims', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-osv-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const source = await captureSnapshot(path.resolve('fixtures/dependencies-vulnerable'));
   const requests: { url: string; body?: string }[] = [];
@@ -237,7 +237,7 @@ test('OSV normalizes aliases, fixed versions, and provenance without exploitabil
 });
 
 test('dependency reachability records an explicit runtime import without claiming execution', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-reference-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-osv-reference-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const source = snapshot({
     'package.json': '{"dependencies":{"fixture-package":"1.0.0"}}',
@@ -267,7 +267,7 @@ test('dependency reachability records an explicit runtime import without claimin
 });
 
 test('offline advisory coverage stays partial when the local database lacks packages', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-partial-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-osv-partial-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const source = snapshot({
     'package.json': '{"dependencies":{"alpha":"1.0.0","beta":"2.0.0"}}',
@@ -316,7 +316,7 @@ test('offline advisory coverage stays partial when the local database lacks pack
 });
 
 test('OSV clean and malformed responses remain distinct', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-clean-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-osv-clean-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const source = await captureSnapshot(path.resolve('fixtures/dependencies-safe'));
   const clean = await scanOsv(source, true, path.join(directory, 'clean.json'), 24, undefined, {
@@ -337,7 +337,7 @@ test('OSV clean and malformed responses remain distinct', async (context) => {
 });
 
 test('OSV follows bounded per-query pagination', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-osv-pages-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-osv-pages-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const source = await captureSnapshot(path.resolve('fixtures/dependencies-vulnerable'));
   const bodies: string[] = [];

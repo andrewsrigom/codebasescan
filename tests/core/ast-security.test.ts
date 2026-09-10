@@ -208,7 +208,7 @@ test('explicit public submission routes are not required to have an existing ses
 
 test('declarative public routes avoid project-specific missing-login noise', () => {
   const snapshot = snapshotFromFiles({
-    'traceward.config.json': JSON.stringify({
+    'codebasescan.config.json': JSON.stringify({
       schemaVersion: 1,
       expectedUnauthenticatedRoutes: ['/api/partner/callback'],
     }),

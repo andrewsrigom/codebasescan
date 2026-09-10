@@ -7,7 +7,7 @@ if (existsSync('.env.local')) loadEnvFile('.env.local');
 
 const require = createRequire(import.meta.url);
 const mode = process.argv[2] ?? 'dev';
-const port = process.env.TRACEWARD_PORT ?? '3000';
+const port = process.env.CODEBASESCAN_PORT ?? '3000';
 const args = mode === 'build' ? [mode] : [mode, '--hostname', '127.0.0.1', '--port', port];
 const child = spawn(process.execPath, [require.resolve('next/dist/bin/next'), ...args], {
   stdio: 'inherit',

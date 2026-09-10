@@ -1,6 +1,6 @@
 # Security policy
 
-Traceward is an early local-only defensive review tool. It is not a penetration-testing service, compliance assessment, or guarantee of software security. Do not use its output as the sole release gate for sensitive systems.
+CodebaseScan is an early local-only defensive review tool. It is not a penetration-testing service, compliance assessment, or guarantee of software security. Do not use its output as the sole release gate for sensitive systems.
 
 ## Supported deployment
 

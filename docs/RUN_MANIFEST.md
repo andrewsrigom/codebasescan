@@ -5,7 +5,7 @@ entry point for automation and later AI review before either reads the larger au
 
 The manifest records:
 
-- Traceward, workflow, rule-pack, report, and manifest versions;
+- CodebaseScan, workflow, rule-pack, report, and manifest versions;
 - audit and snapshot identity without the repository's absolute path;
 - requested/effective audit modes when that selection exists;
 - captured files, skipped counts, truncation, and preflight limits;

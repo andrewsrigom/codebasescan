@@ -155,8 +155,8 @@ const finding = z.looseObject({
   provenance: z
     .looseObject({
       detector: z.enum([
-        'traceward-heuristic',
-        'traceward-ast',
+        'codebasescan-heuristic',
+        'codebasescan-ast',
         'scanner',
         'runtime-probe',
         'advisory-database',
@@ -986,7 +986,7 @@ const controlStatus = z.enum([
 ]);
 const checklist = z.looseObject({
   schemaVersion: z.literal(1),
-  packId: z.literal('traceward-web-application'),
+  packId: z.literal('codebasescan-web-application'),
   packVersion: shortText,
   controls: z
     .array(

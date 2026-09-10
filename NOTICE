@@ -1,9 +1,9 @@
-Traceward — local-first security review workbench
-Copyright 2026 Traceward contributors.
+CodebaseScan — local-first security review workbench
+Copyright 2026 CodebaseScan contributors.
 
 This starter includes original project code under Apache-2.0.
 Third-party dependencies, externally installed scanner binaries, scanner rules,
 and model weights remain subject to their respective licenses.
 No external scanner binaries, model weights, or font files are bundled.
-Traceward is a provisional project name; no affiliation with scanner vendors,
+CodebaseScan is a provisional project name; no affiliation with scanner vendors,
 LangChain, Microsoft, OpenAI, OWASP, or any certification body is implied.

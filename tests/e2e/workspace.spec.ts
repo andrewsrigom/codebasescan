@@ -45,7 +45,7 @@ test('exports a report without inline executable code', async ({ page }) => {
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('link', { name: 'Export report' }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^traceward-.*\.html$/);
+  expect(download.suggestedFilename()).toMatch(/^codebasescan-.*\.html$/);
 });
 test('rejects a forged cross-origin mutation', async ({ request }) => {
   const response = await request.post('/api/audits', {
@@ -85,7 +85,7 @@ test('supports keyboard tabs and keeps collapsed mobile navigation named', async
   await page.goto('/');
 
   for (const name of [
-    'Traceward overview',
+    'CodebaseScan overview',
     'Overview',
     'Audit history',
     'Projects',

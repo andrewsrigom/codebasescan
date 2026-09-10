@@ -106,7 +106,7 @@ export function buildCoverage(
       label: 'Dynamic exploitation',
       status: 'NOT PERFORMED',
       detail:
-        'Traceward does not exploit targets, brute-force authentication, or crawl applications.',
+        'CodebaseScan does not exploit targets, brute-force authentication, or crawl applications.',
     },
   ];
 }

@@ -19,8 +19,8 @@ const ignoredDirectories = new Set([
   'coverage',
   'storybook-static',
   'test-results',
-  'traceward-report',
-  '.traceward',
+  'codebasescan-report',
+  '.codebasescan',
   '.turbo',
   '.venv',
   'vendor',
@@ -185,7 +185,7 @@ export async function validateProjectRoot(input: string, dataDirectory: string):
   const data = path.resolve(dataDirectory);
   if (isWithin(root, data) || isWithin(data, root))
     throw new Error(
-      'Project and audit storage must not overlap. Move TRACEWARD_DATA_DIR outside the repository.',
+      'Project and audit storage must not overlap. Move CODEBASESCAN_DATA_DIR outside the repository.',
     );
   return root;
 }

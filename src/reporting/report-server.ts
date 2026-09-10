@@ -22,7 +22,7 @@ const artifactPath = z
 
 const manifestSchema = z.object({
   schemaVersion: z.literal(staticReportVersion),
-  kind: z.literal('traceward-static-report'),
+  kind: z.literal('codebasescan-static-report'),
   auditId: z.string().min(1).max(100),
   snapshotDigest: z.string().regex(/^[a-f0-9]{64}$/),
   generatedAt: z.iso.datetime(),
@@ -111,7 +111,7 @@ async function packageDirectory(location: string): Promise<string> {
   const latest = candidates
     .filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== null)
     .sort((left, right) => right.manifest.generatedAt.localeCompare(left.manifest.generatedAt))[0];
-  if (!latest) throw new Error(`No valid Traceward report package was found at ${directory}.`);
+  if (!latest) throw new Error(`No valid CodebaseScan report package was found at ${directory}.`);
   return latest.directory;
 }
 
@@ -156,7 +156,7 @@ export async function loadReportPackage(location: string): Promise<LoadedReportP
       JSON.parse(dataArtifacts.get('run-manifest.json')!.toString('utf8')),
     );
   } catch {
-    throw new Error('Static report contains invalid Traceward data.');
+    throw new Error('Static report contains invalid CodebaseScan data.');
   }
 
   if (
@@ -241,7 +241,7 @@ export async function startReportServer(location: string, port = 4173): Promise<
     } catch {
       response
         .writeHead(409, { 'Content-Type': 'text/plain; charset=utf-8' })
-        .end('Report artifact changed. Restart Traceward after restoring the report package.');
+        .end('Report artifact changed. Restart CodebaseScan after restoring the report package.');
     }
   });
 
@@ -255,7 +255,7 @@ export async function startReportServer(location: string, port = 4173): Promise<
   const address = server.address();
   if (!address || typeof address === 'string') {
     server.close();
-    throw new Error('Traceward could not determine the report server address.');
+    throw new Error('CodebaseScan could not determine the report server address.');
   }
   return {
     server,

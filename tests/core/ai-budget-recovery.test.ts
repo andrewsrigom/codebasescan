@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { AuditStore } from '../../src/server/store.ts';
 
 test('an unfinished AI reservation survives database reopen and still limits cost', async (context) => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-ai-budget-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-ai-budget-'));
   context.after(() => rm(directory, { recursive: true, force: true }));
   const databasePath = path.join(directory, 'application.sqlite');
   const first = new AuditStore(databasePath);

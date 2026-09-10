@@ -1,12 +1,12 @@
 {
-  "name": "traceward",
+  "name": "codebasescan",
   "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "A local-first, evidence-led security review workbench.",
   "license": "Apache-2.0",
   "bin": {
-    "traceward": "./bin/traceward.mjs"
+    "codebasescan": "./bin/codebasescan.mjs"
   },
   "files": [
     "bin",

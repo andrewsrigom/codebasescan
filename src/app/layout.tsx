@@ -5,7 +5,7 @@ import { Icon } from '../components/icon.tsx';
 import { Navigation } from '../components/navigation.tsx';
 import './globals.css';
 export const metadata: Metadata = {
-  title: 'Traceward · Security review workbench',
+  title: 'CodebaseScan · Security review workbench',
   description: 'Local-first, evidence-led security review. Your code stays in your workspace.',
   robots: { index: false, follow: false },
 };
@@ -17,12 +17,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         <aside className="sidebar">
-          <Link href="/" className="brand" aria-label="Traceward overview">
+          <Link href="/" className="brand" aria-label="CodebaseScan overview">
             <span className="brand-mark">
               <Icon name="shield" size={23} />
             </span>
             <span>
-              traceward <span className="brand-sub">SECURITY WORKBENCH</span>
+              codebasescan <span className="brand-sub">SECURITY WORKBENCH</span>
             </span>
           </Link>
           <Navigation />

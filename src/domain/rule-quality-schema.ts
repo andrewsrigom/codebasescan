@@ -33,8 +33,8 @@ const rule = z.object({
   scanner: shortText,
   scannerVersion: shortText.optional(),
   detector: z.enum([
-    'traceward-heuristic',
-    'traceward-ast',
+    'codebasescan-heuristic',
+    'codebasescan-ast',
     'scanner',
     'runtime-probe',
     'advisory-database',
@@ -57,7 +57,7 @@ const rule = z.object({
 
 const schema = z.object({
   schemaVersion: z.literal(2),
-  kind: z.literal('traceward-rule-quality'),
+  kind: z.literal('codebasescan-rule-quality'),
   generatedAt: shortText,
   auditId: shortText,
   summary: z.object({

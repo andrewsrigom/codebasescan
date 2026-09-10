@@ -23,8 +23,8 @@ export async function GET(
 ) {
   const error = localRequestError(
     request,
-    process.env.TRACEWARD_PORT ?? '3000',
-    process.env.TRACEWARD_INTERNAL_HOST,
+    process.env.CODEBASESCAN_PORT ?? '3000',
+    process.env.CODEBASESCAN_INTERNAL_HOST,
   );
   if (error) return new Response(error, { status: 403 });
   try {
@@ -60,7 +60,7 @@ export async function GET(
             : format === 'md'
               ? 'text/markdown; charset=utf-8'
               : 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="traceward-${id}.${['bundle', 'sbom', 'plan'].includes(format) ? `${format}.json` : format}"`,
+        'Content-Disposition': `attachment; filename="codebasescan-${id}.${['bundle', 'sbom', 'plan'].includes(format) ? `${format}.json` : format}"`,
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
       },

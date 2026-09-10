@@ -17,7 +17,7 @@ const required = [
   'LICENSE',
   'NOTICE',
   'README.md',
-  'bin/traceward.mjs',
+  'bin/codebasescan.mjs',
   'configs/gitleaks.toml',
   'configs/semgrep.yml',
   'dist/cli/main.js',
@@ -27,7 +27,7 @@ const required = [
 for (const file of required)
   if (!files.has(file)) throw new Error(`Packed CLI is missing ${file}.`);
 for (const file of files)
-  if (file.startsWith('src/') || file === '.env.local' || file.startsWith('.traceward/'))
+  if (file.startsWith('src/') || file === '.env.local' || file.startsWith('.codebasescan/'))
     throw new Error(`Packed CLI contains private development data: ${file}.`);
 console.log(
   `Package check passed: ${pack.entryCount} files, ${pack.size} packed bytes, ${pack.unpackedSize} unpacked bytes.`,

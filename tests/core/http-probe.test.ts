@@ -67,7 +67,7 @@ test('probe uses a bounded HEAD request and discards cookie values', async (cont
   const result = await probeHttp({ url, allowPrivateNetwork: false });
   assert.equal(result.run.status, 'completed');
   assert.deepEqual(methods, ['HEAD']);
-  assert.deepEqual(origins, ['https://traceward.invalid']);
+  assert.deepEqual(origins, ['https://codebasescan.invalid']);
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H002'));
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H003'));
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H004'));

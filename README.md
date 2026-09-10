@@ -1,16 +1,16 @@
-# Traceward
+# CodebaseScan
 
 Local-first security review for TypeScript, Node.js, and Next.js repositories.
 
-Traceward turns source code into review candidates with evidence, coverage gaps, and a human decision trail. It does not execute the target repository and does not require AI.
+CodebaseScan turns source code into review candidates with evidence, coverage gaps, and a human decision trail. It does not execute the target repository and does not require AI.
 
 **Status:** usable local workflow, validated on WSL2/Linux. Apache-2.0. Node.js 22.16+.
 
-![Traceward audit workspace](docs/assets/workspace.png)
+![CodebaseScan audit workspace](docs/assets/workspace.png)
 
-## Why Traceward
+## Why CodebaseScan
 
-Most small teams have code but little production telemetry. Traceward starts with what is available:
+Most small teams have code but little production telemetry. CodebaseScan starts with what is available:
 
 - framework-aware source rules and project mapping;
 - package lifecycle, dependency-source, registry, integrity, and manifest/lock consistency checks;
@@ -39,7 +39,7 @@ npm run dev
 Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 
 The default server accepts loopback hosts only. A WSL-to-Windows loopback relay may set an exact
-`TRACEWARD_INTERNAL_HOST`; the browser-facing host and Origin must still be loopback.
+`CODEBASESCAN_INTERNAL_HOST`; the browser-facing host and Origin must still be loopback.
 
 For queued audits, run the worker in another terminal:
 
@@ -54,16 +54,16 @@ Only inspect code you own or are authorized to assess.
 The terminal-first flow produces a self-contained directory like a test coverage report:
 
 ```bash
-traceward doctor
+codebasescan doctor
 cd /absolute/path/to/project
-traceward audit . --open
+codebasescan audit . --open
 ```
 
 All offline modes run by default. A focused pass can select a comma-separated subset:
 
 ```bash
-traceward audit . --modes security,saas,next-react
-traceward audit . --modes accessibility-static,privacy,reliability
+codebasescan audit . --modes security,saas,next-react
+codebasescan audit . --modes accessibility-static,privacy,reliability
 ```
 
 The report records all eight modes and marks omitted capabilities `DISABLED`, never clean.
@@ -72,36 +72,36 @@ The report records all eight modes and marks omitted capabilities `DISABLED`, ne
 it with Ctrl+C. To reopen an existing result, including the newest audit inside a report root:
 
 ```bash
-traceward open traceward-report
-traceward open traceward-report/<audit-id> --port 4173
+codebasescan open codebasescan-report
+codebasescan open codebasescan-report/<audit-id> --port 4173
 ```
 
-Without `--open`, open the printed `traceward-report/<audit-id>/index.html` directly. The directory also contains the full
+Without `--open`, open the printed `codebasescan-report/<audit-id>/index.html` directly. The directory also contains the full
 audit JSON, a prioritized `agent-plan.json` and its JSON Schema, a compatibility
 `remediation-plan.json`, a bounded Codex bundle, Markdown, SARIF, CycloneDX, and a hash manifest.
-It does not need the persistent Traceward server or its SQLite database. The loopback report server
+It does not need the persistent CodebaseScan server or its SQLite database. The loopback report server
 exposes only manifest-declared artifacts and rejects a package when an identity, size, or hash check
 fails.
 
-Traceward is not published to npm yet. To test the installable package from this checkout:
+CodebaseScan is not published to npm yet. To test the installable package from this checkout:
 
 ```bash
 npm ci
 npm pack
-npm install --global ./traceward-0.2.0.tgz
+npm install --global ./codebasescan-0.2.0.tgz
 ```
 
 After changes, compare a fresh audit with the previous report:
 
 ```bash
-traceward audit . --baseline traceward-report/<previous-audit-id>/audit-report.json
+codebasescan audit . --baseline codebasescan-report/<previous-audit-id>/audit-report.json
 ```
 
 The new directory then includes `remediation-result.json` and an HTML before/after summary. To
 give Codex or another agent only one focused task and its captured evidence:
 
 ```bash
-traceward task traceward-report/<audit-id> <task-id> --output traceward-task.json
+codebasescan task codebasescan-report/<audit-id> <task-id> --output codebasescan-task.json
 ```
 
 The generated task is analysis input, not permission to edit files, run project commands, access
@@ -111,14 +111,14 @@ After a separately authorized agent runs declared project checks, preserve only 
 provenance and build a combined report without rerunning target code:
 
 ```bash
-traceward finalize traceward-after/<after-id>/audit-report.json \
-  --baseline traceward-before/<before-id>/audit-report.json \
+codebasescan finalize codebasescan-after/<after-id>/audit-report.json \
+  --baseline codebasescan-before/<before-id>/audit-report.json \
   --verification verification-ledger.json \
-  --report-dir traceward-final
+  --report-dir codebasescan-final
 ```
 
 See [Bounded correction evidence](docs/CORRECTION_FLOW.md) for the strict ledger contract. Exact
-commands must already exist in the baseline agent plan. Traceward validates and reports the claims
+commands must already exist in the baseline agent plan. CodebaseScan validates and reports the claims
 but never executes them or authenticates the external executor.
 
 Repeated candidates from the same rule and primary file are grouped into one task while retaining
@@ -127,9 +127,9 @@ every original finding and evidence reference.
 Portable human decisions stay in a separate explicit ledger:
 
 ```bash
-traceward review traceward-report/<audit-id> <finding-id> false_positive \
+codebasescan review codebasescan-report/<audit-id> <finding-id> false_positive \
   --note "Inert secret-shaped fixture used only by the encryption test."
-traceward audit . --reviews traceward-report/<audit-id>/review-ledger.json
+codebasescan audit . --reviews codebasescan-report/<audit-id>/review-ledger.json
 ```
 
 Only `confirmed`, `false_positive`, and `accepted_risk` are portable. A fresh audit must prove
@@ -138,8 +138,8 @@ finding fingerprint, and every evidence source-file digest still match. Stale an
 remain visible in the report. The ledger is explicit user input, not trusted repository
 configuration.
 
-Use `traceward audit . --format agent-plan` when only the machine work queue is needed. Use
-`traceward audit . --format rule-quality` to inspect detector provenance, declared fixture status,
+Use `codebasescan audit . --format agent-plan` when only the machine work queue is needed. Use
+`codebasescan audit . --format rule-quality` to inspect detector provenance, declared fixture status,
 observed dispositions, standards mappings, and limitations for the rules applied in that audit.
 Static report directories also include `review-ledger.schema.json`.
 
@@ -152,12 +152,12 @@ npm run cli -- list
 npm run cli -- export <audit-id> html
 ```
 
-Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
+CodebaseScan captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
 
-Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned Traceward-owned tools. Knip receives script-free sanitized manifests and a generated configuration with every target plugin disabled. Traceward safely imports bounded JSON/JSONC Knip settings, workspace declarations, package-script entry hints, TypeScript path aliases, and contained workspace package exports as data. The project graph follows imported reexport bridges for at most five steps. Executable target configuration and lifecycle scripts are never loaded or run. Mechanical results are review evidence, not vulnerabilities.
+Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned CodebaseScan-owned tools. Knip receives script-free sanitized manifests and a generated configuration with every target plugin disabled. CodebaseScan safely imports bounded JSON/JSONC Knip settings, workspace declarations, package-script entry hints, TypeScript path aliases, and contained workspace package exports as data. The project graph follows imported reexport bridges for at most five steps. Executable target configuration and lifecycle scripts are never loaded or run. Mechanical results are review evidence, not vulnerabilities.
 
 Projects may declare their own SaaS vocabulary and wrapper names in a root
-`traceward.config.json` (or JSONC) file:
+`codebasescan.config.json` (or JSONC) file:
 
 ```json
 {
@@ -192,7 +192,7 @@ Projects may declare their own SaaS vocabulary and wrapper names in a root
 
 Configured names extend generic defaults and are used only when the named call or field is present
 in captured source. Lists, identifiers, route patterns, keys, and file size are bounded. Unknown or
-unsafe settings keep profile coverage partial and are ignored. `traceward.config.ts/js` is never
+unsafe settings keep profile coverage partial and are ignored. `codebasescan.config.ts/js` is never
 loaded. Public-route declarations prevent a project-specific login warning but do not turn the
 authentication checklist into a clean result.
 
@@ -220,9 +220,9 @@ Every finding keeps detector confidence, probable exposure, a 0–100 review pri
 External scanners stay opt-in:
 
 ```dotenv
-TRACEWARD_SEMGREP=true
-TRACEWARD_GITLEAKS=true
-TRACEWARD_OSV=true
+CODEBASESCAN_SEMGREP=true
+CODEBASESCAN_GITLEAKS=true
+CODEBASESCAN_OSV=true
 ```
 
 Semgrep and Gitleaks must be trusted local binaries. OSV receives only resolved npm package names and versions.
@@ -246,13 +246,13 @@ Future audits use the saved exact-version records without a network request. Dep
 AI is optional and never receives an arbitrary filesystem tool:
 
 ```dotenv
-TRACEWARD_AI=ollama
+CODEBASESCAN_AI=ollama
 OLLAMA_MODEL=your-downloaded-model
 ```
 
 For OpenAI, use [.env.example](.env.example). Requests use structured output, redaction, timeouts, cache, hard budgets, and store disabled. There is no automatic local-to-cloud fallback.
 
-To investigate manually with Codex without enabling OpenAI in Traceward:
+To investigate manually with Codex without enabling OpenAI in CodebaseScan:
 
 ```bash
 npm run cli -- export <audit-id> bundle
@@ -263,7 +263,7 @@ Attach the generated bundle to an authorized Codex task. It contains bounded evi
 ## CI
 
 ```bash
-traceward audit . --policy balanced
+codebasescan audit . --policy balanced
 ```
 
 Exit 0: advisory/pass. Exit 1: finding policy failed. Exit 2: coverage or audit execution failed.
@@ -278,7 +278,7 @@ owner, justification, supporting evidence, and optional expiry. See
 [Portable suppressions](docs/SUPPRESSIONS.md).
 
 Repeated audits reuse bounded local results only for deterministic scanners when the snapshot,
-scanner version, and workflow version match exactly. Set `TRACEWARD_SCANNER_CACHE=false` to force a
+scanner version, and workflow version match exactly. Set `CODEBASESCAN_SCANNER_CACHE=false` to force a
 fresh deterministic run. HTTP, advisories, Git history, Semgrep, and Gitleaks are never replayed by
 this cache. Each entry is limited to 12 MiB and best-effort pruning keeps at most 256 entries or
 256 MiB.
@@ -329,4 +329,4 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 
 ## License
 
-Apache-2.0. External scanners, APIs, models, rules, and dependencies retain their own licenses and terms. Traceward is a working name; domain and trademark availability have not been checked.
+Apache-2.0. External scanners, APIs, models, rules, and dependencies retain their own licenses and terms. CodebaseScan is a working name; domain and trademark availability have not been checked.

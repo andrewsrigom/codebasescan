@@ -684,7 +684,7 @@ async function scanDeadCode(
   await mkdir(temporaryDirectory, { recursive: true, mode: 0o700 });
   const stage = await mkdtemp(path.join(temporaryDirectory, 'knip-'));
   const sourceRoot = path.join(stage, 'source');
-  const configName = 'traceward.knip.json';
+  const configName = 'codebasescan.knip.json';
   try {
     await writeSnapshotStage(snapshot, sourceRoot, knipSource);
     await writeSanitizedManifests(snapshot, sourceRoot);

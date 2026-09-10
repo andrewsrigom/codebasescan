@@ -17,7 +17,7 @@ const checkKind = z.enum([
   'control_evidenced',
   'project_tests',
   'project_build',
-  'traceward_rescan',
+  'codebasescan_rescan',
 ]);
 const confidence = z.enum(['low', 'medium', 'high']);
 const exposure = z.enum(['potentially_public', 'authenticated', 'local', 'unknown']);
@@ -38,13 +38,13 @@ const rootCause = z.object({
 
 const verificationCommand = z.object({
   id: shortText,
-  kind: z.enum(['traceward_rescan', 'project_test', 'project_build']),
+  kind: z.enum(['codebasescan_rescan', 'project_test', 'project_build']),
   argv: z.array(shortText).min(1).max(32),
   workingDirectory: z.literal('project_root'),
   timeoutSeconds: z.number().int().min(1).max(3_600),
   network: z.enum(['denied', 'requires_approval']),
   requiresApproval: z.boolean(),
-  source: z.enum(['traceward', 'project_context']),
+  source: z.enum(['codebasescan', 'project_context']),
 });
 
 const findingRef = z.object({
@@ -108,7 +108,7 @@ const task = z.object({
 
 const planSchema = z.object({
   schemaVersion: z.literal(5),
-  kind: z.literal('traceward-remediation-plan'),
+  kind: z.literal('codebasescan-remediation-plan'),
   createdAt: shortText,
   audit: z.object({
     id: shortText,
@@ -150,7 +150,7 @@ const planSchema = z.object({
 
 const resultSchema = z.object({
   schemaVersion: z.literal(3),
-  kind: z.literal('traceward-remediation-result'),
+  kind: z.literal('codebasescan-remediation-result'),
   generatedAt: shortText,
   planDigest: shortText,
   before: z.object({ auditId: shortText, snapshotDigest: shortText }),

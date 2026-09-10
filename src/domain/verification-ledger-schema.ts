@@ -28,7 +28,7 @@ const execution = z
 const schema = z
   .object({
     schemaVersion: z.literal(1),
-    kind: z.literal('traceward-verification-ledger'),
+    kind: z.literal('codebasescan-verification-ledger'),
     createdAt: z.iso.datetime(),
     project: z
       .object({

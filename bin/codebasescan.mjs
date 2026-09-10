@@ -20,7 +20,7 @@ const child = spawn(
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
 
 child.on('error', () => {
-  console.error('Traceward could not start. Use Node.js 22.16 or newer.');
+  console.error('CodebaseScan could not start. Use Node.js 22.16 or newer.');
   process.exitCode = 1;
 });
 child.on('exit', (code, signal) => {

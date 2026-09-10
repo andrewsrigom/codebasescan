@@ -13,7 +13,7 @@ export function localRequestError(
   if (request.headers.get('sec-fetch-site') === 'cross-site')
     return 'Cross-site requests are not accepted.';
   if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
-    if (origin !== `http://${host}` || request.headers.get('x-traceward-client') !== 'local-ui')
+    if (origin !== `http://${host}` || request.headers.get('x-codebasescan-client') !== 'local-ui')
       return 'A same-origin UI request is required.';
     if (!request.headers.get('content-type')?.startsWith('application/json'))
       return 'JSON is required.';

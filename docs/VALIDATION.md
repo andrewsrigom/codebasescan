@@ -84,7 +84,7 @@ The real `seusaas` verification baseline
 external ledger recorded the exact `env:check`, `lint`, `test`, `typecheck`, `boundary:check`,
 and `build` argument arrays with timestamps, durations, exit codes, output sizes, and output
 SHA-256 digests. Finalization applied all six records and rejected none. Across 61 remediation
-tasks, 61 project-test checks, 61 project-build checks, and 61 Traceward-rescan checks passed; 41
+tasks, 61 project-test checks, 61 project-build checks, and 61 CodebaseScan-rescan checks passed; 41
 finding-absence checks and 20 deterministic-control checks failed because the underlying security
 work was intentionally not claimed as complete. The final comparison retained 108 unchanged
 findings with zero new and zero resolved.

@@ -23,16 +23,25 @@
 | Custom CSS and system fonts                          | Small UI dependency surface, offline assets, readable components. No forced component library migration.                                                                                                                                                                                                                        |
 | Apache-2.0 for original starter                      | Explicit open-source intention. External binary, rules, and model licenses must be reviewed separately.                                                                                                                                                                                                                         |
 | No bundled binary/model/font files                   | Keep redistribution auditable and the starter lightweight.                                                                                                                                                                                                                                                                      |
-| Pinned mechanical scanner packages                   | dependency-cruiser and jscpd run offline from Traceward-owned dependencies with fixed arguments; target scanner configuration is never loaded.                                                                                                                                                                                  |
+| Pinned mechanical scanner packages                   | dependency-cruiser and jscpd run offline from CodebaseScan-owned dependencies with fixed arguments; target scanner configuration is never loaded.                                                                                                                                                                               |
 | Isolated Knip execution                              | Knip receives captured source, script-free sanitized workspace manifests, and a generated config that disables all target plugins. Bounded declarative exclusions, aliases, workspaces, and entry hints reduce noise without executing target configuration. Its output is maintenance evidence, never a vulnerability verdict. |
 | Declarative SaaS semantics                           | A root JSON/JSONC file may extend fixed identifier/helper lists and constrained public routes. It cannot provide code, regex, plugins, arbitrary paths, or suppressions. The declared name must still appear in captured source, and coverage/limitations remain visible.                                                       |
 | Optional report schema v5 data                       | New audits add supply-chain and code-quality analysis. Stored v1-v4 reports remain readable, are not rewritten, and omit optional fields. Workflow v5 prevents old in-progress checkpoints from resuming into changed deterministic analysis.                                                                                   |
 
 Changes to these decisions should be deliberate. Add a dated decision with the problem, alternatives, trade-offs, and migration impact. Do not create endless documentation for ordinary implementation details.
 
+## 2026-09-10 — rename to CodebaseScan before publication
+
+The project, package, CLI, environment variables, local state, report folders, and portable artifact
+identifiers move from Traceward to CodebaseScan before the first public release. The old name is
+already used by unrelated products, while CodebaseScan states the tool's source-audit scope more
+directly. This is a pre-release breaking rename: existing local databases, checkpoints, generated
+reports, and configuration filenames are not migrated or resumed across names. Regenerate them with
+the CodebaseScan build instead of mixing old and new state.
+
 ## 2026-09-10 — explicit framework-major rule coverage
 
-Captured package manifests provide requested versions as data; Traceward never imports them. The
+Captured package manifests provide requested versions as data; CodebaseScan never imports them. The
 project profile reports a supported, partial, or unverified static-rule coverage state for detected
 Next.js, React, and Express majors. Ambiguous ranges and source-only detections remain unverified,
 and frameworks without a declared version matrix never inherit a compatibility claim. Workflow v21
@@ -101,7 +110,7 @@ consumers must regenerate plans from their immutable audit report rather than mi
 
 ## 2026-09-10 — declared context and observed data map
 
-Safe Traceward JSON/JSONC configuration may add bounded project context and manifest-verified script
+Safe CodebaseScan JSON/JSONC configuration may add bounded project context and manifest-verified script
 names. The audit still executes neither configuration nor scripts. Declared context keeps separate
 provenance from an observed, source-derived data map. Both fields are optional additions to report
 schema v5, so stored earlier reports remain readable and are not rewritten. Workflow v11 prevents an
@@ -109,7 +118,7 @@ in-progress older graph from resuming into the changed profiler behavior.
 
 ## 2026-09-10 — bounded static audit modes
 
-Accessibility, privacy, and reliability start as small Traceward-owned AST scanners rather than new
+Accessibility, privacy, and reliability start as small CodebaseScan-owned AST scanners rather than new
 third-party engines. Their nine rules have declared vulnerable and benign benchmark cases and retain
 source-only limitations. They add optional findings to report schema v5 without rewriting existing
 reports. Workflow v12 prevents old in-progress checkpoints from resuming into the expanded fan-out.

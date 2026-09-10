@@ -6,8 +6,8 @@ import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs
 import { cleanupStaleScannerStaging } from '../../src/scanners/external.ts';
 
 test('worker startup removes only recognized stale scanner staging', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-staging-recovery-'));
-  const outside = await mkdtemp(path.join(os.tmpdir(), 'traceward-staging-outside-'));
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-staging-recovery-'));
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-staging-outside-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   context.after(() => rm(outside, { recursive: true, force: true }));
 

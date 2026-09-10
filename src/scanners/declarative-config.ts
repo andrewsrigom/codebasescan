@@ -38,7 +38,7 @@ const allowedIssueTypes = new Set([
   'types',
 ]);
 const executableKnipConfig = /(?:^|\/)(?:\.knip|knip(?:\.config)?)\.[cm]?[jt]s$/i;
-const executableTracewardConfig = /(?:^|\/)traceward\.config\.[cm]?[jt]s$/i;
+const executableCodebaseScanConfig = /(?:^|\/)codebasescan\.config\.[cm]?[jt]s$/i;
 
 const saasVocabularyKeys = [
   'tenantKeys',
@@ -688,7 +688,7 @@ function retainDeclaredVerificationScripts(
 export function declarativeSaasConfiguration(snapshot: Snapshot): TrustedSaasConfigurationResult {
   const sources: string[] = [];
   const issues: string[] = [];
-  const candidates = ['traceward.config.json', 'traceward.config.jsonc'];
+  const candidates = ['codebasescan.config.json', 'codebasescan.config.jsonc'];
   for (const name of candidates) {
     const file = snapshot.files.find((item) => item.path === name && isRuntimeSource(item));
     if (!file) continue;
@@ -709,11 +709,11 @@ export function declarativeSaasConfiguration(snapshot: Snapshot): TrustedSaasCon
   }
   if (
     snapshot.files.some(
-      (file) => isRuntimeSource(file) && executableTracewardConfig.test(file.path),
+      (file) => isRuntimeSource(file) && executableCodebaseScanConfig.test(file.path),
     )
   )
     issues.push(
-      'Executable Traceward configuration was ignored. Use traceward.config.json for safe import.',
+      'Executable CodebaseScan configuration was ignored. Use codebasescan.config.json for safe import.',
     );
   return { config: sanitizeSaasConfiguration({}), sources, issues };
 }
@@ -827,7 +827,8 @@ export function sanitizedManifest(
 ): Record<string, unknown> {
   const parsed = parseJsonc(file) ?? {};
   const output: Record<string, unknown> = {
-    name: typeof parsed.name === 'string' ? parsed.name.slice(0, 214) : 'traceward-staged-project',
+    name:
+      typeof parsed.name === 'string' ? parsed.name.slice(0, 214) : 'codebasescan-staged-project',
     private: true,
   };
   if (parsed.type === 'module') output.type = 'module';

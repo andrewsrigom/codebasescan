@@ -6,7 +6,7 @@ Read `docs/CODEX_HANDOFF.md`, `docs/VALIDATION.md`, and `docs/ARCHITECTURE.md`. 
 
 ## Product contract
 
-Traceward is a single-user, local-first, defensive source-review workbench. Code, UI, documentation, identifiers, and commit messages are in readable English. Use TypeScript and the existing Next.js App Router structure. Keep the worker outside the Next.js request lifecycle.
+CodebaseScan is a single-user, local-first, defensive source-review workbench. Code, UI, documentation, identifiers, and commit messages are in readable English. Use TypeScript and the existing Next.js App Router structure. Keep the worker outside the Next.js request lifecycle.
 
 The working name is provisional. Do not create a public repository, publish an npm package, deploy a hosted service, change the license, or contact third parties without the owner's instruction.
 

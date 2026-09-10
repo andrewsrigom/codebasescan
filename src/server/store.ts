@@ -115,7 +115,7 @@ export class AuditStore {
       this.db.exec("ALTER TABLE audits ADD COLUMN options_json TEXT NOT NULL DEFAULT '{}'");
     if (!auditColumns.some((column) => column.name === 'workflow_version'))
       this.db.exec(
-        "ALTER TABLE audits ADD COLUMN workflow_version TEXT NOT NULL DEFAULT 'traceward-audit-v1'",
+        "ALTER TABLE audits ADD COLUMN workflow_version TEXT NOT NULL DEFAULT 'codebasescan-audit-v1'",
       );
     const projectColumns = this.db.prepare('PRAGMA table_info(projects)').all() as Row[];
     if (!projectColumns.some((column) => column.name === 'baseline_audit_id'))

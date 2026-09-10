@@ -148,7 +148,7 @@ export async function runDoctor(config: Configuration): Promise<DoctorCheck[]> {
     {
       name: 'Node.js',
       status: supportedNodeVersion(process.version) ? 'pass' : 'fail',
-      detail: `${process.version}; Traceward requires >=22.16.0.`,
+      detail: `${process.version}; CodebaseScan requires >=22.16.0.`,
     },
     dataDirectory,
     rulesDirectory,

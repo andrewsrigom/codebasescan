@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Traceward must turn an authorized Node.js, TypeScript, React, or Next.js repository into:
+CodebaseScan must turn an authorized Node.js, TypeScript, React, or Next.js repository into:
 
 1. a human report explaining risks, evidence, uncertainty, coverage, and progress;
 2. a versioned agent contract containing a bounded, testable work queue.
@@ -65,7 +65,7 @@ security-critical test targets; bundle v3 includes the selected component bounda
 component edges, and bounded related-test references.
 
 Publish a versioned run manifest beside the report. It records repository/snapshot identity,
-Traceward and pack versions, requested and effective modes, scanner status, supported/unsupported
+CodebaseScan and pack versions, requested and effective modes, scanner status, supported/unsupported
 scope, truncation, elapsed time, and output digests without copying source or secrets.
 
 Gate: schema, determinism, path containment, command allowlist, compatibility alias, manifest, and
@@ -98,7 +98,7 @@ Expose composable, versioned modes:
 - `maintainability`: architecture, duplication, dead code, complexity, imported coverage;
 - `release-readiness`: coverage failures, risky scripts, operational evidence, unresolved work.
 
-Modes select fixed Traceward-owned packs and never target plugins. Runtime Playwright/axe remains a
+Modes select fixed CodebaseScan-owned packs and never target plugins. Runtime Playwright/axe remains a
 separately authorized future mode.
 
 Gate: every mode reports version, applicability, coverage, and retained/omitted counts. Disabled is
@@ -182,12 +182,12 @@ The audit stays read-only. A separate, authorized coding-agent flow consumes one
 3. change only allowed paths within configured file/line limits;
 4. commit one coherent correction with its focused test;
 5. run only declared and independently authorized verification commands;
-6. rerun Traceward and generate a before/after result;
+6. rerun CodebaseScan and generate a before/after result;
 7. record file, command, exit status, duration, and output digest provenance.
 
 The versioned external verification ledger now covers command arguments, working-directory class,
 exit status, duration, output digest/size, truncation, executor claim, and network claim. It binds
-to the baseline plan and both audit snapshots. `traceward finalize` produces a new static report
+to the baseline plan and both audit snapshots. `codebasescan finalize` produces a new static report
 from existing artifacts; it does not execute or repeat target code. Exact declared commands are
 applied, unmatched commands remain visible, and incomplete declared verification keeps a resolved
 lifecycle task partial. Changed-file digest attestation and signed executor identity remain open.
@@ -260,7 +260,7 @@ comparisons require explicit credential, spend, or download approval and measure
 - reviewer identity/signature policy above the current unauthenticated portable ledger;
 - explicit finding lifecycle for new, confirmed, accepted, fixed, stale, and reappearing work;
 - parser fuzzing, malformed-repository tests, deterministic replay, and hostile-input containment;
-- signed release artifacts, checksums, a Traceward SBOM, and pinned scanner compatibility data;
+- signed release artifacts, checksums, a CodebaseScan SBOM, and pinned scanner compatibility data;
 - comprehensive UI and static-report accessibility pass;
 - name/trademark review, private vulnerability route, and support policy.
 

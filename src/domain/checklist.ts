@@ -1338,7 +1338,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   ) as Record<SecurityControlStatus, number>;
   return {
     schemaVersion: 1,
-    packId: 'traceward-web-application',
+    packId: 'codebasescan-web-application',
     packVersion: '0.5.0',
     controls,
     summary,

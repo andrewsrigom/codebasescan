@@ -11,7 +11,7 @@ test(
   'a replacement worker recovers state after an actual SIGKILL',
   { skip: process.platform === 'win32', timeout: 10_000 },
   async (context) => {
-    const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-sigkill-'));
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-sigkill-'));
     context.after(() => rm(directory, { recursive: true, force: true }));
     const databasePath = path.join(directory, 'application.sqlite');
     const child = spawn(

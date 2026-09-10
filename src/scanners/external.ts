@@ -34,7 +34,7 @@ export function scannerCompatibility(name: TrustedScanner, version?: string) {
   if (tested.includes(version))
     return {
       status: 'tested' as const,
-      detail: `${name} ${version} is covered by the Traceward scanner compatibility fixtures.`,
+      detail: `${name} ${version} is covered by the CodebaseScan scanner compatibility fixtures.`,
     };
   return {
     status: 'untested' as const,
@@ -70,8 +70,8 @@ function recordOrEmpty(value: unknown): Record<string, unknown> {
 
 function semgrepRuleId(input: unknown): string {
   const value = safeString(input, 'semgrep.unknown');
-  const tracewardRule = value.lastIndexOf('traceward.');
-  return tracewardRule >= 0 ? value.slice(tracewardRule) : value;
+  const codebasescanRule = value.lastIndexOf('codebasescan.');
+  return codebasescanRule >= 0 ? value.slice(codebasescanRule) : value;
 }
 
 function semgrepCategory(input: unknown): Category {

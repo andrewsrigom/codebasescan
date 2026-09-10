@@ -21,7 +21,7 @@ const result = (findings: number): { findings: never[]; run: ScannerRun } => ({
 });
 
 test('scanner cache reuses only an exact snapshot, scanner version, and variant', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-scanner-cache-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-scanner-cache-'));
   let calls = 0;
   const options = {
     snapshotDigest,
@@ -57,7 +57,7 @@ test('scanner cache reuses only an exact snapshot, scanner version, and variant'
 });
 
 test('scanner cache fails closed for malformed and oversized entries', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-scanner-cache-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-scanner-cache-'));
   const options = {
     snapshotDigest,
     scannerId: 'example',
@@ -94,7 +94,7 @@ test('scanner cache fails closed for malformed and oversized entries', async () 
 });
 
 test('disabled scanner cache performs no reuse', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'traceward-scanner-cache-'));
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-scanner-cache-'));
   let calls = 0;
   const options = {
     snapshotDigest,

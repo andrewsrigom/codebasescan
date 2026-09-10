@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildRunManifest } from '../../src/domain/run-manifest.ts';
 import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
-import { tracewardVersion } from '../../src/domain/versions.ts';
+import { codebasescanVersion } from '../../src/domain/versions.ts';
 import { sampleReport } from '../helpers.ts';
 
 test('run manifest keeps execution, coverage, and artifact integrity explicit', () => {
@@ -62,7 +62,7 @@ test('run manifest rejects traversal-shaped output paths', () => {
   assert.throws(() => parseRunManifest(manifest));
 });
 
-test('declared Traceward version matches the package', async () => {
+test('declared CodebaseScan version matches the package', async () => {
   const packageJson = JSON.parse(await readFile('package.json', 'utf8')) as { version?: string };
-  assert.equal(tracewardVersion, packageJson.version);
+  assert.equal(codebasescanVersion, packageJson.version);
 });

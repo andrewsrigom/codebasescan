@@ -94,7 +94,7 @@ function headerCandidates(snapshot: Snapshot): Candidate[] {
       title: 'Declared response security-header coverage is incomplete',
       category: 'configuration',
       severity: 'low',
-      description: `Traceward could not find these declarations in the captured Next.js, proxy, or deployment configuration: ${missing.join(', ')}. A CDN, ingress, framework default, or production-only layer outside this snapshot may still provide them.`,
+      description: `CodebaseScan could not find these declarations in the captured Next.js, proxy, or deployment configuration: ${missing.join(', ')}. A CDN, ingress, framework default, or production-only layer outside this snapshot may still provide them.`,
       remediation:
         'Confirm the effective production response headers. Define missing policy at one authoritative layer and use the opt-in HTTP probe to verify what reaches a browser.',
       cwe: ['CWE-693'],

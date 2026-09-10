@@ -16,7 +16,7 @@ test('rule quality groups applied findings and preserves human dispositions', ()
   });
 
   const quality = parseRuleQualityReport(buildRuleQualityReport(report));
-  assert.equal(quality.kind, 'traceward-rule-quality');
+  assert.equal(quality.kind, 'codebasescan-rule-quality');
   assert.equal(quality.auditId, report.auditId);
   assert.equal(quality.summary.appliedRules, 1);
   assert.equal(quality.summary.withHumanDisposition, 1);

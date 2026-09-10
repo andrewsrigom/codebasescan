@@ -83,12 +83,12 @@ collect_context -> assess
 Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
 
 The UI receives a compact project-map projection instead of the full symbol/import/call graph. An
-optional exact `TRACEWARD_INTERNAL_HOST` supports a local OS relay; browser-facing Host and Origin
+optional exact `CODEBASESCAN_INTERNAL_HOST` supports a local OS relay; browser-facing Host and Origin
 checks remain restricted to loopback.
 
 ## Deterministic evidence
 
-`project-profile.ts` parses captured TypeScript/JavaScript as data and maps Next.js, Express, tRPC, Prisma, Drizzle, Supabase, Auth.js, GraphQL, Zod, Joi, Valibot, and billing signals plus entry points, symbols, imports, direct local call edges, and security facts under fixed limits. It resolves bounded TypeScript path aliases and contained workspace package exports from declarative JSON/JSONC without loading the target compiler or package. Imported workspace reexport bridges are followed for at most five steps. A root `traceward.config.json`/JSONC may extend fixed tenant/owner/role/billing/token vocabulary, security helper names, and constrained public-route patterns. It cannot add code, regex, scanner plugins, suppressions, or arbitrary paths; executable Traceward configuration is ignored.
+`project-profile.ts` parses captured TypeScript/JavaScript as data and maps Next.js, Express, tRPC, Prisma, Drizzle, Supabase, Auth.js, GraphQL, Zod, Joi, Valibot, and billing signals plus entry points, symbols, imports, direct local call edges, and security facts under fixed limits. It resolves bounded TypeScript path aliases and contained workspace package exports from declarative JSON/JSONC without loading the target compiler or package. Imported workspace reexport bridges are followed for at most five steps. A root `codebasescan.config.json`/JSONC may extend fixed tenant/owner/role/billing/token vocabulary, security helper names, and constrained public-route patterns. It cannot add code, regex, scanner plugins, suppressions, or arbitrary paths; executable CodebaseScan configuration is ignored.
 
 The same declarative file may record bounded application features, roles, sensitive-data classes,
 named storage/external boundaries, review-priority paths, report-only out-of-scope paths, and package
@@ -104,7 +104,7 @@ findings that could not be correlated and states that a static path is not runti
 
 `supply-chain.ts` parses package manifests and npm/pnpm/Yarn lockfiles as data. It reports high-risk lifecycle declarations, plaintext or unpinned dependency sources, missing/weak integrity, non-default registry hosts, and npm manifest/lock drift. Private registries and intentional local sources remain review candidates rather than automatic compromise claims.
 
-`quality.ts` measures function complexity, size, and parameter count through the Traceward-owned TypeScript parser. Knip runs from a pinned local entry point in a temporary snapshot containing captured source, script-free sanitized workspace manifests, and a generated JSON configuration that disables every target plugin/config loader. Safe Knip JSON/JSONC exclusions, TypeScript aliases, workspace declarations, conventional configuration entry points, and source paths referenced by package scripts are imported only as bounded data. Test references participate in Knip reachability but remain excluded from production security rules. Only bounded paths and symbols are retained, while exact category totals remain visible when detail rows reach a limit. Existing `coverage-summary.json` and `lcov.info` aggregates can be imported; Traceward does not run target tests.
+`quality.ts` measures function complexity, size, and parameter count through the CodebaseScan-owned TypeScript parser. Knip runs from a pinned local entry point in a temporary snapshot containing captured source, script-free sanitized workspace manifests, and a generated JSON configuration that disables every target plugin/config loader. Safe Knip JSON/JSONC exclusions, TypeScript aliases, workspace declarations, conventional configuration entry points, and source paths referenced by package scripts are imported only as bounded data. Test references participate in Knip reachability but remain excluded from production security rules. Only bounded paths and symbols are retained, while exact category totals remain visible when detail rows reach a limit. Existing `coverage-summary.json` and `lcov.info` aggregates can be imported; CodebaseScan does not run target tests.
 
 `mechanical.ts` stages runtime JavaScript/TypeScript only and invokes pinned dependency-cruiser and jscpd entry points with fixed arguments. It does not load target tool configuration. Reports retain exact aggregate totals plus bounded cycles, orphan candidates, coupling hotspots, and duplicate locations. Raw duplicate fragments are discarded. Semgrep parser diagnostics likewise retain only a validated snapshot path, optional line, and diagnostic kind. These observations never become security findings automatically.
 
@@ -126,7 +126,7 @@ command or authenticates the executor.
 
 ## AI boundary
 
-`TRACEWARD_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`.
+`CODEBASESCAN_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`.
 
 The context broker exposes a finding-specific catalog of opaque evidence, entry-point, symbol, fact, and resolved-call IDs. Models cannot name arbitrary repository paths. Delivery is checked against the immutable captured snapshot, rejects unknown/repeated IDs, permits at most two requested items per round, and caps accumulated source context at 16,000 characters. Context is redacted again for credentials, emails, and user-home paths; `.env` and key files never enter the snapshot.
 
@@ -136,7 +136,7 @@ Calls are protected by persisted per-audit call/input/output budgets, a per-find
 
 A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, confidence, probable exposure, review priority, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. Human dispositions include confirmed, fixed, false positive, accepted risk, and needs review. Expiring project exceptions keep the original finding and exact fingerprint visible. Checklist controls separately retain their deterministic status and an optional human assessment for verified external evidence, accepted gaps, non-applicability, or follow-up. These states are not collapsed into “verified.”
 
-Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. Traceward does not compute a global security score.
+Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. CodebaseScan does not compute a global security score.
 
 ## Persistence and replay
 
@@ -146,7 +146,7 @@ Nodes are safe to repeat but execution is not a universal exactly-once guarantee
 
 ## Local HTTP service
 
-The Traceward UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, same Origin for mutations, JSON, a UI header, and streamed body limits. This control is separate from the optional outbound target probe. The application has no multi-user authentication and must not be exposed publicly.
+The CodebaseScan UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL, same Origin for mutations, JSON, a UI header, and streamed body limits. This control is separate from the optional outbound target probe. The application has no multi-user authentication and must not be exposed publicly.
 
 ## Reading order
 

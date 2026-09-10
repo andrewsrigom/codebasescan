@@ -43,15 +43,15 @@ export default function SettingsPage() {
               <strong>Disabled by worker</strong>
             </div>
             <p className="small muted">
-              OpenAI is disabled unless TRACEWARD_AI=openai. Cloud mode sends only bounded,
+              OpenAI is disabled unless CODEBASESCAN_AI=openai. Cloud mode sends only bounded,
               relevant, redacted context with store=false. Use OS egress controls when strict
               offline operation is required.
             </p>
             <pre className="command">
-              TRACEWARD_AI=ollama
+              CODEBASESCAN_AI=ollama
               <br />
               OLLAMA_MODEL=your-downloaded-model
-              <br /># or TRACEWARD_AI=openai with OPENAI_MODEL and OPENAI_API_KEY
+              <br /># or CODEBASESCAN_AI=openai with OPENAI_MODEL and OPENAI_API_KEY
             </pre>
           </div>
         </section>
@@ -82,11 +82,11 @@ export default function SettingsPage() {
               at <code>{config.advisoryDatabasePath}</code>.
             </p>
             <pre className="command">
-              TRACEWARD_SEMGREP=true
+              CODEBASESCAN_SEMGREP=true
               <br />
-              TRACEWARD_GITLEAKS=true
+              CODEBASESCAN_GITLEAKS=true
               <br />
-              TRACEWARD_OSV=true
+              CODEBASESCAN_OSV=true
             </pre>
             <p className="small muted">
               Refresh exact package versions manually with{' '}

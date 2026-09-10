@@ -44,7 +44,7 @@ test('executable Knip configuration is detected but never imported', () => {
 test('declarative SaaS configuration extends bounded generic semantics', () => {
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({ scripts: { test: 'node --test', build: 'next build' } }),
-    'traceward.config.jsonc': `{
+    'codebasescan.config.jsonc': `{
       // Project terms extend the generic defaults.
       "schemaVersion": 1,
       "vocabulary": {
@@ -74,7 +74,7 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
   });
 
   const result = declarativeSaasConfiguration(snapshot);
-  assert.deepEqual(result.sources, ['traceward.config.jsonc']);
+  assert.deepEqual(result.sources, ['codebasescan.config.jsonc']);
   assert.ok(result.config.vocabulary.tenantKeys.includes('tenantId'));
   assert.ok(result.config.vocabulary.tenantKeys.includes('customerWorkspaceKey'));
   assert.ok(result.config.helpers.authorization.includes('requireMembership'));
@@ -92,7 +92,7 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
 
 test('unsafe SaaS settings are reported and removed without executing code', () => {
   const snapshot = snapshotFromFiles({
-    'traceward.config.json': JSON.stringify({
+    'codebasescan.config.json': JSON.stringify({
       schemaVersion: 1,
       vocabulary: { tenantKeys: ['workspaceId', 'bad.name'] },
       helpers: { authorization: ['requireRole'], execute: ['targetCode'] },
@@ -113,13 +113,13 @@ test('unsafe SaaS settings are reported and removed without executing code', () 
   assert.equal((result.config.helpers as unknown as Record<string, unknown>).execute, undefined);
 });
 
-test('executable Traceward configuration is detected but never imported', () => {
+test('executable CodebaseScan configuration is detected but never imported', () => {
   const snapshot = snapshotFromFiles({
-    'traceward.config.ts': `throw new Error('must not run'); export default {};`,
+    'codebasescan.config.ts': `throw new Error('must not run'); export default {};`,
   });
   const result = declarativeSaasConfiguration(snapshot);
   assert.deepEqual(result.sources, []);
-  assert.ok(result.issues[0]?.includes('Executable Traceward configuration'));
+  assert.ok(result.issues[0]?.includes('Executable CodebaseScan configuration'));
 });
 
 test('workspace manifests and pnpm declarations are read as data', () => {

@@ -6,7 +6,7 @@ import { Icon } from './icon.tsx';
 export async function mutate(url: string, body: unknown): Promise<unknown> {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Traceward-Client': 'local-ui' },
+    headers: { 'Content-Type': 'application/json', 'X-CodebaseScan-Client': 'local-ui' },
     body: JSON.stringify(body),
   });
   const payload = (await response.json()) as {

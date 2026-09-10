@@ -1,6 +1,6 @@
 # Finding lifecycle diff
 
-Traceward comparison schema version 3 compares two immutable audit reports and, when available,
+CodebaseScan comparison schema version 3 compares two immutable audit reports and, when available,
 earlier reports from the same local project.
 
 ## States

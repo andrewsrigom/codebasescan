@@ -18,7 +18,7 @@ const coverageStatus = z.enum([
 
 const schema = z.object({
   schemaVersion: z.literal(1),
-  kind: z.literal('traceward-policy-result'),
+  kind: z.literal('codebasescan-policy-result'),
   generatedAt: z.iso.datetime(),
   auditId: shortText,
   snapshotDigest: digest,

@@ -1,6 +1,6 @@
 # Webhook contract correlation
 
-Traceward maps captured HTTP webhook endpoints to bounded call relationships, signature-verification
+CodebaseScan maps captured HTTP webhook endpoints to bounded call relationships, signature-verification
 facts, idempotency facts, and literal event names. TypeScript and JavaScript are parsed as inert
 syntax. Target modules, handlers, configurations, and provider SDKs are never imported or executed.
 
@@ -30,7 +30,7 @@ may be a payment provider, source-control service, or customer endpoint.
 ## Evidence meaning
 
 `evidenced` means the bounded source relationship reaches a fact already captured by the project
-profiler. `unverified` means that Traceward did not capture that relationship. It does not prove the
+profiler. `unverified` means that CodebaseScan did not capture that relationship. It does not prove the
 runtime control is absent, correct, or effective. Dynamic dispatch, generated handlers, provider
 configuration, replay windows, database constraints, queues, and runtime behavior remain outside
 this static result.

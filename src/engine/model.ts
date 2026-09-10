@@ -89,7 +89,7 @@ export function createLocalReviewer(modelName: string): Reviewer {
         requestedContextIds,
         provider: 'ollama',
         model: modelName,
-        promptVersion: 'traceward-review-v2',
+        promptVersion: 'codebasescan-review-v2',
         contextFilesSent: [
           ...new Set(
             contextIds.flatMap(

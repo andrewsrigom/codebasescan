@@ -3,7 +3,7 @@
 Suppressions are explicit review records, not deleted findings. Create one from a static report:
 
 ```bash
-traceward suppress traceward-report/<audit-id> <finding-id> \
+codebasescan suppress codebasescan-report/<audit-id> <finding-id> \
   --owner "Security team" \
   --justification "Accepted during the bounded migration window." \
   --evidence "Change record CR-123 documents the compensating control." \
@@ -14,7 +14,7 @@ This writes `suppression-ledger.json` beside the report by default. Apply it onl
 running a fresh audit:
 
 ```bash
-traceward audit . --suppressions suppression-ledger.json --policy balanced
+codebasescan audit . --suppressions suppression-ledger.json --policy balanced
 ```
 
 An entry applies only when all of these still match:

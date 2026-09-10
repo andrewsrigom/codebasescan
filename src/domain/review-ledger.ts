@@ -20,7 +20,7 @@ export interface ReviewLedgerEntry {
 
 export interface ReviewLedger {
   schemaVersion: typeof reviewLedgerVersion;
-  kind: 'traceward-review-ledger';
+  kind: 'codebasescan-review-ledger';
   projectName: string;
   updatedAt: string;
   entries: ReviewLedgerEntry[];
@@ -65,7 +65,7 @@ export function upsertReviewLedger(
   };
   return {
     schemaVersion: reviewLedgerVersion,
-    kind: 'traceward-review-ledger',
+    kind: 'codebasescan-review-ledger',
     projectName: report.projectName,
     updatedAt: entry.reviewedAt,
     entries: [
@@ -140,7 +140,7 @@ export function applyReviewLedger(
     limitations: [
       ...new Set([
         ...report.limitations,
-        'Portable review decisions came from an explicitly supplied ledger. Traceward matched fingerprint and source-file digests but did not authenticate the reviewer.',
+        'Portable review decisions came from an explicitly supplied ledger. CodebaseScan matched fingerprint and source-file digests but did not authenticate the reviewer.',
       ]),
     ],
   };

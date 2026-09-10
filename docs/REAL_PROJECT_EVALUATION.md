@@ -2,7 +2,7 @@
 
 ## 2026-09-09 source-only pass
 
-Traceward was run locally against ten public TypeScript/Next.js repositories selected to cover App Router, Pages Router, monorepo layouts, authentication wrappers, Prisma-style data access, middleware, uploads, and third-party integrations. Projects are labeled A-J because this document evaluates Traceward, not the upstream projects.
+CodebaseScan was run locally against ten public TypeScript/Next.js repositories selected to cover App Router, Pages Router, monorepo layouts, authentication wrappers, Prisma-style data access, middleware, uploads, and third-party integrations. Projects are labeled A-J because this document evaluates CodebaseScan, not the upstream projects.
 
 No target dependency was installed, no target script was run, and no target module was imported. AI, OSV network lookup, and the HTTP probe were disabled for this pass. The installed Semgrep 1.176.1 and Gitleaks 8.30.1 adapters were enabled. Repository copies and raw reports remained temporary and are not committed.
 
@@ -72,7 +72,7 @@ Current snapshot limits are 1,500 supported files, 8 MiB total source, 512 KiB p
 
 ## 2026-09-10 five-project calibration pass
 
-Traceward was then run against five owner-authorized applications with different sizes and
+CodebaseScan was then run against five owner-authorized applications with different sizes and
 structures. They remain labeled A-E; the private mapping, source snapshots, and raw reports are not
 committed. Target code and configuration were parsed only as data. No target dependency, script,
 test, build, or module was executed. AI and OSV network access were disabled. Installed Semgrep and

@@ -23,7 +23,7 @@ export interface VerificationExecution {
 
 export interface VerificationLedger {
   schemaVersion: typeof verificationLedgerVersion;
-  kind: 'traceward-verification-ledger';
+  kind: 'codebasescan-verification-ledger';
   createdAt: string;
   project: {
     name: string;

@@ -1,6 +1,12 @@
 node_modules
 .next
+.codebasescan
 .traceward
+traceward-report
+traceward-*.json
+traceward-*.md
+traceward-*.html
+traceward-*.sarif
 package-lock.json
 next-env.d.ts
 fixtures

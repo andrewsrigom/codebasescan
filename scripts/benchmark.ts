@@ -69,7 +69,7 @@ const osvFixtureFetch: typeof fetch = async (input, init) => {
   });
 };
 
-const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-benchmark-'));
+const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-benchmark-'));
 let truePositives = 0;
 let falsePositives = 0;
 let falseNegatives = 0;
@@ -209,7 +209,7 @@ console.log(
   }),
 );
 console.log(
-  'Benchmark measures Traceward rules on declared ground truth. It is not a security certification or a generic model evaluation.',
+  'Benchmark measures CodebaseScan rules on declared ground truth. It is not a security certification or a generic model evaluation.',
 );
 process.exitCode =
   precision >= 0.85 &&

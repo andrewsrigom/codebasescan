@@ -1,4 +1,4 @@
-name: Validate Traceward
+name: Validate CodebaseScan
 on:
   push:
   pull_request:
@@ -12,9 +12,9 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
       LANGSMITH_TRACING: 'false'
       LANGCHAIN_TRACING_V2: 'false'
-      TRACEWARD_AI: disabled
-      TRACEWARD_SEMGREP: 'false'
-      TRACEWARD_GITLEAKS: 'false'
+      CODEBASESCAN_AI: disabled
+      CODEBASESCAN_SEMGREP: 'false'
+      CODEBASESCAN_GITLEAKS: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,14 +32,14 @@ jobs:
       - run: npm run test:graph
       - name: Generate local audit artifacts and exercise baseline gate
         run: |
-          npm run cli -- audit fixtures/hardened-saas --format json --output traceward-ci-base.json
-          npm run cli -- audit fixtures/hardened-saas --baseline traceward-ci-base.json --fail-on high --format sarif --output traceward-ci.sarif
+          npm run cli -- audit fixtures/hardened-saas --format json --output codebasescan-ci-base.json
+          npm run cli -- audit fixtures/hardened-saas --baseline codebasescan-ci-base.json --fail-on high --format sarif --output codebasescan-ci.sarif
       - uses: actions/upload-artifact@v4
         with:
-          name: traceward-audit
+          name: codebasescan-audit
           path: |
-            traceward-ci-base.json
-            traceward-ci.sarif
+            codebasescan-ci-base.json
+            codebasescan-ci.sarif
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
