@@ -56,7 +56,7 @@ The terminal-first flow produces a self-contained directory like a test coverage
 ```bash
 traceward doctor
 cd /absolute/path/to/project
-traceward audit .
+traceward audit . --open
 ```
 
 All offline modes run by default. A focused pass can select a comma-separated subset:
@@ -68,10 +68,20 @@ traceward audit . --modes accessibility-static,privacy,reliability
 
 The report records all eight modes and marks omitted capabilities `DISABLED`, never clean.
 
-Open the printed `traceward-report/<audit-id>/index.html`. The directory also contains the full
+`--open` validates the generated package and serves its unified report interface on loopback. Stop
+it with Ctrl+C. To reopen an existing result, including the newest audit inside a report root:
+
+```bash
+traceward open traceward-report
+traceward open traceward-report/<audit-id> --port 4173
+```
+
+Without `--open`, open the printed `traceward-report/<audit-id>/index.html` directly. The directory also contains the full
 audit JSON, a prioritized `agent-plan.json` and its JSON Schema, a compatibility
 `remediation-plan.json`, a bounded Codex bundle, Markdown, SARIF, CycloneDX, and a hash manifest.
-It does not need the Traceward server to be viewed.
+It does not need the persistent Traceward server or its SQLite database. The loopback report server
+exposes only manifest-declared artifacts and rejects a package when an identity, size, or hash check
+fails.
 
 Traceward is not published to npm yet. To test the installable package from this checkout:
 

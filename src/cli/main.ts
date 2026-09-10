@@ -29,6 +29,7 @@ import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
 import { writeStaticReport } from '../reporting/static-report.ts';
+import { startReportServer } from '../reporting/report-server.ts';
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import {
   applyReviewLedger,
@@ -81,6 +82,20 @@ const commandAuditOptions = (): AuditOptions => {
     ...(modes ? { modes } : {}),
   };
 };
+const commandPort = (): number => {
+  const value = option('--port');
+  if (!value) return 4173;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 0 || port > 65_535)
+    throw new Error('Use --port with an integer from 0 to 65535.');
+  return port;
+};
+
+async function openReport(location: string): Promise<void> {
+  const reportServer = await startReportServer(location, commandPort());
+  console.log(`Serving audit ${reportServer.reportPackage.report.auditId} at ${reportServer.url}`);
+  console.log('Press Ctrl+C to stop.');
+}
 function render(report: AuditReport, format: string): string {
   if (
     ![
@@ -246,7 +261,9 @@ async function preflight(root: string, requireApproval: boolean) {
 
 let store: AuditStore | null = null;
 try {
-  if (command === 'doctor') {
+  if (command === 'open') {
+    await openReport(target && !target.startsWith('--') ? target : 'traceward-report');
+  } else if (command === 'doctor') {
     const checks = await runDoctor(config);
     console.log(renderDoctor(checks));
     if (checks.some((check) => check.status === 'fail')) process.exitCode = 1;
@@ -355,6 +372,7 @@ try {
       `Baseline comparison: ${comparison.newFindings.length} new, ${comparison.resolvedFindings.length} resolved, ${comparison.unchangedFindings.length} unchanged.`,
     );
     process.exitCode = policyResult.exitCode;
+    if (arguments_.includes('--open')) await openReport(staticReport.directory);
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -410,6 +428,9 @@ try {
           : ciGate(report, threshold as Severity | undefined);
       const requestedFormat = option('--format');
       const destination = option('--output');
+      if (arguments_.includes('--open') && (requestedFormat || destination))
+        throw new Error('--open requires the default static report output.');
+      let staticReportDirectory: string | undefined;
       if (!requestedFormat && !destination) {
         const staticReport = await writeStaticReport(
           report,
@@ -419,6 +440,7 @@ try {
             policyResult,
           },
         );
+        staticReportDirectory = staticReport.directory;
         console.log(`Saved static report ${staticReport.directory}`);
         console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
       } else {
@@ -443,6 +465,8 @@ try {
           `Policy ${policyResult.profile}: ${policyResult.decision}; ${policyResult.summary.gatedFindings} finding(s), ${policyResult.summary.blockingCoverageIssues} blocking coverage issue(s).`,
         );
       process.exitCode = gate.exitCode;
+      if (arguments_.includes('--open') && staticReportDirectory)
+        await openReport(staticReportDirectory);
     } finally {
       ciStore.close();
       await rm(temporary, { recursive: true, force: true });
@@ -512,7 +536,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir traceward-final-report] [--policy advisory|balanced|strict]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--open] [--port 4173] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- open [report-directory|report-root] [--port 4173]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir traceward-final-report] [--policy advisory|balanced|strict] [--open]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }
