@@ -88,6 +88,13 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="review-ledger.schema.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
+  assert.ok(html.includes('How to read this report'));
+  assert.ok(html.includes('What we found'));
+  assert.ok(html.includes('Where to look'));
+  assert.ok(html.includes('What to do next'));
+  assert.ok(html.includes('Consider it resolved when'));
+  assert.ok(!html.includes('<code>rem-'));
+  assert.ok(!html.includes('Components:'));
   assert.ok(html.includes('CAUSE-ORIENTED REVIEW'));
   assert.ok(html.includes('Likely root causes'));
   assert.ok(html.includes('RULE TRANSPARENCY'));

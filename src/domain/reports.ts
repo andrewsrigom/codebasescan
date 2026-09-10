@@ -1,7 +1,7 @@
 import type { AuditReport, ProjectFramework } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
-import type { RemediationPlan, RemediationResult } from './remediation.ts';
+import type { RemediationPlan, RemediationResult, RemediationTask } from './remediation.ts';
 import type { RuleQualityReport } from './rule-quality.ts';
 import type { PolicyResult } from './policy.ts';
 
@@ -689,6 +689,91 @@ export function toMarkdown(
   lines.push('## Limitations', '', ...report.limitations.map((limitation) => `- ${m(limitation)}`));
   return lines.join('\n');
 }
+
+function humanTaskTitle(task: RemediationTask): string {
+  const packageName = task.target.package;
+  if (task.target.type !== 'dependency' || !packageName) return task.title;
+  const current = task.target.currentVersion ? ` ${task.target.currentVersion}` : '';
+  if (task.kind === 'upgrade_dependency' && task.target.fixCandidate)
+    return `Update ${packageName}${current} to ${task.target.fixCandidate}`;
+  return `Review security advisories for ${packageName}${current}`;
+}
+
+function humanTaskLabel(task: RemediationTask): string {
+  if (task.kind === 'upgrade_dependency') return 'Suggested update';
+  if (task.kind === 'verify_control') return 'Needs verification';
+  if (task.kind === 'add_test') return 'Test needed';
+  if (task.kind === 'patch_source') return 'Code change';
+  if (task.kind === 'review_configuration') return 'Review configuration';
+  return 'Needs investigation';
+}
+
+function humanTaskEvidenceCount(task: RemediationTask): string {
+  if (task.findings.length)
+    return `${task.findings.length} ${task.findings.length === 1 ? 'finding' : 'findings'}`;
+  if (task.controlIds.length)
+    return `${task.controlIds.length} ${task.controlIds.length === 1 ? 'control' : 'controls'}`;
+  return 'Review item';
+}
+
+function humanTaskSummary(task: RemediationTask): string {
+  if (task.target.type !== 'dependency' || !task.target.package) return task.rationale;
+  const count = task.findings.length;
+  const version = task.target.currentVersion ? ` ${task.target.currentVersion}` : '';
+  const relationship =
+    task.target.relationship === 'direct'
+      ? 'It is used directly by this project.'
+      : task.target.relationship === 'transitive'
+        ? 'It is installed through another dependency.'
+        : 'Its dependency path still needs confirmation.';
+  return `${count} known security ${count === 1 ? 'advisory affects' : 'advisories affect'} ${task.target.package}${version}. ${relationship}`;
+}
+
+function humanTaskSteps(task: RemediationTask): string[] {
+  if (task.target.type !== 'dependency' || !task.target.package) return task.instructions;
+  if (task.target.fixCandidate)
+    return [
+      `Update ${task.target.package} from ${task.target.currentVersion ?? 'the current version'} to ${task.target.fixCandidate} through the package that owns it.`,
+      'Keep unrelated dependency versions unchanged.',
+      'Run the project tests, production build, and a new Traceward audit.',
+    ];
+  return [
+    `Check the supported release line for ${task.target.package} and choose a version that resolves the listed advisories.`,
+    'Do not change unrelated dependencies while investigating this item.',
+    'Run the project tests, production build, and a new Traceward audit before closing it.',
+  ];
+}
+
+function humanCheckDescription(check: RemediationTask['acceptanceChecks'][number]): string {
+  if (check.kind === 'finding_absent')
+    return 'A new Traceward scan no longer reports the same issue.';
+  if (check.kind === 'control_evidenced') return 'The expected control has direct evidence.';
+  if (check.kind === 'project_tests') return 'The relevant project tests pass.';
+  if (check.kind === 'project_build') return 'The production build passes.';
+  return 'A fresh Traceward audit completes after the change.';
+}
+
+function humanFindingSource(source: AuditReport['findings'][number]['source']): string {
+  const labels: Record<AuditReport['findings'][number]['source'], string> = {
+    builtin: 'Source review',
+    posture: 'Security posture',
+    ast: 'Code flow',
+    saas: 'SaaS control',
+    next: 'Next.js check',
+    react: 'React check',
+    accessibility: 'Accessibility check',
+    privacy: 'Privacy check',
+    reliability: 'Reliability check',
+    environment: 'Environment check',
+    'supply-chain': 'Supply-chain check',
+    'http-probe': 'Runtime observation',
+    osv: 'Dependency advisory',
+    semgrep: 'Security rule',
+    gitleaks: 'Secret scan',
+  };
+  return labels[source];
+}
+
 export function toHtml(
   report: AuditReport,
   options: {
@@ -818,18 +903,16 @@ export function toHtml(
             '"><span class="rank">' +
             String(index + 1).padStart(2, '0') +
             '</span><span class="risk-copy"><strong>' +
-            e(task.title) +
+            e(humanTaskTitle(task)) +
             '</strong><small>' +
-            e(task.rootCause.summary) +
+            e(humanTaskSummary(task)) +
             '</small></span><span class="risk-meta"><span class="severity ' +
             e(task.severity) +
             '">' +
             e(task.severity) +
-            '</span><span>Priority ' +
-            task.priority +
             '</span><span>' +
-            task.findings.length +
-            ' linked</span></span><span class="arrow" aria-hidden="true">↘</span></a></li>',
+            e(humanTaskEvidenceCount(task)) +
+            '</span></span><span class="arrow" aria-hidden="true">↘</span></a></li>',
         )
         .join('')
     : priorityLinks;
@@ -867,7 +950,8 @@ export function toHtml(
             group.tasks
               .slice(0, 3)
               .map(
-                (task) => '<li><a href="#task-' + e(task.id) + '">' + e(task.title) + '</a></li>',
+                (task) =>
+                  '<li><a href="#task-' + e(task.id) + '">' + e(humanTaskTitle(task)) + '</a></li>',
               )
               .join('') +
             '</ul></article>',
@@ -928,13 +1012,9 @@ export function toHtml(
             ? '<p><strong>Supporting evidence:</strong> ' + e(finding.suppression.evidence) + '</p>'
             : '') +
           (finding.suppression.target
-            ? '<p><strong>Exact target:</strong> ' +
-              e(finding.suppression.target.ruleId) +
-              ' · ' +
+            ? '<p><strong>Applies to:</strong> ' +
               e(finding.suppression.target.paths.join(', ')) +
-              ' · <code>' +
-              e(finding.suppression.target.fingerprint) +
-              '</code></p>'
+              '</p>'
             : '') +
           '<p>' +
           (finding.suppression.expiresAt
@@ -950,18 +1030,18 @@ export function toHtml(
         '">' +
         e(finding.severity) +
         '</span><span class="meta">' +
-        e(finding.source) +
+        e(humanFindingSource(finding.source)) +
         ' · ' +
         e(finding.disposition.replaceAll('_', ' ')) +
         '</span></span><strong>' +
         e(finding.title) +
         '</strong><span class="finding-location">' +
-        e(finding.evidence[0]?.file ?? 'Unknown location') +
-        '</span></summary><div class="finding-body"><p>' +
+        e(finding.evidence[0]?.file ?? 'Location not identified') +
+        '</span></summary><div class="finding-body"><section class="finding-section finding-overview"><h3>What Traceward found</h3><p>' +
         e(finding.description) +
-        '</p><section class="finding-section"><h3>Evidence</h3>' +
+        '</p></section><section class="finding-section"><h3>Where to look</h3>' +
         evidence +
-        '</section><section class="finding-section remediation"><h3>Recommended next step</h3><p>' +
+        '</section><section class="finding-section remediation"><h3>What to do next</h3><p>' +
         e(finding.remediation) +
         '</p></section>' +
         analysis +
@@ -1604,62 +1684,82 @@ export function toHtml(
       '</p></section>'
     : '';
   const remediationPlan = options.remediationPlan
-    ? '<section class="report-section" id="remediation-queue"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +
-      options.remediationPlan.summary.tasks +
-      '</strong><span>Total tasks</span></div><div class="summary-card"><strong>' +
-      options.remediationPlan.summary.ready +
-      '</strong><span>Ready for analysis</span></div><div class="summary-card"><strong>' +
-      options.remediationPlan.summary.blocked +
-      '</strong><span>Blocked</span></div><div class="summary-card"><strong>' +
-      options.remediationPlan.summary.needsHuman +
-      '</strong><span>Needs human input</span></div></div><ol class="task-list">' +
-      options.remediationPlan.tasks
-        .slice(0, 50)
-        .map(
-          (task) =>
-            '<li id="task-' +
-            e(task.id) +
-            '"><details class="task-detail"><summary><span><span class="severity ' +
-            e(task.severity) +
-            '">' +
-            e(task.severity) +
-            '</span><span class="status ' +
-            (task.status === 'ready' ? 'complete' : 'gap') +
-            '">' +
-            e(task.status.replaceAll('_', ' ')) +
-            '</span></span><strong>' +
-            e(task.title) +
-            '</strong><span class="task-priority">Priority ' +
-            task.priority +
-            '</span></summary><div class="task-body"><code>' +
-            e(task.id) +
-            '</code><p>' +
-            e(task.rationale) +
-            '</p><small>' +
-            e(task.instructions[0] ?? 'Review the linked evidence.') +
-            '</small>' +
-            (task.componentIds.length || task.testEvidenceFiles.length
-              ? '<p class="muted">' +
-                (task.componentIds.length
-                  ? 'Components: ' + e(task.componentIds.join(', ')) + '. '
-                  : '') +
-                (task.testEvidenceFiles.length
-                  ? task.testEvidenceFiles.length +
-                    (task.testEvidenceFiles.length === 1
-                      ? ' critical target has'
-                      : ' critical targets have') +
-                    ' static test-reference evidence.'
-                  : 'No matching critical test target was captured.') +
-                '</p>'
-              : '') +
-            '</div></details></li>',
-        )
-        .join('') +
-      '</ol>' +
-      (options.remediationPlan.summary.tasks > 50
-        ? '<p class="muted">Only the first 50 tasks are rendered here. The JSON plan retains the full bounded queue.</p>'
-        : '') +
-      '</section>'
+    ? (() => {
+        const visibleTasks = options.remediationPlan.tasks.slice(0, 20);
+        const taskRows = visibleTasks
+          .map((task) => {
+            const files = [
+              ...new Set(task.files.length ? task.files : task.constraints.allowedPaths),
+            ];
+            const locations = files.length
+              ? '<ul class="file-list">' +
+                files
+                  .slice(0, 5)
+                  .map((file) => '<li>' + e(file) + '</li>')
+                  .join('') +
+                (files.length > 5 ? '<li>+' + (files.length - 5) + ' more files</li>' : '') +
+                '</ul>'
+              : '<p>This check spans an application flow; no single file was identified yet.</p>';
+            const nextSteps = humanTaskSteps(task)
+              .map((step) => '<li>' + e(step) + '</li>')
+              .join('');
+            const completionChecks = [...new Set(task.acceptanceChecks.map(humanCheckDescription))]
+              .map((check) => '<li>' + e(check) + '</li>')
+              .join('');
+            const evidenceAnchor = task.findings
+              .map((finding) => findingAnchors.get(finding.id))
+              .find((anchor): anchor is string => Boolean(anchor));
+            const limitations = task.uncertainties.length
+              ? '<aside class="task-note"><strong>What this does not prove</strong><p>' +
+                e(task.uncertainties.slice(0, 2).join(' ')) +
+                '</p></aside>'
+              : '';
+            return (
+              '<li id="task-' +
+              e(task.id) +
+              '"><details class="task-detail"><summary><span><span class="severity ' +
+              e(task.severity) +
+              '">' +
+              e(task.severity) +
+              '</span><span class="action-pill">' +
+              e(humanTaskLabel(task)) +
+              '</span></span><strong>' +
+              e(humanTaskTitle(task)) +
+              '</strong><span class="task-count">' +
+              e(humanTaskEvidenceCount(task)) +
+              '</span></summary><div class="task-body"><div class="task-explanation"><section><h4>What we found</h4><p>' +
+              e(humanTaskSummary(task)) +
+              '</p></section><section><h4>Where to look</h4>' +
+              locations +
+              '</section><section><h4>What to do next</h4><ol>' +
+              nextSteps +
+              '</ol></section><section><h4>Consider it resolved when</h4><ul>' +
+              completionChecks +
+              '</ul></section></div>' +
+              limitations +
+              (evidenceAnchor
+                ? '<p class="evidence-link"><a href="#' +
+                  e(evidenceAnchor) +
+                  '">Open supporting evidence →</a></p>'
+                : '') +
+              '</div></details></li>'
+            );
+          })
+          .join('');
+        return (
+          '<section class="report-section" id="remediation-queue"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>Open a task to understand what was found, where to look, what to do next, and how to verify the result.</p><p class="queue-summary">Showing ' +
+          visibleTasks.length +
+          ' of ' +
+          options.remediationPlan.summary.tasks +
+          ' tasks, ordered by urgency.</p><ol class="task-list">' +
+          taskRows +
+          '</ol>' +
+          (options.remediationPlan.summary.tasks > visibleTasks.length
+            ? '<p class="muted">The complete queue remains available in Agent data.</p>'
+            : '') +
+          '</section>'
+        );
+      })()
     : '';
   const unmeasuredRules = (options.ruleQuality?.rules ?? [])
     .filter((rule) => rule.declaredFixtureMetrics.status === 'not_measured')
@@ -1812,12 +1912,17 @@ export function toHtml(
     ':root{color-scheme:dark;--ink:#f5f7ff;--muted:#929bb1;--line:#293047;--paper:#121728;--canvas:#080b14;--accent:#3478ff;--amber:#f0a909;--red:#ff6b63;--nav:#0d1120;--nav-muted:#8c96ad;--shadow:none}' +
     'body{background:var(--canvas)}.report-sidebar{border-right:1px solid #222a3d}.brand-mark{border-color:#4a5571}.brand strong{color:#fff}.nav-label{color:#5f6980}.report-nav a{color:#c3cad9}.report-nav a:hover,.report-nav a:focus-visible{background:#171d30}.report-nav a.current{background:#2364f5;color:#fff}.report-nav a.current .nav-icon{color:#fff}.side-meta{border-color:#293047}.side-meta strong{color:#fff}.topbar{background:rgba(8,11,20,.94);backdrop-filter:blur(12px)}.button{background:#0e1322;color:var(--ink)}.button.primary{background:#2364f5;border-color:#2364f5}.button:hover,.button:focus-visible{border-color:#4b7fff;outline-color:#152a52}.review-note{border-color:#574317;background:#19170e}.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group,.finding{background:var(--paper)}.machine-banner{background:#0d1322;border-color:#39435d;color:var(--muted)}.risk-table li+li,.queue-card ul,.detail-group[open]>summary,.detail-group-body>.report-section,.task-body,.finding-body,.finding-section{border-color:#252d43}.risk-table a:hover,.risk-table a:focus-visible{background:#171e32}.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#b0b8ca}.task-list li,.control,.dependency-plan,.artifact-links li{border-color:#293047}.facts span{background:#171d30;border-color:#293047}.callout{background:#17150d}.evidence pre{background:#070a12;color:#dfe7ff}.severity.critical,.severity.high{background:#35171c;color:#ff8c85}.severity.medium{background:#382b10;color:#ffc85b}.severity.low,.severity.info{background:#20283a;color:#aeb8ce}.status.complete{background:#0d3229;color:#57d9a3}.status.gap{background:#3a2b10;color:#ffd075}.artifact-links a{color:#78a4ff}' +
     '@media print{:root{color-scheme:light;--ink:#111827;--muted:#667085;--line:#dfe3ea;--paper:#fff;--canvas:#fff;--accent:#245fe5}.report-section,.finding,.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group{background:#fff}.review-note{background:#fffaf0;color:#111827}.risk-table a,.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#111827}}';
+  const humanReportCss =
+    '.reading-guide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:14px}.reading-guide>div{background:var(--paper);padding:13px 15px}.reading-guide span{float:left;display:grid;place-items:center;width:22px;height:22px;margin-right:9px;border-radius:50%;background:#2364f5;color:#fff;font-size:10px;font-weight:800}.reading-guide strong{display:block;font-size:11px}.reading-guide p{margin:3px 0 0 31px;color:var(--muted);font-size:10px}.queue-summary{color:var(--muted);font-size:11px}.task-detail>summary{grid-template-columns:auto minmax(220px,1fr) auto 18px}.action-pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;background:#183b67;color:#8fbaff;font-size:10px;font-weight:750;white-space:nowrap}.task-count{font-size:10px;color:var(--muted);white-space:nowrap}.task-body{padding:18px}.task-explanation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.task-explanation section{border:1px solid var(--line);border-radius:9px;padding:14px}.task-explanation h4{margin:0 0 7px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#aeb8ca}.task-explanation p{margin:0;font-size:12px;color:#c5ccda}.task-explanation ol,.task-explanation ul{margin:0;padding-left:18px}.task-explanation li{border:0;border-radius:0;padding:3px 0;color:#c5ccda;font-size:11px}.task-explanation .file-list{list-style:none;padding:0}.task-explanation .file-list li{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:#9eb8f2}.task-note{margin-top:12px;border-left:3px solid #755b1a;background:#17150d;padding:10px 12px}.task-note strong{font-size:11px}.task-note p{margin:3px 0 0;color:var(--muted);font-size:11px}.evidence-link{margin:13px 0 0}.evidence-link a{font-size:11px;font-weight:750}.finding-overview{border-top:0;margin-top:0}' +
+    '@media(max-width:720px){.reading-guide,.task-explanation{grid-template-columns:1fr}.task-detail>summary{grid-template-columns:minmax(0,1fr) 18px}.task-detail>summary>span,.task-count{display:none}}' +
+    '@media print{.reading-guide>div,.task-explanation section{background:#fff}.task-explanation p,.task-explanation li{color:#111827}.action-pill{background:#eaf0ff;color:#245fe5}}';
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Traceward · ' +
     e(report.projectName) +
     '</title><style>' +
     redesignedCss +
     darkThemeCss +
+    humanReportCss +
     '</style></head><body><div class="report-app"><aside class="report-sidebar"><div class="brand"><div class="brand-mark">TW</div><div><strong>TRACEWARD</strong><small>Audit review</small></div></div><div class="nav-label">Report</div><nav class="report-nav" aria-label="Report sections"><a class="current" aria-current="page" href="#overview"><span class="nav-icon">⌂</span><span>Overview</span></a><a href="#risks"><span class="nav-icon">!</span><span>Top risks</span></a>' +
     (queueGroups
       ? '<a href="#queue"><span class="nav-icon">≡</span><span>Fix queue</span></a>'
@@ -1838,7 +1943,7 @@ export function toHtml(
     (options.artifactLinks
       ? '<a class="button" href="agent-plan.json">Agent data</a><a class="button primary" href="report.md">Export report</a>'
       : '<a class="button primary" href="#findings">Browse findings</a>') +
-    '</div></header><main class="report-content" id="top"><section id="overview" class="section-shell" style="margin-top:0"><div class="overview-hero"><div><div class="eyebrow">Executive overview · Review summary</div><h1>Code audit review</h1><p>Decision-oriented view of captured findings, grouped remediation work, and what the audit did — and did not — cover.</p></div><aside class="review-note"><strong>Human review required</strong><p>' +
+    '</div></header><main class="report-content" id="top"><section id="overview" class="section-shell" style="margin-top:0"><div class="overview-hero"><div><div class="eyebrow">Executive overview · Review summary</div><h1>Code audit review</h1><p>Start with the highest-risk work, confirm the evidence, then verify each correction.</p></div><aside class="review-note"><strong>Human review required</strong><p>' +
     (options.remediationPlan
       ? options.remediationPlan.summary.requiresHuman +
         ' of ' +
@@ -1855,17 +1960,14 @@ export function toHtml(
     completeCoverage +
     ' / ' +
     partialCoverage +
-    '</strong><p>Complete capabilities / partial capabilities</p></article></div>' +
-    (options.artifactLinks
-      ? '<div class="machine-banner"><span><strong>Machine contract preserved.</strong> Task IDs, priorities, checks, constraints, and original JSON remain available without crowding the human summary.</span><a href="agent-plan.json">Open agent data →</a></div>'
-      : '') +
-    '</section><section id="risks" class="section-shell"><div class="section-heading"><div><div class="eyebrow">01 · Prioritize</div><h2>Top risks</h2></div><p>Grouped by remediation task instead of repeating every scanner occurrence. Open a row for the linked work and evidence.</p></div>' +
+    '</strong><p>Complete capabilities / partial capabilities</p></article></div><div class="reading-guide" aria-label="How to read this report"><div><span>1</span><strong>Choose a risk</strong><p>Start with critical and high items at the top.</p></div><div><span>2</span><strong>Confirm the evidence</strong><p>Open the task and inspect the listed files before changing code.</p></div><div><span>3</span><strong>Fix and verify</strong><p>Run tests, build, and a new audit before closing the item.</p></div></div>' +
+    '</section><section id="risks" class="section-shell"><div class="section-heading"><div><div class="eyebrow">01 · Prioritize</div><h2>Top risks</h2></div><p>Start here. Each row groups evidence that points to the same underlying problem.</p></div>' +
     (topRiskRows
       ? '<ol class="risk-table">' + topRiskRows + '</ol>'
       : '<div class="report-section"><p>No candidate is waiting for review. Coverage gaps and accepted risk may still remain.</p></div>') +
     '</section>' +
     (queueGroups
-      ? '<section id="queue" class="section-shell"><div class="section-heading"><div><div class="eyebrow">02 · Act</div><h2>Grouped fix queue</h2></div><p>Work is grouped by the decision needed, while the complete JSON plan stays available for an authorized agent.</p></div><div class="queue-grid">' +
+      ? '<section id="queue" class="section-shell"><div class="section-heading"><div><div class="eyebrow">02 · Act</div><h2>Grouped fix queue</h2></div><p>Choose a task to see the problem, affected files, next steps, and completion checks.</p></div><div class="queue-grid">' +
         queueGroups +
         '</div>' +
         remediationPlan +
