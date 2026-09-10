@@ -76,6 +76,12 @@ one coherent change, run only authorized commands, and require a fresh Traceward
 the candidate disappeared. Authentication policy, tenant model, billing behavior, database
 migrations, destructive actions, and deployment always require human authorization.
 
+Executed test/build claims must use the strict external verification ledger. A coding agent records
+only exact argument arrays already present in the baseline plan plus exit code, duration, and output
+digest metadata. Raw command output does not enter the ledger. Traceward may mark matching checks
+passed or failed, but the executor remains unauthenticated and its claims are never converted into
+deterministic scanner evidence.
+
 Task-bundle version 3 supplies the owning workspace component, adjacent cross-component import
 edges, and any matching security-critical test-reference target. These records help the coding
 agent select local context and focused tests; they do not claim that a test executed or asserted the

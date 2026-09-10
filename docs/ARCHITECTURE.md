@@ -119,7 +119,10 @@ Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without runn
 The terminal-first audit uses the same graph with an ephemeral local store and writes a static,
 script-free report directory. The remediation plan is a versioned plan-only contract. A baseline
 audit adds a deterministic before/after result, while the `task` command reduces that contract to
-one task and its referenced report evidence for bounded agent input.
+one task and its referenced report evidence for bounded agent input. The `finalize` command reads
+existing before/after audit artifacts and a strict external verification ledger. It matches exact
+declared test/build commands and records their bounded provenance, but never executes a project
+command or authenticates the executor.
 
 ## AI boundary
 

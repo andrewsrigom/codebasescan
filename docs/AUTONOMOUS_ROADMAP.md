@@ -185,6 +185,13 @@ The audit stays read-only. A separate, authorized coding-agent flow consumes one
 6. rerun Traceward and generate a before/after result;
 7. record file, command, exit status, duration, and output digest provenance.
 
+The versioned external verification ledger now covers command arguments, working-directory class,
+exit status, duration, output digest/size, truncation, executor claim, and network claim. It binds
+to the baseline plan and both audit snapshots. `traceward finalize` produces a new static report
+from existing artifacts; it does not execute or repeat target code. Exact declared commands are
+applied, unmatched commands remain visible, and incomplete declared verification keeps a resolved
+lifecycle task partial. Changed-file digest attestation and signed executor identity remain open.
+
 Portable CLI review uses a separate, explicitly supplied ledger. It carries only confirmed,
 false-positive, or accepted-risk decisions whose project, finding fingerprint, and evidence
 source-file digests still match. A fixed decision is never carried forward; disappearance in a
@@ -195,8 +202,8 @@ destructive operations, and public deployment require human authorization. A dir
 command outside the allowlist, unexpected file expansion, failed focused test, or new critical
 finding stops automatic correction.
 
-Gate: a `seusaas` correction pass produces small commits, command provenance, fresh audit evidence,
-and an honest remaining-work list.
+Gate: a `seusaas` correction pass proves the new ledger end to end with small commits, fresh audit
+evidence, and an honest remaining-work list.
 
 ## Phase 8 — human report
 

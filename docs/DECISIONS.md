@@ -221,3 +221,14 @@ evidence, AI cache, review, and suppression boundaries while preventing an unrel
 shift from inventing resolved and new advisories. Other findings retain exact fingerprint matching;
 old comparison and remediation-result artifacts remain immutable and are not mixed with the new
 counts.
+
+## 2026-09-10 — external correction evidence ledger
+
+Project test and build execution remains outside the audit trust boundary. A separately authorized
+executor may supply a strict versioned ledger bound to the project, baseline audit, after audit,
+both snapshot digests, and the exact baseline agent-plan artifact digest. Only exact project-context
+commands from that plan are applied; other records remain unmatched. Raw output is rejected in
+favor of exit code, duration, byte count, and SHA-256 metadata. Remediation-result schema v3 records
+the ledger and keeps an otherwise resolved task partial when declared verification is incomplete.
+`finalize` combines existing artifacts without rerunning the target. Executor authentication and
+changed-file attestation remain explicit future work.

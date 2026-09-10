@@ -97,6 +97,20 @@ traceward task traceward-report/<audit-id> <task-id> --output traceward-task.jso
 The generated task is analysis input, not permission to edit files, run project commands, access
 the network, suppress findings, or publish a report.
 
+After a separately authorized agent runs declared project checks, preserve only structured command
+provenance and build a combined report without rerunning target code:
+
+```bash
+traceward finalize traceward-after/<after-id>/audit-report.json \
+  --baseline traceward-before/<before-id>/audit-report.json \
+  --verification verification-ledger.json \
+  --report-dir traceward-final
+```
+
+See [Bounded correction evidence](docs/CORRECTION_FLOW.md) for the strict ledger contract. Exact
+commands must already exist in the baseline agent plan. Traceward validates and reports the claims
+but never executes them or authenticates the external executor.
+
 Repeated candidates from the same rule and primary file are grouped into one task while retaining
 every original finding and evidence reference.
 
@@ -299,6 +313,7 @@ Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CON
 - [Policy profiles and exit codes](docs/POLICY_PROFILES.md)
 - [Portable suppressions](docs/SUPPRESSIONS.md)
 - [Finding lifecycle diff](docs/LIFECYCLE_DIFF.md)
+- [Bounded correction evidence](docs/CORRECTION_FLOW.md)
 - [Structured AI review standard](docs/AI_REVIEW_STANDARD.md)
 - [Changelog](CHANGELOG.md)
 

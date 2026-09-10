@@ -17,6 +17,7 @@ Deeper references:
 - [Run and coverage manifest](RUN_MANIFEST.md)
 - [Policy profiles and exit codes](POLICY_PROFILES.md)
 - [Portable suppressions](SUPPRESSIONS.md)
+- [Bounded correction evidence](CORRECTION_FLOW.md)
 - [Edge cases](EDGE_CASES.md)
 - [Engineering decisions](DECISIONS.md)
 - [External sources](SOURCES.md)

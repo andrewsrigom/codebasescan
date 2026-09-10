@@ -71,6 +71,12 @@ The resolved set included 10 `better-auth`, 8 `postcss`, 3 `nanoid`, and 1 `kyse
 instances. This run proved comparison schema v3 and remediation-result schema v2 against lockfile
 line churn: unchanged advisories no longer appeared as false resolved/new pairs.
 
+The correction contract now has paired tests for exact external test/build command evidence,
+failed commands, incomplete verification, stale after-snapshot binding, unmatched commands, strict
+raw-output rejection, schema generation, and finalized static artifacts. Remediation-result schema
+v3 retains the external ledger digest and bounded execution provenance while preserving the audit's
+no-execution boundary. A real `seusaas` end-to-end finalized report is the remaining Phase 7 gate.
+
 The structurally different `robs-web` portability run captured 1,070 files and completed its
 project profile. It produced 6 total candidates and no dedicated SaaS-rule candidate. Different
 SaaS controls were applicable there, which confirms that the checklist is driven by detected
