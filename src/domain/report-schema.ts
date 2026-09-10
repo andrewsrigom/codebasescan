@@ -511,7 +511,14 @@ const checklist = z.looseObject({
 });
 
 export const auditReportSchema = z.looseObject({
-  schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]),
+  schemaVersion: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+    z.literal(5),
+    z.literal(6),
+  ]),
   auditId: shortText,
   projectName: shortText,
   createdAt: shortText,
@@ -564,6 +571,18 @@ export const auditReportSchema = z.looseObject({
       contextFilesSent: z.array(shortText).max(10_000),
       contextIdsSent: z.array(shortText).max(10_000).optional(),
       redactionApplied: z.boolean(),
+    })
+    .optional(),
+  reviewImport: z
+    .object({
+      schemaVersion: z.literal(1),
+      ledgerDigest: z.string().regex(/^[a-f0-9]{64}$/),
+      sourceAuditIds: z.array(shortText).max(10_000),
+      importedAt: shortText,
+      entries: z.number().int().nonnegative(),
+      applied: z.number().int().nonnegative(),
+      stale: z.number().int().nonnegative(),
+      unmatched: z.number().int().nonnegative(),
     })
     .optional(),
   limitations: z.array(shortText).max(10_000),

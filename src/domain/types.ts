@@ -641,7 +641,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -663,6 +663,16 @@ export interface AuditReport {
   httpProbe?: HttpProbeReport;
   coverage?: CoverageCapability[];
   aiUsage?: AiUsage;
+  reviewImport?: {
+    schemaVersion: 1;
+    ledgerDigest: string;
+    sourceAuditIds: string[];
+    importedAt: string;
+    entries: number;
+    applied: number;
+    stale: number;
+    unmatched: number;
+  };
   limitations: string[];
   publication: 'draft' | 'reviewed';
   reviewNote?: string;

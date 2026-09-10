@@ -546,7 +546,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 5,
+        schemaVersion: 6,
         auditId: state.auditId,
         projectName,
         createdAt,
