@@ -3,6 +3,7 @@ import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 import type { RemediationPlan, RemediationResult } from './remediation.ts';
 import type { RuleQualityReport } from './rule-quality.ts';
+import type { PolicyResult } from './policy.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -217,7 +218,10 @@ function frameworkLabel(framework: ProjectFramework): string {
   return `${framework.name}${version} [${coverage.status}]`;
 }
 
-export function toMarkdown(report: AuditReport): string {
+export function toMarkdown(
+  report: AuditReport,
+  options: { policyResult?: PolicyResult } = {},
+): string {
   const m = escapeMarkdown;
   const componentNames = new Map(
     report.projectProfile?.components?.map((component) => [component.id, component.name]) ?? [],
@@ -238,6 +242,18 @@ export function toMarkdown(report: AuditReport): string {
     '',
     '> Findings are review candidates, not a security certification. No findings does not prove safety.',
     '',
+    ...(options.policyResult
+      ? [
+          '## Policy result',
+          '',
+          `Profile: ${m(options.policyResult.profile)}. Decision: ${m(options.policyResult.decision)}. Exit code: ${options.policyResult.exitCode}.`,
+          `Gated findings: ${options.policyResult.summary.gatedFindings}. Blocking coverage issues: ${options.policyResult.summary.blockingCoverageIssues}.`,
+          `Finding scope: ${m(options.policyResult.criteria.findingScope)}. Coverage gate: ${m(options.policyResult.criteria.coverageGate)}.`,
+          '',
+          '> Policy evaluates captured evidence only. A passing policy is not a security or compliance certification.',
+          '',
+        ]
+      : []),
     '## Coverage',
     '',
     `${report.filesAnalyzed} files analyzed. ${report.truncated ? 'Snapshot was truncated.' : 'Snapshot stayed within configured limits.'}`,
@@ -660,6 +676,7 @@ export function toHtml(
     remediationPlan?: RemediationPlan;
     remediationResult?: RemediationResult;
     ruleQuality?: RuleQualityReport;
+    policyResult?: PolicyResult;
   } = {},
 ): string {
   const e = escapeHtml;
@@ -1568,6 +1585,29 @@ export function toHtml(
       e(report.reviewImport.importedAt) +
       '.</p></section>'
     : '';
+  const policySummary = options.policyResult
+    ? '<section class="report-section"><div class="section-head"><div><span class="kicker">DETERMINISTIC POLICY</span><h2>Policy result</h2></div><span class="status ' +
+      (options.policyResult.exitCode === 0 ? 'complete' : 'gap') +
+      '">' +
+      e(options.policyResult.decision) +
+      '</span></div><p>Profile <strong>' +
+      e(options.policyResult.profile) +
+      '</strong> evaluated captured findings and coverage without reinterpreting scanner evidence.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      options.policyResult.summary.gatedFindings +
+      '</strong><span>Gated findings</span></div><div class="summary-card"><strong>' +
+      options.policyResult.summary.blockingCoverageIssues +
+      '</strong><span>Blocking coverage</span></div><div class="summary-card"><strong>' +
+      options.policyResult.summary.excludedByDisposition +
+      '</strong><span>Resolved / accepted</span></div><div class="summary-card"><strong>' +
+      options.policyResult.summary.excludedByActiveSuppression +
+      '</strong><span>Active exceptions</span></div></div><p class="muted">Exit ' +
+      options.policyResult.exitCode +
+      ' · ' +
+      e(options.policyResult.criteria.findingScope) +
+      ' · ' +
+      e(options.policyResult.criteria.coverageGate) +
+      '. Passing does not certify security or compliance.</p></section>'
+    : '';
   const artifactLinks = options.artifactLinks
     ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li>' +
       (options.remediationResult
@@ -1643,6 +1683,7 @@ export function toHtml(
       ? '<ol class="priority-list">' + priorityLinks + '</ol>'
       : '<p>No candidate is waiting for a human disposition. Coverage gaps and accepted risk may still remain.</p>') +
     '</nav>' +
+    policySummary +
     auditModes +
     '<section class="report-section"><div class="section-head"><div><span class="kicker">WHAT ACTUALLY RAN</span><h2>Coverage</h2></div><span class="status ' +
     (coverageGaps.length ? 'gap' : 'complete') +

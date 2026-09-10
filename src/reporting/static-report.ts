@@ -103,6 +103,7 @@ export async function writeStaticReport(
         remediationPlan: plan,
         remediationResult,
         ruleQuality,
+        policyResult,
       }),
     },
     {
@@ -226,7 +227,7 @@ export async function writeStaticReport(
     {
       path: 'report.md',
       mediaType: 'text/markdown; charset=utf-8',
-      content: `${toMarkdown(report)}\n`,
+      content: `${toMarkdown(report, { policyResult })}\n`,
     },
     {
       path: 'report.sarif',

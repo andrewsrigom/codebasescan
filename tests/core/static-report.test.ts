@@ -74,6 +74,8 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="run-manifest.schema.json"'));
   assert.ok(html.includes('href="policy-result.json"'));
   assert.ok(html.includes('href="policy-result.schema.json"'));
+  assert.ok(html.includes('DETERMINISTIC POLICY'));
+  assert.ok(html.includes('Policy result'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -147,6 +149,9 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'policy-result.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(policyResultSchema.properties?.schemaVersion?.const, 1);
+  const markdown = await readFile(path.join(result.directory, 'report.md'), 'utf8');
+  assert.ok(markdown.includes('## Policy result'));
+  assert.ok(markdown.includes('Profile: advisory. Decision: advisory. Exit code: 0.'));
   const ruleQuality = parseRuleQualityReport(
     JSON.parse(await readFile(path.join(result.directory, 'rule-quality.json'), 'utf8')),
   );
