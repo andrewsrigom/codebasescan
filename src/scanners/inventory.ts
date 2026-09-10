@@ -126,14 +126,16 @@ function npmLock(file: SourceFile, declared: Map<string, Declaration>): Dependen
 
 function pnpmPackageKey(key: string): { name: string; version: string } | null {
   const normalized = key.replace(/^\//, '');
-  const legacy = /^(@[^/]+\/[^/]+|[^/]+)\/([^/]+)$/.exec(normalized);
-  if (legacy?.[1] && legacy[2]) return { name: legacy[1], version: legacy[2].split('(')[0] ?? '' };
   const split = normalized.lastIndexOf('@');
-  if (split <= 0) return null;
-  return {
-    name: normalized.slice(0, split),
-    version: normalized.slice(split + 1).split('(')[0] ?? '',
-  };
+  if (split > 0)
+    return {
+      name: normalized.slice(0, split),
+      version: normalized.slice(split + 1).split('(')[0] ?? '',
+    };
+  const legacy = /^(@[^/]+\/[^/]+|[^/]+)\/([^/]+)$/.exec(normalized);
+  return legacy?.[1] && legacy[2]
+    ? { name: legacy[1], version: legacy[2].split('(')[0] ?? '' }
+    : null;
 }
 
 function pnpmLock(file: SourceFile, declared: Map<string, Declaration>): Dependency[] {

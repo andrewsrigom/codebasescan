@@ -49,11 +49,23 @@ test('pnpm and Yarn lockfiles produce resolved package inventory', () => {
     snapshot({
       'package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
       'pnpm-lock.yaml':
-        "lockfileVersion: '9.0'\npackages:\n  alpha@1.2.3: {}\n  beta@2.0.0:\n    dev: true\n",
+        "lockfileVersion: '9.0'\npackages:\n  alpha@1.2.3: {}\n  beta@2.0.0:\n    dev: true\n  '@aws-crypto/crc32@5.2.0': {}\n  /@legacy/scoped/3.2.1: {}\n",
     }),
   );
   assert.equal(pnpm.dependencies.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
   assert.equal(pnpm.dependencies.find((item) => item.name === 'beta')?.scope, 'development');
+  assert.equal(
+    pnpm.dependencies.find((item) => item.name === '@aws-crypto/crc32')?.resolvedVersion,
+    '5.2.0',
+  );
+  assert.equal(
+    pnpm.dependencies.find((item) => item.name === '@legacy/scoped')?.resolvedVersion,
+    '3.2.1',
+  );
+  assert.equal(
+    pnpm.dependencies.some((item) => item.name === '@aws-crypto'),
+    false,
+  );
 
   const classic = resolvedInventory(
     snapshot({
