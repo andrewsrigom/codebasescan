@@ -7,6 +7,7 @@ import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
+import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
 import {
   sampleApiContract,
   sampleDatabaseContract,
@@ -36,6 +37,7 @@ test('static report writes a self-contained versioned artifact directory', async
     [
       'index.html',
       'audit-report.json',
+      'run-manifest.json',
       'risk-paths.json',
       'environment-contract.json',
       'test-evidence.json',
@@ -46,6 +48,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'agent-plan.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
+      'run-manifest.schema.json',
       'rule-quality.json',
       'rule-quality.schema.json',
       'review-ledger.schema.json',
@@ -64,6 +67,8 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="database-contract.json"'));
   assert.ok(html.includes('href="webhook-contract.json"'));
   assert.ok(html.includes('href="feature-flags.json"'));
+  assert.ok(html.includes('href="run-manifest.json"'));
+  assert.ok(html.includes('href="run-manifest.schema.json"'));
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
@@ -113,6 +118,21 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'agent-plan.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(schema.properties?.schemaVersion?.const, 5);
+  const runManifest = parseRunManifest(
+    JSON.parse(await readFile(path.join(result.directory, 'run-manifest.json'), 'utf8')),
+  );
+  assert.equal(runManifest.audit.id, report.auditId);
+  assert.equal(runManifest.audit.reportSchemaVersion, report.schemaVersion);
+  assert.equal(runManifest.modes.selectionAvailable, false);
+  assert.equal(runManifest.execution.scannerStatus.completed, 1);
+  assert.equal(runManifest.execution.scannerDurationMs, 1);
+  assert.equal(runManifest.scope.truncated, false);
+  assert.ok(runManifest.outputs.some((output) => output.path === 'audit-report.json'));
+  assert.ok(runManifest.outputs.every((output) => /^[a-f0-9]{64}$/.test(output.sha256)));
+  const runManifestSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'run-manifest.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(runManifestSchema.properties?.schemaVersion?.const, 1);
   const ruleQuality = parseRuleQualityReport(
     JSON.parse(await readFile(path.join(result.directory, 'rule-quality.json'), 'utf8')),
   );

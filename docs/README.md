@@ -14,6 +14,7 @@ Deeper references:
 - [Real-project evaluation](REAL_PROJECT_EVALUATION.md)
 - [Webhook contract correlation](WEBHOOK_CONTRACT.md)
 - [Feature flag consistency](FEATURE_FLAGS.md)
+- [Run and coverage manifest](RUN_MANIFEST.md)
 - [Edge cases](EDGE_CASES.md)
 - [Engineering decisions](DECISIONS.md)
 - [External sources](SOURCES.md)

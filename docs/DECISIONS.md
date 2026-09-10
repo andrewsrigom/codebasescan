@@ -188,3 +188,10 @@ narrow allowlist of evaluation and definition-by-key calls. Dynamic keys remain 
 retain type and digest while arbitrary strings stay out of reports. Different declaration files may
 represent valid plan/environment variants and do not conflict by themselves. Report schema v13,
 investigation bundle v4, workflow v27, and audit-mode pack 0.9.0 preserve the new output.
+
+## 2026-09-10 — separate run and coverage manifest
+
+Static exports include a schema-validated compact manifest before the larger evidence artifacts.
+It records product/workflow/pack versions, mode selection, snapshot limits, scanner duration and
+status, explicit coverage states, limitations, and output digests. The existing outer artifact
+manifest digests this run manifest, avoiding a circular self-digest while preserving integrity.

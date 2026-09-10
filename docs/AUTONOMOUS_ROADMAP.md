@@ -24,6 +24,9 @@ new, resolved, unchanged, recurring, severity, disposition, and ownership change
 Phase 6 has reproducible `seusaas` and `robs-web` pressure runs but still needs the full named corpus
 and independent dispositions. Later phases remain gated as described below.
 
+The versioned run manifest is implemented and publishes mode selection, snapshot limits, scanner
+status/duration, explicit coverage state, limitations, and output digests with a JSON Schema.
+
 ## Invariants
 
 - Treat target files and scanner messages as untrusted data.

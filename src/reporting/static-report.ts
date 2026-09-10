@@ -18,6 +18,8 @@ import {
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-quality-schema.ts';
 import { reviewLedgerJsonSchema } from '../domain/review-ledger-schema.ts';
+import { buildRunManifest, type RunManifestOutput } from '../domain/run-manifest.ts';
+import { parseRunManifest, runManifestJsonSchema } from '../domain/run-manifest-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -41,6 +43,21 @@ export interface StaticReportOptions {
 }
 
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
+
+interface StaticArtifact {
+  path: string;
+  mediaType: string;
+  content: string;
+}
+
+function describeArtifact(artifact: StaticArtifact): RunManifestOutput {
+  return {
+    path: artifact.path,
+    mediaType: artifact.mediaType,
+    bytes: Buffer.byteLength(artifact.content),
+    sha256: digest(artifact.content),
+  };
+}
 
 function safeAuditSegment(auditId: string): string {
   if (!/^[a-zA-Z0-9-]{1,100}$/.test(auditId))
@@ -71,7 +88,7 @@ export async function writeStaticReport(
         buildRemediationResult(buildRemediationPlan(options.baseline), options.baseline, report),
       )
     : undefined;
-  const artifacts = [
+  const artifacts: StaticArtifact[] = [
     {
       path: 'index.html',
       mediaType: 'text/html; charset=utf-8',
@@ -166,6 +183,11 @@ export async function writeStaticReport(
       content: json(remediationPlanJsonSchema()),
     },
     {
+      path: 'run-manifest.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(runManifestJsonSchema()),
+    },
+    {
       path: 'rule-quality.json',
       mediaType: 'application/json',
       content: json(ruleQuality),
@@ -210,6 +232,12 @@ export async function writeStaticReport(
         ]
       : []),
   ];
+  const runManifest = parseRunManifest(buildRunManifest(report, artifacts.map(describeArtifact)));
+  artifacts.splice(2, 0, {
+    path: 'run-manifest.json',
+    mediaType: 'application/json',
+    content: json(runManifest),
+  });
   await Promise.all(
     artifacts.map((artifact) =>
       writeFile(path.join(directory, artifact.path), artifact.content, {
@@ -225,12 +253,7 @@ export async function writeStaticReport(
     snapshotDigest: report.snapshotDigest,
     generatedAt: report.createdAt,
     entrypoint: 'index.html',
-    files: artifacts.map((artifact) => ({
-      path: artifact.path,
-      mediaType: artifact.mediaType,
-      bytes: Buffer.byteLength(artifact.content),
-      sha256: digest(artifact.content),
-    })),
+    files: artifacts.map(describeArtifact),
   };
   await writeFile(path.join(directory, 'manifest.json'), json(manifest), {
     mode: 0o600,
