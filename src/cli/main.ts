@@ -16,10 +16,12 @@ import { compareReports } from '../domain/comparison.ts';
 import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
+import { buildRemediationPlan } from '../domain/remediation.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
+import { writeStaticReport } from '../reporting/static-report.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -46,8 +48,8 @@ const commandAuditOptions = (): AuditOptions => {
   };
 };
 function render(report: AuditReport, format: string): string {
-  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle'].includes(format))
-    throw new Error('Use json, md, html, sarif, sbom, or bundle.');
+  if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle', 'plan'].includes(format))
+    throw new Error('Use json, md, html, sarif, sbom, bundle, or plan.');
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
@@ -59,7 +61,9 @@ function render(report: AuditReport, format: string): string {
               ? toCycloneDx(report)
               : format === 'bundle'
                 ? toInvestigationBundle(report)
-                : report,
+                : format === 'plan'
+                  ? buildRemediationPlan(report)
+                  : report,
           null,
           2,
         );
@@ -114,7 +118,7 @@ try {
     console.log(
       `Updated ${config.advisoryDatabasePath} for ${result.dependencies.filter((item) => item.resolvedVersion).length} resolved package(s). ${result.findings.length} advisory match(es).`,
     );
-  } else if (command === 'audit' && target) {
+  } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
     try {
@@ -125,7 +129,8 @@ try {
         checkpointPath: path.join(temporary, 'checkpoints.sqlite'),
         temporaryDirectory: path.join(temporary, 'scanner-staging'),
       };
-      const root = await validateProjectRoot(target, temporary);
+      const auditTarget = target && !target.startsWith('--') ? target : '.';
+      const root = await validateProjectRoot(auditTarget, temporary);
       const scopePreflight = await preflight(root, true);
       const project = ciStore.registerProject(path.basename(root), root);
       const audit = ciStore.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
@@ -145,14 +150,24 @@ try {
       const gate = comparison
         ? baselineCiGate(comparison, threshold as Severity | undefined)
         : ciGate(completed.report, threshold as Severity | undefined);
-      const format = option('--format') ?? 'json';
-      const output = render(completed.report, format);
+      const requestedFormat = option('--format');
       const destination = option('--output');
-      if (destination) {
-        const resolved = path.resolve(destination);
-        await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
-        console.error(`Saved ${resolved}`);
-      } else console.log(output);
+      if (!requestedFormat && !destination) {
+        const staticReport = await writeStaticReport(
+          completed.report,
+          option('--report-dir') ?? path.resolve('traceward-report'),
+        );
+        console.log(`Saved static report ${staticReport.directory}`);
+        console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
+      } else {
+        const format = requestedFormat ?? 'json';
+        const output = render(completed.report, format);
+        if (destination) {
+          const resolved = path.resolve(destination);
+          await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
+          console.error(`Saved ${resolved}`);
+        } else console.log(output);
+      }
       if (comparison)
         console.error(
           `Baseline comparison: ${comparison.newFindings.length} new, ${comparison.resolvedFindings.length} resolved, ${comparison.unchangedFindings.length} unchanged.`,
@@ -197,9 +212,8 @@ try {
       const report = store.audit(target).report;
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
-      const destination = path.resolve(
-        `traceward-${report.auditId}.${['bundle', 'sbom'].includes(format) ? `${format}.json` : format}`,
-      );
+      const extension = ['bundle', 'sbom', 'plan'].includes(format) ? `${format}.json` : format;
+      const destination = path.resolve(`traceward-${report.auditId}.${extension}`);
       await writeFile(destination, render(report, format), { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${destination}`);
     } else if (command === 'compare' && target && arguments_[2]) {
@@ -217,7 +231,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- doctor\n  npm run cli -- audit /path/to/project [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high] [--format json|sarif|sbom|md|html|bundle] [--output report.json]\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|plan [--output report.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|plan',
       );
     }
   }

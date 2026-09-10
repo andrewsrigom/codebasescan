@@ -8,6 +8,7 @@ import {
 } from '../../../../../domain/reports.ts';
 import { uuid } from '../../../../../domain/validation.ts';
 import { localRequestError } from '../../../../../security/local-http.ts';
+import { buildRemediationPlan } from '../../../../../domain/remediation.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(
@@ -27,7 +28,7 @@ export async function GET(
     const report = store().audit(id).report;
     if (!report) return new Response('No report is available yet.', { status: 409 });
     const format = new URL(request.url).searchParams.get('format') ?? 'json';
-    if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle'].includes(format))
+    if (!['json', 'md', 'html', 'sarif', 'sbom', 'bundle', 'plan'].includes(format))
       return new Response('Unsupported export format.', { status: 400 });
     const content =
       format === 'html'
@@ -41,7 +42,9 @@ export async function GET(
                   ? toCycloneDx(report)
                   : format === 'bundle'
                     ? toInvestigationBundle(report)
-                    : report,
+                    : format === 'plan'
+                      ? buildRemediationPlan(report)
+                      : report,
               null,
               2,
             );
@@ -53,7 +56,7 @@ export async function GET(
             : format === 'md'
               ? 'text/markdown; charset=utf-8'
               : 'application/json; charset=utf-8',
-        'Content-Disposition': `attachment; filename="traceward-${id}.${['bundle', 'sbom'].includes(format) ? `${format}.json` : format}"`,
+        'Content-Disposition': `attachment; filename="traceward-${id}.${['bundle', 'sbom', 'plan'].includes(format) ? `${format}.json` : format}"`,
         'Cache-Control': 'no-store',
         'X-Content-Type-Options': 'nosniff',
       },
