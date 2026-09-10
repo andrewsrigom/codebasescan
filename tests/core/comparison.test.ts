@@ -68,6 +68,23 @@ test('dependency lifecycle ignores lockfile line churn for the same advisory ins
   assert.equal(comparison.unchangedFindings.length, 1);
 });
 
+test('source lifecycle ignores line churn when the evidence remains the same', () => {
+  const base = sampleReport();
+  const current = structuredClone(base);
+  current.auditId = '00000000-0000-4000-8000-000000000002';
+  current.findings[0]!.id = 'moved-finding';
+  current.findings[0]!.fingerprint = 'moved-source-line-fingerprint';
+  current.findings[0]!.evidence[0]!.startLine += 28;
+  current.findings[0]!.evidence[0]!.endLine += 28;
+  current.findings[0]!.evidence[0]!.focusLine =
+    (current.findings[0]!.evidence[0]!.focusLine ?? 1) + 28;
+
+  const comparison = compareReports(base, current);
+  assert.equal(comparison.newFindings.length, 0);
+  assert.equal(comparison.resolvedFindings.length, 0);
+  assert.equal(comparison.unchangedFindings.length, 1);
+});
+
 test('comparison attributes lifecycle to components and identifies reappearing fingerprints', () => {
   const historical = sampleReport();
   historical.auditId = '00000000-0000-4000-8000-000000000000';
@@ -200,6 +217,10 @@ test('baseline CI gate counts only new findings at the selected severity', () =>
       id: 'new-medium-id',
       fingerprint: 'new-medium-fingerprint',
       severity: 'medium',
+      evidence: base.findings[0]!.evidence.map((item) => ({
+        ...item,
+        file: 'src/new-risk.ts',
+      })),
     },
   ];
   const comparison = compareReports(base, current);

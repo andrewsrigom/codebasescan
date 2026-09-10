@@ -199,8 +199,8 @@ export function compareReports(
     componentChanges,
     components: componentSummaries([base, current, ...historicalReports], references),
     limitations: [
-      'Dependency advisories use source, advisory ID, package, resolved version, and lockfile as lifecycle identity; other findings use exact fingerprints.',
-      'Line-sensitive moves of non-dependency findings can appear as one resolved and one new finding.',
+      'Dependency advisories use source, advisory ID, package, resolved version, and lockfile as lifecycle identity; other findings use source, rule, file, normalized evidence excerpt, and observation.',
+      'Material changes to a non-dependency evidence excerpt or observation can produce a new lifecycle identity even when the rule and file remain the same.',
       'Resolved means absent from the current report, not proof that the underlying risk was remediated.',
       'Reappeared requires the same lifecycle identity in an explicitly supplied earlier report and absence from the selected base.',
       'A finding with evidence in multiple components contributes to each component summary.',

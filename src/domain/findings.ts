@@ -6,10 +6,23 @@ export function digest(value: string): string {
 }
 
 export function findingLifecycleKey(
-  finding: Pick<Finding, 'fingerprint' | 'source' | 'vulnerability'>,
+  finding: Pick<Finding, 'evidence' | 'fingerprint' | 'ruleId' | 'source' | 'vulnerability'>,
 ): string {
   const vulnerability = finding.vulnerability;
-  if (!vulnerability) return JSON.stringify(['fingerprint', finding.fingerprint]);
+  if (!vulnerability) {
+    const evidence = finding.evidence
+      .map((item) => [
+        item.file,
+        item.kind ?? '',
+        item.scope ?? '',
+        item.excerpt.replace(/\s+/g, ' ').trim(),
+        item.observation.replace(/\s+/g, ' ').trim(),
+      ])
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+    return evidence.length
+      ? JSON.stringify(['finding', finding.source, finding.ruleId, evidence])
+      : JSON.stringify(['fingerprint', finding.fingerprint]);
+  }
   return JSON.stringify([
     'vulnerability',
     finding.source,

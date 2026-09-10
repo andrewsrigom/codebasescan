@@ -191,6 +191,26 @@ test('remediation result separates resolved, remaining, and unexecuted checks', 
   assert.deepEqual(parseRemediationResult(result), result);
 });
 
+test('remediation result keeps a source finding remaining after line-only movement', () => {
+  const before = sampleReport();
+  const plan = buildRemediationPlan(before);
+  const after = structuredClone(before);
+  after.auditId = '00000000-0000-4000-8000-000000000002';
+  after.snapshotDigest = 'changed-snapshot';
+  after.createdAt = '2026-09-10T10:00:00.000Z';
+  after.findings[0]!.id = 'moved-finding';
+  after.findings[0]!.fingerprint = 'moved-source-line-fingerprint';
+  after.findings[0]!.evidence[0]!.startLine += 28;
+  after.findings[0]!.evidence[0]!.endLine += 28;
+  after.findings[0]!.evidence[0]!.focusLine = (after.findings[0]!.evidence[0]!.focusLine ?? 1) + 28;
+
+  const result = buildRemediationResult(plan, before, after);
+  assert.equal(result.summary.resolved, 0);
+  assert.equal(result.summary.remaining, 1);
+  assert.equal(result.summary.newFindings, 0);
+  assert.equal(result.taskResults[0]?.outcome, 'remaining');
+});
+
 test('remediation result applies exact external test and build evidence', () => {
   const before = dependencyReport();
   const plan = buildRemediationPlan(before);
