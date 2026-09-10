@@ -1,4 +1,17 @@
-import type { AuditReport, Finding, SecurityControlResult, Severity } from './types.ts';
+import type {
+  AuditReport,
+  CoverageCapability,
+  Dependency,
+  Finding,
+  ProjectCallEdge,
+  ProjectEntrypoint,
+  ProjectFact,
+  ProjectFramework,
+  ProjectSymbol,
+  ScannerRun,
+  SecurityControlResult,
+  Severity,
+} from './types.ts';
 import { digest, severityRank } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
@@ -114,6 +127,28 @@ export interface RemediationResult {
   taskResults: RemediationTaskResult[];
   newFindingIds: string[];
   changedFiles: string[];
+  limitations: string[];
+}
+
+export interface RemediationTaskBundle {
+  schemaVersion: 1;
+  kind: 'traceward-remediation-task-bundle';
+  createdAt: string;
+  audit: RemediationPlan['audit'];
+  policy: string[];
+  task: RemediationTask;
+  findings: Finding[];
+  controls: SecurityControlResult[];
+  dependencies: Dependency[];
+  coverage: (CoverageCapability | ScannerRun)[];
+  projectContext: {
+    frameworks: ProjectFramework[];
+    entrypoints: ProjectEntrypoint[];
+    symbols: ProjectSymbol[];
+    callEdges: ProjectCallEdge[];
+    securityFacts: ProjectFact[];
+    truncated: boolean;
+  } | null;
   limitations: string[];
 }
 
@@ -501,6 +536,67 @@ export function buildRemediationResult(
       'Changed files are unavailable because audit reports contain evidence snapshots, not source-control diffs.',
       'Project test and build checks remain not_run until a trusted executor supplies results.',
       'A missing fingerprint is evidence of report change, not proof that the underlying risk is eliminated.',
+    ],
+  };
+}
+
+export function buildRemediationTaskBundle(
+  report: AuditReport,
+  taskId: string,
+): RemediationTaskBundle {
+  const plan = buildRemediationPlan(report);
+  const task = plan.tasks.find((candidate) => candidate.id === taskId);
+  if (!task) throw new Error(`Remediation task not found: ${taskId}`);
+  const findingIds = new Set(task.findings.map((finding) => finding.id));
+  const controlIds = new Set(task.controlIds);
+  const files = new Set(task.files);
+  const findings = report.findings.filter((finding) => findingIds.has(finding.id));
+  for (const finding of findings) for (const evidence of finding.evidence) files.add(evidence.file);
+  const controls = (report.checklist?.controls ?? []).filter((control) =>
+    controlIds.has(control.id),
+  );
+  const dependencies = report.dependencies.filter(
+    (dependency) =>
+      dependency.name === task.target.package ||
+      files.has(dependency.manifest) ||
+      (dependency.lockfile ? files.has(dependency.lockfile) : false),
+  );
+  const profile = report.projectProfile;
+  const matchesFile = <T extends { file: string }>(item: T) => files.has(item.file);
+  const relevantFacts = profile?.facts.filter(
+    (fact) => task.evidenceIds.includes(fact.id) || matchesFile(fact),
+  );
+  const relevantCalls = profile?.calls.filter(matchesFile);
+  const relevantSymbols = profile?.symbols.filter(matchesFile);
+  const relevantEntrypoints = profile?.entrypoints.filter(matchesFile);
+  const contextLimit = 200;
+  return {
+    schemaVersion: 1,
+    kind: 'traceward-remediation-task-bundle',
+    createdAt: report.createdAt,
+    audit: plan.audit,
+    policy: plan.policy,
+    task,
+    findings,
+    controls,
+    dependencies,
+    coverage: report.coverage ?? report.scanners,
+    projectContext: profile
+      ? {
+          frameworks: profile.frameworks,
+          entrypoints: (relevantEntrypoints ?? []).slice(0, contextLimit),
+          symbols: (relevantSymbols ?? []).slice(0, contextLimit),
+          callEdges: (relevantCalls ?? []).slice(0, contextLimit),
+          securityFacts: (relevantFacts ?? []).slice(0, contextLimit),
+          truncated: [relevantEntrypoints, relevantSymbols, relevantCalls, relevantFacts].some(
+            (items) => (items?.length ?? 0) > contextLimit,
+          ),
+        }
+      : null,
+    limitations: [
+      ...plan.limitations,
+      ...task.uncertainties,
+      'The bundle contains only evidence already captured by the audit and does not contain the repository source tree.',
     ],
   };
 }

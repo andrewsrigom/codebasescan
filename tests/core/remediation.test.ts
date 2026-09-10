@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRemediationPlan, buildRemediationResult } from '../../src/domain/remediation.ts';
+import {
+  buildRemediationPlan,
+  buildRemediationResult,
+  buildRemediationTaskBundle,
+} from '../../src/domain/remediation.ts';
 import {
   parseRemediationPlan,
   parseRemediationResult,
@@ -89,4 +93,33 @@ test('remediation result rejects a plan for another audit', () => {
   const plan = buildRemediationPlan(before);
   plan.audit.id = 'another-audit';
   assert.throws(() => buildRemediationResult(plan, before, before), /does not belong/);
+});
+
+test('task bundle contains only the selected task and its bounded evidence', () => {
+  const report = dependencyReport();
+  const plan = buildRemediationPlan(report);
+  const unrelated = {
+    ...structuredClone(report.findings[0]!),
+    id: 'unrelated-finding',
+    fingerprint: 'unrelated-fingerprint',
+    ruleId: 'unrelated-rule',
+  };
+  unrelated.vulnerability!.package = 'other-package';
+  report.findings.push(unrelated);
+  const bundle = buildRemediationTaskBundle(report, plan.tasks[0]!.id);
+  assert.equal(bundle.kind, 'traceward-remediation-task-bundle');
+  assert.equal(bundle.task.id, plan.tasks[0]!.id);
+  assert.deepEqual(
+    bundle.findings.map((finding) => finding.id),
+    ['finding-dependency'],
+  );
+  assert.equal(JSON.stringify(bundle).includes('unrelated-finding'), false);
+  assert.equal('root' in bundle.audit, false);
+});
+
+test('task bundle rejects an unknown task id', () => {
+  assert.throws(
+    () => buildRemediationTaskBundle(sampleReport(), 'rem-does-not-exist'),
+    /not found/,
+  );
 });

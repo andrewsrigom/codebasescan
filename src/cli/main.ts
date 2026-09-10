@@ -16,7 +16,7 @@ import { compareReports } from '../domain/comparison.ts';
 import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
-import { buildRemediationPlan } from '../domain/remediation.ts';
+import { buildRemediationPlan, buildRemediationTaskBundle } from '../domain/remediation.ts';
 import { severities, type AuditOptions, type AuditReport, type Severity } from '../domain/types.ts';
 import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
@@ -82,6 +82,20 @@ async function loadBaseline(file: string): Promise<AuditReport> {
   }
 }
 
+async function loadReportArtifact(location: string): Promise<AuditReport> {
+  const resolved = path.resolve(location);
+  const metadata = await stat(resolved);
+  const file = metadata.isDirectory() ? path.join(resolved, 'audit-report.json') : resolved;
+  const fileMetadata = metadata.isDirectory() ? await stat(file) : metadata;
+  if (!fileMetadata.isFile() || fileMetadata.size > 16 * 1024 * 1024)
+    throw new Error('Audit report must be a regular JSON file no larger than 16 MB.');
+  try {
+    return parseAuditReport(JSON.parse(await readFile(file, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Audit report is not valid Traceward JSON.');
+  }
+}
+
 async function preflight(root: string, requireApproval: boolean) {
   const estimate = await estimateProjectScope(root);
   const truncationApproved = arguments_.includes('--allow-partial-snapshot');
@@ -118,6 +132,16 @@ try {
     console.log(
       `Updated ${config.advisoryDatabasePath} for ${result.dependencies.filter((item) => item.resolvedVersion).length} resolved package(s). ${result.findings.length} advisory match(es).`,
     );
+  } else if (command === 'task' && target && arguments_[2] && !arguments_[2].startsWith('--')) {
+    const report = await loadReportArtifact(target);
+    const bundle = buildRemediationTaskBundle(report, arguments_[2]);
+    const output = `${JSON.stringify(bundle, null, 2)}\n`;
+    const destination = option('--output');
+    if (destination) {
+      const resolved = path.resolve(destination);
+      await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
+      console.log(`Saved ${resolved}`);
+    } else console.log(output);
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -232,7 +256,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|plan [--output report.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|plan',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|plan [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|plan',
       );
     }
   }
