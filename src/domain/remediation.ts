@@ -63,6 +63,7 @@ export interface RemediationTask {
     currentVersion?: string;
     fixCandidate?: string;
     relationship?: 'direct' | 'transitive' | 'unknown';
+    parentChains?: string[][];
   };
   instructions: string[];
   acceptanceChecks: RemediationCheck[];
@@ -211,6 +212,11 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
       completePlans.flatMap((plan) => (plan.fixCandidate ? [plan.fixCandidate] : [])),
     );
     const dependencies = report.dependencies.filter((item) => item.name === group.package);
+    const parentChains = unique(
+      dependencies.flatMap((item) => item.parentChains ?? []).map((chain) => chain.join('\u0000')),
+    )
+      .map((chain) => chain.split('\u0000'))
+      .slice(0, 3);
     const files = unique(
       dependencies.flatMap((item) => [item.manifest, ...(item.lockfile ? [item.lockfile] : [])]),
     );
@@ -236,13 +242,16 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
         currentVersion: group.affectedVersions.join(', '),
         ...(candidates.length === 1 ? { fixCandidate: candidates[0] } : {}),
         relationship: group.relationship,
+        ...(parentChains.length ? { parentChains } : {}),
       },
       instructions: [
         ...(allComplete
           ? [
               group.relationship === 'direct'
                 ? 'Update the direct dependency and regenerate only the relevant lockfile.'
-                : 'Identify the direct parent before changing the transitive resolution.',
+                : parentChains[0]
+                  ? `Update the owning dependency shown by this lockfile path: ${parentChains[0].join(' → ')}.`
+                  : 'Identify the direct parent before changing the transitive resolution.',
             ]
           : [
               'Determine the supported branch or parent upgrade because OSV does not provide complete same-major fix evidence.',
@@ -265,7 +274,7 @@ function dependencyTasks(report: AuditReport): RemediationTask[] {
               `${incompletePlans.length} affected version plan(s) lack complete same-major fixed-event coverage.`,
             ]
           : []),
-        ...(group.relationship === 'transitive'
+        ...(group.relationship === 'transitive' && parentChains.length === 0
           ? ['The direct parent dependency path is not yet available in this plan.']
           : []),
       ],

@@ -184,6 +184,7 @@ export interface Dependency {
   relationship?: 'direct' | 'transitive' | 'unknown';
   lockfile?: string;
   lockfileLine?: number;
+  parentChains?: string[][];
 }
 export interface HttpProbeOptions {
   url: string;

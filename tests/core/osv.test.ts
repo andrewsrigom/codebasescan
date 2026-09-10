@@ -91,6 +91,41 @@ test('pnpm and Yarn lockfiles produce resolved package inventory', () => {
   assert.equal(berry.dependencies.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
 });
 
+test('pnpm inventory records bounded direct-parent chains without executing configuration', () => {
+  const result = resolvedInventory(
+    snapshot({
+      'package.json': '{"dependencies":{"alpha":"1.2.3"}}',
+      'pnpm-lock.yaml': `lockfileVersion: '9.0'
+importers:
+  .:
+    dependencies:
+      alpha:
+        specifier: 1.2.3
+        version: 1.2.3
+packages:
+  alpha@1.2.3: {}
+  beta@2.0.0: {}
+  gamma@3.0.0: {}
+snapshots:
+  alpha@1.2.3(peer@9.0.0):
+    dependencies:
+      beta: 2.0.0
+  beta@2.0.0:
+    dependencies:
+      gamma: 3.0.0
+  gamma@3.0.0: {}
+`,
+    }),
+  ).dependencies;
+  assert.deepEqual(result.find((item) => item.name === 'alpha')?.parentChains, [
+    ['package.json', 'alpha@1.2.3'],
+  ]);
+  assert.deepEqual(result.find((item) => item.name === 'gamma')?.parentChains, [
+    ['package.json', 'alpha@1.2.3', 'beta@2.0.0', 'gamma@3.0.0'],
+  ]);
+  assert.equal(result.find((item) => item.name === 'gamma')?.relationship, 'transitive');
+});
+
 test('workspace lockfiles exclude local packages but retain direct external dependencies', () => {
   const npm = resolvedInventory(
     snapshot({

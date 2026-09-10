@@ -34,6 +34,7 @@ export function DependencyInventory({ dependencies }: { dependencies: Dependency
                 <th>Relationship</th>
                 <th>Scope</th>
                 <th>Source</th>
+                <th>Parent path</th>
               </tr>
             </thead>
             <tbody>
@@ -47,6 +48,9 @@ export function DependencyInventory({ dependencies }: { dependencies: Dependency
                   <td>{dependency.relationship ?? 'unknown'}</td>
                   <td>{dependency.scope}</td>
                   <td className="mono small">{dependency.lockfile ?? dependency.manifest}</td>
+                  <td className="mono small">
+                    {dependency.parentChains?.[0]?.join(' → ') ?? 'Not mapped'}
+                  </td>
                 </tr>
               ))}
             </tbody>

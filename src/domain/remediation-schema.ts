@@ -53,6 +53,7 @@ const task = z.object({
     currentVersion: shortText.optional(),
     fixCandidate: shortText.optional(),
     relationship: z.enum(['direct', 'transitive', 'unknown']).optional(),
+    parentChains: z.array(z.array(shortText).min(2).max(14)).max(3).optional(),
   }),
   instructions: stringList,
   acceptanceChecks: z.array(acceptanceCheck).max(100),

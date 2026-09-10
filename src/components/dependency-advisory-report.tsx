@@ -99,6 +99,13 @@ export function DependencyAdvisoryReport({
                     <span>{severitySummary(plan.severityCounts)}</span>
                   </div>
                   <p>{plan.action}</p>
+                  {plan.parentChains.length > 0 && (
+                    <div className="dependency-parent-chains">
+                      {plan.parentChains.map((chain) => (
+                        <code key={chain.join('\u0000')}>{chain.join(' → ')}</code>
+                      ))}
+                    </div>
+                  )}
                   <div className="dependency-version-meta">
                     {plan.fixCandidate ? (
                       <Badge tone={plan.fixCoverage === plan.advisoryCount ? 'success' : 'medium'}>

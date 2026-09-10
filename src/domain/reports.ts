@@ -124,6 +124,7 @@ export function toInvestigationBundle(report: AuditReport): object {
         fixCandidate: plan.fixCandidate ?? null,
         fixCoverage: plan.fixCoverage,
         scopes: plan.scopes,
+        parentChains: plan.parentChains,
         action: plan.action,
         findingIds: plan.findings.map((finding) => finding.id),
       })),
@@ -300,6 +301,7 @@ export function toMarkdown(report: AuditReport): string {
             '',
             ...group.versionPlans.flatMap((plan) => [
               `- Current ${m(`${group.package}@${plan.version}`)}: ${plan.fixCandidate ? `candidate ${m(plan.fixCandidate)}` : 'no same-major candidate'}; fixed-event coverage ${plan.fixCoverage}/${plan.advisoryCount}; scopes ${plan.scopes.map(m).join(', ') || 'unknown'}.`,
+              ...plan.parentChains.map((chain) => `  Parent path: ${chain.map(m).join(' -> ')}`),
               `  Action: ${m(plan.action)}`,
             ]),
             '',
@@ -761,6 +763,11 @@ export function toHtml(
                   plan.fixCoverage +
                   '/' +
                   plan.advisoryCount +
+                  (plan.parentChains.length
+                    ? '<p><strong>Parent path:</strong> ' +
+                      e(plan.parentChains[0]!.join(' → ')) +
+                      '</p>'
+                    : '') +
                   '<p>' +
                   e(plan.action) +
                   '</p></li>',

@@ -18,6 +18,7 @@ export interface DependencyVersionPlan {
   relationship: 'direct' | 'transitive' | 'unknown';
   reachability: 'referenced' | 'not_found' | 'unknown';
   scopes: Dependency['scope'][];
+  parentChains: string[][];
   fixCandidate?: string;
   fixCoverage: number;
   action: string;
@@ -136,6 +137,17 @@ function versionPlan(
         .map((dependency) => dependency.scope),
     ),
   ];
+  const parentChains = dependencies
+    .filter(
+      (dependency) => dependency.name === packageName && dependency.resolvedVersion === version,
+    )
+    .flatMap((dependency) => dependency.parentChains ?? [])
+    .filter(
+      (chain, index, chains) =>
+        chains.findIndex((candidate) => candidate.join('\u0000') === chain.join('\u0000')) ===
+        index,
+    )
+    .slice(0, 3);
   return {
     version,
     advisoryCount: findings.length,
@@ -144,6 +156,7 @@ function versionPlan(
     relationship: dependencyRelationship,
     reachability: reachability(findings),
     scopes,
+    parentChains,
     ...(plan.candidate ? { fixCandidate: plan.candidate } : {}),
     fixCoverage: plan.coverage,
     action: actionFor({

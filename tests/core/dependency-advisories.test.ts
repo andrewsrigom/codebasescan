@@ -85,6 +85,7 @@ test('dependency advisories group by package and version with bounded fix claims
   assert.equal(groups[0]?.versionPlans[0]?.fixCandidate, '16.2.11');
   assert.equal(groups[0]?.versionPlans[0]?.fixCoverage, 1);
   assert.deepEqual(groups[0]?.versionPlans[0]?.scopes, ['runtime']);
+  assert.deepEqual(groups[0]?.versionPlans[0]?.parentChains, []);
   assert.match(groups[0]?.versionPlans[0]?.action ?? '', /1\/2 advisories/);
   assert.match(groups[0]?.versionPlans[0]?.action ?? '', /branch or vendor review/);
 });

@@ -171,6 +171,7 @@ const dependency = z.looseObject({
   relationship: z.enum(['direct', 'transitive', 'unknown']).optional(),
   lockfile: shortText.optional(),
   lockfileLine: z.number().int().positive().optional(),
+  parentChains: z.array(z.array(shortText).min(2).max(14)).max(3).optional(),
 });
 
 const scopePreflight = z.looseObject({
