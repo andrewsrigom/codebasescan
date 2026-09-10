@@ -684,6 +684,12 @@ export function AuditWorkspace({
                   </strong>
                 </div>
                 <div className="detail-row">
+                  <span>Components / boundaries</span>
+                  <strong>
+                    {projectProfile.components.length} / {projectProfile.componentEdges.length}
+                  </strong>
+                </div>
+                <div className="detail-row">
                   <span>Structural coverage</span>
                   <strong>
                     {projectProfile.filesAnalyzed} files · {projectProfile.nodesAnalyzed} AST nodes
@@ -702,6 +708,37 @@ export function AuditWorkspace({
                       <li key={issue}>{issue}</li>
                     ))}
                   </ul>
+                )}
+                {projectProfile.components.length > 0 && (
+                  <>
+                    <h3>Declared package boundaries</h3>
+                    <div className="checklist-summary">
+                      {projectProfile.components.slice(0, 30).map((component) => (
+                        <Badge key={component.id}>
+                          {component.name} · {component.sourceFiles} files
+                        </Badge>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {projectProfile.componentEdges.length > 0 && (
+                  <>
+                    <h3>Cross-component imports</h3>
+                    <ul className="limitations">
+                      {projectProfile.componentEdges.slice(0, 20).map((edge) => (
+                        <li key={edge.id}>
+                          {projectProfile.components.find(
+                            (component) => component.id === edge.fromComponentId,
+                          )?.name ?? edge.fromComponentId}{' '}
+                          →{' '}
+                          {projectProfile.components.find(
+                            (component) => component.id === edge.toComponentId,
+                          )?.name ?? edge.toComponentId}
+                          : {edge.imports} import(s)
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
               </div>
               <div className="filter-bar">
@@ -1144,6 +1181,12 @@ export function AuditWorkspace({
                   <span>Frameworks</span>
                   <strong>
                     {projectProfile.frameworks.map(frameworkLabel).join(', ') || 'None detected'}
+                  </strong>
+                </div>
+                <div className="detail-row">
+                  <span>Components / boundaries</span>
+                  <strong>
+                    {projectProfile.components.length} / {projectProfile.componentEdges.length}
                   </strong>
                 </div>
                 <div className="detail-row">

@@ -4,6 +4,8 @@ import { digest } from '../domain/findings.ts';
 import { buildProjectDataMap } from '../domain/data-map.ts';
 import type {
   ProjectCallEdge,
+  ProjectComponent,
+  ProjectComponentEdge,
   ProjectEntrypoint,
   ProjectFact,
   ProjectFactKind,
@@ -35,6 +37,9 @@ const maximumEdges = 50_000;
 const maximumFacts = 50_000;
 const maximumImports = 20_000;
 const maximumEntrypoints = 10_000;
+const maximumComponents = 200;
+const maximumComponentEdges = 1_000;
+const maximumImportIdsPerComponentEdge = 20;
 
 interface ParsedFile {
   source: SourceFile;
@@ -277,6 +282,114 @@ function packageDependencies(snapshot: Snapshot): Map<string, DependencyDeclarat
     }
   }
   return dependencies;
+}
+
+function componentDeclarations(
+  snapshot: Snapshot,
+  sourceFiles: SourceFile[],
+): { components: ProjectComponent[]; truncated: boolean } {
+  const manifests = snapshot.files
+    .filter((file) => isRuntimeSource(file) && file.path.endsWith('package.json'))
+    .sort((left, right) => {
+      const leftRoot = path.posix.dirname(left.path);
+      const rightRoot = path.posix.dirname(right.path);
+      if (leftRoot === '.') return rightRoot === '.' ? 0 : -1;
+      if (rightRoot === '.') return 1;
+      return left.path.localeCompare(right.path);
+    });
+  const declarations = manifests.slice(0, maximumComponents).flatMap((manifest) => {
+    try {
+      const parsed = JSON.parse(manifest.content) as { name?: unknown; private?: unknown };
+      const root = path.posix.dirname(manifest.path);
+      const name =
+        typeof parsed.name === 'string' && parsed.name.trim()
+          ? parsed.name.trim().slice(0, 200)
+          : root === '.'
+            ? 'root'
+            : path.posix.basename(root);
+      return [
+        {
+          id: stableId('component', manifest.path, name),
+          name,
+          root,
+          manifest: manifest.path,
+          kind: root === '.' ? ('root' as const) : ('package' as const),
+          ...(typeof parsed.private === 'boolean' ? { private: parsed.private } : {}),
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+  const ordered = [...declarations].sort((left, right) => right.root.length - left.root.length);
+  const counts = new Map(declarations.map((component) => [component.id, 0]));
+  for (const file of sourceFiles) {
+    const owner = ordered.find(
+      (component) => component.root === '.' || file.path.startsWith(`${component.root}/`),
+    );
+    if (owner) counts.set(owner.id, (counts.get(owner.id) ?? 0) + 1);
+  }
+  return {
+    components: declarations.map((component) => ({
+      ...component,
+      sourceFiles: counts.get(component.id) ?? 0,
+    })),
+    truncated: manifests.length > maximumComponents,
+  };
+}
+
+function componentOwner(
+  components: ProjectComponent[],
+  file: string,
+): ProjectComponent | undefined {
+  let owner: ProjectComponent | undefined;
+  for (const component of components)
+    if (
+      (component.root === '.' || file.startsWith(`${component.root}/`)) &&
+      (!owner || component.root.length > owner.root.length)
+    )
+      owner = component;
+  return owner;
+}
+
+function componentImportEdges(
+  imports: ProjectImport[],
+  components: ProjectComponent[],
+): { edges: ProjectComponentEdge[]; truncated: boolean } {
+  const grouped = new Map<
+    string,
+    { fromComponentId: string; toComponentId: string; importIds: string[]; imports: number }
+  >();
+  for (const item of imports) {
+    if (!item.componentId || !item.resolvedFile) continue;
+    const target = componentOwner(components, item.resolvedFile);
+    if (!target || target.id === item.componentId) continue;
+    const key = `${item.componentId}:${target.id}`;
+    const group = grouped.get(key) ?? {
+      fromComponentId: item.componentId,
+      toComponentId: target.id,
+      importIds: [],
+      imports: 0,
+    };
+    group.imports++;
+    if (group.importIds.length < maximumImportIdsPerComponentEdge) group.importIds.push(item.id);
+    grouped.set(key, group);
+  }
+  const values = [...grouped.values()].sort(
+    (left, right) =>
+      right.imports - left.imports ||
+      `${left.fromComponentId}:${left.toComponentId}`.localeCompare(
+        `${right.fromComponentId}:${right.toComponentId}`,
+      ),
+  );
+  return {
+    edges: values.slice(0, maximumComponentEdges).map((edge) => ({
+      id: stableId('component-edge', edge.fromComponentId, edge.toComponentId),
+      ...edge,
+      truncated: edge.imports > edge.importIds.length,
+    })),
+    truncated: values.length > maximumComponentEdges,
+  };
 }
 
 const supportedFrameworkMajors: Partial<Record<ProjectFramework['id'], readonly number[]>> = {
@@ -1058,7 +1171,30 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       ? (['javascript'] as const)
       : []),
   ];
-  const frameworks = frameworkFacts(snapshot, parsed);
+  const componentResult = componentDeclarations(
+    snapshot,
+    parsed.map((item) => item.source),
+  );
+  if (componentResult.truncated) {
+    truncated = true;
+    issues.push(`Component limit of ${maximumComponents} was reached.`);
+  }
+  const own = <T extends { file: string }>(items: T[]): T[] =>
+    items.map((item) => {
+      const component = componentOwner(componentResult.components, item.file);
+      return component ? { ...item, componentId: component.id } : item;
+    });
+  const ownedSymbols = own(symbols);
+  const ownedImports = own(imports);
+  const ownedCalls = own(resolveCallTargets(calls, symbols, imports));
+  const ownedFacts = own(facts);
+  const ownedEntrypoints = own(entrypoints.slice(0, maximumEntrypoints));
+  const frameworks = own(frameworkFacts(snapshot, parsed));
+  const componentEdgeResult = componentImportEdges(ownedImports, componentResult.components);
+  if (componentEdgeResult.truncated) {
+    truncated = true;
+    issues.push(`Component import edge limit of ${maximumComponentEdges} was reached.`);
+  }
   const status: ProjectProfile['status'] = !parsed.length
     ? 'unsupported'
     : truncated || issues.length
@@ -1069,11 +1205,13 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
     status,
     languages,
     frameworks,
-    entrypoints: entrypoints.slice(0, maximumEntrypoints),
-    symbols,
-    imports,
-    calls: resolveCallTargets(calls, symbols, imports),
-    facts,
+    components: componentResult.components,
+    componentEdges: componentEdgeResult.edges,
+    entrypoints: ownedEntrypoints,
+    symbols: ownedSymbols,
+    imports: ownedImports,
+    calls: ownedCalls,
+    facts: ownedFacts,
     saasSemantics: {
       schemaVersion: 1,
       sources: saasConfiguration.sources,
@@ -1085,7 +1223,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
         ? { verification: saasConfiguration.config.verification }
         : {}),
     },
-    dataMap: buildProjectDataMap(facts, saasConfiguration.config.context),
+    dataMap: buildProjectDataMap(ownedFacts, saasConfiguration.config.context),
     filesAnalyzed: parsed.length,
     nodesAnalyzed,
     issues: issues.slice(0, 200),
@@ -1100,9 +1238,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
-        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
+        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${componentResult.components.length} declared component(s), ${componentEdgeResult.edges.length} cross-component import edge(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.8.0',
+      version: '0.9.0',
     },
   };
 }

@@ -47,6 +47,7 @@ The full execution sequence and release gates are maintained in
 - Static accessibility, privacy, and reliability scanners add nine paired source rules for JSX semantics, sensitive URL/log/browser storage, request timeouts, and swallowed errors.
 - Bounded source-risk paths now connect eligible findings to proven entrypoint/call/sensitive-operation chains, and sanitized environment templates are compared with named source usage without retaining values.
 - Detected Next.js, React, and Express majors now publish supported, partial, or unverified static-rule coverage instead of silently applying a generic compatibility assumption.
+- Captured package manifests now define bounded monorepo components; source entities retain their owner and reports expose cross-component imports without treating a package boundary as a proven security boundary.
 
 ## Next — independent real-project ground truth
 

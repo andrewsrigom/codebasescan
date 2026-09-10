@@ -9,6 +9,8 @@ test('workspace presentation keeps project-map evidence without shipping the ful
     status: 'complete',
     languages: ['typescript'],
     frameworks: [],
+    components: [],
+    componentEdges: [],
     entrypoints: [
       {
         id: 'entrypoint',

@@ -135,6 +135,8 @@ export function toInvestigationBundle(report: AuditReport): object {
       ? {
           status: profile.status,
           frameworks: profile.frameworks,
+          components: profile.components ?? [],
+          componentEdges: profile.componentEdges ?? [],
           entrypoints: profile.entrypoints.slice(0, 500),
           securityFacts: profile.facts.slice(0, 1_000),
           callEdges: profile.calls.filter((edge) => edge.targetSymbolId).slice(0, 1_000),
@@ -212,6 +214,9 @@ function frameworkLabel(framework: ProjectFramework): string {
 
 export function toMarkdown(report: AuditReport): string {
   const m = escapeMarkdown;
+  const componentNames = new Map(
+    report.projectProfile?.components?.map((component) => [component.id, component.name]) ?? [],
+  );
   const dependencyRemediation = groupDependencyAdvisories(report.findings, report.dependencies);
   const dependencyAdvisories = dependencyRemediation.reduce(
     (total, group) => total + group.advisoryCount,
@@ -253,7 +258,38 @@ export function toMarkdown(report: AuditReport): string {
           '',
           `Status: ${m(report.projectProfile.status)}. ${report.projectProfile.filesAnalyzed} source files and ${report.projectProfile.nodesAnalyzed} AST nodes parsed as data.`,
           `Framework rule coverage: ${report.projectProfile.frameworks.map((item) => m(frameworkLabel(item))).join(', ') || 'none detected'}.`,
+          `Declared components: ${report.projectProfile.components?.length ?? 0}. Cross-component import edges: ${report.projectProfile.componentEdges?.length ?? 0}.`,
           `Entry points: ${report.projectProfile.entrypoints.length}. Symbols: ${report.projectProfile.symbols.length}. Call edges: ${report.projectProfile.calls.length}. Security facts: ${report.projectProfile.facts.length}.`,
+          ...((report.projectProfile.components?.length ?? 0) > 0
+            ? [
+                '',
+                'Declared package boundaries:',
+                ...report.projectProfile
+                  .components!.slice(0, 30)
+                  .map(
+                    (component) =>
+                      `- ${m(component.name)} (${m(component.root)}): ${component.sourceFiles} source file(s).`,
+                  ),
+                ...((report.projectProfile.components?.length ?? 0) > 30
+                  ? ['- Additional components remain in audit-report.json.']
+                  : []),
+              ]
+            : []),
+          ...((report.projectProfile.componentEdges?.length ?? 0) > 0
+            ? [
+                '',
+                'Cross-component imports:',
+                ...report.projectProfile
+                  .componentEdges!.slice(0, 20)
+                  .map(
+                    (edge) =>
+                      `- ${m(componentNames.get(edge.fromComponentId) ?? edge.fromComponentId)} → ${m(componentNames.get(edge.toComponentId) ?? edge.toComponentId)}: ${edge.imports} import(s).`,
+                  ),
+                ...((report.projectProfile.componentEdges?.length ?? 0) > 20
+                  ? ['- Additional edges remain in audit-report.json.']
+                  : []),
+              ]
+            : []),
           ...(report.projectProfile.issues.length
             ? [
                 '',
@@ -510,6 +546,9 @@ export function toHtml(
   } = {},
 ): string {
   const e = escapeHtml;
+  const componentNames = new Map(
+    report.projectProfile?.components?.map((component) => [component.id, component.name]) ?? [],
+  );
   const list = (title: string, items?: string[]) =>
     items?.length
       ? '<h3>' +
@@ -720,10 +759,48 @@ export function toHtml(
       report.projectProfile.calls.length +
       '</strong> call edges</span><span><strong>' +
       report.projectProfile.facts.length +
-      '</strong> security facts</span></div><p class="muted">Frameworks: ' +
+      '</strong> security facts</span><span><strong>' +
+      (report.projectProfile.components?.length ?? 0) +
+      '</strong> components</span><span><strong>' +
+      (report.projectProfile.componentEdges?.length ?? 0) +
+      '</strong> cross-component imports</span></div><p class="muted">Frameworks: ' +
       (report.projectProfile.frameworks.map((item) => e(frameworkLabel(item))).join(', ') ||
         'none detected') +
       '.</p>' +
+      ((report.projectProfile.components?.length ?? 0) > 0
+        ? '<h3>Declared package boundaries</h3><ul>' +
+          report.projectProfile
+            .components!.slice(0, 30)
+            .map(
+              (component) =>
+                '<li><strong>' +
+                e(component.name) +
+                '</strong> (' +
+                e(component.root) +
+                '): ' +
+                component.sourceFiles +
+                ' source file(s).</li>',
+            )
+            .join('') +
+          '</ul>'
+        : '') +
+      ((report.projectProfile.componentEdges?.length ?? 0) > 0
+        ? '<h3>Cross-component imports</h3><ul>' +
+          report.projectProfile
+            .componentEdges!.slice(0, 20)
+            .map(
+              (edge) =>
+                '<li>' +
+                e(componentNames.get(edge.fromComponentId) ?? edge.fromComponentId) +
+                ' &rarr; ' +
+                e(componentNames.get(edge.toComponentId) ?? edge.toComponentId) +
+                ': ' +
+                edge.imports +
+                ' import(s).</li>',
+            )
+            .join('') +
+          '</ul>'
+        : '') +
       (report.projectProfile.issues.length
         ? '<h3>Profile issues</h3><ul>' +
           report.projectProfile.issues.map((issue) => '<li>' + e(issue) + '</li>').join('') +

@@ -126,11 +126,17 @@ test('declarative TypeScript path aliases resolve without loading config code', 
 
 test('captured workspace package exports resolve without loading package code', () => {
   const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({
+      name: 'fixture-root',
+      private: true,
+      workspaces: ['apps/*', 'packages/*'],
+    }),
     'packages/security/package.json': JSON.stringify({
       name: '@fixture/security',
       exports: './src/index.ts',
     }),
     'packages/security/src/index.ts': `export async function requireUser() { return { id: '1' }; }`,
+    'apps/web/package.json': JSON.stringify({ name: '@fixture/web', private: true }),
     'apps/web/tsconfig.json': JSON.stringify({
       compilerOptions: { paths: { '@/*': ['./src/*'] } },
     }),
@@ -158,6 +164,18 @@ test('captured workspace package exports resolve without loading package code', 
   assert.ok(entrypoint);
   assert.ok(
     effectiveEntrypointFacts(profile, entrypoint).some((fact) => fact.kind === 'authentication'),
+  );
+  assert.deepEqual(
+    profile.components?.map((component) => component.name),
+    ['fixture-root', '@fixture/web', '@fixture/security'],
+  );
+  const web = profile.components?.find((component) => component.name === '@fixture/web');
+  const security = profile.components?.find((component) => component.name === '@fixture/security');
+  assert.equal(entrypoint.componentId, web?.id);
+  assert.ok(
+    profile.componentEdges?.some(
+      (edge) => edge.fromComponentId === web?.id && edge.toComponentId === security?.id,
+    ),
   );
 });
 

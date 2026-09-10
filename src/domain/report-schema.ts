@@ -313,6 +313,33 @@ const projectProfile = z.looseObject({
       }),
     )
     .max(100),
+  components: z
+    .array(
+      z.looseObject({
+        id: shortText,
+        name: shortText,
+        root: shortText,
+        manifest: shortText,
+        kind: z.enum(['root', 'package']),
+        private: z.boolean().optional(),
+        sourceFiles: z.number().int().nonnegative(),
+      }),
+    )
+    .max(200)
+    .optional(),
+  componentEdges: z
+    .array(
+      z.looseObject({
+        id: shortText,
+        fromComponentId: shortText,
+        toComponentId: shortText,
+        imports: z.number().int().positive(),
+        importIds: z.array(shortText).max(20),
+        truncated: z.boolean(),
+      }),
+    )
+    .max(1_000)
+    .optional(),
   entrypoints: z.array(z.looseObject({ id: shortText, file: shortText })).max(10_000),
   symbols: z.array(z.looseObject({ id: shortText, file: shortText })).max(20_000),
   imports: z.array(z.looseObject({ id: shortText, file: shortText })).max(20_000),

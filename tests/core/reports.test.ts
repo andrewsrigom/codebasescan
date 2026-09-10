@@ -25,6 +25,16 @@ test('HTML export escapes source and titles rather than executing them', () => {
   report.projectProfile = profileProject(
     snapshotOf('export function handler() { return Response.json({ ok: true }); }'),
   ).profile;
+  report.projectProfile.components = [
+    {
+      id: 'component-web',
+      name: '<unsafe-component>',
+      root: 'apps/<web>',
+      manifest: 'apps/web/package.json',
+      kind: 'package',
+      sourceFiles: 1,
+    },
+  ];
   report.projectProfile.dataMap!.declaredBoundaries.externalServices = ['<unsafe-service>'];
   report.reviewImport = {
     schemaVersion: 1,
@@ -53,6 +63,8 @@ test('HTML export escapes source and titles rather than executing them', () => {
   assert.ok(output.includes('Observed signals and declared context'));
   assert.ok(output.includes('&lt;unsafe-service&gt;'));
   assert.ok(!output.includes('<unsafe-service>'));
+  assert.ok(output.includes('&lt;unsafe-component&gt;'));
+  assert.ok(!output.includes('<unsafe-component>'));
   assert.ok(output.includes('Imported decisions'));
   assert.ok(output.includes('&lt;untrusted-audit&gt;'));
   assert.ok(!output.includes('<untrusted-audit>'));
@@ -208,11 +220,41 @@ test('Markdown includes scope and limitations', () => {
   };
   report.riskCorrelation = sampleRiskCorrelation(report.findings[0]!.id);
   report.environmentContract = sampleEnvironmentContract();
+  report.projectProfile.components = [
+    {
+      id: 'component-web',
+      name: '@fixture/web',
+      root: 'apps/web',
+      manifest: 'apps/web/package.json',
+      kind: 'package',
+      sourceFiles: 2,
+    },
+    {
+      id: 'component-auth',
+      name: '@fixture/auth',
+      root: 'packages/auth',
+      manifest: 'packages/auth/package.json',
+      kind: 'package',
+      sourceFiles: 1,
+    },
+  ];
+  report.projectProfile.componentEdges = [
+    {
+      id: 'component-edge',
+      fromComponentId: 'component-web',
+      toComponentId: 'component-auth',
+      imports: 3,
+      importIds: ['import-1'],
+      truncated: true,
+    },
+  ];
   const output = toMarkdown(report);
   assert.ok(output.includes('not a security certification'));
   assert.ok(output.includes('## Coverage'));
   assert.ok(output.includes('Capability summary'));
   assert.ok(output.includes('## Project structure'));
+  assert.ok(output.includes('Declared package boundaries:'));
+  assert.ok(output.includes('@fixture/web → @fixture/auth: 3 import'));
   assert.ok(output.includes('## Mechanical analysis'));
   assert.ok(output.includes('## Supply-chain integrity'));
   assert.ok(output.includes('## Code quality'));

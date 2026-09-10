@@ -11,6 +11,8 @@ export function presentProjectProfile(
     status: profile.status,
     languages: profile.languages,
     frameworks: profile.frameworks,
+    components: profile.components ?? [],
+    componentEdges: profile.componentEdges ?? [],
     entrypoints: profile.entrypoints.map((entrypoint) => {
       const facts = effectiveEntrypointFacts(profile, entrypoint);
       return {

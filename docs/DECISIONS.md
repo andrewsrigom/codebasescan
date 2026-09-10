@@ -38,6 +38,14 @@ Next.js, React, and Express majors. Ambiguous ranges and source-only detections 
 and frameworks without a declared version matrix never inherit a compatibility claim. Workflow v21
 prevents older checkpoints from being resumed as if they contained this metadata.
 
+## 2026-09-10 — declared package component ownership
+
+Every captured root or nested package manifest defines a bounded component. The profiler assigns
+source entities to the nearest manifest root and records resolved imports that cross components.
+This is package ownership evidence, not proof of process, network, tenant, or deployment isolation.
+Opaque component IDs remain stable for the same manifest/name pair, while reports resolve them to
+human-readable package names. Workflow v22 prevents incompatible checkpoint reuse.
+
 ## 2026-09-10 — agent plan contract v2
 
 The remediation plan is now also emitted as the primary `agent-plan.json`, with a generated JSON

@@ -311,6 +311,7 @@ export interface ProjectFramework {
   name: string;
   file: string;
   line: number;
+  componentId?: string;
   versionCoverage?: {
     requested?: string;
     detectedMajor?: number;
@@ -318,6 +319,23 @@ export interface ProjectFramework {
     supportedMajors?: number[];
     detail: string;
   };
+}
+export interface ProjectComponent {
+  id: string;
+  name: string;
+  root: string;
+  manifest: string;
+  kind: 'root' | 'package';
+  private?: boolean;
+  sourceFiles: number;
+}
+export interface ProjectComponentEdge {
+  id: string;
+  fromComponentId: string;
+  toComponentId: string;
+  imports: number;
+  importIds: string[];
+  truncated: boolean;
 }
 export interface ProjectEntrypoint {
   id: string;
@@ -330,6 +348,7 @@ export interface ProjectEntrypoint {
   methods: string[];
   dynamicParameters: string[];
   symbolIds: string[];
+  componentId?: string;
 }
 export interface ProjectSymbol {
   id: string;
@@ -339,6 +358,7 @@ export interface ProjectSymbol {
   name: string;
   kind: 'function' | 'arrow-function' | 'method';
   exported: boolean;
+  componentId?: string;
 }
 export interface ProjectImportBinding {
   imported: string;
@@ -351,6 +371,7 @@ export interface ProjectImport {
   specifier: string;
   bindings: ProjectImportBinding[];
   resolvedFile?: string;
+  componentId?: string;
 }
 export interface ProjectCallEdge {
   id: string;
@@ -359,6 +380,7 @@ export interface ProjectCallEdge {
   callee: string;
   callerSymbolId?: string;
   targetSymbolId?: string;
+  componentId?: string;
 }
 export interface ProjectFact {
   id: string;
@@ -367,6 +389,7 @@ export interface ProjectFact {
   line: number;
   signal: string;
   ownerSymbolId?: string;
+  componentId?: string;
 }
 export interface ProjectSaasSemantics {
   schemaVersion: 1;
@@ -453,6 +476,8 @@ export interface ProjectProfile {
   status: ProjectProfileStatus;
   languages: ('typescript' | 'javascript')[];
   frameworks: ProjectFramework[];
+  components?: ProjectComponent[];
+  componentEdges?: ProjectComponentEdge[];
   entrypoints: ProjectEntrypoint[];
   symbols: ProjectSymbol[];
   imports: ProjectImport[];
@@ -473,6 +498,8 @@ export interface ProjectProfilePresentation {
   status: ProjectProfileStatus;
   languages: ProjectProfile['languages'];
   frameworks: ProjectFramework[];
+  components: ProjectComponent[];
+  componentEdges: ProjectComponentEdge[];
   entrypoints: ProjectEntrypointPresentation[];
   symbolCount: number;
   callCount: number;

@@ -90,6 +90,8 @@ test('unconfirmed source candidates become analysis tasks rather than automatic 
     status: 'complete',
     languages: ['typescript'],
     frameworks: [],
+    components: [],
+    componentEdges: [],
     entrypoints: [],
     symbols: [],
     imports: [],
