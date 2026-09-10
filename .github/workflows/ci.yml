@@ -16,8 +16,8 @@ jobs:
       CODEBASESCAN_SEMGREP: 'false'
       CODEBASESCAN_GITLEAKS: 'false'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.16.0'
       - name: Install dependencies
@@ -34,7 +34,7 @@ jobs:
         run: |
           npm run cli -- audit fixtures/hardened-saas --format json --output codebasescan-ci-base.json
           npm run cli -- audit fixtures/hardened-saas --baseline codebasescan-ci-base.json --fail-on high --format sarif --output codebasescan-ci.sarif
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: codebasescan-audit
           path: |
