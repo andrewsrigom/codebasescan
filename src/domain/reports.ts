@@ -1,7 +1,7 @@
 import type { AuditReport } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
-import type { RemediationResult } from './remediation.ts';
+import type { RemediationPlan, RemediationResult } from './remediation.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -435,7 +435,11 @@ export function toMarkdown(report: AuditReport): string {
 }
 export function toHtml(
   report: AuditReport,
-  options: { artifactLinks?: boolean; remediationResult?: RemediationResult } = {},
+  options: {
+    artifactLinks?: boolean;
+    remediationPlan?: RemediationPlan;
+    remediationResult?: RemediationResult;
+  } = {},
 ): string {
   const e = escapeHtml;
   const list = (title: string, items?: string[]) =>
@@ -791,6 +795,45 @@ export function toHtml(
       options.remediationResult.summary.newFindings +
       '</strong><span>New findings</span></div></div><p class="muted">Test and build checks stay not run unless a trusted executor supplies them. A missing fingerprint is report evidence, not proof that the risk was eliminated.</p><p><a href="remediation-result.json">Open remediation result JSON</a></p></section>'
     : '';
+  const remediationPlan = options.remediationPlan
+    ? '<section class="report-section"><span class="kicker">REMEDIATION QUEUE</span><h2>Prioritized work items</h2><p>The JSON plan is the machine contract. These top tasks are a bounded human preview; every action still requires separate authorization and verification.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.tasks +
+      '</strong><span>Total tasks</span></div><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.ready +
+      '</strong><span>Ready for analysis</span></div><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.blocked +
+      '</strong><span>Blocked</span></div><div class="summary-card"><strong>' +
+      options.remediationPlan.summary.needsHuman +
+      '</strong><span>Needs human input</span></div></div><ol class="task-list">' +
+      options.remediationPlan.tasks
+        .slice(0, 50)
+        .map(
+          (task) =>
+            '<li><div><span class="severity ' +
+            e(task.severity) +
+            '">' +
+            e(task.severity) +
+            '</span><span class="status ' +
+            (task.status === 'ready' ? 'complete' : 'gap') +
+            '">' +
+            e(task.status.replaceAll('_', ' ')) +
+            '</span><code>' +
+            e(task.id) +
+            '</code></div><h3>' +
+            e(task.title) +
+            '</h3><p>' +
+            e(task.rationale) +
+            '</p><small>' +
+            e(task.instructions[0] ?? 'Review the linked evidence.') +
+            '</small></li>',
+        )
+        .join('') +
+      '</ol>' +
+      (options.remediationPlan.summary.tasks > 50
+        ? '<p class="muted">Only the first 50 tasks are rendered here. The JSON plan retains the full bounded queue.</p>'
+        : '') +
+      '</section>'
+    : '';
   const artifactLinks = options.artifactLinks
     ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="remediation-plan.json">Remediation plan JSON</a></li>' +
       (options.remediationResult
@@ -809,6 +852,7 @@ export function toHtml(
     '.coverage-list strong{display:block}.coverage-list p{margin:2px 0 0;color:var(--muted)}.facts{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.facts span{background:#f4f7f5;border:1px solid #e7ece9;border-radius:8px;padding:9px 11px;font-size:12px}.facts strong{font-size:16px}.muted{color:var(--muted)}.checklist-facts{margin-bottom:22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.control{border:1px solid #e7ece9;border-radius:9px;padding:17px}.control h3{font-size:15px;text-transform:none}.control p{font-size:13px;color:#42564c}.control .meta{margin-left:8px}' +
     '.dependency-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dependency-plan{border:1px solid #e7ece9;border-radius:9px;padding:17px}.dependency-plan h3{font:700 14px ui-monospace,monospace;overflow-wrap:anywhere}.dependency-plan .meta{margin-left:8px}.dependency-plan ul{padding-left:20px}.dependency-plan li+li{margin-top:12px}.dependency-plan p{color:var(--muted);font-size:13px;margin:4px 0}' +
     '.artifact-links{display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;padding-left:20px}.artifact-links a{font-weight:650}' +
+    '.task-list{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}.task-list li{border:1px solid #e7ece9;border-radius:9px;padding:16px}.task-list li>div{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.task-list code{margin-left:auto;color:var(--muted);font-size:10px}.task-list h3{font-size:15px;margin:10px 0 4px}.task-list p{margin:0;color:#42564c}.task-list small{display:block;color:var(--muted);margin-top:7px}' +
     '.findings-title{margin-top:42px}.finding>h2{margin-top:18px}.finding-section{border-top:1px solid #e8eeea;margin-top:20px;padding-top:4px}.evidence h3{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172b26;color:#edf5f0;padding:18px;border-radius:8px;font:12px/1.55 ui-monospace,monospace}.evidence p{color:var(--muted)}.remediation{border-left:3px solid var(--accent);padding-left:16px}.review{border-left:3px solid #739b7f;padding-left:16px}' +
     'footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}' +
     '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans,.artifact-links{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
@@ -852,6 +896,7 @@ export function toHtml(
     profile +
     mechanical +
     dependencyRemediation +
+    remediationPlan +
     remediationResult +
     artifactLinks +
     checklist +

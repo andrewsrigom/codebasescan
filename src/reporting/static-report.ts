@@ -67,7 +67,7 @@ export async function writeStaticReport(
     {
       path: 'index.html',
       mediaType: 'text/html; charset=utf-8',
-      content: toHtml(report, { artifactLinks: true, remediationResult }),
+      content: toHtml(report, { artifactLinks: true, remediationPlan: plan, remediationResult }),
     },
     {
       path: 'audit-report.json',

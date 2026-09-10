@@ -29,6 +29,8 @@ test('static report writes a self-contained versioned artifact directory', async
   const html = await readFile(path.join(result.directory, 'index.html'), 'utf8');
   assert.ok(html.includes("default-src 'none'"));
   assert.ok(html.includes('href="remediation-plan.json"'));
+  assert.ok(html.includes('REMEDIATION QUEUE'));
+  assert.ok(html.includes('Prioritized work items'));
   const plan = parseRemediationPlan(
     JSON.parse(await readFile(path.join(result.directory, 'remediation-plan.json'), 'utf8')),
   );
