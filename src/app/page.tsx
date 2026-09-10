@@ -2,6 +2,7 @@ import { store } from '../server/context.ts';
 import { AuditWorkspace } from '../components/audit-workspace.tsx';
 import { NewAudit } from '../components/new-audit.tsx';
 import { EmptyState } from '../components/ui.tsx';
+import { buildRemediationPlan } from '../domain/remediation.ts';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export default function HomePage() {
@@ -42,6 +43,7 @@ export default function HomePage() {
       initialEvents={database.events(latest.id)}
       initialWorkerOnline={database.workerOnline()}
       projects={projects}
+      initialRemediationPlan={latest.report ? buildRemediationPlan(latest.report) : null}
     />
   );
 }

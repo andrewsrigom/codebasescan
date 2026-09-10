@@ -18,9 +18,12 @@ import { FindingDetails } from './finding-details.tsx';
 import { MechanicalReportPanel } from './mechanical-report.tsx';
 import { DependencyAdvisoryReport } from './dependency-advisory-report.tsx';
 import { DependencyInventory } from './dependency-inventory.tsx';
+import type { RemediationPlan } from '../domain/remediation.ts';
+import { RemediationQueue } from './remediation-queue.tsx';
 const tabs = [
   'Overview',
   'Findings',
+  'Remediation',
   'Project map',
   'Source analysis',
   'Checklist',
@@ -38,6 +41,7 @@ export function AuditWorkspace({
   projects,
   comparison,
   baselineAuditId,
+  initialRemediationPlan,
 }: {
   initialAudit: Audit;
   initialEvents: AuditEvent[];
@@ -45,6 +49,7 @@ export function AuditWorkspace({
   projects: Pick<Project, 'id' | 'name'>[];
   comparison?: AuditComparison;
   baselineAuditId?: string;
+  initialRemediationPlan: RemediationPlan | null;
 }) {
   const [audit, setAudit] = useState(initialAudit);
   const [events, setEvents] = useState(initialEvents);
@@ -66,6 +71,7 @@ export function AuditWorkspace({
   const [controlDecisions, setControlDecisions] = useState<
     Record<string, SecurityControlReviewDecision>
   >({});
+  const [remediationPlan, setRemediationPlan] = useState(initialRemediationPlan);
   const report = audit.report;
   const findings = report?.findings ?? [];
   const active = ['queued', 'running'].includes(audit.status);
@@ -77,10 +83,12 @@ export function AuditWorkspace({
       audit: Audit;
       events: AuditEvent[];
       workerOnline: boolean;
+      remediationPlan: RemediationPlan | null;
     };
     setAudit(result.audit);
     setEvents(result.events);
     setWorkerOnline(result.workerOnline);
+    setRemediationPlan(result.remediationPlan);
   }, [initialAudit.id]);
   useEffect(() => {
     if (!active) return;
@@ -361,6 +369,9 @@ export function AuditWorkspace({
           >
             {label}
             {label === 'Findings' && <span className="tab-count">{findings.length}</span>}
+            {label === 'Remediation' && remediationPlan && (
+              <span className="tab-count">{remediationPlan.summary.tasks}</span>
+            )}
             {label === 'Investigations' && investigations.length > 0 && (
               <span className="tab-count">{investigations.length}</span>
             )}
@@ -624,6 +635,15 @@ export function AuditWorkspace({
             </EmptyState>
           )}
         </section>
+      )}
+      {tab === 'Remediation' && (
+        <RemediationQueue
+          plan={remediationPlan}
+          onSelectFinding={(findingId) => {
+            const finding = findings.find((candidate) => candidate.id === findingId);
+            if (finding) setSelected(finding);
+          }}
+        />
       )}
       {tab === 'Project map' && (
         <section
@@ -1275,6 +1295,7 @@ export function AuditWorkspace({
               <a href={`/api/audits/${audit.id}/export?format=sarif`}>SARIF</a>
               <a href={`/api/audits/${audit.id}/export?format=sbom`}>CycloneDX SBOM</a>
               <a href={`/api/audits/${audit.id}/export?format=bundle`}>Codex bundle</a>
+              <a href={`/api/audits/${audit.id}/export?format=plan`}>Plan JSON</a>
             </>
           )}
           {audit.status === 'completed' && report && baselineAuditId !== audit.id && (

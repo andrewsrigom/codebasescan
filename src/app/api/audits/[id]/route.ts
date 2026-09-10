@@ -8,6 +8,7 @@ import {
   text,
   uuid,
 } from '../../../../domain/validation.ts';
+import { buildRemediationPlan } from '../../../../domain/remediation.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 type Context = {
@@ -21,11 +22,13 @@ export async function GET(request: Request, context: Context) {
   try {
     const id = uuid((await context.params).id);
     const database = store();
+    const audit = database.audit(id);
     return Response.json(
       {
-        audit: database.audit(id),
+        audit,
         events: database.events(id),
         workerOnline: database.workerOnline(),
+        remediationPlan: audit.report ? buildRemediationPlan(audit.report) : null,
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );
