@@ -614,6 +614,148 @@ select {
   color: #a6b4aa;
   width: 13px;
 }
+.dependency-remediation {
+  padding: 21px;
+  border-bottom: 1px solid var(--line);
+}
+.dependency-stats {
+  margin-bottom: 21px;
+}
+.dependency-plan-list {
+  display: grid;
+  gap: 12px;
+}
+.dependency-group {
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.dependency-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 17px;
+  border-bottom: 1px solid #edf1ed;
+}
+.dependency-group-header h3 {
+  margin: 0;
+  font-size: 12px;
+  color: #365947;
+}
+.dependency-group-header p {
+  margin: 5px 0 0;
+  font-size: 9px;
+  color: var(--muted);
+}
+.dependency-group-badges,
+.dependency-version-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dependency-group-badges {
+  justify-content: flex-end;
+}
+.dependency-version-plans {
+  display: grid;
+  gap: 8px;
+  padding: 12px 17px;
+}
+.dependency-version-plan {
+  padding: 12px 13px;
+  border: 1px solid #e8eee9;
+  border-radius: 7px;
+  background: #fafcf9;
+}
+.dependency-version-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dependency-version-heading code {
+  color: #315d49;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.dependency-version-heading span {
+  color: var(--muted);
+  font-size: 9px;
+  text-align: right;
+}
+.dependency-version-plan p {
+  margin: 9px 0;
+  color: #4f6357;
+  font-size: 10px;
+  line-height: 1.65;
+}
+.dependency-advisory-details {
+  border-top: 1px solid #edf1ed;
+}
+.dependency-advisory-details summary {
+  padding: 12px 17px;
+  color: #44705a;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+}
+.dependency-advisory-list {
+  border-top: 1px solid #edf1ed;
+}
+.dependency-advisory-list button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 17px;
+  border: 0;
+  border-bottom: 1px solid #f0f3f1;
+  background: white;
+  color: #40564a;
+  text-align: left;
+}
+.dependency-advisory-list button:hover {
+  background: #fafcf9;
+}
+.dependency-advisory-list button:last-child {
+  border-bottom: 0;
+}
+.dependency-advisory-list strong,
+.dependency-advisory-list small {
+  display: block;
+}
+.dependency-advisory-list strong {
+  font-size: 10px;
+  font-weight: 550;
+}
+.dependency-advisory-list small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 8px;
+}
+.dependency-inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 18px 21px 12px;
+}
+.dependency-inventory-heading h3 {
+  margin: 0;
+  font-size: 11px;
+}
+.dependency-inventory-heading p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+.dependency-inventory-toggle {
+  flex: 0 0 auto;
+}
 .trust-panel > .panel-header {
   border: 0;
   padding-bottom: 0;
@@ -1204,6 +1346,26 @@ dialog::backdrop {
   }
   .finding-indicator {
     width: 29px;
+  }
+}
+@media (max-width: 720px) {
+  .dependency-remediation {
+    padding: 14px;
+  }
+  .dependency-group-header,
+  .dependency-version-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dependency-group-badges {
+    justify-content: flex-start;
+  }
+  .dependency-inventory-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dependency-version-heading span {
+    text-align: left;
   }
 }
 @media (max-width: 950px) {

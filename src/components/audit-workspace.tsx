@@ -16,6 +16,8 @@ import { Badge, EmptyState, SeverityBadge, StatusBadge, utcDate } from './ui.tsx
 import { NewAudit, mutate } from './new-audit.tsx';
 import { FindingDetails } from './finding-details.tsx';
 import { MechanicalReportPanel } from './mechanical-report.tsx';
+import { DependencyAdvisoryReport } from './dependency-advisory-report.tsx';
+import { DependencyInventory } from './dependency-inventory.tsx';
 const tabs = [
   'Overview',
   'Findings',
@@ -760,41 +762,19 @@ export function AuditWorkspace({
         >
           <div className="panel-header">
             <div>
-              <h2>Dependency inventory</h2>
-              <p>Resolved lockfile versions where available; declared ranges remain visible.</p>
+              <h2>Dependency remediation</h2>
+              <p>Advisories grouped by package with conservative lockfile upgrade candidates.</p>
             </div>
             <Badge tone={osvRun?.status === 'completed' ? 'success' : 'medium'}>
               OSV {osvRun?.status ?? 'not run'}
             </Badge>
           </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Package</th>
-                  <th>Requested version</th>
-                  <th>Resolved version</th>
-                  <th>Relationship</th>
-                  <th>Scope</th>
-                  <th>Source</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report?.dependencies.map((dependency) => (
-                  <tr
-                    key={`${dependency.manifest}:${dependency.scope}:${dependency.name}:${dependency.resolvedVersion ?? dependency.requestedVersion}`}
-                  >
-                    <td className="strong mono">{dependency.name}</td>
-                    <td className="mono">{dependency.requestedVersion}</td>
-                    <td className="mono">{dependency.resolvedVersion ?? 'Not resolved'}</td>
-                    <td>{dependency.relationship ?? 'unknown'}</td>
-                    <td>{dependency.scope}</td>
-                    <td className="mono small">{dependency.lockfile ?? dependency.manifest}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DependencyAdvisoryReport
+            findings={findings}
+            dependencies={report?.dependencies ?? []}
+            onSelect={setSelected}
+          />
+          <DependencyInventory dependencies={report?.dependencies ?? []} />
           <div className="panel-footer">
             A known vulnerable version does not prove that vulnerable code is reachable or
             exploitable. Check OSV status and advisory freshness in Coverage.
