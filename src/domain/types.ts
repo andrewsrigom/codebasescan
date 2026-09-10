@@ -719,6 +719,64 @@ export interface DatabaseContractAnalysis {
   truncated: boolean;
   limitations: string[];
 }
+export type WebhookEventDirection = 'produced' | 'consumed';
+export interface WebhookEventReference {
+  id: string;
+  file: string;
+  line: number;
+  event: string;
+  normalizedEvent: string;
+  direction: WebhookEventDirection;
+  origin: 'branch' | 'return-contract' | 'dispatch-call';
+  symbolId?: string;
+  componentId?: string;
+}
+export interface WebhookEndpointContract {
+  id: string;
+  entrypointId: string;
+  file: string;
+  line: number;
+  route?: string;
+  methods: string[];
+  componentId?: string;
+  reachableSymbolIds: string[];
+  callEdgeIds: string[];
+  verificationEvidenceIds: string[];
+  idempotencyEvidenceIds: string[];
+  eventReferenceIds: string[];
+  verification: 'evidenced' | 'unverified';
+  idempotency: 'evidenced' | 'unverified';
+  traversalTruncated: boolean;
+}
+export interface WebhookEventContract {
+  id: string;
+  event: string;
+  normalizedEvent: string;
+  producerReferenceIds: string[];
+  consumerReferenceIds: string[];
+  status: 'matched-local' | 'external-consumer-boundary' | 'external-producer-boundary';
+}
+export interface WebhookContractAnalysis {
+  schemaVersion: 1;
+  version: string;
+  status: ProjectProfileStatus;
+  endpoints: WebhookEndpointContract[];
+  eventReferences: WebhookEventReference[];
+  events: WebhookEventContract[];
+  summary: {
+    endpoints: number;
+    verifiedEndpoints: number;
+    idempotentEndpoints: number;
+    producedEvents: number;
+    consumedEvents: number;
+    matchedEvents: number;
+    externalConsumerBoundaries: number;
+    externalProducerBoundaries: number;
+  };
+  parseFailures: number;
+  truncated: boolean;
+  limitations: string[];
+}
 export interface ArchitectureHotspot {
   file: string;
   incoming: number;
@@ -888,7 +946,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
   auditId: string;
   projectName: string;
   createdAt: string;
@@ -908,6 +966,7 @@ export interface AuditReport {
   testEvidence?: TestEvidenceAnalysis;
   apiContract?: ApiContractAnalysis;
   databaseContract?: DatabaseContractAnalysis;
+  webhookContract?: WebhookContractAnalysis;
   mechanicalAnalysis?: MechanicalAnalysis;
   supplyChainAnalysis?: SupplyChainAnalysis;
   codeQualityAnalysis?: CodeQualityAnalysis;
