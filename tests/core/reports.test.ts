@@ -191,6 +191,49 @@ test('Markdown includes scope and limitations', () => {
   assert.ok(output.includes('NOT SUPPORTED'));
   assert.ok(output.includes('## Limitations'));
 });
+test('exports group dependency advisories into conservative remediation plans', () => {
+  const report = sampleReport();
+  const finding = report.findings[0]!;
+  finding.source = 'osv';
+  finding.ruleId = 'GHSA-example';
+  finding.title = 'Example dependency advisory';
+  finding.category = 'dependencies';
+  finding.vulnerability = {
+    id: 'GHSA-example',
+    aliases: [],
+    package: '@scope/runtime',
+    version: '1.2.3',
+    fixedVersions: ['1.2.5', '2.0.0'],
+    severity: [],
+    relationship: 'direct',
+    reachability: 'referenced',
+    lockfile: 'pnpm-lock.yaml',
+  };
+  report.dependencies = [
+    {
+      name: '@scope/runtime',
+      requestedVersion: '^1.2.0',
+      resolvedVersion: '1.2.3',
+      manifest: 'package.json',
+      lockfile: 'pnpm-lock.yaml',
+      relationship: 'direct',
+      scope: 'runtime',
+    },
+  ];
+
+  const markdown = toMarkdown(report);
+  const html = toHtml(report);
+  const bundle = toInvestigationBundle(report) as {
+    dependencyRemediation: { package: string; versionPlans: { fixCandidate: string }[] }[];
+  };
+  assert.ok(markdown.includes('## Dependency remediation'));
+  assert.ok(markdown.includes('candidate 1.2.5'));
+  assert.ok(markdown.includes('fixed-event coverage 1/1'));
+  assert.ok(html.includes('Dependency remediation'));
+  assert.ok(html.includes('@scope/runtime@1.2.3'));
+  assert.equal(bundle.dependencyRemediation[0]?.package, '@scope/runtime');
+  assert.equal(bundle.dependencyRemediation[0]?.versionPlans[0]?.fixCandidate, '1.2.5');
+});
 test('Markdown escapes raw HTML and link syntax from untrusted report text', () => {
   const report = sampleReport();
   report.projectName = '<script>alert(1)</script> [run](javascript:alert(1))';

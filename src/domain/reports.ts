@@ -1,5 +1,6 @@
 import type { AuditReport } from './types.ts';
 import { digest } from './findings.ts';
+import { groupDependencyAdvisories } from './dependency-advisories.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -85,6 +86,7 @@ export function toCycloneDx(report: AuditReport): object {
 
 export function toInvestigationBundle(report: AuditReport): object {
   const profile = report.projectProfile;
+  const dependencyRemediation = groupDependencyAdvisories(report.findings, report.dependencies);
   return {
     schemaVersion: 1,
     kind: 'traceward-investigation-bundle',
@@ -108,6 +110,23 @@ export function toInvestigationBundle(report: AuditReport): object {
     mechanicalAnalysis: report.mechanicalAnalysis ?? null,
     supplyChainAnalysis: report.supplyChainAnalysis ?? null,
     codeQualityAnalysis: report.codeQualityAnalysis ?? null,
+    dependencyRemediation: dependencyRemediation.map((group) => ({
+      package: group.package,
+      advisoryCount: group.advisoryCount,
+      pendingCount: group.pendingCount,
+      highestSeverity: group.highestSeverity,
+      relationship: group.relationship,
+      reachability: group.reachability,
+      versionPlans: group.versionPlans.map((plan) => ({
+        version: plan.version,
+        advisoryCount: plan.advisoryCount,
+        fixCandidate: plan.fixCandidate ?? null,
+        fixCoverage: plan.fixCoverage,
+        scopes: plan.scopes,
+        action: plan.action,
+        findingIds: plan.findings.map((finding) => finding.id),
+      })),
+    })),
     projectMap: profile
       ? {
           status: profile.status,
@@ -177,6 +196,11 @@ export function escapeMarkdown(value: string): string {
 }
 export function toMarkdown(report: AuditReport): string {
   const m = escapeMarkdown;
+  const dependencyRemediation = groupDependencyAdvisories(report.findings, report.dependencies);
+  const dependencyAdvisories = dependencyRemediation.reduce(
+    (total, group) => total + group.advisoryCount,
+    0,
+  );
   const lines = [
     '# Traceward security review',
     '',
@@ -259,6 +283,26 @@ export function toMarkdown(report: AuditReport): string {
           ...Object.entries(report.supplyChainAnalysis.issueCounts).map(
             ([kind, count]) => `- ${m(kind)}: ${count}`,
           ),
+        ]
+      : []),
+    ...(dependencyRemediation.length
+      ? [
+          '',
+          '## Dependency remediation',
+          '',
+          `${dependencyAdvisories} advisories grouped into ${dependencyRemediation.length} affected packages. Candidates below use only higher stable same-major fixed events reported by OSV; they are not compatibility guarantees.`,
+          '',
+          ...dependencyRemediation.flatMap((group) => [
+            `### ${m(group.highestSeverity.toUpperCase())}: ${m(group.package)}`,
+            '',
+            `${group.advisoryCount} ${group.advisoryCount === 1 ? 'advisory' : 'advisories'}; ${m(group.relationship)} dependency; source ${m(group.reachability.replaceAll('_', ' '))}.`,
+            '',
+            ...group.versionPlans.flatMap((plan) => [
+              `- Current ${m(`${group.package}@${plan.version}`)}: ${plan.fixCandidate ? `candidate ${m(plan.fixCandidate)}` : 'no same-major candidate'}; fixed-event coverage ${plan.fixCoverage}/${plan.advisoryCount}; scopes ${plan.scopes.map(m).join(', ') || 'unknown'}.`,
+              `  Action: ${m(plan.action)}`,
+            ]),
+            '',
+          ]),
         ]
       : []),
     ...(report.codeQualityAnalysis
@@ -404,6 +448,14 @@ export function toHtml(report: AuditReport): string {
   const capabilities = report.coverage ?? report.scanners;
   const coverageGaps = capabilities.filter(
     (capability) => capability.status !== 'COMPLETE' && capability.status !== 'completed',
+  );
+  const dependencyRemediationGroups = groupDependencyAdvisories(
+    report.findings,
+    report.dependencies,
+  );
+  const dependencyAdvisoryCount = dependencyRemediationGroups.reduce(
+    (total, group) => total + group.advisoryCount,
+    0,
   );
   const priorityLinks = report.findings
     .map((finding, index) => ({ finding, index }))
@@ -669,6 +721,52 @@ export function toHtml(report: AuditReport): string {
         .join('') +
       '</div></section>'
     : '';
+  const dependencyRemediation = dependencyRemediationGroups.length
+    ? '<section class="report-section"><span class="kicker">DEPENDENCY ACTION PLAN</span><h2>Dependency remediation</h2><p>' +
+      dependencyAdvisoryCount +
+      ' advisories grouped into ' +
+      dependencyRemediationGroups.length +
+      ' affected packages. Candidates use only higher stable same-major fixed events reported by OSV; they are not compatibility guarantees.</p><div class="dependency-plans">' +
+      dependencyRemediationGroups
+        .map(
+          (group) =>
+            '<article class="dependency-plan"><div><span class="severity ' +
+            e(group.highestSeverity) +
+            '">' +
+            e(group.highestSeverity) +
+            '</span><span class="meta">' +
+            e(group.relationship) +
+            ' · source ' +
+            e(group.reachability.replaceAll('_', ' ')) +
+            '</span></div><h3>' +
+            e(group.package) +
+            '</h3><p>' +
+            group.advisoryCount +
+            (group.advisoryCount === 1 ? ' advisory' : ' advisories') +
+            '</p><ul>' +
+            group.versionPlans
+              .map(
+                (plan) =>
+                  '<li><strong>' +
+                  e(`${group.package}@${plan.version}`) +
+                  '</strong> · ' +
+                  (plan.fixCandidate
+                    ? 'candidate ' + e(plan.fixCandidate)
+                    : 'no same-major candidate') +
+                  ' · fixed-event coverage ' +
+                  plan.fixCoverage +
+                  '/' +
+                  plan.advisoryCount +
+                  '<p>' +
+                  e(plan.action) +
+                  '</p></li>',
+              )
+              .join('') +
+            '</ul></article>',
+        )
+        .join('') +
+      '</div></section>'
+    : '';
   const css =
     ':root{color-scheme:light;--ink:#182824;--muted:#5a6e64;--line:#dce5e0;--paper:#fff;--canvas:#f3f6f4;--accent:#08745c;--amber:#9b641f;--red:#a94943}' +
     '*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--canvas);color:var(--ink);font:15px/1.65 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}' +
@@ -678,9 +776,10 @@ export function toHtml(report: AuditReport): string {
     '.report-section,.finding{background:var(--paper);border:1px solid var(--line);border-radius:12px;margin:20px 0;padding:26px}.section-head,.finding-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}.section-head h2{margin-top:5px}.finding-head a{font-size:11px;white-space:nowrap}.priority-list,.coverage-list{list-style:none;padding:0;margin:12px 0 0}.priority-list li+li,.coverage-list li+li{border-top:1px solid #edf1ef}.priority-list a,.coverage-list li{display:flex;align-items:flex-start;gap:12px;padding:13px 0;text-decoration:none}.priority-list a>span:last-child{font-weight:650}.priority-list small{display:block;color:var(--muted);font:11px ui-monospace,monospace;margin-top:3px;overflow-wrap:anywhere}' +
     '.severity,.status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.severity.critical,.severity.high{background:#f9e6e3;color:var(--red)}.severity.medium{background:#fbefd9;color:var(--amber)}.severity.low,.severity.info{background:#edf2ef;color:#4f655a}.status.complete{background:#e6f3eb;color:#28704f}.status.gap{background:#f6ecdd;color:#895d25}' +
     '.coverage-list strong{display:block}.coverage-list p{margin:2px 0 0;color:var(--muted)}.facts{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.facts span{background:#f4f7f5;border:1px solid #e7ece9;border-radius:8px;padding:9px 11px;font-size:12px}.facts strong{font-size:16px}.muted{color:var(--muted)}.checklist-facts{margin-bottom:22px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}.control{border:1px solid #e7ece9;border-radius:9px;padding:17px}.control h3{font-size:15px;text-transform:none}.control p{font-size:13px;color:#42564c}.control .meta{margin-left:8px}' +
+    '.dependency-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}.dependency-plan{border:1px solid #e7ece9;border-radius:9px;padding:17px}.dependency-plan h3{font:700 14px ui-monospace,monospace;overflow-wrap:anywhere}.dependency-plan .meta{margin-left:8px}.dependency-plan ul{padding-left:20px}.dependency-plan li+li{margin-top:12px}.dependency-plan p{color:var(--muted);font-size:13px;margin:4px 0}' +
     '.findings-title{margin-top:42px}.finding>h2{margin-top:18px}.finding-section{border-top:1px solid #e8eeea;margin-top:20px;padding-top:4px}.evidence h3{font:11px ui-monospace,monospace;overflow-wrap:anywhere}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172b26;color:#edf5f0;padding:18px;border-radius:8px;font:12px/1.55 ui-monospace,monospace}.evidence p{color:var(--muted)}.remediation{border-left:3px solid var(--accent);padding-left:16px}.review{border-left:3px solid #739b7f;padding-left:16px}' +
     'footer{margin-top:38px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}' +
-    '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
+    '@media(max-width:720px){main{padding:30px 16px 50px}.summary-grid{grid-template-columns:1fr 1fr}.controls,.dependency-plans{grid-template-columns:1fr}.report-section,.finding{padding:19px}.finding-head{display:block}.finding-head a{display:inline-block;margin-top:10px}}' +
     '@media print{body{background:white}main{max-width:none;padding:0}.report-section,.finding{break-inside:avoid;box-shadow:none}.finding-head a{display:none}.callout{border:1px solid #ddd}.priority-list a{color:var(--ink)}}';
   return (
     '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; base-uri \'none\'; form-action \'none\'"><title>Traceward · ' +
@@ -720,6 +819,7 @@ export function toHtml(report: AuditReport): string {
     '</ul></section>' +
     profile +
     mechanical +
+    dependencyRemediation +
     checklist +
     '<section class="findings-title"><span class="kicker">EVIDENCE AND ACTIONS</span><h2>Findings</h2><p class="muted">' +
     report.findings.length +
