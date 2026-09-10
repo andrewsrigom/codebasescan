@@ -46,3 +46,10 @@ names. The audit still executes neither configuration nor scripts. Declared cont
 provenance from an observed, source-derived data map. Both fields are optional additions to report
 schema v5, so stored earlier reports remain readable and are not rewritten. Workflow v11 prevents an
 in-progress older graph from resuming into the changed profiler behavior.
+
+## 2026-09-10 — bounded static audit modes
+
+Accessibility, privacy, and reliability start as small Traceward-owned AST scanners rather than new
+third-party engines. Their nine rules have declared vulnerable and benign benchmark cases and retain
+source-only limitations. They add optional findings to report schema v5 without rewriting existing
+reports. Workflow v12 prevents old in-progress checkpoints from resuming into the expanded fan-out.

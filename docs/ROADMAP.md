@@ -44,6 +44,7 @@ The full execution sequence and release gates are maintained in
 - The checklist now exposes mechanical SaaS controls for tenant scope, rate limiting, webhook replay, CSRF, billing trust, recovery-token lifecycle, and OAuth uncertainty without converting missing evidence into a confirmed vulnerability.
 - Next.js posture review now flags explicit wildcard Server Action origins and broad or insecure remote image declarations.
 - Captured workspace package exports and imported reexport bridges now participate in the bounded project graph without loading package code or build configuration.
+- Static accessibility, privacy, and reliability scanners add nine paired source rules for JSX semantics, sensitive URL/log/browser storage, request timeouts, and swallowed errors.
 
 ## Next — independent real-project ground truth
 

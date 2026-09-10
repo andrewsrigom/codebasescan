@@ -1,0 +1,6 @@
+{
+  "id": "false-positive-static-modes-safe",
+  "category": "false-positives",
+  "scanners": ["accessibility", "privacy", "reliability"],
+  "expectedRuleIds": []
+}

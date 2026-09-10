@@ -8,6 +8,9 @@ export type Category =
   | 'configuration'
   | 'ai-security'
   | 'dependencies'
+  | 'accessibility'
+  | 'privacy'
+  | 'reliability'
   | 'code';
 export type Disposition =
   'needs_review' | 'confirmed' | 'fixed' | 'false_positive' | 'accepted_risk';
@@ -106,6 +109,9 @@ export interface Finding {
     | 'saas'
     | 'next'
     | 'react'
+    | 'accessibility'
+    | 'privacy'
+    | 'reliability'
     | 'supply-chain'
     | 'http-probe'
     | 'osv'

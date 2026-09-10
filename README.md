@@ -155,6 +155,11 @@ and URL parameters, and OAuth redirect trust. The checklist separately exposes t
 rate limiting, webhook replay, CSRF, billing, recovery, and OAuth review. These are bounded source
 candidates and control gaps, not proof of exploitability or business-logic correctness.
 
+Offline static modes also inspect intrinsic JSX accessibility semantics, sensitive URL/log/browser
+storage use, request-bound outbound calls without local timeout evidence, and empty catch blocks.
+These findings are review candidates: runtime focus, contrast, assistive technology, data purpose,
+retention, platform timeouts, queues, and recovery behavior remain outside source-only proof.
+
 Every finding keeps detector confidence, probable exposure, a 0–100 review priority, and human disposition separate. Reviewers can mark findings confirmed, fixed, false positive, accepted risk, or still needing review. Project exceptions require a reason, may expire, never delete evidence, and can be removed. A completed audit can be selected as the project comparison baseline.
 
 ## Optional depth

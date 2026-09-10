@@ -1,0 +1,6 @@
+{
+  "id": "privacy-static-rules",
+  "category": "privacy",
+  "scanners": ["privacy"],
+  "expectedRuleIds": ["TW-PRIV001", "TW-PRIV002", "TW-PRIV003"]
+}

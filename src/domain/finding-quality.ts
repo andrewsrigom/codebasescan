@@ -5,7 +5,19 @@ import { severityRank } from './findings.ts';
 function confidence(finding: Finding): NonNullable<Finding['confidence']> {
   if (finding.confidence) return finding.confidence;
   if (finding.source === 'http-probe') return 'high';
-  if (['ast', 'next', 'react', 'osv', 'semgrep', 'gitleaks'].includes(finding.source))
+  if (
+    [
+      'ast',
+      'next',
+      'react',
+      'accessibility',
+      'privacy',
+      'reliability',
+      'osv',
+      'semgrep',
+      'gitleaks',
+    ].includes(finding.source)
+  )
     return 'medium';
   return 'low';
 }
@@ -22,7 +34,10 @@ function runtimeExposure(report?: HttpProbeReport): Finding['exposure'] {
 }
 
 function sourceExposure(finding: Finding, profile?: ProjectProfile): Finding['exposure'] {
-  if (finding.source === 'react' || ['TW-NEXT004', 'TW-NEXT007'].includes(finding.ruleId))
+  if (
+    ['react', 'accessibility'].includes(finding.source) ||
+    ['TW-NEXT004', 'TW-NEXT007'].includes(finding.ruleId)
+  )
     return 'potentially_public';
   if (!profile) return 'unknown';
   const evidenceFiles = new Set(finding.evidence.map((evidence) => evidence.file));

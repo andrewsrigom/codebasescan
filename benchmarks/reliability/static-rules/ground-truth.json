@@ -1,0 +1,6 @@
+{
+  "id": "reliability-static-rules",
+  "category": "reliability",
+  "scanners": ["reliability"],
+  "expectedRuleIds": ["TW-REL001", "TW-REL002"]
+}

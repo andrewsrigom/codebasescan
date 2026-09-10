@@ -32,6 +32,9 @@ import { scanSaasSecurity } from '../scanners/saas-security.ts';
 import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
 import { scanSupplyChain } from '../scanners/supply-chain.ts';
 import { scanCodeQuality } from '../scanners/quality.ts';
+import { scanAccessibilityStatic } from '../scanners/accessibility-static.ts';
+import { scanPrivacyStatic } from '../scanners/privacy-static.ts';
+import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
@@ -206,6 +209,31 @@ export function buildAuditGraph(options: {
         throw new Error('Project profile was not available to Next.js security analysis.');
       const result = scanNextSecurity(await checkedSnapshot(state), state.projectProfile);
       event(state, 'next_security', `${result.findings.length} Next.js security candidate(s).`);
+      return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('accessibility_static', async (state) => {
+      const result = scanAccessibilityStatic(await checkedSnapshot(state));
+      event(
+        state,
+        'accessibility_static',
+        `${result.findings.length} static accessibility candidate(s).`,
+      );
+      return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('privacy_static', async (state) => {
+      const result = scanPrivacyStatic(await checkedSnapshot(state));
+      event(state, 'privacy_static', `${result.findings.length} static privacy candidate(s).`);
+      return { findings: result.findings, scanners: [result.run] };
+    })
+    .addNode('reliability_static', async (state) => {
+      if (!state.projectProfile)
+        throw new Error('Project profile was not available to reliability analysis.');
+      const result = scanReliabilityStatic(await checkedSnapshot(state), state.projectProfile);
+      event(
+        state,
+        'reliability_static',
+        `${result.findings.length} static reliability candidate(s).`,
+      );
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('architecture', async (state) => {
@@ -531,6 +559,9 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'saas_security')
     .addEdge('project_profile', 'next_security')
     .addEdge('project_profile', 'react_security')
+    .addEdge('project_profile', 'accessibility_static')
+    .addEdge('project_profile', 'privacy_static')
+    .addEdge('project_profile', 'reliability_static')
     .addEdge('project_profile', 'architecture')
     .addEdge('project_profile', 'code_quality')
     .addEdge('snapshot', 'duplication')
@@ -547,6 +578,9 @@ export function buildAuditGraph(options: {
         'saas_security',
         'next_security',
         'react_security',
+        'accessibility_static',
+        'privacy_static',
+        'reliability_static',
         'architecture',
         'duplication',
         'supply_chain',

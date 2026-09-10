@@ -11,11 +11,27 @@ import { scanAstSecurity } from '../src/scanners/ast-security.ts';
 import { scanNextSecurity } from '../src/scanners/next-security.ts';
 import { scanReactSecurity } from '../src/scanners/react-security.ts';
 import { scanSaasSecurity } from '../src/scanners/saas-security.ts';
+import { scanAccessibilityStatic } from '../src/scanners/accessibility-static.ts';
+import { scanPrivacyStatic } from '../src/scanners/privacy-static.ts';
+import { scanReliabilityStatic } from '../src/scanners/reliability-static.ts';
 
 const truthSchema = z.object({
   id: z.string(),
   category: z.string(),
-  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'saas', 'next', 'react', 'osv'])),
+  scanners: z.array(
+    z.enum([
+      'builtin',
+      'posture',
+      'ast',
+      'saas',
+      'next',
+      'react',
+      'accessibility',
+      'privacy',
+      'reliability',
+      'osv',
+    ]),
+  ),
   expectedRuleIds: z.array(z.string()),
 });
 
@@ -79,6 +95,11 @@ try {
       ...(truth.scanners.includes('saas') ? scanSaasSecurity(source, profile).findings : []),
       ...(truth.scanners.includes('next') ? scanNextSecurity(source, profile).findings : []),
       ...(truth.scanners.includes('react') ? scanReactSecurity(source, profile).findings : []),
+      ...(truth.scanners.includes('accessibility') ? scanAccessibilityStatic(source).findings : []),
+      ...(truth.scanners.includes('privacy') ? scanPrivacyStatic(source).findings : []),
+      ...(truth.scanners.includes('reliability')
+        ? scanReliabilityStatic(source, profile).findings
+        : []),
     ];
     if (truth.scanners.includes('osv')) {
       const osv = await scanOsv(

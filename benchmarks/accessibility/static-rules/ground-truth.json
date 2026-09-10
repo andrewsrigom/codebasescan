@@ -1,0 +1,6 @@
+{
+  "id": "accessibility-static-rules",
+  "category": "accessibility",
+  "scanners": ["accessibility"],
+  "expectedRuleIds": ["TW-A11Y001", "TW-A11Y002", "TW-A11Y003", "TW-A11Y004"]
+}

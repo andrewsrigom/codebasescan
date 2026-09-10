@@ -57,7 +57,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   }
   assert.ok(interruptedCheckpointId);
   assert.equal(store.audit(audit.id).report?.findings.length, 9);
-  assert.equal(store.audit(audit.id).report?.scanners.length, 16);
+  assert.equal(store.audit(audit.id).report?.scanners.length, 19);
   assert.ok(
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'react-security'),
   );
@@ -67,6 +67,8 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
   assert.ok(
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'saas-security'),
   );
+  for (const scanner of ['accessibility-static', 'privacy-static', 'reliability-static'])
+    assert.ok(store.audit(audit.id).report?.scanners.some((run) => run.id === scanner));
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
   assert.equal(store.audit(audit.id).report?.schemaVersion, 5);
   assert.ok(store.audit(audit.id).report?.mechanicalAnalysis?.architecture);

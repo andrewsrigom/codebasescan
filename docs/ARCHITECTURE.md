@@ -44,6 +44,9 @@ START -> snapshot
               +-> SaaS security+
               +-> Next security+
               +-> React security+
+              +-> accessibility+
+              +-> privacy ------+
+              +-> reliability --+
               +-> dependencies -+
               +-> duplication --+
               +-> supply chain -+
@@ -62,7 +65,7 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The sixteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The nineteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
 The nested review graph remains:
 
