@@ -30,7 +30,7 @@ test('native semantics and complete labels avoid accessibility candidates', () =
         return <html lang="en"><body>{children}</body></html>;
       }`,
       'src/form.tsx': `export function Form() {
-        return <><img src="/shape.png" alt="" /><button onClick={() => save()}>Save</button><label htmlFor="email">Email</label><input id="email" /></>;
+        return <><img src="/shape.png" alt="" /><button onClick={() => save()}>Save</button><label htmlFor="email">Email</label><input id="email" /><input type="file" className="hidden" /><select hidden /></>;
       }`,
     }),
   );

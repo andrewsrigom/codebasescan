@@ -41,6 +41,14 @@ function hasSpreadAttributes(node: ts.JsxOpeningLikeElement): boolean {
   return node.attributes.properties.some(ts.isJsxSpreadAttribute);
 }
 
+function isStaticallyHiddenControl(
+  node: ts.JsxOpeningLikeElement,
+  type: string | undefined,
+): boolean {
+  if (type === 'hidden' || attribute(node, 'hidden')) return true;
+  return literalAttribute(node, 'classname')?.trim() === 'hidden';
+}
+
 function finding(
   file: SourceFile,
   source: ts.SourceFile,
@@ -159,7 +167,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
         const type = literalAttribute(opening, 'type')?.toLowerCase();
         const id = attributeReference(opening, 'id');
         const named =
-          type === 'hidden' ||
+          isStaticallyHiddenControl(opening, type) ||
           Boolean(attribute(opening, 'aria-label')) ||
           Boolean(attribute(opening, 'aria-labelledby')) ||
           Boolean(id && labels.has(id)) ||
@@ -212,7 +220,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
       detail: files.length
         ? `Inspected ${files.length} JSX file(s) for four bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior were not tested.`
         : 'No runtime JSX source was available for static accessibility review.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }
