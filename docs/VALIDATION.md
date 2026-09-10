@@ -1,6 +1,6 @@
 # Validation
 
-Last full local gate: **2026-09-09 BRT**.
+Last full local gate: **2026-09-10 BRT**.
 
 Environment:
 
@@ -19,36 +19,42 @@ Environment:
 | npm run format:check          | Passed                                                                 |
 | npm run typecheck             | Passed                                                                 |
 | npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 224 passed                                                             |
+| npm test                      | 248 passed                                                             |
 | npm run test:graph            | 11 passed, including real scanners and worker recovery                 |
-| npm run benchmark             | TP 36, FP 1, FN 0; precision 0.9730, recall 1.00                       |
+| npm run benchmark             | TP 45, FP 1, FN 0; precision 0.9783, recall 1.00                       |
 | AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
 | Next.js benchmark subset      | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
+| SaaS benchmark subset         | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
 | npm run build                 | Passed                                                                 |
 | npm run test:e2e              | 7 passed in Chromium                                                   |
-| npm run test:package          | 56 files; 147,977 packed bytes; required CLI/rules present             |
+| npm run test:package          | 57 files; 160,862 packed bytes; required CLI/rules present             |
 | npm audit --audit-level=low   | 0 known vulnerabilities                                                |
 | npm run cli -- doctor         | 9 checks passed                                                        |
 | Browser workspace             | Dependency plans rendered real data with no overlay or console error   |
 | Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
 | Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
 | Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,196 files, 1,094 dependencies, 112 candidates, 52 remediation tasks  |
+| Latest `seusaas` offline run  | 1,196 files, 1,094 dependencies, 124 candidates, 70 remediation tasks  |
+| `robs-web` portability run    | 1,070 files, 6 candidates, 0 dedicated SaaS-rule candidates            |
 
-The latest full offline `seusaas-platform` run included Semgrep, Gitleaks, OSV,
+The latest full offline `seusaas-platform` run (`640cc6fb-771c-49e9-9072-c87fc53ad94e`) included Semgrep, Gitleaks, OSV,
 dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
-the project profile, and the built-in AST/Next.js/React rules. It captured 1,196 files and
+the project profile, and the built-in AST/Next.js/React/SaaS rules. It captured 1,196 files and
 mapped 739 runtime modules, 295 local dependencies, one cycle, 50 orphan candidates, and 188
 coupling hotspots (100 detail rows retained). It measured 6,064 functions and found 259 quality
 hotspots (200 retained), 54 duplicate blocks (2.7026%), 55 unused-file candidates, 6
 source-unreferenced runtime dependencies, 149 unused exports, 78 unused types, and 21 unlisted
-dependency candidates. The profile completed with 3,424 imports. Semgrep produced no finding and
+dependency candidates. The profile completed with 124 entry points, 5,707 symbols, 21,692 call
+edges, 1,653 security facts, and 11 captured workspace package entry points. Semgrep produced no finding and
 reported one explicit partial parse at
 `apps/analytics/src/features/reports/reports-preview.tsx:87`; all other omitted detail is reported
-with exact totals. The checklist retained 8 evidenced controls, 7 gap candidates, 7 unverified
-controls, and one partial control. The 112 security candidates were 4 critical, 63 high, 37 medium,
-and 8 low: 101 exact-version OSV advisories across 26 affected packages plus 11 source candidates.
+with exact totals. The checklist retained 8 evidenced controls, 11 gap candidates, 7 unverified
+controls, 3 partial controls, and 3 not-applicable controls. The 124 security candidates were 4
+critical, 63 high, 49 medium, and 8 low: 101 exact-version OSV advisories plus 23 source candidates.
+The dedicated SaaS scanner contributed 12 `TW-SAAS004` internal-error response candidates; it did
+not treat them as confirmed runtime leaks. Indirect workspace-package billing evidence remains
+explicitly partial rather than being promoted to proof.
 The corrected pnpm inventory retained 1,094 distinct dependencies, including full scoped-package
 names. It mapped bounded parent paths for 1,085 dependencies and every one of the 26 dependency
 remediation tasks. Remediation plans were verified in the workspace, static HTML, Markdown, and
@@ -56,6 +62,12 @@ focused Codex task bundles. The terminal flow also passed static-directory gener
 before/after output, packed-content validation, and a real 17 KiB focused task export. Calibration against this run
 removed 45 reproducible false positives without weakening the declared benchmark. No target code,
 configuration module, test, or package lifecycle script ran.
+
+The structurally different `robs-web` portability run captured 1,070 files and completed its
+project profile. It produced 6 total candidates and no dedicated SaaS-rule candidate. Different
+SaaS controls were applicable there, which confirms that the checklist is driven by detected
+structure instead of copying the `seusaas` result. These two runs are calibration evidence, not
+owner-confirmed security ground truth.
 
 The benchmark measures declared inert fixtures. It is not a generic accuracy claim. The public-project pass has manual triage but not owner-confirmed ground truth; see [Real-project evaluation](REAL_PROJECT_EVALUATION.md).
 

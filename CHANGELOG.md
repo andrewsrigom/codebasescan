@@ -42,3 +42,4 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Added safe declarative SaaS vocabulary/wrapper configuration and a dedicated LangGraph scanner node with nine focused source rules.
 - Added SaaS checklist controls for tenant scope, abuse rate limiting, webhook replay, CSRF, billing, recovery, and OAuth uncertainty.
 - Added explicit Next.js posture candidates for wildcard Server Action origins and broad/insecure remote image policy.
+- Added bounded resolution for captured workspace package exports and imported reexport bridges in the project graph.

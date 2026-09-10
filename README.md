@@ -95,7 +95,7 @@ npm run cli -- export <audit-id> html
 
 Traceward captures a bounded snapshot. It never installs dependencies, runs lifecycle scripts, starts the target app, or exploits it.
 
-Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned Traceward-owned tools. Knip receives script-free sanitized manifests and a generated configuration with every target plugin disabled. Traceward safely imports bounded JSON/JSONC Knip settings, workspace declarations, package-script entry hints, and TypeScript path aliases as data. Executable target configuration and lifecycle scripts are never loaded or run. Mechanical results are review evidence, not vulnerabilities.
+Supply-chain, dependency structure, duplication, quality, and dead-code analysis run offline by default with pinned Traceward-owned tools. Knip receives script-free sanitized manifests and a generated configuration with every target plugin disabled. Traceward safely imports bounded JSON/JSONC Knip settings, workspace declarations, package-script entry hints, TypeScript path aliases, and contained workspace package exports as data. The project graph follows imported reexport bridges for at most five steps. Executable target configuration and lifecycle scripts are never loaded or run. Mechanical results are review evidence, not vulnerabilities.
 
 Projects may declare their own SaaS vocabulary and wrapper names in a root
 `traceward.config.json` (or JSONC) file:

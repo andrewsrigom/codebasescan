@@ -40,6 +40,7 @@
 - A dedicated SaaS graph node now reviews client-controlled billing, ownership/privilege assignment, token entropy/storage/expiry, internal error responses, sensitive logs/URLs, and OAuth redirect trust with paired vulnerable and benign benchmarks.
 - The checklist now exposes mechanical SaaS controls for tenant scope, rate limiting, webhook replay, CSRF, billing trust, recovery-token lifecycle, and OAuth uncertainty without converting missing evidence into a confirmed vulnerability.
 - Next.js posture review now flags explicit wildcard Server Action origins and broad or insecure remote image declarations.
+- Captured workspace package exports and imported reexport bridges now participate in the bounded project graph without loading package code or build configuration.
 
 ## Next — independent real-project ground truth
 
@@ -47,7 +48,7 @@ Repeat evaluation on owner-authorized applications with production context and i
 
 Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
-Calibrate the generic SaaS pack on structurally different owner-authorized applications. Add new provider/ORM adapters only after recording missed source shapes or reproducible false positives; do not encode one reference project's names or directory layout into rules.
+Continue calibrating the generic SaaS pack on structurally different owner-authorized applications. The initial `seusaas-platform` and `robs-web` runs establish pressure and portability checks, not owner-confirmed ground truth. Add new provider/ORM adapters only after recording missed source shapes or reproducible false positives; do not encode one reference project's names or directory layout into rules.
 
 Extend npm/Yarn parent-path fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 

@@ -16,6 +16,7 @@ normalization. The security checklist pack is `0.5.0`. The generic SaaS layer co
 - a dedicated `saas-security` scanner with nine source rules;
 - tenant, rate-limit, webhook-idempotency, CSRF, billing, recovery, and OAuth controls;
 - paired vulnerable and benign unit/benchmark cases.
+- bounded workspace package-export and imported-reexport resolution.
 
 No production scanner or configuration default contains reference-project names or paths.
 
@@ -31,7 +32,8 @@ No production scanner or configuration default contains reference-project names 
 ## Next evidence needed
 
 The generic SaaS pack still needs independent owner-confirmed real-project ground truth. The
-`seusaas` repository is a pressure/false-positive reference only. A different SaaS should be used
-to validate portability before adding more provider, ORM, job, WebSocket, upload, or framework
-shapes. Runtime business authorization, RLS, provider dashboard settings, token one-time use, and
-deployment controls remain outside source-only proof.
+`seusaas` repository is a pressure/false-positive reference only; `robs-web` is a structurally
+different portability check. Neither run is an independent security verdict. Add more provider,
+ORM, job, WebSocket, upload, or framework shapes only from reproducible missed evidence. Runtime
+business authorization, RLS, provider dashboard settings, token one-time use, and deployment
+controls remain outside source-only proof.
