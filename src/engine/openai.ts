@@ -259,8 +259,12 @@ export function createOpenAiReviewer(
           outputPerCall: config.aiMaxOutputTokensPerCall,
         });
         attemptsByFinding.set(finding.id, findingAttempts + 1);
-        const deadline = AbortSignal.timeout(config.aiTimeoutMs);
-        const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
+        const deadline = new AbortController();
+        const timeout = setTimeout(
+          () => deadline.abort(new Error('OpenAI request timed out.')),
+          config.aiTimeoutMs,
+        );
+        const requestSignal = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
         try {
           const response = await fetcher('https://api.openai.com/v1/responses', {
             method: 'POST',
@@ -336,6 +340,8 @@ export function createOpenAiReviewer(
         } catch (error) {
           lastError = error;
           if (requestSignal.aborted || retry >= config.aiMaxRetries) break;
+        } finally {
+          clearTimeout(timeout);
         }
       }
       throw lastError instanceof Error ? lastError : new Error('OpenAI analysis failed.');
