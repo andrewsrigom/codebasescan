@@ -10,11 +10,12 @@ import { profileProject } from '../src/scanners/project-profile.ts';
 import { scanAstSecurity } from '../src/scanners/ast-security.ts';
 import { scanNextSecurity } from '../src/scanners/next-security.ts';
 import { scanReactSecurity } from '../src/scanners/react-security.ts';
+import { scanSaasSecurity } from '../src/scanners/saas-security.ts';
 
 const truthSchema = z.object({
   id: z.string(),
   category: z.string(),
-  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'next', 'react', 'osv'])),
+  scanners: z.array(z.enum(['builtin', 'posture', 'ast', 'saas', 'next', 'react', 'osv'])),
   expectedRuleIds: z.array(z.string()),
 });
 
@@ -63,6 +64,9 @@ let nextFalseNegatives = 0;
 let reactTruePositives = 0;
 let reactFalsePositives = 0;
 let reactFalseNegatives = 0;
+let saasTruePositives = 0;
+let saasFalsePositives = 0;
+let saasFalseNegatives = 0;
 try {
   for (const truthFile of await truthFiles(path.resolve('benchmarks'))) {
     const truth = truthSchema.parse(JSON.parse(await readFile(truthFile, 'utf8')) as unknown);
@@ -72,6 +76,7 @@ try {
       ...(truth.scanners.includes('builtin') ? scanPatterns(source) : []),
       ...(truth.scanners.includes('posture') ? scanPosture(source) : []),
       ...(truth.scanners.includes('ast') ? scanAstSecurity(source, profile).findings : []),
+      ...(truth.scanners.includes('saas') ? scanSaasSecurity(source, profile).findings : []),
       ...(truth.scanners.includes('next') ? scanNextSecurity(source, profile).findings : []),
       ...(truth.scanners.includes('react') ? scanReactSecurity(source, profile).findings : []),
     ];
@@ -109,6 +114,11 @@ try {
       reactFalsePositives += falsePositive;
       reactFalseNegatives += falseNegative;
     }
+    if (truth.scanners.length === 1 && truth.scanners[0] === 'saas') {
+      saasTruePositives += truePositive;
+      saasFalsePositives += falsePositive;
+      saasFalseNegatives += falseNegative;
+    }
     console.log(
       JSON.stringify({
         id: truth.id,
@@ -133,6 +143,8 @@ const nextPrecision = nextTruePositives / Math.max(1, nextTruePositives + nextFa
 const nextRecall = nextTruePositives / Math.max(1, nextTruePositives + nextFalseNegatives);
 const reactPrecision = reactTruePositives / Math.max(1, reactTruePositives + reactFalsePositives);
 const reactRecall = reactTruePositives / Math.max(1, reactTruePositives + reactFalseNegatives);
+const saasPrecision = saasTruePositives / Math.max(1, saasTruePositives + saasFalsePositives);
+const saasRecall = saasTruePositives / Math.max(1, saasTruePositives + saasFalseNegatives);
 console.log(
   JSON.stringify({
     summary: {
@@ -162,6 +174,13 @@ console.log(
         precision: Number(reactPrecision.toFixed(4)),
         recall: Number(reactRecall.toFixed(4)),
       },
+      saas: {
+        truePositives: saasTruePositives,
+        falsePositives: saasFalsePositives,
+        falseNegatives: saasFalseNegatives,
+        precision: Number(saasPrecision.toFixed(4)),
+        recall: Number(saasRecall.toFixed(4)),
+      },
     },
   }),
 );
@@ -176,6 +195,8 @@ process.exitCode =
   nextPrecision >= 0.9 &&
   nextRecall >= 0.85 &&
   reactPrecision >= 0.9 &&
-  reactRecall >= 0.85
+  reactRecall >= 0.85 &&
+  saasPrecision >= 0.9 &&
+  saasRecall >= 0.85
     ? 0
     : 1;

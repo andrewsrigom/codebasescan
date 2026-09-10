@@ -1,0 +1,6 @@
+{
+  "id": "saas-security-safe",
+  "category": "false-positive",
+  "scanners": ["saas"],
+  "expectedRuleIds": []
+}

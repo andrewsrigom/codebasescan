@@ -1,0 +1,6 @@
+{
+  "id": "saas-security-rules",
+  "category": "saas",
+  "scanners": ["saas"],
+  "expectedRuleIds": ["TW-SAAS001", "TW-SAAS002", "TW-SAAS003", "TW-SAAS004"]
+}
