@@ -385,18 +385,18 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
       const target = attributeText(jsxAttribute(attributes, 'target'));
       if (target === '_blank') {
         const rel = attributeText(jsxAttribute(attributes, 'rel')) ?? '';
-        if (!/\bnoopener\b/i.test(rel) || !/\bnoreferrer\b/i.test(rel))
+        if (!/\bnoreferrer\b/i.test(rel))
           add(
             reactFinding({
               file,
               source,
               node,
               ruleId: 'TW-REACT006',
-              title: 'New-tab link lacks explicit opener and referrer protection',
+              title: 'New-tab link lacks explicit referrer protection',
               category: 'configuration',
               severity: 'low',
               description:
-                'A target=_blank link does not explicitly declare both noopener and noreferrer. Browser defaults vary and referrer disclosure may remain.',
+                'A target=_blank link does not declare noreferrer. Referrer disclosure may remain; noreferrer also provides opener isolation in modern browsers.',
               remediation: 'Add rel="noopener noreferrer" to external new-tab links.',
               cwe: ['CWE-1022', 'CWE-200'],
               observation: `${tag} opens a new tab without complete rel protection.`,
@@ -595,7 +595,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.2.0',
+        version: '0.4.0',
       },
     };
 
@@ -617,7 +617,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }

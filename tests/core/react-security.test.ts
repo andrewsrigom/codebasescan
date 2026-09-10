@@ -109,6 +109,16 @@ test('safe React boundaries avoid client security candidates', () => {
   assert.deepEqual(result.findings, []);
 });
 
+test('noreferrer alone protects a new-tab link', () => {
+  const result = scan(`
+    'use client';
+    export function ExternalLink() {
+      return <a href="https://example.test" rel="noreferrer" target="_blank">Open</a>;
+    }
+  `);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT006'));
+});
+
 test('ordinary component props, route builders, images, and array pushes are not navigation taint', () => {
   const result = scan(`
     'use client';
