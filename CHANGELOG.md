@@ -36,3 +36,6 @@ Notable changes are recorded here. Traceward has not published a stable release 
 - Reduced real-project React/Next/AST/Semgrep noise by respecting nested Client Components, descriptive security wrappers, scoped service helpers, explicit public submission routes, standards-compliant `noreferrer` links, and actual logger call shapes.
 - Grouped OSV findings into package/version remediation plans with conservative same-major fixed-event coverage in the workspace, Markdown, HTML, and Codex bundle exports.
 - Corrected modern pnpm scoped-package parsing so packages such as `@aws-crypto/crc32` retain their full identity and advisory coverage.
+- Added an installable compiled `traceward` command whose default audit output is a self-contained static report directory.
+- Added versioned remediation plans, a human task queue, baseline before/after results, and focused per-task bundles for bounded Codex handoff.
+- Added bounded pnpm importer/snapshot parent paths to dependency inventory, remediation plans, HTML, Markdown, and the local workspace.

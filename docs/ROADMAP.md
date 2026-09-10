@@ -33,6 +33,9 @@
 - Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
 - The 1,196-file `seusaas-platform` pressure test now calibrates nested React client boundaries, descriptive auth/validation wrappers, scoped service helpers, public submission routes, new-tab protection, and structured-log matching; 45 reproducible false positives were removed while benchmark recall stayed unchanged.
 - Dependency findings now collapse into actionable package/version plans with conservative OSV fix coverage, lazy full-inventory rendering, and matching Markdown, HTML, and Codex bundle exports. Modern pnpm scoped packages retain their complete names.
+- The installable terminal command now generates self-contained static report directories with human HTML, audit JSON, prioritized remediation tasks, bounded Codex evidence, SARIF, CycloneDX, and artifact hashes by default.
+- Baseline runs now emit deterministic before/after remediation results, and focused task bundles let an authorized agent consume one work item without sending the complete report.
+- pnpm dependency inventory now retains bounded lockfile parent paths, so direct owners are visible for transitive remediation without loading project configuration.
 
 ## Next — independent real-project ground truth
 
@@ -40,7 +43,7 @@ Repeat evaluation on owner-authorized applications with production context and i
 
 Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
 
-Extend lockfile fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Add parent-chain explanations for transitive upgrade plans. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
+Extend npm/Yarn parent-path fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
 
 ## Next — operational hardening
 

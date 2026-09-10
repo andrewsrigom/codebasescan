@@ -48,6 +48,44 @@ npm run worker
 
 Only inspect code you own or are authorized to assess.
 
+The terminal-first flow produces a self-contained directory like a test coverage report:
+
+```bash
+traceward doctor
+cd /absolute/path/to/project
+traceward audit .
+```
+
+Open the printed `traceward-report/<audit-id>/index.html`. The directory also contains the full
+audit JSON, a prioritized remediation plan, a bounded Codex bundle, Markdown, SARIF, CycloneDX,
+and a hash manifest. It does not need the Traceward server to be viewed.
+
+Traceward is not published to npm yet. To test the installable package from this checkout:
+
+```bash
+npm ci
+npm pack
+npm install --global ./traceward-0.2.0.tgz
+```
+
+After changes, compare a fresh audit with the previous report:
+
+```bash
+traceward audit . --baseline traceward-report/<previous-audit-id>/audit-report.json
+```
+
+The new directory then includes `remediation-result.json` and an HTML before/after summary. To
+give Codex or another agent only one focused task and its captured evidence:
+
+```bash
+traceward task traceward-report/<audit-id> <task-id> --output traceward-task.json
+```
+
+The generated task is analysis input, not permission to edit files, run project commands, access
+the network, suppress findings, or publish a report.
+
+For the persistent local review UI:
+
 ```bash
 npm run cli -- register /absolute/path/to/project
 npm run cli -- scan /absolute/path/to/project
@@ -109,7 +147,7 @@ Attach the generated bundle to an authorized Codex task. It contains bounded evi
 ## CI
 
 ```bash
-npm run cli -- audit . --ci --fail-on high --format sarif --output traceward.sarif
+traceward audit . --fail-on high --format sarif --output traceward.sarif
 ```
 
 Exit 0: gate passed. Exit 1: unresolved findings reached the threshold. Exit 2: audit failed operationally.
@@ -135,6 +173,7 @@ npm run test:graph
 npm run benchmark
 npm run build
 npm run test:e2e
+npm run test:package
 ```
 
 Start with [Contributing](CONTRIBUTING.md) and the [Code of conduct](CODE_OF_CONDUCT.md). Security boundaries are in [Security policy](SECURITY.md) and [Threat model](docs/THREAT_MODEL.md).
