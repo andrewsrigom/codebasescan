@@ -30,6 +30,12 @@ import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
 import { writeStaticReport } from '../reporting/static-report.ts';
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
+import {
+  applyReviewLedger,
+  type PortableReviewDecision,
+  upsertReviewLedger,
+} from '../domain/review-ledger.ts';
+import { parseReviewLedger } from '../domain/review-ledger-schema.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -129,6 +135,46 @@ async function loadReportArtifact(location: string): Promise<AuditReport> {
   }
 }
 
+async function loadReviewLedger(file: string) {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 2 * 1024 * 1024)
+    throw new Error('Review ledger must be a regular JSON file no larger than 2 MB.');
+  try {
+    return parseReviewLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Review ledger is not valid Traceward JSON.');
+  }
+}
+
+async function existingReviewLedger(file: string) {
+  try {
+    return await loadReviewLedger(file);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    )
+      return undefined;
+    throw error;
+  }
+}
+
+function portableReviewDecision(value: string | undefined): PortableReviewDecision {
+  if (value === 'confirmed' || value === 'false_positive' || value === 'accepted_risk')
+    return value;
+  throw new Error('Use confirmed, false_positive, or accepted_risk for a portable review.');
+}
+
+async function defaultReviewLedgerDestination(location: string): Promise<string> {
+  const resolved = path.resolve(location);
+  const metadata = await stat(resolved);
+  return metadata.isDirectory()
+    ? path.join(resolved, 'review-ledger.json')
+    : path.join(path.dirname(resolved), 'review-ledger.json');
+}
+
 async function preflight(root: string, requireApproval: boolean) {
   const estimate = await estimateProjectScope(root);
   const truncationApproved = arguments_.includes('--allow-partial-snapshot');
@@ -175,6 +221,30 @@ try {
       await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
       console.log(`Saved ${resolved}`);
     } else console.log(output);
+  } else if (
+    command === 'review' &&
+    target &&
+    arguments_[2] &&
+    arguments_[3] &&
+    !arguments_[2].startsWith('--') &&
+    !arguments_[3].startsWith('--')
+  ) {
+    const report = await loadReportArtifact(target);
+    const destination = path.resolve(
+      option('--output') ?? (await defaultReviewLedgerDestination(target)),
+    );
+    const note = option('--note');
+    if (!note) throw new Error('Use --note with the evidence supporting this review decision.');
+    const current = await existingReviewLedger(destination);
+    const ledger = parseReviewLedger(
+      upsertReviewLedger(current, report, {
+        findingId: arguments_[2],
+        decision: portableReviewDecision(arguments_[3]),
+        note,
+      }),
+    );
+    await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
+    console.log(`Saved review ledger ${destination}`);
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'traceward-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -196,22 +266,26 @@ try {
       const completed = ciStore.audit(audit.id);
       if (completed.status !== 'completed' || !completed.report)
         throw new Error('Non-interactive audit did not produce a complete draft report.');
+      const reviewsPath = option('--reviews');
+      const report = reviewsPath
+        ? applyReviewLedger(completed.report, await loadReviewLedger(reviewsPath))
+        : completed.report;
       const threshold = option('--fail-on');
       if (threshold && !severities.includes(threshold as Severity))
         throw new Error('Use critical, high, medium, low, or info for --fail-on.');
       const baselinePath = option('--baseline');
       const baseline = baselinePath ? await loadBaseline(baselinePath) : null;
-      if (baseline && baseline.projectName !== completed.report.projectName)
+      if (baseline && baseline.projectName !== report.projectName)
         throw new Error('Baseline report belongs to a different project.');
-      const comparison = baseline ? compareReports(baseline, completed.report) : null;
+      const comparison = baseline ? compareReports(baseline, report) : null;
       const gate = comparison
         ? baselineCiGate(comparison, threshold as Severity | undefined)
-        : ciGate(completed.report, threshold as Severity | undefined);
+        : ciGate(report, threshold as Severity | undefined);
       const requestedFormat = option('--format');
       const destination = option('--output');
       if (!requestedFormat && !destination) {
         const staticReport = await writeStaticReport(
-          completed.report,
+          report,
           option('--report-dir') ?? path.resolve('traceward-report'),
           baseline ? { baseline } : {},
         );
@@ -219,7 +293,7 @@ try {
         console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
       } else {
         const format = requestedFormat ?? 'json';
-        const output = render(completed.report, format);
+        const output = render(report, format);
         if (destination) {
           const resolved = path.resolve(destination);
           await writeFile(resolved, output, { mode: 0o600, flag: 'wx' });
@@ -291,7 +365,7 @@ try {
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
       console.log(
-        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
+        'Traceward\n\n  npm run cli -- audit [project] [--report-dir traceward-report] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--fail-on high]\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
       );
     }
   }

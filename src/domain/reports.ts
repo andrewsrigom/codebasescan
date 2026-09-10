@@ -994,8 +994,25 @@ export function toHtml(
       list('Quality limitations', options.ruleQuality.limitations) +
       '<p><a href="rule-quality.json">Open the complete per-rule quality record</a></p></section>'
     : '';
+  const portableReview = report.reviewImport
+    ? '<section class="report-section"><span class="kicker">PORTABLE HUMAN REVIEW</span><h2>Imported decisions</h2><p>Decisions were applied only where the finding fingerprint and every cited source-file digest still matched. The ledger was explicitly supplied; reviewer authenticity was not verified.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      report.reviewImport.entries +
+      '</strong><span>Ledger entries</span></div><div class="summary-card"><strong>' +
+      report.reviewImport.applied +
+      '</strong><span>Applied</span></div><div class="summary-card"><strong>' +
+      report.reviewImport.stale +
+      '</strong><span>Stale evidence</span></div><div class="summary-card"><strong>' +
+      report.reviewImport.unmatched +
+      '</strong><span>Not present</span></div></div>' +
+      list('Source audits', report.reviewImport.sourceAuditIds) +
+      '<p class="muted">Ledger digest: <code>' +
+      e(report.reviewImport.ledgerDigest) +
+      '</code> · imported ' +
+      e(report.reviewImport.importedAt) +
+      '.</p></section>'
+    : '';
   const artifactLinks = options.artifactLinks
-    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li>' +
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li>' +
       (options.remediationResult
         ? '<li><a href="remediation-result.json">Remediation result JSON</a></li>'
         : '') +
@@ -1055,6 +1072,7 @@ export function toHtml(
     ' gaps</span></div><ul class="coverage-list">' +
     coverage +
     '</ul></section>' +
+    portableReview +
     rootCauseSummary +
     ruleQuality +
     profile +

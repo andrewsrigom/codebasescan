@@ -17,6 +17,7 @@ import {
 } from '../domain/remediation-schema.ts';
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-quality-schema.ts';
+import { reviewLedgerJsonSchema } from '../domain/review-ledger-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -110,6 +111,11 @@ export async function writeStaticReport(
       path: 'rule-quality.schema.json',
       mediaType: 'application/schema+json',
       content: json(ruleQualityJsonSchema()),
+    },
+    {
+      path: 'review-ledger.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(reviewLedgerJsonSchema()),
     },
     {
       path: 'codex-bundle.json',

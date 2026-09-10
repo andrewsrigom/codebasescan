@@ -100,9 +100,24 @@ the network, suppress findings, or publish a report.
 Repeated candidates from the same rule and primary file are grouped into one task while retaining
 every original finding and evidence reference.
 
+Portable human decisions stay in a separate explicit ledger:
+
+```bash
+traceward review traceward-report/<audit-id> <finding-id> false_positive \
+  --note "Inert secret-shaped fixture used only by the encryption test."
+traceward audit . --reviews traceward-report/<audit-id>/review-ledger.json
+```
+
+Only `confirmed`, `false_positive`, and `accepted_risk` are portable. A fresh audit must prove
+that a finding marked fixed disappeared. Imported decisions apply only when the project name,
+finding fingerprint, and every evidence source-file digest still match. Stale and unmatched entries
+remain visible in the report. The ledger is explicit user input, not trusted repository
+configuration.
+
 Use `traceward audit . --format agent-plan` when only the machine work queue is needed. Use
 `traceward audit . --format rule-quality` to inspect detector provenance, declared fixture status,
 observed dispositions, standards mappings, and limitations for the rules applied in that audit.
+Static report directories also include `review-ledger.schema.json`.
 
 For the persistent local review UI:
 

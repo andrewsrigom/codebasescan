@@ -25,6 +25,7 @@ test('static report writes a self-contained versioned artifact directory', async
       'agent-plan.schema.json',
       'rule-quality.json',
       'rule-quality.schema.json',
+      'review-ledger.schema.json',
       'codex-bundle.json',
       'report.md',
       'report.sarif',
@@ -36,6 +37,7 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="agent-plan.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
+  assert.ok(html.includes('href="review-ledger.schema.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
   assert.ok(html.includes('CAUSE-ORIENTED REVIEW'));

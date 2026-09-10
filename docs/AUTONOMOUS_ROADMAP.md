@@ -113,6 +113,11 @@ The audit stays read-only. A separate, authorized coding-agent flow consumes one
 6. rerun Traceward and generate a before/after result;
 7. record file, command, exit status, duration, and output digest provenance.
 
+Portable CLI review uses a separate, explicitly supplied ledger. It carries only confirmed,
+false-positive, or accepted-risk decisions whose project, finding fingerprint, and evidence
+source-file digests still match. A fixed decision is never carried forward; disappearance in a
+fresh audit is the evidence. Stale and unmatched ledger entries remain visible.
+
 Authentication policy, authorization policy, tenant model, database migrations, billing semantics,
 destructive operations, and public deployment require human authorization. A dirty worktree,
 command outside the allowlist, unexpected file expansion, failed focused test, or new critical
@@ -152,6 +157,7 @@ comparisons require explicit credential, spend, or download approval and measure
 - incremental/cache behavior keyed by snapshot and scanner versions;
 - abrupt-failure and resource-limit matrix for external scanners;
 - CLI reference, JSON Schemas, rule-pack changelog, and correction-flow guide;
+- reviewer identity/signature policy above the current unauthenticated portable ledger;
 - comprehensive UI and static-report accessibility pass;
 - name/trademark review, private vulnerability route, and support policy.
 
