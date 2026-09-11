@@ -11,7 +11,10 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
   await expect(page.getByLabel('Filter priority')).toBeVisible();
   await page.getByLabel('Search findings').fill('Raw SQL');
   await page.getByRole('button', { name: /raw SQL construction/i }).click();
-  await expect(page.getByRole('heading', { name: 'Evidence', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Where to look', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'How to verify manually', exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Contextual assessment', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Close finding' }).click();
   await page.getByRole('tab', { name: 'Project map', exact: true }).click();
