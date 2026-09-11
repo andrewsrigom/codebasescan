@@ -42,6 +42,8 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
+export const projectProfileScannerVersion = '0.10.1';
+
 interface ParsedFile {
   source: SourceFile;
   ast: ts.SourceFile;
@@ -1264,7 +1266,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       detail: parsed.length
         ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${ownedCalls.length} resolved call edge(s), ${facts.length} security-relevant fact(s), ${componentResult.components.length} declared component(s), ${componentEdgeResult.edges.length} cross-component import edge(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.10.1',
+      version: projectProfileScannerVersion,
     },
   };
 }

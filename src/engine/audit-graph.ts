@@ -35,7 +35,7 @@ import { scanPosture } from '../scanners/posture.ts';
 import { scanExternal } from '../scanners/external.ts';
 import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
-import { profileProject } from '../scanners/project-profile.ts';
+import { profileProject, projectProfileScannerVersion } from '../scanners/project-profile.ts';
 import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
 import { scanReactSecurity } from '../scanners/react-security.ts';
 import { scanNextSecurity } from '../scanners/next-security.ts';
@@ -181,6 +181,7 @@ export function buildAuditGraph(options: {
     directory: config.scannerCacheDirectory ?? path.join(config.dataDirectory, 'scanner-cache'),
     enabled: config.scannerCache ?? true,
   };
+  const projectProfileCacheVariant = `project-profile@${projectProfileScannerVersion}`;
   const cachedScan = <T>(
     source: Snapshot,
     scannerId: string,
@@ -266,7 +267,7 @@ export function buildAuditGraph(options: {
       const result = await cachedScan(
         source,
         'project-profile',
-        '0.10.1',
+        projectProfileScannerVersion,
         ['project-profile'],
         () => profileProject(source),
       );
@@ -282,8 +283,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to AST analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'ast-security', '0.5.0', ['ast-security'], () =>
-        scanAstSecurity(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'ast-security',
+        '0.5.0',
+        ['ast-security'],
+        () => scanAstSecurity(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -301,8 +307,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to SaaS security analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'saas-security', '0.4.0', ['saas-security'], () =>
-        scanSaasSecurity(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'saas-security',
+        '0.4.0',
+        ['saas-security'],
+        () => scanSaasSecurity(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(state, 'saas_security', `${result.findings.length} SaaS security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
@@ -316,8 +327,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to React security analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'react-security', '0.4.2', ['react-security'], () =>
-        scanReactSecurity(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'react-security',
+        '0.4.2',
+        ['react-security'],
+        () => scanReactSecurity(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(state, 'react_security', `${result.findings.length} React security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
@@ -331,8 +347,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to Next.js security analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'next-security', '0.4.2', ['next-security'], () =>
-        scanNextSecurity(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'next-security',
+        '0.4.2',
+        ['next-security'],
+        () => scanNextSecurity(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(state, 'next_security', `${result.findings.length} Next.js security candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
@@ -412,6 +433,7 @@ export function buildAuditGraph(options: {
         '0.2.0',
         ['reliability-static'],
         () => scanReliabilityStatic(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -463,8 +485,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to test evidence analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'test-evidence', '1.0.0', ['test-evidence'], () =>
-        scanTestEvidence(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'test-evidence',
+        '1.0.0',
+        ['test-evidence'],
+        () => scanTestEvidence(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -484,8 +511,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to API contract analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'api-contract', '1.0.0', ['api-contract'], () =>
-        scanApiContract(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'api-contract',
+        '1.0.0',
+        ['api-contract'],
+        () => scanApiContract(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -517,6 +549,7 @@ export function buildAuditGraph(options: {
         '1.0.0',
         ['database-contract'],
         () => scanDatabaseContract(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -548,6 +581,7 @@ export function buildAuditGraph(options: {
         '1.0.0',
         ['webhook-contract'],
         () => scanWebhookContract(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -573,8 +607,13 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to feature flag analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'feature-flags', '1.0.0', ['feature-flags'], () =>
-        scanFeatureFlags(source, state.projectProfile!),
+      const result = await cachedScan(
+        source,
+        'feature-flags',
+        '1.0.0',
+        ['feature-flags'],
+        () => scanFeatureFlags(source, state.projectProfile!),
+        projectProfileCacheVariant,
       );
       event(
         state,
@@ -610,6 +649,7 @@ export function buildAuditGraph(options: {
             config.temporaryDirectory,
             signal,
           ),
+        projectProfileCacheVariant,
       );
       event(state, 'architecture', `Dependency structure: ${result.run.status}.`);
       return {
@@ -677,6 +717,7 @@ export function buildAuditGraph(options: {
             config.temporaryDirectory,
             signal,
           ),
+        projectProfileCacheVariant,
       );
       event(state, 'code_quality', 'Static quality and dead-code analysis completed.');
       return { codeQualityAnalysis: result.analysis, scanners: result.runs };
