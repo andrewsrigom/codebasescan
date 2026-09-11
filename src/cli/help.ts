@@ -81,6 +81,7 @@ Start here:
   codebasescan audit [project]     Audit a project and update one stable report
   codebasescan open [report-root]  View the latest audit and immutable history
   codebasescan doctor              Check this installation
+  codebasescan --version           Print the installed version
 
 Evidence workflow:
   finalize   Build a verified before/after report

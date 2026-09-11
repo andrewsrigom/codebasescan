@@ -50,6 +50,7 @@ import { renderCliHelp } from './help.ts';
 import { initializeProjectConfig } from './init.ts';
 import { createCliProgress } from './progress.ts';
 import { EphemeralAuditStore } from '../engine/ephemeral-audit-store.ts';
+import { codebasescanVersion } from '../domain/versions.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -271,7 +272,14 @@ async function preflight(root: string, requireApproval: boolean) {
 
 let store: AuditStore | null = null;
 try {
-  if (!command || command === 'help' || command === '--help' || arguments_.includes('--help')) {
+  if (command === '--version' || command === '-v' || command === 'version') {
+    console.log(codebasescanVersion);
+  } else if (
+    !command ||
+    command === 'help' ||
+    command === '--help' ||
+    arguments_.includes('--help')
+  ) {
     console.log(renderCliHelp(command === 'help' ? target : command));
   } else if (command === 'init') {
     progress.phase('Creating declarative project configuration');

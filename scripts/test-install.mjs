@@ -142,6 +142,7 @@ try {
     await run('yarn', ['config', 'set', 'nodeLinker', 'node-modules'], { cwd: fixture });
   }
   const install = await run(manager, installArguments(tarball), { cwd: fixture });
+  const version = await runCodebaseScan(fixture, ['--version'], { capture: true });
   const doctor = await runCodebaseScan(fixture, ['doctor', '--quiet'], { capture: true });
   const init = await runCodebaseScan(fixture, ['init', '.', '--quiet'], { capture: true });
   const audit = await runCodebaseScan(
@@ -149,6 +150,9 @@ try {
     ['audit', '.', '--report-dir', reportDirectory, '--non-interactive', '--quiet'],
     { capture: true },
   );
+  if (version.stdout.trim() !== packageData.version)
+    throw new Error('Installed CLI did not print the packed package version.');
+  rejectRuntimeWarnings('version', version);
   rejectRuntimeWarnings('doctor', doctor);
   rejectRuntimeWarnings('init', init);
   rejectRuntimeWarnings('audit', audit);

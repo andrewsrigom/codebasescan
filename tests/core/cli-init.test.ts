@@ -35,6 +35,7 @@ test('init creates a schema-backed config from inert package metadata', async (c
 
 test('CLI help separates the common workflow from command details', () => {
   assert.match(renderCliHelp(), /codebasescan init/);
+  assert.match(renderCliHelp(), /codebasescan --version/);
   assert.match(renderCliHelp(), /No target project code is executed/);
   assert.match(renderCliHelp('audit'), /--non-interactive/);
   assert.doesNotMatch(renderCliHelp('doctor'), /--fail-on/);
