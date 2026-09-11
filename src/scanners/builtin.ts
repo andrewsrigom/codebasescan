@@ -99,16 +99,28 @@ export const rules: Rule[] = [
   },
 ];
 
-function commentRanges(content: string): { start: number; end: number }[] {
-  const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.JSX, content);
+function commentRanges(content: string, filePath: string): { start: number; end: number }[] {
+  const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
   const ranges: { start: number; end: number }[] = [];
-  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
-    if (
-      token === ts.SyntaxKind.SingleLineCommentTrivia ||
-      token === ts.SyntaxKind.MultiLineCommentTrivia
-    )
-      ranges.push({ start: scanner.getTokenPos(), end: scanner.getTextPos() });
-  }
+  const seen = new Set<string>();
+  const collect = (position: number): void => {
+    const comments = [
+      ...(ts.getLeadingCommentRanges(content, position) ?? []),
+      ...(ts.getTrailingCommentRanges(content, position) ?? []),
+    ];
+    for (const comment of comments) {
+      const key = `${comment.pos}:${comment.end}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ranges.push({ start: comment.pos, end: comment.end });
+    }
+  };
+  const visit = (node: ts.Node): void => {
+    collect(node.pos);
+    collect(node.end);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
   return ranges;
 }
 
@@ -120,7 +132,7 @@ export function scanPatterns(snapshot: Snapshot): Finding[] {
   const findings: Finding[] = [];
   for (const file of snapshot.files) {
     if (!isRuntimeSource(file) || !/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
-    const comments = commentRanges(file.content);
+    const comments = commentRanges(file.content, file.path);
     for (const rule of rules) {
       const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
       for (const match of file.content.matchAll(expression)) {
