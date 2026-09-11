@@ -1,7 +1,9 @@
 import path from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import type { AuditReport } from '../domain/types.ts';
 import { digest } from '../domain/findings.ts';
+import { parseAuditReport } from '../domain/report-schema.ts';
 import {
   toCycloneDx,
   toHtml,
@@ -50,6 +52,33 @@ export interface StaticReportOptions {
   verificationLedger?: VerificationLedger;
 }
 
+export const staticReportIndexVersion = 1 as const;
+
+export interface StaticReportIndexEntry {
+  auditId: string;
+  projectName: string;
+  generatedAt: string;
+  directory: string;
+  publication: AuditReport['publication'];
+  findings: {
+    total: number;
+    critical: number;
+    high: number;
+  };
+  coverage: {
+    complete: number;
+    partial: number;
+  };
+}
+
+export interface StaticReportIndex {
+  schemaVersion: typeof staticReportIndexVersion;
+  kind: 'codebasescan-report-index';
+  generatedAt: string;
+  latestAuditId: string;
+  audits: StaticReportIndexEntry[];
+}
+
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
 interface StaticArtifact {
@@ -73,11 +102,209 @@ function safeAuditSegment(auditId: string): string {
   return auditId;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function reportIndexEntry(report: AuditReport): StaticReportIndexEntry {
+  return {
+    auditId: report.auditId,
+    projectName: report.projectName,
+    generatedAt: report.createdAt,
+    directory: safeAuditSegment(report.auditId),
+    publication: report.publication,
+    findings: {
+      total: report.findings.length,
+      critical: report.findings.filter((finding) => finding.severity === 'critical').length,
+      high: report.findings.filter((finding) => finding.severity === 'high').length,
+    },
+    coverage: {
+      complete:
+        report.coverage?.filter((capability) => capability.status === 'COMPLETE').length ?? 0,
+      partial: report.coverage?.filter((capability) => capability.status === 'PARTIAL').length ?? 0,
+    },
+  };
+}
+
+async function readIndexedReport(directory: string): Promise<AuditReport | null> {
+  try {
+    const manifestFile = path.join(directory, 'manifest.json');
+    const manifestMetadata = await lstat(manifestFile);
+    if (
+      !manifestMetadata.isFile() ||
+      manifestMetadata.isSymbolicLink() ||
+      manifestMetadata.size > 1024 * 1024
+    )
+      return null;
+    const manifestValue: unknown = JSON.parse(await readFile(manifestFile, 'utf8'));
+    if (
+      !isRecord(manifestValue) ||
+      manifestValue.schemaVersion !== staticReportVersion ||
+      manifestValue.kind !== 'codebasescan-static-report' ||
+      !Array.isArray(manifestValue.files)
+    )
+      return null;
+    const auditArtifact = manifestValue.files.find(
+      (value): value is Record<string, unknown> =>
+        isRecord(value) && value.path === 'audit-report.json',
+    );
+    if (
+      !auditArtifact ||
+      typeof auditArtifact.bytes !== 'number' ||
+      auditArtifact.bytes < 0 ||
+      auditArtifact.bytes > 16 * 1024 * 1024 ||
+      typeof auditArtifact.sha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(auditArtifact.sha256)
+    )
+      return null;
+    const reportFile = path.join(directory, 'audit-report.json');
+    const reportMetadata = await lstat(reportFile);
+    if (
+      !reportMetadata.isFile() ||
+      reportMetadata.isSymbolicLink() ||
+      reportMetadata.size !== auditArtifact.bytes
+    )
+      return null;
+    const content = await readFile(reportFile, 'utf8');
+    if (digest(content) !== auditArtifact.sha256) return null;
+    const report = parseAuditReport(JSON.parse(content) as unknown);
+    return manifestValue.auditId === report.auditId &&
+      manifestValue.generatedAt === report.createdAt
+      ? report
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
+  );
+}
+
+export function renderStaticReportIndex(index: StaticReportIndex): string {
+  const rows = index.audits
+    .map(
+      (audit, position) => `
+        <li>
+          <a href="./${audit.directory}/index.html">
+            <span><strong>${escapeHtml(audit.projectName)}</strong><small>${escapeHtml(audit.generatedAt)} · ${escapeHtml(audit.publication)}${position === 0 ? ' · latest' : ''}</small></span>
+            <span class="numbers"><strong>${audit.findings.total}</strong><small>findings · ${audit.findings.critical} critical · ${audit.findings.high} high</small></span>
+          </a>
+        </li>`,
+    )
+    .join('');
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>CodebaseScan audit history</title>
+  <style>
+    :root{color-scheme:dark;font-family:ui-sans-serif,system-ui,sans-serif;background:#080b14;color:#eef2ff}*{box-sizing:border-box}body{margin:0}main{width:min(980px,calc(100% - 32px));margin:64px auto}header{margin-bottom:28px}p,small{color:#96a0b8}.eyebrow{color:#4f8cff;font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}h1{font-size:clamp(32px,5vw,54px);margin:8px 0 12px}ul{list-style:none;padding:0;margin:0;border:1px solid #252b3d;border-radius:14px;overflow:hidden;background:#101522}li+li{border-top:1px solid #252b3d}a{display:flex;justify-content:space-between;gap:24px;padding:22px;color:inherit;text-decoration:none}a:hover{background:#151c2e}span{display:grid;gap:6px}.numbers{text-align:right}small{font-size:12px;font-weight:400}@media(max-width:620px){main{margin:32px auto}a{display:grid}.numbers{text-align:left}}
+  </style>
+</head>
+<body>
+  <main>
+    <header><div class="eyebrow">CodebaseScan</div><h1>Audit history</h1><p>The newest result stays at this address. Every audit remains available as an immutable package.</p></header>
+    <ul>${rows}</ul>
+  </main>
+</body>
+</html>`;
+}
+
+function isIndexEntry(value: unknown): value is StaticReportIndexEntry {
+  return (
+    isRecord(value) &&
+    typeof value.auditId === 'string' &&
+    /^[A-Za-z0-9-]{1,100}$/.test(value.auditId) &&
+    typeof value.projectName === 'string' &&
+    value.projectName.length > 0 &&
+    value.projectName.length <= 200 &&
+    typeof value.generatedAt === 'string' &&
+    !Number.isNaN(Date.parse(value.generatedAt)) &&
+    value.directory === value.auditId &&
+    (value.publication === 'draft' || value.publication === 'reviewed') &&
+    isRecord(value.findings) &&
+    Number.isInteger(value.findings.total) &&
+    Number.isInteger(value.findings.critical) &&
+    Number.isInteger(value.findings.high) &&
+    isRecord(value.coverage) &&
+    Number.isInteger(value.coverage.complete) &&
+    Number.isInteger(value.coverage.partial)
+  );
+}
+
+export function parseStaticReportIndex(value: unknown): StaticReportIndex {
+  if (
+    !isRecord(value) ||
+    value.schemaVersion !== staticReportIndexVersion ||
+    value.kind !== 'codebasescan-report-index' ||
+    typeof value.generatedAt !== 'string' ||
+    Number.isNaN(Date.parse(value.generatedAt)) ||
+    typeof value.latestAuditId !== 'string' ||
+    !Array.isArray(value.audits) ||
+    value.audits.length < 1 ||
+    value.audits.length > 500 ||
+    !value.audits.every(isIndexEntry) ||
+    value.audits[0]?.auditId !== value.latestAuditId
+  )
+    throw new Error('Static report index is invalid.');
+  return value as unknown as StaticReportIndex;
+}
+
+async function replaceFile(file: string, content: string): Promise<void> {
+  const temporary = `${file}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, content, { mode: 0o600, flag: 'wx' });
+    await rename(temporary, file);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+async function updateStaticReportIndex(root: string): Promise<StaticReportIndex> {
+  const entries = (await readdir(root, { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory() && /^[A-Za-z0-9-]{1,100}$/.test(entry.name))
+    .slice(0, 500);
+  const audits: StaticReportIndexEntry[] = [];
+  for (const entry of entries) {
+    const report = await readIndexedReport(path.join(root, entry.name));
+    if (report && report.auditId === entry.name) audits.push(reportIndexEntry(report));
+  }
+  audits.sort(
+    (left, right) =>
+      right.generatedAt.localeCompare(left.generatedAt) ||
+      right.auditId.localeCompare(left.auditId),
+  );
+  const latest = audits[0];
+  if (!latest) throw new Error('Cannot build an empty static report index.');
+  const index: StaticReportIndex = {
+    schemaVersion: staticReportIndexVersion,
+    kind: 'codebasescan-report-index',
+    generatedAt: latest.generatedAt,
+    latestAuditId: latest.auditId,
+    audits,
+  };
+  await replaceFile(path.join(root, 'report-index.json'), json(index));
+  await replaceFile(path.join(root, 'index.html'), renderStaticReportIndex(index));
+  return index;
+}
+
 export async function writeStaticReport(
   report: AuditReport,
   outputRoot: string,
   options: StaticReportOptions = {},
-): Promise<{ directory: string; manifest: StaticReportManifest }> {
+): Promise<{
+  directory: string;
+  rootEntrypoint: string;
+  manifest: StaticReportManifest;
+  index: StaticReportIndex;
+}> {
   const root = path.resolve(outputRoot);
   const directory = path.join(root, safeAuditSegment(report.auditId));
   await mkdir(root, { recursive: true, mode: 0o700 });
@@ -310,5 +537,6 @@ export async function writeStaticReport(
     mode: 0o600,
     flag: 'wx',
   });
-  return { directory, manifest };
+  const index = await updateStaticReportIndex(root);
+  return { directory, rootEntrypoint: path.join(root, 'index.html'), manifest, index };
 }

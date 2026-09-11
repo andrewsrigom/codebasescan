@@ -367,12 +367,12 @@ try {
       { baseline, policyResult, verificationLedger },
     );
     console.log(`Saved finalized report ${staticReport.directory}`);
-    console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
+    console.log(`Open ${staticReport.rootEntrypoint}`);
     console.error(
       `Baseline comparison: ${comparison.newFindings.length} new, ${comparison.resolvedFindings.length} resolved, ${comparison.unchangedFindings.length} unchanged.`,
     );
     process.exitCode = policyResult.exitCode;
-    if (arguments_.includes('--open')) await openReport(staticReport.directory);
+    if (arguments_.includes('--open')) await openReport(path.dirname(staticReport.rootEntrypoint));
   } else if (command === 'audit') {
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-ci-'));
     const ciStore = new AuditStore(':memory:');
@@ -442,7 +442,7 @@ try {
         );
         staticReportDirectory = staticReport.directory;
         console.log(`Saved static report ${staticReport.directory}`);
-        console.log(`Open ${path.join(staticReport.directory, 'index.html')}`);
+        console.log(`Open ${staticReport.rootEntrypoint}`);
       } else {
         const format = requestedFormat ?? 'json';
         const output = render(report, format);
@@ -466,7 +466,7 @@ try {
         );
       process.exitCode = gate.exitCode;
       if (arguments_.includes('--open') && staticReportDirectory)
-        await openReport(staticReportDirectory);
+        await openReport(path.dirname(staticReportDirectory));
     } finally {
       ciStore.close();
       await rm(temporary, { recursive: true, force: true });

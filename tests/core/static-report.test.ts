@@ -199,6 +199,43 @@ test('static report writes a self-contained versioned artifact directory', async
   ) as { kind: string; files: { sha256: string }[] };
   assert.equal(manifest.kind, 'codebasescan-static-report');
   assert.match(manifest.files[0]?.sha256 ?? '', /^[a-f0-9]{64}$/);
+  assert.equal(result.rootEntrypoint, path.join(temporary, 'index.html'));
+  assert.equal(result.index.latestAuditId, report.auditId);
+  const rootHtml = await readFile(result.rootEntrypoint, 'utf8');
+  assert.ok(rootHtml.includes('Audit history'));
+  assert.ok(rootHtml.includes(`href="./${report.auditId}/index.html"`));
+  assert.ok(!rootHtml.includes('<script'));
+  const rootIndex = JSON.parse(
+    await readFile(path.join(temporary, 'report-index.json'), 'utf8'),
+  ) as { schemaVersion: number; latestAuditId: string; audits: { auditId: string }[] };
+  assert.equal(rootIndex.schemaVersion, 1);
+  assert.equal(rootIndex.latestAuditId, report.auditId);
+  assert.deepEqual(
+    rootIndex.audits.map((audit) => audit.auditId),
+    [report.auditId],
+  );
+});
+
+test('static report root keeps immutable audit history and points to the newest audit', async (context) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
+  context.after(() => rm(temporary, { recursive: true, force: true }));
+  const older = sampleReport();
+  const newer = {
+    ...sampleReport(),
+    auditId: '00000000-0000-4000-8000-000000000099',
+    createdAt: '2026-09-08T14:00:00.000Z',
+  };
+  await writeStaticReport(older, temporary);
+  const result = await writeStaticReport(newer, temporary);
+  assert.equal(result.index.latestAuditId, newer.auditId);
+  assert.deepEqual(
+    result.index.audits.map((audit) => audit.auditId),
+    [newer.auditId, older.auditId],
+  );
+  assert.equal(
+    await readFile(path.join(temporary, older.auditId, 'audit-report.json'), 'utf8'),
+    `${JSON.stringify(older, null, 2)}\n`,
+  );
 });
 
 test('static report refuses to overwrite an existing audit directory', async (context) => {

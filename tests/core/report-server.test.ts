@@ -22,6 +22,17 @@ test('report package loader resolves the newest audit from a report root', async
   const loaded = await loadReportPackage(temporary);
   assert.equal(loaded.report.auditId, newer.auditId);
   assert.equal(loaded.directory, path.join(temporary, newer.auditId));
+
+  const running = await startReportServer(temporary, 0);
+  context.after(() => running.close());
+  const history = await fetch(running.url);
+  assert.equal(history.status, 200);
+  const historyHtml = await history.text();
+  assert.match(historyHtml, /Audit history/);
+  assert.match(historyHtml, new RegExp(`href="\\./${newer.auditId}/index\\.html"`));
+  const olderPage = await fetch(new URL(`${older.auditId}/index.html`, running.url));
+  assert.equal(olderPage.status, 200);
+  assert.match(await olderPage.text(), /Review summary/);
 });
 
 test('report server exposes only verified manifest artifacts on loopback', async (context) => {

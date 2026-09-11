@@ -7,7 +7,13 @@ import { parseAuditReport } from '../domain/report-schema.ts';
 import { parseRunManifest } from '../domain/run-manifest-schema.ts';
 import type { AuditReport } from '../domain/types.ts';
 import type { RunManifest } from '../domain/run-manifest.ts';
-import { staticReportVersion, type StaticReportManifest } from './static-report.ts';
+import {
+  parseStaticReportIndex,
+  renderStaticReportIndex,
+  staticReportVersion,
+  type StaticReportIndex,
+  type StaticReportManifest,
+} from './static-report.ts';
 
 const manifestLimitBytes = 1024 * 1024;
 const artifactLimitBytes = 64 * 1024 * 1024;
@@ -59,6 +65,12 @@ export interface ReportServer {
   close(): Promise<void>;
 }
 
+interface ReportServerSource {
+  rootDirectory?: string;
+  index?: StaticReportIndex;
+  latest: LoadedReportPackage;
+}
+
 async function readBoundedFile(file: string, limit: number): Promise<Buffer> {
   const metadata = await lstat(file);
   if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > limit)
@@ -80,6 +92,16 @@ async function readManifest(directory: string): Promise<StaticReportManifest> {
     return manifestSchema.parse(JSON.parse(value.toString('utf8'))) as StaticReportManifest;
   } catch {
     throw new Error(`Static report manifest is invalid: ${path.join(directory, 'manifest.json')}`);
+  }
+}
+
+async function readReportIndex(directory: string): Promise<StaticReportIndex> {
+  const file = path.join(directory, 'report-index.json');
+  const value = await readBoundedFile(file, manifestLimitBytes);
+  try {
+    return parseStaticReportIndex(JSON.parse(value.toString('utf8')) as unknown);
+  } catch {
+    throw new Error(`Static report index is invalid: ${file}`);
   }
 }
 
@@ -207,10 +229,63 @@ function requestedArtifact(url: string | undefined): string | null {
   }
 }
 
+async function reportServerSource(location: string): Promise<ReportServerSource> {
+  const resolved = path.resolve(location);
+  const metadata = await lstat(resolved);
+  const directory = metadata.isDirectory() ? resolved : path.dirname(resolved);
+  try {
+    await lstat(path.join(directory, 'manifest.json'));
+    return { latest: await loadReportPackage(directory) };
+  } catch (error) {
+    if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
+  }
+  const [index, latest] = await Promise.all([
+    readReportIndex(directory),
+    loadReportPackage(directory),
+  ]);
+  if (index.latestAuditId !== latest.report.auditId)
+    throw new Error('Static report index does not match the newest valid audit package.');
+  return { rootDirectory: directory, index, latest };
+}
+
+async function indexedRequest(
+  source: ReportServerSource,
+  url: string | undefined,
+): Promise<{ content: Buffer; mediaType: string } | null> {
+  if (!source.rootDirectory || !source.index) return null;
+  let pathname: string;
+  try {
+    pathname = decodeURIComponent(new URL(url ?? '/', 'http://127.0.0.1').pathname);
+  } catch {
+    return null;
+  }
+  if (pathname === '/' || pathname === '/index.html')
+    return {
+      content: Buffer.from(renderStaticReportIndex(source.index)),
+      mediaType: 'text/html; charset=utf-8',
+    };
+  if (pathname === '/report-index.json')
+    return {
+      content: Buffer.from(`${JSON.stringify(source.index, null, 2)}\n`),
+      mediaType: 'application/json',
+    };
+  const match = /^\/([A-Za-z0-9-]{1,100})(?:\/(.*))?$/.exec(pathname);
+  if (!match || !source.index.audits.some((audit) => audit.auditId === match[1])) return null;
+  const reportPackage = await loadReportPackage(path.join(source.rootDirectory, match[1]!));
+  const requested = match[2] || 'index.html';
+  const artifact = reportPackage.files.get(requested);
+  if (!artifact) return null;
+  return {
+    content: await verifiedArtifact(reportPackage, artifact),
+    mediaType: artifact.mediaType,
+  };
+}
+
 export async function startReportServer(location: string, port = 4173): Promise<ReportServer> {
   if (!Number.isInteger(port) || port < 0 || port > 65_535)
     throw new Error('Report server port must be an integer from 0 to 65535.');
-  const reportPackage = await loadReportPackage(location);
+  const source = await reportServerSource(location);
+  const reportPackage = source.latest;
   const server = createServer(async (request, response) => {
     response.setHeader(
       'Content-Security-Policy',
@@ -225,16 +300,20 @@ export async function startReportServer(location: string, port = 4173): Promise<
       response.writeHead(405, { Allow: 'GET, HEAD' }).end('Method not allowed.');
       return;
     }
-    const requested = requestedArtifact(request.url);
-    const artifact = requested ? reportPackage.files.get(requested) : undefined;
-    if (!artifact) {
-      response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found.');
-      return;
-    }
     try {
-      const content = await verifiedArtifact(reportPackage, artifact);
+      const indexed = await indexedRequest(source, request.url);
+      const requested = source.rootDirectory ? null : requestedArtifact(request.url);
+      const artifact = requested ? reportPackage.files.get(requested) : undefined;
+      const content =
+        indexed?.content ??
+        (artifact ? await verifiedArtifact(reportPackage, artifact) : undefined);
+      const mediaType = indexed?.mediaType ?? artifact?.mediaType;
+      if (!content || !mediaType) {
+        response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found.');
+        return;
+      }
       response.writeHead(200, {
-        'Content-Type': artifact.mediaType,
+        'Content-Type': mediaType,
         'Content-Length': content.byteLength,
       });
       response.end(request.method === 'HEAD' ? undefined : content);
