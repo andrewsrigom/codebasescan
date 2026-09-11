@@ -115,6 +115,24 @@ test('matching authenticated middleware protects a Next route but unrelated midd
   assert.ok(unrelatedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('middleware data access is not attributed to a mutating route', () => {
+  const snapshot = snapshotFromFiles({
+    'src/middleware.ts': `
+      export async function middleware(request) {
+        await db.website.findFirst({ where: { host: request.headers.get('host') } });
+        return NextResponse.next();
+      }
+      export const config = { matcher: ['/api/:path*'] };
+    `,
+    'src/app/api/health/route.ts': `
+      export async function POST() { return Response.json({ ok: true }); }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST001'));
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST003'));
+});
+
 test('authentication wrappers protect mapped Next route callbacks', () => {
   const snapshot = snapshotOf(
     `

@@ -40,6 +40,24 @@ test('applicable middleware and owner scope protect a dynamic read route', () =>
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT002'));
 });
 
+test('middleware data access is not attributed to a read route', () => {
+  const snapshot = snapshotFromFiles({
+    'src/middleware.ts': `
+      export async function middleware(request) {
+        await db.website.findFirst({ where: { host: request.headers.get('host') } });
+        return NextResponse.next();
+      }
+      export const config = { matcher: ['/api/:path*'] };
+    `,
+    'src/app/api/health/route.ts': `
+      export async function GET() { return Response.json({ ok: true }); }
+    `,
+  });
+  const findings = scanNextSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-NEXT001'));
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-NEXT002'));
+});
+
 test('a scoped service helper protects a dynamic read route', () => {
   const result = scan(`
     export async function GET(_request: Request, { params }) {

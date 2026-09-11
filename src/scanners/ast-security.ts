@@ -17,6 +17,7 @@ import {
   isAdministrativeEntrypoint,
   isMutatingEntrypoint,
   isWebhookEntrypoint,
+  reachableFacts,
   sensitiveProjectFactKinds,
 } from '../domain/project-graph.ts';
 
@@ -1179,7 +1180,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.5.0',
+        version: '0.6.0',
       },
     };
 
@@ -1189,8 +1190,9 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
     if (isWebhookEntrypoint(entrypoint)) continue;
     const roots = entrypointRoots(profile, entrypoint);
     if (!roots.length) continue;
+    const routeFacts = reachableFacts(profile, entrypoint);
     const mappedFacts = effectiveEntrypointFacts(profile, entrypoint);
-    const sensitive = mappedFacts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
+    const sensitive = routeFacts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
     if (!sensitive) continue;
     const authenticated = mappedFacts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
@@ -1231,7 +1233,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       });
       if (candidate) findings.push(candidate);
     }
-    const resourceOperation = mappedFacts.find((fact) => fact.kind === 'database');
+    const resourceOperation = routeFacts.find((fact) => fact.kind === 'database');
     const scoped = mappedFacts.some((fact) => fact.kind === 'resource-scope');
     if (entrypoint.dynamicParameters.length && resourceOperation && !scoped && !authorized) {
       const candidate = authorizationFinding({
@@ -1264,7 +1266,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.5.0',
+      version: '0.6.0',
     },
   };
 }

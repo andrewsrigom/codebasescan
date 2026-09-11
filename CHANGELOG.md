@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Kept middleware data operations separate from route operations so a shared Next.js proxy can
+  contribute authentication evidence without fabricating database findings for every matched route.
 - Reduced environment-contract noise by excluding writes and recognized optional/default reads
   from findings while retaining them in machine-readable coverage. Sanitized templates now preserve
   commented `NAME=` placeholders without retaining comments or values.

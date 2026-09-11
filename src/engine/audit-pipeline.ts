@@ -264,7 +264,7 @@ export function buildAuditPipeline(options: {
       const result = await cachedScan(
         source,
         'ast-security',
-        '0.5.0',
+        '0.6.0',
         ['ast-security'],
         () => scanAstSecurity(source, state.projectProfile!),
         projectProfileCacheVariant,
@@ -328,7 +328,7 @@ export function buildAuditPipeline(options: {
       const result = await cachedScan(
         source,
         'next-security',
-        '0.4.2',
+        '0.5.0',
         ['next-security'],
         () => scanNextSecurity(source, state.projectProfile!),
         projectProfileCacheVariant,

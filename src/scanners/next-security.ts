@@ -15,6 +15,7 @@ import {
   effectiveEntrypointFacts,
   isMutatingEntrypoint,
   isWebhookEntrypoint,
+  reachableFacts,
   reachableSymbols,
   sensitiveProjectFactKinds,
 } from '../domain/project-graph.ts';
@@ -378,8 +379,9 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
   const findings: Finding[] = [];
   for (const entrypoint of profile.entrypoints) {
     if (entrypoint.kind === 'middleware' || isWebhookEntrypoint(entrypoint)) continue;
+    const routeFacts = reachableFacts(profile, entrypoint);
     const facts = effectiveEntrypointFacts(profile, entrypoint);
-    const sensitive = facts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
+    const sensitive = routeFacts.find((fact) => sensitiveProjectFactKinds.has(fact.kind));
     if (!sensitive) continue;
     const authenticated = facts.some((fact) =>
       ['authentication', 'authorization'].includes(fact.kind),
@@ -413,11 +415,11 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
     if (
       read &&
       entrypoint.dynamicParameters.length > 0 &&
-      facts.some((fact) => fact.kind === 'database') &&
+      routeFacts.some((fact) => fact.kind === 'database') &&
       !scoped &&
       !authorized
     ) {
-      const database = facts.find((fact) => fact.kind === 'database')!;
+      const database = routeFacts.find((fact) => fact.kind === 'database')!;
       const candidate = structuralFinding({
         snapshot,
         profile,
@@ -436,7 +438,7 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
       if (candidate) findings.push(candidate);
     }
 
-    const stateChanging = facts.find(isStateChangingFact);
+    const stateChanging = routeFacts.find(isStateChangingFact);
     if (
       isMutatingEntrypoint(entrypoint) &&
       stateChanging &&
@@ -654,7 +656,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
         findings: 0,
         detail:
           'No supported Next.js framework signal was mapped. No clean Next.js result is implied.',
-        version: '0.4.2',
+        version: '0.5.0',
       },
     };
 
@@ -671,7 +673,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s) for authenticated reads, object scope, input validation, user-specific caching, public environment exposure, and sensitive response fields.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.4.2',
+      version: '0.5.0',
     },
   };
 }
