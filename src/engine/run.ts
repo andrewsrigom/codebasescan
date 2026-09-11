@@ -17,6 +17,7 @@ function executionFingerprint(
       workflow: auditWorkflowVersion,
       checkpointAdapter: checkpointAdapterVersion,
       aiMode: config.aiMode,
+      aiDepth: config.aiDepth,
       model: config.model,
       strongModel: config.strongModel,
       aiTimeoutMs: config.aiTimeoutMs,

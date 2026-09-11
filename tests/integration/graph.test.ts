@@ -73,7 +73,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     store.audit(audit.id).report?.scanners.some((run) => run.id === 'environment-contract'),
   );
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
-  assert.equal(store.audit(audit.id).report?.schemaVersion, 16);
+  assert.equal(store.audit(audit.id).report?.schemaVersion, 17);
   assert.ok(store.audit(audit.id).report?.environmentContract);
   assert.ok(store.audit(audit.id).report?.testEvidence);
   assert.ok(store.audit(audit.id).report?.webhookContract);
@@ -247,6 +247,7 @@ test('the context loop terminates after two rounds with an injected reviewer', a
             .filter((item) => !contextIds.includes(item.id))
             .slice(0, 1)
             .map((item) => item.id),
+          searchQueries: [],
         };
       },
     },
@@ -255,6 +256,44 @@ test('the context loop terminates after two rounds with an injected reviewer', a
   const result = await graph.invoke({ finding });
   assert.ok(calls <= 2);
   assert.equal(result.rounds, 2);
+});
+test('deep review can request bounded search over the immutable snapshot', async () => {
+  const source = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
+  const finding = scanPatterns(source).find((candidate) => candidate.category === 'injection')!;
+  const profile = profileProject(source).profile;
+  let calls = 0;
+  const graph = buildReviewGraph(
+    source,
+    {
+      provider: 'ollama',
+      async assess() {
+        calls++;
+        return {
+          assessment: 'inconclusive',
+          confidence: 'low',
+          explanation: 'Related controls require review.',
+          evidenceIds: [],
+          controlsFound: [],
+          missingEvidence: ['Runtime behavior is unavailable.'],
+          impact: 'Impact depends on the reachable request path.',
+          preconditions: ['The code path must be reachable.'],
+          remediationOptions: ['Verify the relevant trust boundary.'],
+          verificationPlan: ['Inspect the related response policy.'],
+          limitations: ['Only the immutable source snapshot was searched.'],
+          requestedContextIds: [],
+          searchQueries: calls === 1 ? ['Access-Control-Allow-Origin'] : [],
+        };
+      },
+    },
+    profile,
+    undefined,
+    'deep',
+  );
+  const result = await graph.invoke({ finding });
+  assert.equal(calls, 2);
+  assert.equal(result.rounds, 2);
+  assert.ok(result.inspectedFiles.includes('src/lib/cors.ts'));
+  assert.ok(result.context.includes('Access-Control-Allow-Origin'));
 });
 test('SQLite checkpoints survive graph reconstruction between review and resume', async (context) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-persistence-'));

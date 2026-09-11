@@ -68,6 +68,7 @@ export interface Analysis {
   preconditions?: string[];
   remediationOptions?: string[];
   verificationPlan?: string[];
+  searchQueries?: string[];
   inspectedFiles: string[];
   rounds: number;
   confidence?: 'low' | 'medium' | 'high';
@@ -1038,7 +1039,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17;
   auditId: string;
   projectName: string;
   createdAt: string;

@@ -1,5 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  agentReviewDepthLimits,
+  parseAgentReviewDepth,
+  type AgentReviewDepth,
+} from '../domain/agent-depth.ts';
 
 const bundledRulesDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -14,6 +19,7 @@ export interface Configuration {
   temporaryDirectory: string;
   rulesDirectory: string;
   aiMode: 'disabled' | 'ollama' | 'openai';
+  aiDepth: AgentReviewDepth;
   model: string;
   strongModel: string;
   openaiApiKey?: string;
@@ -61,6 +67,8 @@ export function configuration(): Configuration {
   if (!['disabled', 'ollama', 'openai'].includes(requestedAiMode))
     throw new Error('CODEBASESCAN_AI must be disabled, ollama, or openai.');
   const aiMode = requestedAiMode as Configuration['aiMode'];
+  const aiDepth = parseAgentReviewDepth(process.env.CODEBASESCAN_AI_DEPTH);
+  const depthDefaults = agentReviewDepthLimits[aiDepth];
   const model =
     aiMode === 'ollama'
       ? (process.env.OLLAMA_MODEL?.trim() ?? '')
@@ -81,33 +89,39 @@ export function configuration(): Configuration {
       ? path.resolve(process.env.CODEBASESCAN_RULES_DIR)
       : bundledRulesDirectory,
     aiMode,
+    aiDepth,
     model,
     strongModel: process.env.OPENAI_STRONG_MODEL?.trim() ?? '',
     ...(openaiApiKey ? { openaiApiKey } : {}),
     aiTimeoutMs: boundedInteger(process.env.CODEBASESCAN_AI_TIMEOUT_MS, 30000, 1000, 120000),
     aiMaxRetries: boundedInteger(process.env.CODEBASESCAN_AI_MAX_RETRIES, 1, 0, 3),
-    aiMaxCalls: boundedInteger(process.env.CODEBASESCAN_AI_MAX_CALLS, 12, 1, 100),
+    aiMaxCalls: boundedInteger(
+      process.env.CODEBASESCAN_AI_MAX_CALLS,
+      depthDefaults.defaultMaximumCalls,
+      1,
+      100,
+    ),
     aiMaxCallsPerFinding: boundedInteger(
       process.env.CODEBASESCAN_AI_MAX_CALLS_PER_FINDING,
-      2,
+      depthDefaults.defaultMaximumCallsPerFinding,
       1,
-      3,
+      6,
     ),
     aiInputTokenBudget: boundedInteger(
       process.env.CODEBASESCAN_AI_INPUT_TOKEN_BUDGET,
-      120000,
+      depthDefaults.defaultInputTokenBudget,
       1000,
       2000000,
     ),
     aiOutputTokenBudget: boundedInteger(
       process.env.CODEBASESCAN_AI_OUTPUT_TOKEN_BUDGET,
-      10000,
+      depthDefaults.defaultOutputTokenBudget,
       100,
       200000,
     ),
     aiMaxOutputTokensPerCall: boundedInteger(
       process.env.CODEBASESCAN_AI_MAX_OUTPUT_TOKENS_PER_CALL,
-      900,
+      depthDefaults.defaultMaximumOutputTokensPerCall,
       100,
       10000,
     ),

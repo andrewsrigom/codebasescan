@@ -1,7 +1,9 @@
+import { digest } from '../domain/findings.ts';
+import { agentReviewDepthLimits, type AgentReviewDepth } from '../domain/agent-depth.ts';
 import type { Finding, ProjectProfile, Snapshot, SourceFile } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
 
-export type ContextKind = 'evidence' | 'entrypoint' | 'symbol' | 'fact' | 'call';
+export type ContextKind = 'evidence' | 'entrypoint' | 'symbol' | 'fact' | 'call' | 'search';
 
 export interface ContextDescriptor {
   id: string;
@@ -19,10 +21,6 @@ export interface ContextDelivery {
   truncated: boolean;
 }
 
-const maximumContextCharacters = 16_000;
-const maximumInitialItems = 12;
-const maximumRequestedItems = 2;
-const maximumCatalogItems = 60;
 const maximumItemCharacters = 6_000;
 
 function sourceLines(file: SourceFile, startLine: number, endLine: number): string {
@@ -54,7 +52,6 @@ function relatedProfileIds(finding: Finding, profile?: ProjectProfile): Set<stri
   for (const entrypoint of relevantEntrypoints)
     for (const symbolId of entrypoint.symbolIds) relevantSymbols.add(symbolId);
 
-  // Follow only profiler-resolved local calls, with a small fixed depth.
   let frontier = new Set(relevantSymbols);
   for (let depth = 0; depth < 2 && frontier.size; depth++) {
     const next = new Set<string>();
@@ -85,11 +82,31 @@ function relatedProfileIds(finding: Finding, profile?: ProjectProfile): Set<stri
   return ids;
 }
 
+function normalizedSearchQuery(query: string): { label: string; terms: string[] } | null {
+  const label = query.trim().toLowerCase();
+  if (
+    label.length < 3 ||
+    label.length > 80 ||
+    label.includes('..') ||
+    /^[a-z]:[\\/]/i.test(label) ||
+    label.startsWith('/') ||
+    label.startsWith('\\')
+  )
+    return null;
+  const terms = label
+    .split(/[^a-z0-9_$@.-]+/i)
+    .filter((term) => term.length >= 2)
+    .slice(0, 6);
+  return terms.length ? { label, terms } : null;
+}
+
 export function createContextBroker(
   snapshot: Snapshot,
   finding: Finding,
   profile?: ProjectProfile,
+  depth: AgentReviewDepth = 'standard',
 ) {
+  const limits = agentReviewDepthLimits[depth];
   const files = new Map(snapshot.files.map((file) => [file.path, file]));
   const descriptors = new Map<string, ContextDescriptor>();
   const renderers = new Map<string, () => string>();
@@ -168,19 +185,71 @@ export function createContextBroker(
   const initialIds = finding.evidence
     .map((item) => item.id)
     .filter((id) => descriptors.has(id))
-    .slice(0, maximumInitialItems);
-  const catalog = [...descriptors.values()]
-    .sort((left, right) => {
-      const leftEvidence = left.kind === 'evidence' ? 0 : 1;
-      const rightEvidence = right.kind === 'evidence' ? 0 : 1;
-      return (
-        leftEvidence - rightEvidence ||
-        left.file.localeCompare(right.file) ||
-        left.line - right.line
-      );
-    })
-    .slice(0, maximumCatalogItems);
-  const allowedIds = new Set(catalog.map((item) => item.id));
+    .slice(0, limits.maximumInitialItems);
+
+  function catalog(): ContextDescriptor[] {
+    return [...descriptors.values()]
+      .sort((left, right) => {
+        const priority = (item: ContextDescriptor) =>
+          item.kind === 'evidence' ? 0 : item.kind === 'search' ? 1 : 2;
+        return (
+          priority(left) - priority(right) ||
+          left.file.localeCompare(right.file) ||
+          left.line - right.line
+        );
+      })
+      .slice(0, limits.maximumCatalogItems);
+  }
+
+  function search(queries: string[], previousIds: string[] = []): string[] {
+    if (!limits.maximumSearchQueries || !limits.maximumSearchResults) return [];
+    const normalized = [...new Set(queries)]
+      .flatMap((query) => {
+        const value = normalizedSearchQuery(query);
+        return value ? [value] : [];
+      })
+      .slice(0, limits.maximumSearchQueries);
+    const orderedFiles = [...files.values()].sort((left, right) =>
+      left.path.localeCompare(right.path),
+    );
+    const matched: string[] = [];
+    let searchedCharacters = 0;
+    for (const query of normalized) {
+      for (const file of orderedFiles) {
+        if (
+          searchedCharacters >= limits.maximumSearchCharacters ||
+          matched.length >= limits.maximumSearchResults
+        )
+          break;
+        searchedCharacters += file.content.length;
+        const pathText = file.path.toLowerCase();
+        const lines = file.content.split(/\r?\n/);
+        for (let index = 0; index < lines.length; index++) {
+          if (matched.length >= limits.maximumSearchResults) break;
+          const searchable = `${pathText} ${lines[index]!.toLowerCase()}`;
+          if (
+            !searchable.includes(query.label) &&
+            !query.terms.every((term) => searchable.includes(term))
+          )
+            continue;
+          const line = index + 1;
+          const id = `ctx-search-${digest(`${query.label}:${file.path}:${line}`).slice(0, 24)}`;
+          descriptors.set(id, {
+            id,
+            kind: 'search',
+            label: `search "${query.label}"`,
+            file: file.path,
+            line,
+          });
+          renderers.set(id, () => boundedExcerpt(file, line, 12));
+          matched.push(id);
+        }
+      }
+    }
+    const allowed = new Set(catalog().map((item) => item.id));
+    const previous = new Set(previousIds);
+    return matched.filter((id) => allowed.has(id) && !previous.has(id));
+  }
 
   function collect(
     requestedIds: string[],
@@ -188,9 +257,10 @@ export function createContextBroker(
     previousCharacters = 0,
     initial = false,
   ): ContextDelivery {
-    const maximumItems = initial ? maximumInitialItems : maximumRequestedItems;
-    const remaining = Math.max(0, maximumContextCharacters - previousCharacters);
+    const maximumItems = initial ? limits.maximumInitialItems : limits.maximumRequestedItems;
+    const remaining = Math.max(0, limits.maximumContextCharacters - previousCharacters);
     const seen = new Set(previousIds);
+    const allowedIds = new Set(catalog().map((item) => item.id));
     const fresh = [...new Set(requestedIds)]
       .filter((id) => allowedIds.has(id) && !seen.has(id))
       .slice(0, maximumItems);
@@ -236,12 +306,21 @@ export function createContextBroker(
     };
   }
 
-  return { catalog, initialIds, collect };
+  return {
+    get catalog() {
+      return catalog();
+    },
+    initialIds,
+    collect,
+    search,
+  };
 }
 
+const standardLimits = agentReviewDepthLimits.standard;
 export const contextBrokerLimits = {
-  maximumContextCharacters,
-  maximumInitialItems,
-  maximumRequestedItems,
-  maximumCatalogItems,
+  maximumContextCharacters: standardLimits.maximumContextCharacters,
+  maximumInitialItems: standardLimits.maximumInitialItems,
+  maximumRequestedItems: standardLimits.maximumRequestedItems,
+  maximumCatalogItems: standardLimits.maximumCatalogItems,
+  byDepth: agentReviewDepthLimits,
 };

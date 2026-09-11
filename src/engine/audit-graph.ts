@@ -58,6 +58,7 @@ import type { Configuration } from '../server/config.ts';
 import type { Reviewer } from './model.ts';
 import type { AuditExecutionStore } from './audit-store.ts';
 import { buildReviewGraph } from './review-graph.ts';
+import { agentReviewDepthLimits } from '../domain/agent-depth.ts';
 import { runCachedScan } from './scanner-cache.ts';
 const mergeRuns = (left: ScannerRun[], right: ScannerRun[]) => [
   ...new Map([...left, ...right].map((run) => [run.id, run])).values(),
@@ -140,7 +141,6 @@ export const AuditState = Annotation.Root({
   report: Annotation<AuditReport | null>({ reducer: (_, value) => value, default: () => null }),
 });
 type State = typeof AuditState.State;
-const maximumAnalyzedFindings = 12;
 
 function nextReviewableFinding(state: State): { finding: Finding; index: number } | null {
   for (let index = state.cursor; index < state.normalizedFindings.length; index++) {
@@ -177,6 +177,7 @@ export function buildAuditGraph(options: {
     signal,
   } = options;
   const enabledModes = new Set(resolveAuditModes(modes));
+  const maximumAnalyzedFindings = agentReviewDepthLimits[config.aiDepth].maximumFindings;
   const scannerCache = {
     directory: config.scannerCacheDirectory ?? path.join(config.dataDirectory, 'scanner-cache'),
     enabled: config.scannerCache ?? true,
@@ -852,7 +853,13 @@ export function buildAuditGraph(options: {
       if (!reviewable) return { cursor: state.normalizedFindings.length };
       const { finding, index } = reviewable;
       const source = redactedSnapshot(await checkedSnapshot(state));
-      const graph = buildReviewGraph(source, reviewer, state.projectProfile ?? undefined, signal);
+      const graph = buildReviewGraph(
+        source,
+        reviewer,
+        state.projectProfile ?? undefined,
+        signal,
+        config.aiDepth,
+      );
       const result = await graph.invoke({ finding }, { signal, recursionLimit: 12 });
       const reviewed = { ...finding, ...(result.analysis ? { analysis: result.analysis } : {}) };
       store.event(

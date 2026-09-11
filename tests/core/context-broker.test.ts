@@ -57,3 +57,19 @@ test('context broker keeps prompt injection as redacted bounded repository data'
   assert.ok(delivery.context.includes('untrusted_repository_data'));
   assert.ok(!delivery.context.includes('sk-test-secret-value'));
 });
+
+test('deep context search is snapshot-only, plain-text, and bounded', async () => {
+  const snapshot = await captureSnapshot(path.resolve('fixtures/review-worthy-saas'));
+  const finding = scanPatterns(snapshot).find((item) => item.ruleId === 'TW-003')!;
+  const broker = createContextBroker(snapshot, finding, profileProject(snapshot).profile, 'deep');
+  const ids = broker.search(['Access-Control-Allow-Origin']);
+  assert.ok(ids.length > 0);
+  assert.ok(ids.length <= contextBrokerLimits.byDepth.deep.maximumSearchResults);
+  const delivery = broker.collect(ids);
+  assert.ok(delivery.files.includes('src/lib/cors.ts'));
+  assert.ok(delivery.context.includes('Access-Control-Allow-Origin'));
+  assert.deepEqual(broker.search(['../../outside', '/', 'x']), []);
+
+  const quick = createContextBroker(snapshot, finding, profileProject(snapshot).profile, 'quick');
+  assert.deepEqual(quick.search(['Access-Control-Allow-Origin']), []);
+});

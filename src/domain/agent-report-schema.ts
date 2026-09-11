@@ -6,6 +6,7 @@ import {
 } from './agent-rules.ts';
 import { parseRemediationPlan, remediationPlanJsonSchema } from './remediation-schema.ts';
 import type { RemediationPlan } from './remediation.ts';
+import { agentReviewDepths } from './agent-depth.ts';
 
 const text = (maximum: number) => z.string().min(1).max(maximum);
 const taskGuidanceSchema = z
@@ -47,7 +48,7 @@ const agentReportEnvelopeSchema = z
       .array(
         z
           .object({
-            id: z.enum(['quick', 'standard', 'deep']),
+            id: z.enum(agentReviewDepths),
             description: text(300),
           })
           .strict(),

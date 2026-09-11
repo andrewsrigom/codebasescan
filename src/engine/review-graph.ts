@@ -2,11 +2,14 @@ import { Annotation, END, START, StateGraph } from '@langchain/langgraph';
 import type { Analysis, Finding, ProjectProfile, Snapshot } from '../domain/types.ts';
 import type { Reviewer } from './model.ts';
 import { createContextBroker } from './context-broker.ts';
+import { agentReviewDepthLimits, type AgentReviewDepth } from '../domain/agent-depth.ts';
+import { reviewRulesForFinding } from '../domain/agent-rules.ts';
 const ReviewState = Annotation.Root({
   finding: Annotation<Finding>(),
   inspectedFiles: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
   contextIds: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
   requestedContextIds: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
+  searchQueries: Annotation<string[]>({ reducer: (_, value) => value, default: () => [] }),
   context: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
   contextTruncated: Annotation<boolean>({ reducer: (_, value) => value, default: () => false }),
   rounds: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
@@ -17,11 +20,16 @@ export function buildReviewGraph(
   reviewer: Reviewer,
   profile?: ProjectProfile,
   signal?: AbortSignal,
+  depth: AgentReviewDepth = 'standard',
 ) {
+  const limits = agentReviewDepthLimits[depth];
   return new StateGraph(ReviewState)
     .addNode('collect_context', async (state) => {
-      const broker = createContextBroker(snapshot, state.finding, profile);
-      const requested = state.rounds === 0 ? broker.initialIds : state.requestedContextIds;
+      const broker = createContextBroker(snapshot, state.finding, profile, depth);
+      const searchIds =
+        state.rounds === 0 ? [] : broker.search(state.searchQueries, state.contextIds);
+      const requested =
+        state.rounds === 0 ? broker.initialIds : [...state.requestedContextIds, ...searchIds];
       const delivery = broker.collect(
         requested,
         state.contextIds,
@@ -54,16 +62,21 @@ export function buildReviewGraph(
           contextTruncated: state.contextTruncated,
           rounds: state.rounds,
         };
-        return { analysis, requestedContextIds: [] };
+        return { analysis, requestedContextIds: [], searchQueries: [] };
       }
       try {
-        const broker = createContextBroker(snapshot, state.finding, profile);
+        const broker = createContextBroker(snapshot, state.finding, profile, depth);
+        broker.search(state.searchQueries);
         const assessment = await reviewer.assess(
           state.finding,
           state.context,
           broker.catalog,
           state.contextIds,
-          signal,
+          {
+            depth,
+            rules: reviewRulesForFinding(state.finding),
+            ...(signal ? { signal } : {}),
+          },
         );
         const analysis: Analysis = {
           ...assessment,
@@ -76,7 +89,12 @@ export function buildReviewGraph(
         const fresh = assessment.requestedContextIds.filter(
           (id) => allowedIds.has(id) && !state.contextIds.includes(id),
         );
-        return { analysis, requestedContextIds: fresh };
+        const searchable = broker.search(assessment.searchQueries, state.contextIds);
+        return {
+          analysis,
+          requestedContextIds: fresh,
+          searchQueries: searchable.length ? assessment.searchQueries : [],
+        };
       } catch {
         return {
           analysis: {
@@ -95,13 +113,17 @@ export function buildReviewGraph(
             rounds: state.rounds,
           } satisfies Analysis,
           requestedContextIds: [],
+          searchQueries: [],
         };
       }
     })
     .addEdge(START, 'collect_context')
     .addEdge('collect_context', 'assess')
     .addConditionalEdges('assess', (state) =>
-      state.requestedContextIds.length > 0 && state.rounds < 2 ? 'collect_context' : END,
+      (state.requestedContextIds.length > 0 || state.searchQueries.length > 0) &&
+      state.rounds < limits.maximumRounds
+        ? 'collect_context'
+        : END,
     )
     .compile();
 }

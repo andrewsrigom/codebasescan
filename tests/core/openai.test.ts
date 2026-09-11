@@ -46,6 +46,7 @@ function success(evidenceId: string): Response {
       verificationPlan: ['Trace the input source and add a test with an untrusted expression.'],
       limitations: ['Only the supplied snapshot context was inspected.'],
       requestedContextIds: [],
+      searchQueries: [],
     }),
     usage: {
       input_tokens: 120,
