@@ -1202,6 +1202,31 @@ export function AuditWorkspace({
                     {report.httpProbe.cookies.length}
                   </strong>
                 </div>
+                {report.httpProbe.htmlSurface && (
+                  <>
+                    <div className="detail-row">
+                      <span>HTML forms observed</span>
+                      <strong>
+                        {report.httpProbe.htmlSurface.formsObserved}
+                        {report.httpProbe.htmlSurface.bodyTruncated ? ' · partial response' : ''}
+                      </strong>
+                    </div>
+                    {report.httpProbe.htmlSurface.formEndpoints.length > 0 && (
+                      <details>
+                        <summary>Show retained form endpoints</summary>
+                        <ul className="limitations">
+                          {report.httpProbe.htmlSurface.formEndpoints.map((form, index) => (
+                            <li key={`${form.method}:${form.action}:${index}`}>
+                              <code>{form.method}</code> {form.action} ·{' '}
+                              {form.relationship.replace('-', ' ')}
+                              {form.hasPassword ? ' · password input' : ''}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </>
+                )}
                 {report.httpProbe.redirectChain?.map((redirect, index) => (
                   <p
                     className="small muted"
@@ -1213,8 +1238,8 @@ export function AuditWorkspace({
                 ))}
                 <p className="small muted">
                   One bounded observation at {utcDate(report.httpProbe.observedAt)} UTC. A synthetic
-                  external Origin tests passive CORS behavior. No crawl, mutation, or exploit was
-                  performed.
+                  external Origin tests passive CORS behavior. HTML inspection retains bounded form
+                  metadata, never field values. No crawl, mutation, or exploit was performed.
                 </p>
               </div>
             </section>

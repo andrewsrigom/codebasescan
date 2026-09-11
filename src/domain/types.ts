@@ -283,6 +283,18 @@ export interface HttpProbeReport {
     httpOnly: boolean;
     sameSite: 'strict' | 'lax' | 'none' | 'unspecified';
   }[];
+  htmlSurface?: {
+    contentType: string;
+    bodyTruncated: boolean;
+    formsObserved: number;
+    formsRetained: number;
+    formEndpoints: {
+      method: 'GET' | 'POST' | 'DIALOG' | 'UNKNOWN';
+      action: string;
+      relationship: 'same-origin' | 'cross-origin' | 'unresolved';
+      hasPassword: boolean;
+    }[];
+  };
 }
 export type ProjectProfileStatus = 'complete' | 'partial' | 'unsupported';
 export type ProjectEntrypointKind =
@@ -1026,7 +1038,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
   auditId: string;
   projectName: string;
   createdAt: string;

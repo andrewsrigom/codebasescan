@@ -1037,6 +1037,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(13),
     z.literal(14),
     z.literal(15),
+    z.literal(16),
   ]),
   auditId: shortText,
   projectName: shortText,

@@ -121,6 +121,35 @@ test('redirect chain is retained as bounded passive evidence', async (context) =
   assert.match(result.report?.finalUrl ?? '', /\/final$/);
 });
 
+test('approved HTML response exposes bounded form and endpoint metadata', async (context) => {
+  const methods: string[] = [];
+  const { server, url } = await localServer((request, response) => {
+    methods.push(request.method ?? '');
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    response.end(`
+      <form method="get" action="/login?returnTo=private-value">
+        <input type="password" name="password" value="never-retain-this" />
+      </form>
+      <form method="post" action="https://payments.example/checkout?token=discarded">
+        <input name="amount" />
+      </form>
+    `);
+  });
+  context.after(() => server.close());
+  const result = await probeHttp({ url, allowPrivateNetwork: false });
+  assert.deepEqual(methods, ['HEAD', 'GET']);
+  assert.equal(result.report?.htmlSurface?.formsObserved, 2);
+  assert.equal(result.report?.htmlSurface?.formsRetained, 2);
+  assert.equal(result.report?.htmlSurface?.formEndpoints[0]?.relationship, 'same-origin');
+  assert.equal(result.report?.htmlSurface?.formEndpoints[1]?.relationship, 'cross-origin');
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H010'));
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H011'));
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H012'));
+  assert.ok(!JSON.stringify(result).includes('private-value'));
+  assert.ok(!JSON.stringify(result).includes('never-retain-this'));
+  assert.ok(!JSON.stringify(result).includes('discarded'));
+});
+
 test('probe accepts a complete response without inventing a security result', async (context) => {
   const { server, url } = await localServer((_request, response) => {
     response.writeHead(204, {

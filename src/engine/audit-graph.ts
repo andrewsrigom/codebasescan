@@ -852,7 +852,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 15,
+        schemaVersion: 16,
         auditId: state.auditId,
         projectName,
         createdAt,

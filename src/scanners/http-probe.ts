@@ -31,6 +31,7 @@ const retainedHeaders = [
   'cross-origin-opener-policy',
   'cache-control',
   'vary',
+  'content-type',
 ] as const;
 
 const passiveProbeOrigin = 'https://codebasescan.invalid';
@@ -38,6 +39,8 @@ const passiveProbeOrigin = 'https://codebasescan.invalid';
 interface ProbeResponse {
   statusCode: number;
   headers: IncomingHttpHeaders;
+  body?: string;
+  bodyTruncated: boolean;
 }
 
 export interface HttpProbeResult {
@@ -66,6 +69,7 @@ async function requestOnce(
   method: 'HEAD' | 'GET',
   timeoutMs: number,
   responseLimitBytes: number,
+  captureHtmlBody: boolean,
   signal?: AbortSignal,
 ): Promise<ProbeResponse> {
   const address = target.addresses[0];
@@ -96,9 +100,26 @@ async function requestOnce(
       },
       (response) => {
         let bytes = 0;
-        response.on('data', (chunk: Buffer) => {
+        const chunks: Buffer[] = [];
+        const capturesBody =
+          captureHtmlBody && /^text\/html\b/i.test(String(response.headers['content-type'] ?? ''));
+        response.on('data', (value: Buffer | string) => {
+          const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+          const remaining = responseLimitBytes - bytes;
+          if (capturesBody && remaining > 0) chunks.push(chunk.subarray(0, remaining));
           bytes += chunk.length;
           if (bytes > responseLimitBytes) {
+            if (capturesBody) {
+              settled = true;
+              resolve({
+                statusCode: response.statusCode ?? 0,
+                headers: response.headers,
+                body: Buffer.concat(chunks).toString('utf8'),
+                bodyTruncated: true,
+              });
+              response.destroy();
+              return;
+            }
             response.destroy();
             fail('HTTP probe response exceeded its size limit.');
           }
@@ -107,7 +128,12 @@ async function requestOnce(
         response.on('end', () => {
           if (settled) return;
           settled = true;
-          resolve({ statusCode: response.statusCode ?? 0, headers: response.headers });
+          resolve({
+            statusCode: response.statusCode ?? 0,
+            headers: response.headers,
+            ...(capturesBody ? { body: Buffer.concat(chunks).toString('utf8') } : {}),
+            bodyTruncated: false,
+          });
         });
       },
     );
@@ -120,6 +146,74 @@ async function requestOnce(
     });
     request.end();
   });
+}
+
+function htmlAttribute(attributes: string, name: string): string | undefined {
+  const match = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(
+    attributes,
+  );
+  return match?.[1] ?? match?.[2] ?? match?.[3];
+}
+
+function safeEndpoint(
+  value: string | undefined,
+  baseUrl: string,
+): {
+  action: string;
+  relationship: 'same-origin' | 'cross-origin' | 'unresolved';
+} {
+  try {
+    const base = new URL(baseUrl);
+    const target = new URL(value?.trim() || baseUrl, base);
+    if (!['http:', 'https:'].includes(target.protocol))
+      return { action: '[unsupported form action]', relationship: 'unresolved' };
+    target.username = '';
+    target.password = '';
+    target.search = '';
+    target.hash = '';
+    return {
+      action: redact(target.toString()).slice(0, 500),
+      relationship: target.origin === base.origin ? 'same-origin' : 'cross-origin',
+    };
+  } catch {
+    return { action: '[unresolved form action]', relationship: 'unresolved' };
+  }
+}
+
+function inspectHtmlSurface(
+  html: string,
+  contentType: string,
+  baseUrl: string,
+  bodyTruncated: boolean,
+): NonNullable<HttpProbeReport['htmlSurface']> {
+  const retained: NonNullable<HttpProbeReport['htmlSurface']>['formEndpoints'] = [];
+  let formsObserved = 0;
+  const formPattern = /<form\b([^>]*)>([\s\S]*?)<\/form\s*>/gi;
+  for (const match of html.matchAll(formPattern)) {
+    formsObserved++;
+    if (retained.length >= 50) continue;
+    const attributes = match[1] ?? '';
+    const content = match[2] ?? '';
+    const rawMethod = (htmlAttribute(attributes, 'method') ?? 'GET').toUpperCase();
+    const method = ['GET', 'POST', 'DIALOG'].includes(rawMethod)
+      ? (rawMethod as 'GET' | 'POST' | 'DIALOG')
+      : 'UNKNOWN';
+    const endpoint = safeEndpoint(htmlAttribute(attributes, 'action'), baseUrl);
+    retained.push({
+      method,
+      ...endpoint,
+      hasPassword: /<input\b[^>]*\btype\s*=\s*(?:"password"|'password'|password)(?:\s|\/?>)/i.test(
+        content,
+      ),
+    });
+  }
+  return {
+    contentType: redact(contentType).slice(0, 200),
+    bodyTruncated,
+    formsObserved,
+    formsRetained: retained.length,
+    formEndpoints: retained,
+  };
 }
 
 function headerRecord(headers: IncomingHttpHeaders): Record<string, string> {
@@ -405,6 +499,78 @@ function normalizeFindings(report: HttpProbeReport): Finding[] {
       }),
     );
   }
+  const forms = report.htmlSurface?.formEndpoints ?? [];
+  const insecurePasswordForms = forms.filter(
+    (form) => form.hasPassword && report.finalUrl.startsWith('http:'),
+  );
+  if (insecurePasswordForms.length)
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H010',
+        title: 'Password form was observed on an HTTP page',
+        category: 'authentication',
+        severity: 'high',
+        sourceSeverity: 'high',
+        description:
+          'The approved page contained a password input while the effective page URL used cleartext HTTP. Only retained form metadata was recorded.',
+        remediation:
+          'Serve the page and every submission target over HTTPS, then repeat the authorized runtime observation.',
+        cwe: ['CWE-319'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `${insecurePasswordForms.length} password form(s) were observed on the HTTP page.`,
+          ),
+        ],
+      }),
+    );
+  const passwordGetForms = forms.filter((form) => form.hasPassword && form.method === 'GET');
+  if (passwordGetForms.length)
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H011',
+        title: 'Password form submits with GET',
+        category: 'privacy',
+        severity: 'high',
+        sourceSeverity: 'high',
+        description:
+          'The approved page contained a password input in a GET form. Submitted values can enter URLs, browser history, logs, and referrer data.',
+        remediation:
+          'Submit credentials only in a bounded HTTPS POST body and prevent URL logging.',
+        cwe: ['CWE-598'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `Password GET form targets: ${passwordGetForms.map((form) => form.action).join(', ')}.`,
+          ),
+        ],
+      }),
+    );
+  const crossOriginForms = forms.filter((form) => form.relationship === 'cross-origin');
+  if (crossOriginForms.length)
+    findings.push(
+      makeFinding({
+        source: 'http-probe',
+        ruleId: 'TW-H012',
+        title: 'Form submits to a different origin',
+        category: 'privacy',
+        severity: 'medium',
+        sourceSeverity: 'medium',
+        description:
+          'The approved page contained a form whose action targets another origin. This can be intentional, but the data boundary and destination require review.',
+        remediation:
+          'Confirm the destination owner, submitted fields, consent, transport security, and redirect behavior before accepting the cross-origin transfer.',
+        cwe: ['CWE-201', 'CWE-359'],
+        evidence: [
+          runtimeEvidence(
+            report,
+            `Cross-origin form targets: ${crossOriginForms.map((form) => form.action).join(', ')}.`,
+          ),
+        ],
+      }),
+    );
   return findings;
 }
 
@@ -430,27 +596,44 @@ export async function probeHttp(
     let response: ProbeResponse;
     for (;;) {
       signal?.throwIfAborted();
-      response = await requestOnce(target, method, timeoutMs, responseLimitBytes, signal);
+      response = await requestOnce(
+        target,
+        method,
+        timeoutMs,
+        responseLimitBytes,
+        method === 'GET',
+        signal,
+      );
       if ((response.statusCode === 405 || response.statusCode === 501) && method === 'HEAD') {
         method = 'GET';
-        response = await requestOnce(target, method, timeoutMs, responseLimitBytes, signal);
+        continue;
       }
       const location = response.headers.location;
-      if (![301, 302, 303, 307, 308].includes(response.statusCode) || !location) break;
-      if (redirects >= redirectLimit) throw new Error('HTTP probe exceeded its redirect limit.');
-      const redirected = new URL(Array.isArray(location) ? location[0] : location, target.url);
-      const nextTarget = await validateProbeUrl(
-        redirected.toString(),
-        options.allowPrivateNetwork,
-        resolver,
-      );
-      redirectChain.push({
-        statusCode: response.statusCode,
-        from: target.displayUrl,
-        to: nextTarget.displayUrl,
-      });
-      target = nextTarget;
-      redirects++;
+      if ([301, 302, 303, 307, 308].includes(response.statusCode) && location) {
+        if (redirects >= redirectLimit) throw new Error('HTTP probe exceeded its redirect limit.');
+        const redirected = new URL(Array.isArray(location) ? location[0] : location, target.url);
+        const nextTarget = await validateProbeUrl(
+          redirected.toString(),
+          options.allowPrivateNetwork,
+          resolver,
+        );
+        redirectChain.push({
+          statusCode: response.statusCode,
+          from: target.displayUrl,
+          to: nextTarget.displayUrl,
+        });
+        target = nextTarget;
+        redirects++;
+        continue;
+      }
+      if (
+        method === 'HEAD' &&
+        /^text\/html\b/i.test(String(response.headers['content-type'] ?? ''))
+      ) {
+        method = 'GET';
+        continue;
+      }
+      break;
     }
     const observedAt = new Date().toISOString();
     const report: HttpProbeReport = {
@@ -465,6 +648,16 @@ export async function probeHttp(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       headers: headerRecord(response.headers),
       cookies: cookieMetadata(response.headers),
+      ...(response.body !== undefined
+        ? {
+            htmlSurface: inspectHtmlSurface(
+              response.body,
+              String(response.headers['content-type'] ?? 'text/html'),
+              target.displayUrl,
+              response.bodyTruncated,
+            ),
+          }
+        : {}),
     };
     const findings = normalizeFindings(report);
     return {
@@ -476,8 +669,8 @@ export async function probeHttp(
         status: 'completed',
         durationMs: report.durationMs,
         findings: findings.length,
-        detail: `Observed one explicitly approved URL using ${method}, ${redirects} redirect(s), pinned validated DNS addresses, and bounded response handling. No crawl or exploit was attempted.`,
-        version: '0.3.0',
+        detail: `Observed one explicitly approved URL using ${method}, ${redirects} redirect(s), pinned validated DNS addresses, bounded response handling, and ${report.htmlSurface?.formsObserved ?? 0} retained-page form observation(s). No crawl or exploit was attempted.`,
+        version: '0.4.0',
       },
     };
   } catch (error) {
@@ -490,7 +683,7 @@ export async function probeHttp(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `Probe did not complete: ${redact(error instanceof Error ? error.message : 'unknown failure')}`,
-        version: '0.3.0',
+        version: '0.4.0',
       },
     };
   }
@@ -506,7 +699,7 @@ export function skippedHttpProbe(): HttpProbeResult {
       durationMs: 0,
       findings: 0,
       detail: 'Not run. No HTTP target was explicitly approved for this audit.',
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }
