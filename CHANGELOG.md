@@ -2,6 +2,15 @@
 
 Notable changes are recorded here.
 
+## Unreleased
+
+- Added versioned real-project calibration ledgers, manual miss tracking, anonymized aggregate
+  metrics, JSON Schemas, and CLI review/evaluation commands.
+- Added human review guidance for every finding in the static report and React workspace, with
+  evidence observations first and source/provenance details collapsed.
+- Reduced real-project noise by suppressing generic ID-lookup hotspots when the structural scanner
+  covered the file and by distinguishing database reads from state-changing Next.js operations.
+
 ## 0.2.1 — 2026-09-11
 
 - Added `codebasescan --version`, `codebasescan -v`, and `codebasescan version`, including packed-package smoke coverage.

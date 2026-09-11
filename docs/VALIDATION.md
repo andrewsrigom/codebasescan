@@ -59,18 +59,20 @@ experimental warning.
 These audits parsed captured source and manifests only. No target configuration module,
 dependency installation, lifecycle script, test, build, or application code ran.
 
-| Project           | Snapshot                                                    | Findings                             | Tasks                | Coverage               | Important interpretation                                                 |
-| ----------------- | ----------------------------------------------------------- | ------------------------------------ | -------------------- | ---------------------- | ------------------------------------------------------------------------ |
-| seusaas-platform  | 1,201 / 1,201, complete                                     | 29: 2 high, 2 medium, 23 low, 2 info | 39                   | 14 complete, 2 partial | Three web app roots; two informational crawler/sitemap candidates        |
-| robs-web          | 1,074 / 1,074, complete                                     | 15: 11 medium, 1 low, 3 info         | 23                   | 15 complete, 1 partial | Next.js root route group recognized as one app                           |
-| capta-core        | 1,500 / 2,580, truncated by file/per-file/total-byte limits | 164: 17 high, 116 medium, 31 low     | 159                  | 16 partial             | Owner triage is required; counts cannot support a complete verdict       |
-| fengsoft-commerce | 425 / 425, complete                                         | 0                                    | 6 verification tasks | 12 complete            | No React/Next web root detected; zero is not a clean full-stack verdict  |
-| severyn           | 307 / 307 supported files, complete                         | 2 info                               | 5 verification tasks | 15 complete            | Primarily outside the JS/TS focus, with one detected React web component |
+| Project                  | Snapshot                                                    | Findings                             | Tasks | Coverage               | Important interpretation                                                 |
+| ------------------------ | ----------------------------------------------------------- | ------------------------------------ | ----- | ---------------------- | ------------------------------------------------------------------------ |
+| seusaas-platform         | 1,201 / 1,201, complete                                     | 29: 2 high, 2 medium, 23 low, 2 info | 39    | 14 complete, 2 partial | Three web app roots; two informational crawler/sitemap candidates        |
+| robs-web                 | 1,074 / 1,074, complete                                     | 15: 11 medium, 1 low, 3 info         | 23    | 15 complete, 1 partial | Next.js root route group recognized as one app                           |
+| capta-core               | 1,500 / 2,580, truncated by file/per-file/total-byte limits | 88: 17 high, 40 medium, 31 low       | 99    | 16 partial             | Partial snapshot; detector-noise fixes reduced candidates from 164 to 88 |
+| aster-streaming-platform | 842 / 842, complete                                         | 11: 4 high, 4 medium, 1 low, 2 info  | 38    | 9 complete, 7 partial  | Structurally different React/Next monorepo included in calibration       |
+| severyn                  | 314 / 314 supported files, complete                         | 2 info                               | 5     | 15 complete            | Primarily outside the JS/TS focus, with detected web posture evidence    |
 
 For all five projects, imported Axe evidence was `NOT PERFORMED`, the authorized HTTP probe was
 not run, and infrastructure/cloud behavior was not inferred. Optional external scanners and OSV
 coverage depend on the selected local configuration. These runs prove portability, bounded
-failure, and report honesty; they are not independent owner-confirmed security ground truth.
+failure, and report honesty; they are not independent owner-confirmed security ground truth. The
+anonymized calibration aggregate contains 145 candidates, zero reviewer labels, and correctly
+reports `accuracyClaimReady: false`.
 
 ## What the gate covers
 
@@ -88,14 +90,11 @@ failure, and report honesty; they are not independent owner-confirmed security g
 - CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
 - persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.
 
-## Remaining publication actions
+## Release status
 
-- push the current release candidate and require the public GitHub matrix to pass;
-- confirm the npm name immediately before publication and secure the npm account with 2FA;
-- inspect the final tarball and generated report for private data;
-- configure the protected npm OIDC publisher;
-- remove `private: true` only in the explicit release commit;
-- push the matching version tag, verify npm provenance/fresh install, then create the GitHub release.
+Version 0.2.1 is published on npm with a matching Git tag and public GitHub release. Ordinary pushes
+cannot publish. Future releases still require the clean release gate, packed-artifact inspection,
+registry verification, provenance, and a matching tag/release.
 
 Independent owner-confirmed ground truth, native platforms, signed reviewer/executor identity,
 large-project sharding, and formal trademark clearance remain later maturity work.

@@ -12,14 +12,15 @@ CodebaseScan must turn an authorized Node.js, TypeScript, React, or Next.js repo
 The deterministic audit stays useful with AI disabled. AI may investigate ambiguity and propose
 changes, but cannot overwrite scanner evidence, invent coverage, or verify its own work.
 
-## Implementation checkpoint — 2026-09-10
+## Implementation checkpoint — 2026-09-11
 
 Phases 1–5, 7, and 8 are implemented for the 0.2 release boundary. Correlated evidence includes
 source-risk paths, environment/OpenAPI/database/webhook/feature-flag contracts, framework-major
 coverage, monorepo ownership, test references, and component-aware lifecycle comparison. Phase 6
 has a reproducible five-project corpus covering `seusaas-platform`, `robs-web`, `capta-core`,
-`fengsoft-commerce`, and `severyn`; independent owner dispositions and false-negative review
-remain. Phase 10 now includes the installable CLI, stable static report root, npm/pnpm/Yarn clean
+`aster-streaming-platform`, and `severyn`; a separate versioned calibration ledger, anonymized
+aggregate, CLI review commands, and accuracy-claim gate are implemented. Independent dispositions
+and false-negative review remain. Phase 10 now includes the installable CLI, stable static report root, npm/pnpm/Yarn clean
 install smoke tests, Node 22/24 CI, package dependency separation, guarded provenance metadata, and
 a public security-reporting route. Native Windows/macOS claims, signed releases, and independent
 ground truth remain.
@@ -157,7 +158,7 @@ Security-critical test relationships follow the documented bounded method in
 ## Phase 6 — real-project evaluation corpus
 
 Use authorized repositories with different structures. Start with `seusaas`, `robs-web`,
-`capta-core`, `fengsoft-commerce`, and `severyn` when their roots are available. Profile before
+`capta-core`, `aster-streaming-platform`, and `severyn` when their roots are available. Profile before
 choosing applicable modes; never infer architecture from a project name.
 
 For each run retain an anonymized record: size, duration, memory, coverage, failures, truncation,
@@ -174,6 +175,11 @@ after removing project-specific identifiers and sensitive content.
 
 Gate: different projects produce useful, different results; repeated false positives are fixed or
 downgraded; no broad accuracy claim relies only on synthetic fixtures.
+
+Current corpus pass produces 145 candidates across five projects, down from 221 after eliminating
+generic ID-lookup duplicates in structurally parsed files and database-read mutation noise. The
+aggregate truthfully reports zero reviewed candidates and keeps `accuracyClaimReady` false until
+the independent review ledgers are populated.
 
 ## Phase 7 — bounded correction loop
 

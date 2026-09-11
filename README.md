@@ -38,7 +38,8 @@ target project's dependencies, scripts, configuration modules, tests, and applic
 never installed or executed by an audit. The persistent review application and local Ollama adapter
 use optional peer dependencies and are not required for the terminal report.
 
-CodebaseScan is not published to npm yet. Until the first release, test the same flow from source:
+The public package is [available on npm](https://www.npmjs.com/package/codebasescan). To develop or
+test the repository build directly:
 
 ```bash
 git clone https://github.com/andrewsrigom/codebasescan.git
@@ -78,6 +79,9 @@ Each immutable audit directory contains:
 - `run-manifest.json` — scanner status, coverage, versions, limits, and artifact hashes;
 - `policy-result.json` — optional CI policy result;
 - SARIF, Markdown, CycloneDX, schemas, and a hash manifest.
+
+Detector quality is reviewed through a separate calibration ledger, so scanner output never
+becomes its own ground truth. See [real-project calibration](docs/CALIBRATION.md).
 
 A new audit gets a new ID. Use an earlier JSON report as a baseline when you want a before/after view:
 
@@ -205,6 +209,7 @@ Useful references:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Validation](docs/VALIDATION.md)
+- [Real-project calibration](docs/CALIBRATION.md)
 - [Engineering decisions](docs/DECISIONS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Releasing](docs/RELEASING.md)

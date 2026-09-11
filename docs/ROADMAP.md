@@ -4,7 +4,7 @@ The detailed engineering sequence lives in
 [Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md). This page tracks the product boundary and the
 remaining gates.
 
-## Current release candidate — 0.2.0
+## Current release — 0.2.1
 
 CodebaseScan now has the intended local CLI workflow:
 
@@ -37,17 +37,16 @@ Implemented release work:
 - MIT license, English public documentation, contribution/security policies, public repository,
   private vulnerability reporting, and guarded provenance metadata.
 
-## Final gates before npm
+Version 0.2.1 is published on npm and the matching public GitHub release is available. Publication
+remains manual and is not triggered by ordinary pushes.
 
-- Run the complete release gate from a clean worktree and record exact test/package measurements.
-- Push the release-candidate commits and require the public GitHub workflow to pass.
-- Confirm the unscoped npm name immediately before publication and confirm account 2FA/recovery.
-- Review the packed tarball and static report for accidental secrets or private project paths.
-- Keep `private: true` until the maintainer explicitly authorizes publication.
-- On publication only: remove the private guard, publish with public access and provenance, verify
-  the installed tarball from npm, then create the matching Git tag and GitHub release.
+## Next release — confidence and calibration
 
-No automated workflow publishes the package during ordinary pushes.
+- finish independent candidate labels for five structurally different repositories;
+- record manual misses and false-negative review scope instead of inferring recall;
+- use repeated false positives to narrow generic detectors and add paired regression fixtures;
+- publish evidence, location, and explanation-quality counts per rule;
+- keep `accuracyClaimReady` false until the declared review is actually complete.
 
 ## Evidence still needed after 0.2
 
@@ -64,8 +63,9 @@ These are product maturity items, not reasons to hide current coverage:
 - new framework/provider/ORM shapes only when real projects expose a reproducible miss.
 
 The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
-`fengsoft-commerce`, and `severyn`. It tests portability and unsupported-language behavior; it
-is not owner-confirmed security ground truth.
+`aster-streaming-platform`, and `severyn`. The versioned aggregate currently contains 145
+candidates. It tests portability and detector behavior; reviewer labels and false-negative review
+remain incomplete, so it is not an accuracy claim.
 
 ## Deliberately later
 

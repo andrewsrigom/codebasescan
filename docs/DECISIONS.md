@@ -289,3 +289,22 @@ The package declares public npm access and provenance metadata while retaining `
 until an explicit publication decision. The repository URL must remain the exact public GitHub
 source. The first release requires a clean release gate and deliberate removal of the private guard;
 no commit or CI event in normal development can publish the package.
+
+## 2026-09-11 — independent calibration contract
+
+Detector output, ordinary human dispositions, and detector-quality ground truth are separate
+artifacts. A calibration entry binds to the exact audit, snapshot, finding fingerprint, and source
+digests. It records candidate outcome plus evidence, location, and explanation ratings. Manual
+misses have their own bounded relative paths. Aggregates anonymize project names and omit source.
+Precision is descriptive for reviewed decided candidates; recall is withheld unless every project
+declares a complete false-negative review. The aggregate cannot advertise readiness while reviews
+are incomplete or inconclusive.
+
+## 2026-09-11 — structural scanners replace broad fallback evidence
+
+Broad source patterns remain useful when structural parsing is unavailable, but they must not
+duplicate a stronger structural result from the same parsed file. Generic ID-lookup hotspots are
+therefore retained only as fallback evidence outside structurally analyzed files. The Next.js input
+validation rule now requires a state-changing operation; database reads no longer make a POST route
+a mutation candidate by themselves. Scanner versions change with detector behavior so the local
+cache cannot replay obsolete results.
