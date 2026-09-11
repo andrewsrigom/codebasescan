@@ -20,6 +20,9 @@ and one generated report directory for unexpected source excerpts, private paths
 Immediately before publishing, confirm that the `codebasescan` npm name is available or controlled
 by the maintainer.
 
+The `Publish CodebaseScan` workflow can be started manually from GitHub Actions. Manual runs only
+execute the release gate and npm dry-run; they cannot enter the publish job.
+
 ## Registry setup
 
 Use an npm account with two-factor authentication and recovery codes. Configure npm trusted
@@ -51,6 +54,6 @@ metadata, wrong repository identity, or a package that is still private. The wor
 publish from a fork.
 
 If npm trusted publishing cannot be configured before the first package exists, do not weaken the
-workflow or commit a token. Perform the initial publication through a separately approved
-GitHub-hosted workflow, then configure `publish.yml` as the trusted publisher before later
-versions.
+workflow or commit a token. The maintainer must authenticate directly with npm and approve the
+initial publication with 2FA. Configure `publish.yml` as the trusted publisher immediately after
+the package exists; later versions then use short-lived OIDC credentials only.

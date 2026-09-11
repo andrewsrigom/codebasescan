@@ -4,21 +4,47 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: npm-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  dry-run:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      LANGSMITH_TRACING: 'false'
+      LANGCHAIN_TRACING_V2: 'false'
+      CODEBASESCAN_AI: disabled
+      CODEBASESCAN_SEMGREP: 'false'
+      CODEBASESCAN_GITLEAKS: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Run the complete release gate
+        run: npm run release:check
+
   publish:
-    if: github.repository == 'andrewsrigom/codebasescan'
+    if: github.event_name == 'push' && github.repository == 'andrewsrigom/codebasescan'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: npm
+    permissions:
+      contents: read
+      id-token: write
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       LANGSMITH_TRACING: 'false'
