@@ -154,3 +154,19 @@ test('ordinary component props, route builders, images, and array pushes are not
   `);
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT002'));
 });
+
+test('current pathname safely anchors browser-derived query navigation', () => {
+  const result = scan(`
+    'use client';
+    export function Filters() {
+      const pathname = usePathname();
+      const searchParams = useSearchParams();
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('mode', 'edit');
+      const query = next.toString();
+      router.replace(query ? \`${'${pathname}'}?${'${query}'}\` : pathname);
+      return null;
+    }
+  `);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT002'));
+});

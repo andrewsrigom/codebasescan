@@ -82,7 +82,10 @@ function containsIdentifier(node: ts.Node | undefined, names: Set<string>): bool
   return found;
 }
 
-function functionTaint(node: ts.FunctionLikeDeclaration): Set<string> {
+function functionTaint(node: ts.FunctionLikeDeclaration): {
+  tainted: Set<string>;
+  serverOwnedUrls: Set<string>;
+} {
   const tainted = new Set(
     node.parameters
       .flatMap((parameter) => bindingNames(parameter.name))
@@ -132,7 +135,7 @@ function functionTaint(node: ts.FunctionLikeDeclaration): Set<string> {
     if (node.body) visit(node.body);
     if (!changed) break;
   }
-  return tainted;
+  return { tainted, serverOwnedUrls };
 }
 
 function jsxAttribute(node: ts.JsxAttributes, name: string): ts.JsxAttribute | undefined {
@@ -179,7 +182,12 @@ function isServerOwnedUrl(expression: ts.Expression, trustedNames = new Set<stri
     return (
       /^(?:\/|#|\?)/.test(expression.head.text) ||
       /^(?:mailto|tel):/i.test(expression.head.text) ||
-      /^https?:\/\/[^/]+(?:\/|$)/i.test(expression.head.text)
+      /^https?:\/\/[^/]+(?:\/|$)/i.test(expression.head.text) ||
+      (expression.head.text === '' &&
+        Boolean(
+          expression.templateSpans[0] &&
+          isServerOwnedUrl(expression.templateSpans[0].expression, trustedNames),
+        ))
     );
   if (ts.isConditionalExpression(expression))
     return (
@@ -188,6 +196,7 @@ function isServerOwnedUrl(expression: ts.Expression, trustedNames = new Set<stri
     );
   if (ts.isCallExpression(expression)) {
     const callee = callName(expression).split('.').at(-1) ?? '';
+    if (callee === 'usePathname') return true;
     if (
       /^(?:build|create|localize|resolve|sanitize|safe)[A-Za-z0-9]*(?:Href|Path|Paths|Url)$/i.test(
         callee,
@@ -302,7 +311,11 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
     );
   }
 
-  const visit = (node: ts.Node, tainted = new Set<string>()): void => {
+  const visit = (
+    node: ts.Node,
+    tainted = new Set<string>(),
+    serverOwnedUrls = new Set<string>(),
+  ): void => {
     if (isExecutableFunction(node)) {
       const name = componentName(node);
       if (name && /^[A-Z]/.test(name) && isAsync(node))
@@ -323,8 +336,11 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
             observation: `Client Component ${name} is async.`,
           }),
         );
-      const nextTaint = functionTaint(node);
-      if (node.body) ts.forEachChild(node.body, (child) => visit(child, nextTaint));
+      const nextFlow = functionTaint(node);
+      if (node.body)
+        ts.forEachChild(node.body, (child) =>
+          visit(child, nextFlow.tainted, nextFlow.serverOwnedUrls),
+        );
       return;
     }
 
@@ -367,7 +383,7 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
           value &&
           isSensitiveUrlAttribute(tag, label) &&
           containsIdentifier(value, tainted) &&
-          !isServerOwnedUrl(value)
+          !isServerOwnedUrl(value, serverOwnedUrls)
         )
           add(
             reactFinding({
@@ -418,7 +434,7 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
         isNavigationCall(callee) &&
         first &&
         containsIdentifier(first, tainted) &&
-        !isServerOwnedUrl(first)
+        !isServerOwnedUrl(first, serverOwnedUrls)
       )
         add(
           reactFinding({
@@ -514,7 +530,7 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
       }
     }
 
-    ts.forEachChild(node, (child) => visit(child, tainted));
+    ts.forEachChild(node, (child) => visit(child, tainted, serverOwnedUrls));
   };
   visit(source);
   return findings;
@@ -604,7 +620,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.4.1',
+        version: '0.4.2',
       },
     };
 
@@ -626,7 +642,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.4.1',
+      version: '0.4.2',
     },
   };
 }

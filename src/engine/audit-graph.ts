@@ -311,7 +311,7 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to React security analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'react-security', '0.4.1', ['react-security'], () =>
+      const result = await cachedScan(source, 'react-security', '0.4.2', ['react-security'], () =>
         scanReactSecurity(source, state.projectProfile!),
       );
       event(state, 'react_security', `${result.findings.length} React security candidate(s).`);
