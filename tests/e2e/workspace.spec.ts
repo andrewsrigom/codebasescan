@@ -25,10 +25,9 @@ test('shows evidence, explicit coverage gaps, and the real workflow', async ({ p
   await page.getByRole('tab', { name: 'Checklist', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Security control checklist' })).toBeVisible();
   await expect(page.getByText('GAP CANDIDATE', { exact: false }).first()).toBeVisible();
-  await page.getByRole('tab', { name: 'Investigations', exact: true }).click();
-  await expect(page.getByText('No model investigation was performed')).toBeVisible();
   await page.getByRole('tab', { name: 'Workflow', exact: true }).click();
-  await expect(page.getByText('interrupt() → Command(resume)')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Audit pipeline' })).toBeVisible();
+  await expect(page.getByText('Build portable HTML and machine-readable artifacts')).toBeVisible();
 });
 
 test('records a verified fix and removes it from the unresolved CI state', async ({ page }) => {

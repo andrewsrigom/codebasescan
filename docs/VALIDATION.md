@@ -22,13 +22,13 @@ Linux/WSL is the supported 0.3 candidate environment. Native Windows and macOS a
 | npm run format:check        | Passed                                                                                  |
 | npm run typecheck           | Passed                                                                                  |
 | npm run lint                | Passed, zero warnings                                                                   |
-| npm test                    | 379 passed                                                                              |
+| npm test                    | 368 passed                                                                              |
 | npm run benchmark           | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
 | React benchmark subset      | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
 | SaaS benchmark subset       | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
-| npm run test:graph          | 14 passed, including deep snapshot search, real scanners, cache, and worker recovery    |
+| npm run test:integration    | 11 passed, including real scanners, deterministic fan-in, cache, and worker recovery    |
 | npm run build               | Passed                                                                                  |
 | npm run test:e2e            | 7 passed in Chromium                                                                    |
 | npm audit --audit-level=low | 0 known vulnerabilities                                                                 |
@@ -40,16 +40,16 @@ certification.
 ## Packed installation
 
 The actual tarball was installed into an empty generated project. Each smoke ran the installed
-`doctor`, `init`, full static `audit`, stable report history, and loopback report server.
+`doctor`, `init`, full static `audit`, current report package, and loopback report server.
 
 | Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
 | ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
-| Node 24 / npm     | 274,447 B | 1,219,104 B      | 95,519,559 B           | 10.89 s | 2.19 s |
-| Node 24 / pnpm    | 274,447 B | 1,219,104 B      | 95,604,841 B           | 2.13 s  | 2.30 s |
-| Node 24 / Yarn    | 274,447 B | 1,219,104 B      | 105,010,559 B          | 3.91 s  | 2.17 s |
+| Node 24 / npm     | 260,547 B | 1,155,365 B      | 51,748,920 B           | 5.53 s  | 1.83 s |
+| Node 24 / pnpm    | 260,547 B | 1,155,365 B      | 51,833,120 B           | 1.80 s  | 1.99 s |
+| Node 24 / Yarn    | 260,547 B | 1,155,365 B      | 61,246,765 B           | 2.96 s  | 1.80 s |
 
-The tarball contains 103 files. Next.js, React, shadcn, SQLite checkpoint, and Ollama packages are
-not installed for the default CLI.
+The tarball contains 100 files. Next.js, React, SQLite, LangChain, LangGraph, and model-provider
+packages are not installed for the CLI.
 
 ## Real-project calibration
 
@@ -79,13 +79,14 @@ reports `accuracyClaimReady: false`.
 - Node.js manifest and npm/pnpm/Yarn lockfile integrity checks;
 - nine audit modes with explicit coverage and applicability;
 - paired static accessibility and web-posture rules plus bounded Axe import;
-- LangGraph fan-in, bounded quick/standard/deep context loops, snapshot-only search,
-  interrupt/resume, memory and SQLite checkpoints;
+- deterministic pipeline dependency validation, concurrent fan-in, focused modes, exact cache
+  reuse, and worker recovery;
 - Semgrep and Gitleaks isolated local adapters;
 - dependency structure, duplication, dead code, complexity, and imported coverage summaries;
-- OSV, HTTP, Ollama, and OpenAI boundaries with opt-in and bounded failure behavior;
+- OSV and HTTP boundaries with opt-in and bounded failure behavior;
 - versioned agent report/rule schemas and the packaged Codex review skill installer;
-- immutable report packages, stable history, schemas, integrity manifest, comparison, and policy;
+- one current report package, stale-artifact cleanup, legacy-root reading, schemas, integrity
+  manifest, comparison, and policy;
 - CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
 - persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.
 
@@ -111,4 +112,5 @@ npm run test:package:yarn
 ```
 
 External scanner integration tests require trusted Semgrep and Gitleaks binaries on `PATH`.
-Default AI mode remains disabled.
+The audit has no built-in model provider. External coding agents use separately authorized,
+versioned report and rule contracts.
