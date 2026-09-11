@@ -20,6 +20,8 @@ const rule = z.object({
     'next',
     'react',
     'accessibility',
+    'axe',
+    'web',
     'privacy',
     'reliability',
     'environment',

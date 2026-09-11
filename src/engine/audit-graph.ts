@@ -371,7 +371,7 @@ export function buildAuditGraph(options: {
           scanners: [skippedByMode('web-posture', 'Web discovery and SEO posture', 'web-posture')],
         };
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'web-posture', '0.1.0', ['web-posture'], () =>
+      const result = await cachedScan(source, 'web-posture', '0.4.0', ['web-posture'], () =>
         scanWebPosture(source),
       );
       event(state, 'web_posture', `${result.findings.length} web posture candidate(s).`);

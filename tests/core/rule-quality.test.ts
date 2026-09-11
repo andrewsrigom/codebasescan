@@ -45,6 +45,19 @@ test('rule quality exposes measured and explicitly unmeasured fixture status', (
   assert.equal(unmeasured.rules[0]?.declaredFixtureMetrics.status, 'not_measured');
 });
 
+test('rule quality accepts web posture and imported Axe findings', () => {
+  const report = sampleReport();
+
+  for (const source of ['web', 'axe'] as const) {
+    report.findings[0] = {
+      ...report.findings[0]!,
+      source,
+      ruleId: source === 'web' ? 'TW-WEB001' : 'axe.button-name',
+    };
+    assert.equal(parseRuleQualityReport(buildRuleQualityReport(report)).rules[0]?.source, source);
+  }
+});
+
 test('rule quality JSON Schema is versioned', () => {
   const schema = ruleQualityJsonSchema() as {
     properties?: { schemaVersion?: { const?: number } };
