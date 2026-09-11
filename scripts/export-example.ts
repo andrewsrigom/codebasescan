@@ -40,7 +40,7 @@ const scanners: ScannerRun[] = [
     findings: rawFindings.filter((finding) => finding.source === 'builtin').length,
     detail:
       'Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.',
-    version: '0.2.0',
+    version: '0.2.1',
   },
   {
     id: 'posture',
@@ -49,7 +49,7 @@ const scanners: ScannerRun[] = [
     durationMs: 0,
     findings: rawFindings.filter((finding) => finding.source === 'posture').length,
     detail: 'Conservative framework and configuration posture checks executed locally.',
-    version: '0.2.0',
+    version: '0.2.1',
   },
   {
     id: 'semgrep',

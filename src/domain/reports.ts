@@ -4,6 +4,7 @@ import { groupDependencyAdvisories } from './dependency-advisories.ts';
 import type { RemediationPlan, RemediationResult, RemediationTask } from './remediation.ts';
 import type { RuleQualityReport } from './rule-quality.ts';
 import type { PolicyResult } from './policy.ts';
+import { codebasescanVersion } from './versions.ts';
 
 function npmPurl(name: string, version: string): string {
   const encodedName = encodeURIComponent(name).replace('%2F', '/');
@@ -65,7 +66,7 @@ export function toCycloneDx(report: AuditReport): object {
     metadata: {
       timestamp: report.createdAt,
       tools: {
-        components: [{ type: 'application', name: 'CodebaseScan', version: '0.2.0' }],
+        components: [{ type: 'application', name: 'CodebaseScan', version: codebasescanVersion }],
       },
       component: {
         type: 'application',
@@ -2043,7 +2044,7 @@ export function toSarif(report: AuditReport): object {
     $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
     runs: [
       {
-        tool: { driver: { name: 'CodebaseScan', version: '0.2.0', rules } },
+        tool: { driver: { name: 'CodebaseScan', version: codebasescanVersion, rules } },
         invocations: [
           {
             executionSuccessful:

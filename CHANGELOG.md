@@ -2,6 +2,11 @@
 
 Notable changes are recorded here.
 
+## 0.2.1 — 2026-09-11
+
+- Added `codebasescan --version`, `codebasescan -v`, and `codebasescan version`, including packed-package smoke coverage.
+- Fixed the release dry-run for versions already present on npm by requiring an exact registry integrity match.
+
 ## 0.2.0 — 2026-09-11
 
 - Added a stable script-free `codebasescan-report/index.html` and versioned
