@@ -99,3 +99,14 @@ test('dynamic label references and forwarded intrinsic attributes stay unverifie
   );
   assert.deepEqual(result.findings, []);
 });
+
+test('label components with matching htmlFor provide static naming evidence', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `export function Field({ id }) {
+        return <><Label htmlFor={id}>Notes</Label><textarea id={id} /></>;
+      }`,
+    }),
+  );
+  assert.deepEqual(result.findings, []);
+});

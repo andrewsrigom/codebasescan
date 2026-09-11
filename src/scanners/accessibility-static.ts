@@ -15,6 +15,10 @@ function tagName(node: ts.JsxOpeningLikeElement): string {
   return node.tagName.getText(node.getSourceFile());
 }
 
+function isLabelTag(name: string): boolean {
+  return name === 'label' || name === 'Label' || name.endsWith('.Label');
+}
+
 function attribute(node: ts.JsxOpeningLikeElement, name: string): ts.JsxAttribute | undefined {
   return node.attributes.properties.find(
     (item): item is ts.JsxAttribute =>
@@ -101,7 +105,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
   const collectLabels = (node: ts.Node): void => {
     if (
       (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) &&
-      tagName(ts.isJsxElement(node) ? node.openingElement : node) === 'label'
+      isLabelTag(tagName(ts.isJsxElement(node) ? node.openingElement : node))
     ) {
       const opening = ts.isJsxElement(node) ? node.openingElement : node;
       const target = attributeReference(opening, 'htmlfor');
@@ -369,7 +373,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
         detail: files.length
           ? `Inspected ${files.length} JSX file(s) for six bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior require imported external evidence.`
           : 'No runtime JSX source was available for static accessibility review.',
-        version: '0.4.0',
+        version: '0.5.0',
       },
       imported.run,
     ],

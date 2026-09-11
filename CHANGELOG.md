@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Recognized common JSX `Label` components with matching `htmlFor`/`id` references as static
+  accessible-name evidence.
 - Limited inbound webhook signature-order findings to POST or method-unknown handlers so webhook
   configuration endpoints are not mistaken for provider callbacks.
 - Kept middleware data operations separate from route operations so a shared Next.js proxy can

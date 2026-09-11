@@ -357,7 +357,7 @@ export function buildAuditPipeline(options: {
       const result = await cachedScan(
         source,
         'accessibility-static',
-        '0.4.0',
+        '0.5.0',
         ['accessibility-static', 'axe-results'],
         () => scanAccessibilityStatic(source),
       );
