@@ -4,7 +4,6 @@ Project: Review\-worthy SaaS — fixture export
 Audit: 00000000-0000-4000-8000-000000000001
 Snapshot: be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48
 Publication: draft
-AI mode: disabled
 
 > Findings are review candidates, not a security certification. No findings does not prove safety.
 
@@ -12,36 +11,41 @@ AI mode: disabled
 
 8 files analyzed. Snapshot stayed within configured limits.
 
-- Project structure profile: completed. Parsed 7 captured TypeScript/JavaScript file\(s\) as data; mapped 2 entry point\(s\), 5 symbol\(s\), 8 call edge\(s\), and 6 security\-relevant fact\(s\).
+- Project structure profile: completed. Parsed 7 captured TypeScript/JavaScript file\(s\) as data; mapped 2 entry point\(s\), 5 symbol\(s\), 0 resolved call edge\(s\), 6 security\-relevant fact\(s\), 1 declared component\(s\), 0 cross\-component import edge\(s\), 0 declarative TypeScript path alias\(es\), 0 captured workspace package entry point\(s\), and 0 declarative SaaS semantics file\(s\).
 - Built\-in patterns: completed. Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.
 - Application posture: completed. Conservative framework and configuration posture checks executed locally.
 - Semgrep: skipped. Not executed for this fixture export.
 - Gitleaks: skipped. Not executed for this fixture export.
 - Dependency vulnerabilities: skipped. OSV lookup was disabled for this reproducible fixture export.
-- Dependency structure: completed. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
+- Dependency structure: completed. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) found \(0 retained\), 4 orphan candidate\(s\) found \(4 retained\), and 0 coupling hotspot\(s\) found \(0 retained\). These are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
 - Code duplication: completed. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
 - Node.js supply\-chain integrity: completed. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
-- TypeScript and JavaScript quality metrics: completed. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
-- Dead code and dependency usage: completed. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
+- TypeScript and JavaScript quality metrics: completed. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\) found \(0 retained\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
+- Dead code and dependency usage: completed. 4 unused file candidate\(s\) found \(4 retained\), 1 source\-unreferenced runtime dependency candidate\(s\) found \(1 retained\), and 0 unused export/type candidate\(s\) found \(0 retained\). All target plugins and executable configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
 
 ### Capability summary
 
-- Project structure profile: COMPLETE. Parsed 7 captured TypeScript/JavaScript file\(s\) as data; mapped 2 entry point\(s\), 5 symbol\(s\), 8 call edge\(s\), and 6 security\-relevant fact\(s\).
+- Project structure profile: COMPLETE. Parsed 7 captured TypeScript/JavaScript file\(s\) as data; mapped 2 entry point\(s\), 5 symbol\(s\), 0 resolved call edge\(s\), 6 security\-relevant fact\(s\), 1 declared component\(s\), 0 cross\-component import edge\(s\), 0 declarative TypeScript path alias\(es\), 0 captured workspace package entry point\(s\), and 0 declarative SaaS semantics file\(s\).
 - Framework\-aware authorization: NOT RUN. No scanner run was recorded for this capability.
+- SaaS application security: NOT RUN. No scanner run was recorded for this capability.
 - Next.js application security: NOT RUN. No scanner run was recorded for this capability.
 - React client security: NOT RUN. No scanner run was recorded for this capability.
+- Static accessibility: NOT RUN. No scanner run was recorded for this capability.
+- Imported Axe runtime accessibility: NOT RUN. No scanner run was recorded for this capability.
+- Web discovery and SEO posture: NOT RUN. No scanner run was recorded for this capability.
+- Static privacy: NOT RUN. No scanner run was recorded for this capability.
+- Static reliability: NOT RUN. No scanner run was recorded for this capability.
 - Node.js supply\-chain integrity: COMPLETE. Inspected 1 manifest\(s\), 0 lockfile\(s\), 4 dependency specifier\(s\), and 0 resolved lock entry\(s\) without installing packages.
-- JavaScript/TypeScript dependency structure: COMPLETE. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) and 4 orphan candidate\(s\) are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
+- JavaScript/TypeScript dependency structure: COMPLETE. 7 modules and 0 local dependencies were mapped; 0 cycle\(s\) found \(0 retained\), 4 orphan candidate\(s\) found \(4 retained\), and 0 coupling hotspot\(s\) found \(0 retained\). These are mechanical review data, not vulnerabilities. Target configuration was not loaded. dependency\-cruiser 18.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
 - JavaScript/TypeScript code duplication: COMPLETE. 0 clone\(s\), 0 duplicated line\(s\), and 0% duplication were measured. Source fragments were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd 5.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
-- Code quality metrics: COMPLETE. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
-- Dead code and dependency usage: COMPLETE. 0 unused file candidate\(s\), 0 unused dependency candidate\(s\), and 0 unused export candidate\(s\). All target plugins and configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
+- Code quality metrics: COMPLETE. 5 function\(s\) measured; 0 complexity, size, or parameter hotspot\(s\) found \(0 retained\). 0 existing coverage artifact\(s\) imported. Metrics are review evidence, not vulnerabilities.
+- Dead code and dependency usage: COMPLETE. 4 unused file candidate\(s\) found \(4 retained\), 1 source\-unreferenced runtime dependency candidate\(s\) found \(1 retained\), and 0 unused export/type candidate\(s\) found \(0 retained\). All target plugins and executable configuration loaders were disabled. knip 6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
 - Built\-in static patterns: COMPLETE. Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.
 - Static code analysis: DISABLED. Not executed for this fixture export.
 - Secret scanning: DISABLED. Not executed for this fixture export.
 - Dependency vulnerabilities: DISABLED. OSV lookup was disabled for this reproducible fixture export.
 - Security configuration: COMPLETE. Conservative framework and configuration posture checks executed locally.
 - HTTP runtime posture: NOT RUN. No scanner run was recorded for this capability.
-- AI contextual analysis: DISABLED. Model inference was disabled. Deterministic findings remain available.
 - Infrastructure as Code: NOT SUPPORTED. No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented.
 - Cloud IAM: NOT SUPPORTED. Cloud account and effective IAM policy analysis are outside this release.
 - Dynamic exploitation: NOT PERFORMED. CodebaseScan does not exploit targets, brute\-force authentication, or crawl applications.
@@ -49,12 +53,17 @@ AI mode: disabled
 ## Project structure
 
 Status: complete. 7 source files and 226 AST nodes parsed as data.
-Frameworks: Next.js App Router, Prisma.
-Entry points: 2. Symbols: 5. Call edges: 8. Security facts: 6.
+Framework rule coverage: Next.js App Router 16 \[supported\], React 19 \[supported\], Prisma 6 \[unverified\].
+Declared components: 1. Cross-component import edges: 0.
+Entry points: 2. Symbols: 5. Call edges: 0. Security facts: 6.
+
+Declared package boundaries:
+
+- review\-worthy\-saas (.): 7 source file(s).
 
 ## Mechanical analysis
 
-Dependency structure: 7 modules, 0 local dependencies, 0 cycles, and 4 orphan candidates.
+Dependency structure: 7 modules, 0 local dependencies, 0 cycles (0 retained), 4 orphan candidates (4 retained), and 0 coupling hotspots (0 retained).
 
 Duplication: 0 clones and 0 duplicated lines (0%).
 
@@ -73,14 +82,14 @@ These measurements are maintainability evidence, not security vulnerabilities.
 
 ## Code quality
 
-5 functions across 7 files were measured; 0 complexity, size, or parameter hotspots were retained.
-Knip candidates: 0 unused files, 0 unused dependencies, 0 unused exports/types.
+5 functions across 7 files were measured; 0 complexity, size, or parameter hotspots were found (0 retained).
+Knip candidates: 4 unused files (4 retained), 1 unused dependencies (1 retained), and 0 unused exports/types (0 retained).
 
 These are bounded maintenance and test signals, not vulnerabilities or proof of adequate testing.
 
 ## Security checklist
 
-Pack: codebasescan\-web\-application 0.4.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 8.
+Pack: codebasescan\-web\-application 0.5.0. EVIDENCED 0; GAP_CANDIDATE 3; UNVERIFIED 14; PARTIAL 0; FAILED 0; NOT_APPLICABLE 15.
 
 ### NOT\_APPLICABLE: Sensitive mutations authenticate a principal
 
@@ -177,6 +186,62 @@ Control: TW\-CTRL\-WEBHOOK\-001 | Domain: integrations
 No supported webhook/callback boundary reaching a sensitive operation was mapped.
 
 Verification: Send missing, invalid, replayed, and stale signatures and confirm rejection before parsing or persistence.
+
+### NOT\_APPLICABLE: Webhook side effects resist duplicate delivery
+
+Control: TW\-CTRL\-SAAS\-WEBHOOK\-001 | Domain: integrations
+
+No supported webhook/callback boundary reaching a sensitive operation was mapped.
+
+Verification: Replay the same provider event concurrently and after a failure; confirm one durable effect and safe retry recovery.
+
+### NOT\_APPLICABLE: Abuse\-sensitive routes apply rate limits
+
+Control: TW\-CTRL\-SAAS\-ABUSE\-001 | Domain: authentication
+
+No supported abuse\-sensitive boundary was mapped.
+
+Verification: Burst requests by IP and account identifier, then confirm bounded retries, useful backoff, and no easy key rotation bypass.
+
+### NOT\_APPLICABLE: Billing mutations derive charged values on the server
+
+Control: TW\-CTRL\-SAAS\-BILLING\-001 | Domain: authorization
+
+No supported billing\-provider mutation was mapped.
+
+Verification: Tamper with plan, price, product, amount, currency, quantity, discount, and tenant ownership; compare the provider\-side charge with the server catalog.
+
+### NOT\_APPLICABLE: Recovery and invitation tokens have a bounded lifecycle
+
+Control: TW\-CTRL\-SAAS\-RECOVERY\-001 | Domain: authentication
+
+No supported recovery, invitation, or verification boundary was mapped.
+
+Verification: Test expiry, replay, concurrent redemption, account binding, user enumeration, token disclosure, and invalidation after password or email changes.
+
+### NOT\_APPLICABLE: OAuth/OIDC flows bind redirects and authorization responses
+
+Control: TW\-CTRL\-SAAS\-OAUTH\-001 | Domain: authentication
+
+No supported OAuth/OIDC boundary was mapped.
+
+Verification: Test missing/reused state, PKCE mismatch, nonce mismatch, redirect variants, login CSRF, account\-link confusion, and authorization\-code replay.
+
+### NOT\_APPLICABLE: Tenant\-aware data operations enforce a server\-side scope
+
+Control: TW\-CTRL\-SAAS\-TENANT\-001 | Domain: authorization
+
+No tenant\-aware database boundary was established by the captured semantics and source.
+
+Verification: Exercise every operation as two tenants, including list, lookup, update, delete, export, background job, and administrative paths; inspect effective RLS separately.
+
+### NOT\_APPLICABLE: Cookie\-authenticated mutations validate request origin or CSRF token
+
+Control: TW\-CTRL\-SAAS\-CSRF\-001 | Domain: browser\-security
+
+No mapped sensitive mutation also contained a cookie operation.
+
+Verification: Send cross\-site form, fetch, null\-Origin, and sibling\-subdomain requests; confirm rejection before the sensitive effect.
 
 ### UNVERIFIED: Browser security policies are declared and observed
 
@@ -363,8 +428,8 @@ Rule TW\-006 matched a review\-relevant code pattern. Runtime exploitability is 
 
 ## Limitations
 
-- This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.
-- No model, optional external security scanner, or runtime exploit test was executed.
+- This is an inert fixture export generated directly by the deterministic core.
+- No optional external security scanner or runtime exploit test was executed.
 - Bundled dependency and duplication analysis ran against an isolated inert snapshot; its output is maintainability evidence, not a vulnerability verdict.
 - All findings are review candidates; there are no automatically confirmed vulnerabilities.
 - Regex heuristics can match comments and miss indirect flows. This is not a security certification.

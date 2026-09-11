@@ -43,8 +43,9 @@ test('public demo keeps retained candidates and removes private identifiers', ()
   assert.equal(demo.retainedFindings, 1);
   assert.equal(demo.report.findings.length, 1);
   assert.equal(demo.report.projectName, 'Example SaaS Application');
-  assert.ok(demo.html.includes('Anonymized public example'));
+  assert.ok(demo.html.includes('Public demo'));
   assert.ok(demo.html.includes('Public example report'));
+  assert.ok(!demo.html.includes('model-assisted'));
   assert.ok(!demo.html.toLowerCase().includes('private-saas'));
   assert.ok(!demo.html.includes('Dismissed private-saas candidate'));
   assert.ok(!demo.html.includes('agent-plan.json'));

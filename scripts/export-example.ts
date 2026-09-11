@@ -134,4 +134,4 @@ for (const [extension, content] of [
     await formatDocument(content, { ...prettierConfig, filepath: destination }),
   );
 }
-console.log('Wrote deterministic fixture exports to examples/. No graph or model was executed.');
+console.log('Wrote deterministic fixture exports to examples/.');

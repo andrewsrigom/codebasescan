@@ -250,6 +250,97 @@
       .control .meta {
         margin-left: 8px;
       }
+      .dependency-plans {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .dependency-plan {
+        border: 1px solid #e7ece9;
+        border-radius: 9px;
+        padding: 17px;
+      }
+      .dependency-plan h3 {
+        font:
+          700 14px ui-monospace,
+          monospace;
+        overflow-wrap: anywhere;
+      }
+      .dependency-plan .meta {
+        margin-left: 8px;
+      }
+      .dependency-plan ul {
+        padding-left: 20px;
+      }
+      .dependency-plan li + li {
+        margin-top: 12px;
+      }
+      .dependency-plan p {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 4px 0;
+      }
+      .artifact-links {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 24px;
+        padding-left: 20px;
+      }
+      .artifact-links a {
+        font-weight: 650;
+      }
+      .task-list {
+        list-style: none;
+        padding: 0;
+        margin: 18px 0 0;
+        display: grid;
+        gap: 10px;
+      }
+      .task-list li {
+        border: 1px solid #e7ece9;
+        border-radius: 9px;
+        padding: 16px;
+      }
+      .task-list li > div {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .task-list code {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .task-list h3 {
+        font-size: 15px;
+        margin: 10px 0 4px;
+      }
+      .task-list p {
+        margin: 0;
+        color: #42564c;
+      }
+      .task-list small {
+        display: block;
+        color: var(--muted);
+        margin-top: 7px;
+      }
+      .path-steps {
+        margin: 12px 0;
+        padding-left: 22px;
+      }
+      .path-steps li {
+        border: 0;
+        padding: 4px 0;
+      }
+      .path-steps small {
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+      .path-steps strong {
+        text-transform: capitalize;
+      }
       .findings-title {
         margin-top: 42px;
       }
@@ -303,7 +394,9 @@
         .summary-grid {
           grid-template-columns: 1fr 1fr;
         }
-        .controls {
+        .controls,
+        .dependency-plans,
+        .artifact-links {
           grid-template-columns: 1fr;
         }
         .report-section,
@@ -341,967 +434,2628 @@
           color: var(--ink);
         }
       }
+      :root {
+        --ink: #111827;
+        --muted: #667085;
+        --line: #e4e7ec;
+        --paper: #fff;
+        --canvas: #f5f6f8;
+        --accent: #2563eb;
+        --amber: #a15c07;
+        --red: #b42318;
+        --nav: #101419;
+        --nav-muted: #aab3bf;
+        --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.04);
+      }
+      body {
+        font:
+          14px/1.5 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      .report-app {
+        display: grid;
+        grid-template-columns: 232px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+      .report-sidebar {
+        background: var(--nav);
+        color: #fff;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 20px 14px;
+        display: flex;
+        flex-direction: column;
+        z-index: 20;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 8px 22px;
+      }
+      .brand-mark {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #424a55;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+      .brand strong {
+        font-size: 13px;
+        letter-spacing: 0.08em;
+      }
+      .brand small {
+        display: block;
+        color: var(--nav-muted);
+        font-size: 10px;
+      }
+      .nav-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: #66717e;
+        padding: 12px 10px 8px;
+      }
+      .report-nav {
+        display: grid;
+        gap: 2px;
+      }
+      .report-nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #bac2cc;
+        padding: 9px 10px;
+        border-radius: 8px;
+        font-size: 12px;
+        text-decoration: none;
+      }
+      .report-nav a:hover,
+      .report-nav a:focus-visible {
+        background: #1a2027;
+        color: #fff;
+        outline: none;
+      }
+      .nav-icon {
+        width: 17px;
+        text-align: center;
+        color: #7f8996;
+      }
+      .side-meta {
+        margin-top: auto;
+        border-top: 1px solid #282f38;
+        padding: 14px 8px 0;
+        color: var(--nav-muted);
+        font-size: 10px;
+      }
+      .side-meta strong {
+        display: block;
+        color: #e1e5eb;
+        font-size: 11px;
+        margin-bottom: 4px;
+      }
+      .report-main {
+        min-width: 0;
+      }
+      .topbar {
+        height: 64px;
+        background: rgba(255, 255, 255, 0.94);
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 34px;
+        position: sticky;
+        top: 0;
+        z-index: 15;
+      }
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .breadcrumb strong {
+        color: var(--ink);
+      }
+      .top-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: var(--ink);
+        border-radius: 9px;
+        padding: 8px 11px;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .button.primary {
+        background: #171b21;
+        border-color: #171b21;
+        color: #fff;
+      }
+      .button:hover,
+      .button:focus-visible {
+        border-color: #98a2b3;
+        outline: 3px solid #eaf0ff;
+        outline-offset: 1px;
+      }
+      .report-content {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 32px 36px 80px;
+      }
+      .section-shell {
+        margin-top: 30px;
+        scroll-margin-top: 84px;
+      }
+      .eyebrow {
+        font-size: 10px;
+        line-height: 1;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        color: #98a2b3;
+        font-weight: 800;
+      }
+      .overview-hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 26px;
+        align-items: end;
+        margin: 4px 0 24px;
+      }
+      .overview-hero h1 {
+        font-size: 34px;
+        letter-spacing: -0.035em;
+        line-height: 1.1;
+        margin: 8px 0;
+      }
+      .overview-hero p {
+        margin: 0;
+        color: var(--muted);
+        max-width: 740px;
+      }
+      .review-note {
+        border: 1px solid #ecd9b9;
+        background: #fffaf0;
+        border-radius: 12px;
+        padding: 14px 15px;
+      }
+      .review-note strong {
+        font-size: 12px;
+      }
+      .review-note p {
+        font-size: 11px;
+        margin: 7px 0 0;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .executive-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .executive-metric {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 17px 18px;
+      }
+      .executive-metric span {
+        display: block;
+        color: #98a2b3;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .executive-metric strong {
+        display: block;
+        font-size: 29px;
+        line-height: 1;
+        margin: 15px 0 6px;
+        letter-spacing: -0.04em;
+      }
+      .executive-metric p {
+        font-size: 11px;
+        margin: 0;
+        color: var(--muted);
+      }
+      .machine-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        border: 1px dashed #cfd4dc;
+        border-radius: 11px;
+        padding: 12px 14px;
+        margin-top: 14px;
+        color: #475467;
+        font-size: 10px;
+      }
+      .machine-banner strong {
+        color: var(--ink);
+      }
+      .machine-banner a {
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .section-heading {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 20px;
+        margin-bottom: 11px;
+      }
+      .section-heading h2 {
+        font-size: 18px;
+        margin: 5px 0 0;
+      }
+      .section-heading p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        max-width: 610px;
+      }
+      .risk-table {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .risk-table li + li {
+        border-top: 1px solid #eef0f2;
+      }
+      .risk-table a {
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr) auto 22px;
+        gap: 14px;
+        align-items: center;
+        padding: 15px 16px;
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .risk-table a:hover,
+      .risk-table a:focus-visible {
+        background: #f9fafb;
+        outline: none;
+      }
+      .rank {
+        font:
+          600 11px ui-monospace,
+          monospace;
+        color: #98a2b3;
+      }
+      .risk-copy {
+        min-width: 0;
+      }
+      .risk-copy strong,
+      .risk-copy small {
+        display: block;
+      }
+      .risk-copy small {
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .risk-meta {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .arrow {
+        color: #98a2b3;
+      }
+      .queue-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .queue-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 17px;
+        min-height: 190px;
+      }
+      .queue-card > strong {
+        font-size: 24px;
+      }
+      .queue-card h3 {
+        font-size: 13px;
+        margin: 8px 0 4px;
+      }
+      .queue-card p {
+        font-size: 11px;
+        color: var(--muted);
+        margin: 0 0 14px;
+      }
+      .queue-card ul {
+        border-top: 1px solid #eef0f2;
+        list-style: none;
+        margin: 0;
+        padding: 9px 0 0;
+      }
+      .queue-card li {
+        font-size: 10px;
+        padding: 4px 0;
+      }
+      .queue-card li a {
+        color: #475467;
+        text-decoration: none;
+      }
+      .queue-card li a:hover {
+        text-decoration: underline;
+      }
+      .report-section {
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        margin: 12px 0;
+        padding: 22px;
+      }
+      .coverage-panel {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+      .coverage-panel .coverage-list {
+        margin: 0;
+        padding: 6px 18px;
+      }
+      .coverage-panel .coverage-list li {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        padding: 12px 0;
+      }
+      .detail-group {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        margin: 8px 0;
+        overflow: hidden;
+      }
+      .detail-group > summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 15px 17px;
+        font-size: 12px;
+        font-weight: 750;
+        display: flex;
+        justify-content: space-between;
+      }
+      .detail-group > summary::-webkit-details-marker,
+      .finding-summary::-webkit-details-marker {
+        display: none;
+      }
+      .detail-group > summary:after,
+      .finding-summary:after {
+        content: '+';
+        color: #98a2b3;
+        font-size: 16px;
+        font-weight: 400;
+      }
+      .detail-group[open] > summary:after,
+      .finding[open] > .finding-summary:after {
+        content: '−';
+      }
+      .detail-group[open] > summary {
+        border-bottom: 1px solid #eef0f2;
+      }
+      .detail-group-body {
+        padding: 6px 10px 10px;
+      }
+      .detail-group-body > .report-section {
+        box-shadow: none;
+        border: 0;
+        border-radius: 8px;
+        border-bottom: 1px solid #eef0f2;
+      }
+      .detail-group-body > .report-section:last-child {
+        border-bottom: 0;
+      }
+      .task-list {
+        gap: 6px;
+      }
+      .task-list li {
+        padding: 0;
+        scroll-margin-top: 82px;
+      }
+      .task-detail > summary {
+        cursor: pointer;
+        list-style: none;
+        display: grid;
+        grid-template-columns: auto minmax(220px, 1fr) 80px 18px;
+        align-items: center;
+        gap: 12px;
+        padding: 13px 14px;
+      }
+      .task-detail > summary::-webkit-details-marker {
+        display: none;
+      }
+      .task-detail > summary:after {
+        content: '+';
+        color: #98a2b3;
+        font-size: 16px;
+      }
+      .task-detail[open] > summary:after {
+        content: '−';
+      }
+      .task-detail > summary > span {
+        display: flex;
+        gap: 6px;
+      }
+      .task-detail > summary > strong {
+        font-size: 12px;
+      }
+      .task-priority {
+        font:
+          10px ui-monospace,
+          monospace;
+        color: var(--muted);
+      }
+      .task-body {
+        border-top: 1px solid #eef0f2;
+        padding: 12px 16px 16px;
+      }
+      .task-body > code {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .finding {
+        display: block;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        margin: 8px 0;
+        padding: 0;
+        overflow: hidden;
+        scroll-margin-top: 82px;
+        box-shadow: none;
+      }
+      .finding-summary {
+        cursor: pointer;
+        list-style: none;
+        display: grid;
+        grid-template-columns: auto minmax(220px, 1fr) minmax(140px, 0.5fr) 20px;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 15px;
+      }
+      .finding-summary > span:first-child {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .finding-summary > strong {
+        font-size: 12px;
+      }
+      .finding-location {
+        font:
+          10px ui-monospace,
+          monospace;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .finding-body {
+        border-top: 1px solid #eef0f2;
+        padding: 4px 18px 18px;
+      }
+      .finding-body > p:first-child {
+        color: #475467;
+      }
+      .technical-intro {
+        color: var(--muted);
+        font-size: 12px;
+        margin: -2px 0 14px;
+      }
+      .artifact-links {
+        list-style: none;
+        padding: 0;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .artifact-links li {
+        border: 1px solid #eef0f2;
+        border-radius: 8px;
+        padding: 9px 10px;
+      }
+      .artifact-links a {
+        font-size: 11px;
+        text-decoration: none;
+      }
+      .artifact-links a:hover {
+        text-decoration: underline;
+      }
+      footer {
+        font-size: 11px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      @media (max-width: 1020px) {
+        .report-app {
+          grid-template-columns: 70px minmax(0, 1fr);
+        }
+        .report-sidebar {
+          padding: 20px 9px;
+        }
+        .brand > div:last-child,
+        .nav-label,
+        .report-nav a span:last-child,
+        .side-meta {
+          display: none;
+        }
+        .brand {
+          justify-content: center;
+          padding-left: 0;
+          padding-right: 0;
+        }
+        .report-nav a {
+          justify-content: center;
+        }
+        .nav-icon {
+          width: auto;
+        }
+        .overview-hero {
+          grid-template-columns: 1fr;
+        }
+        .executive-metrics {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 720px) {
+        .report-app {
+          display: block;
+        }
+        .report-sidebar {
+          position: static;
+          height: auto;
+          padding: 10px 12px;
+          display: block;
+        }
+        .brand {
+          justify-content: flex-start;
+          padding: 2px 4px 8px;
+        }
+        .brand > div:last-child {
+          display: block;
+        }
+        .nav-label,
+        .side-meta {
+          display: none;
+        }
+        .report-nav {
+          display: flex;
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+        .report-nav a {
+          flex: 0 0 auto;
+          padding: 8px;
+        }
+        .report-nav a span:last-child {
+          display: inline;
+        }
+        .topbar {
+          height: auto;
+          min-height: 58px;
+          padding: 10px 15px;
+        }
+        .breadcrumb > span:first-child,
+        .top-actions .button:first-child {
+          display: none;
+        }
+        .report-content {
+          padding: 24px 15px 60px;
+        }
+        .overview-hero {
+          grid-template-columns: 1fr;
+        }
+        .overview-hero h1 {
+          font-size: 28px;
+        }
+        .executive-metrics,
+        .queue-grid {
+          grid-template-columns: 1fr;
+        }
+        .risk-table a {
+          grid-template-columns: 34px minmax(0, 1fr) 20px;
+        }
+        .risk-meta {
+          display: none;
+        }
+        .section-heading {
+          display: block;
+        }
+        .section-heading p {
+          margin-top: 7px;
+        }
+        .task-detail > summary {
+          grid-template-columns: auto minmax(0, 1fr) 18px;
+        }
+        .task-priority {
+          display: none;
+        }
+        .finding-summary {
+          grid-template-columns: auto minmax(0, 1fr) 20px;
+        }
+        .finding-location {
+          display: none;
+        }
+        .artifact-links {
+          grid-template-columns: 1fr;
+        }
+        .machine-banner {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+      @media print {
+        .report-app {
+          display: block;
+        }
+        .report-sidebar,
+        .topbar,
+        .machine-banner {
+          display: none;
+        }
+        .report-content {
+          max-width: none;
+          padding: 0;
+        }
+        .detail-group {
+          break-inside: avoid;
+        }
+        .detail-group > summary:after,
+        .finding-summary:after {
+          display: none;
+        }
+      }
+      :root {
+        color-scheme: dark;
+        --ink: #f5f7ff;
+        --muted: #929bb1;
+        --line: #293047;
+        --paper: #121728;
+        --canvas: #080b14;
+        --accent: #3478ff;
+        --amber: #f0a909;
+        --red: #ff6b63;
+        --nav: #0d1120;
+        --nav-muted: #8c96ad;
+        --shadow: none;
+      }
+      body {
+        background: var(--canvas);
+      }
+      .report-sidebar {
+        border-right: 1px solid #222a3d;
+      }
+      .brand-mark {
+        border-color: #4a5571;
+      }
+      .brand strong {
+        color: #fff;
+      }
+      .nav-label {
+        color: #5f6980;
+      }
+      .report-nav a {
+        color: #c3cad9;
+      }
+      .report-nav a:hover,
+      .report-nav a:focus-visible {
+        background: #171d30;
+      }
+      .report-nav a.current {
+        background: #2364f5;
+        color: #fff;
+      }
+      .report-nav a.current .nav-icon {
+        color: #fff;
+      }
+      .side-meta {
+        border-color: #293047;
+      }
+      .side-meta strong {
+        color: #fff;
+      }
+      .topbar {
+        background: rgba(8, 11, 20, 0.94);
+        backdrop-filter: blur(12px);
+      }
+      .button {
+        background: #0e1322;
+        color: var(--ink);
+      }
+      .button.primary {
+        background: #2364f5;
+        border-color: #2364f5;
+      }
+      .button:hover,
+      .button:focus-visible {
+        border-color: #4b7fff;
+        outline-color: #152a52;
+      }
+      .review-note {
+        border-color: #574317;
+        background: #19170e;
+      }
+      .executive-metric,
+      .risk-table,
+      .queue-card,
+      .coverage-panel,
+      .detail-group,
+      .finding {
+        background: var(--paper);
+      }
+      .machine-banner {
+        background: #0d1322;
+        border-color: #39435d;
+        color: var(--muted);
+      }
+      .risk-table li + li,
+      .queue-card ul,
+      .detail-group[open] > summary,
+      .detail-group-body > .report-section,
+      .task-body,
+      .finding-body,
+      .finding-section {
+        border-color: #252d43;
+      }
+      .risk-table a:hover,
+      .risk-table a:focus-visible {
+        background: #171e32;
+      }
+      .queue-card li a,
+      .finding-body > p:first-child,
+      .task-list p,
+      .control p {
+        color: #b0b8ca;
+      }
+      .task-list li,
+      .control,
+      .dependency-plan,
+      .artifact-links li {
+        border-color: #293047;
+      }
+      .facts span {
+        background: #171d30;
+        border-color: #293047;
+      }
+      .callout {
+        background: #17150d;
+      }
+      .evidence pre {
+        background: #070a12;
+        color: #dfe7ff;
+      }
+      .severity.critical,
+      .severity.high {
+        background: #35171c;
+        color: #ff8c85;
+      }
+      .severity.medium {
+        background: #382b10;
+        color: #ffc85b;
+      }
+      .severity.low,
+      .severity.info {
+        background: #20283a;
+        color: #aeb8ce;
+      }
+      .status.complete {
+        background: #0d3229;
+        color: #57d9a3;
+      }
+      .status.gap {
+        background: #3a2b10;
+        color: #ffd075;
+      }
+      .artifact-links a {
+        color: #78a4ff;
+      }
+      @media print {
+        :root {
+          color-scheme: light;
+          --ink: #111827;
+          --muted: #667085;
+          --line: #dfe3ea;
+          --paper: #fff;
+          --canvas: #fff;
+          --accent: #245fe5;
+        }
+        .report-section,
+        .finding,
+        .executive-metric,
+        .risk-table,
+        .queue-card,
+        .coverage-panel,
+        .detail-group {
+          background: #fff;
+        }
+        .review-note {
+          background: #fffaf0;
+          color: #111827;
+        }
+        .risk-table a,
+        .queue-card li a,
+        .finding-body > p:first-child,
+        .task-list p,
+        .control p {
+          color: #111827;
+        }
+      }
+      .reading-guide {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 1px;
+        background: var(--line);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 14px;
+      }
+      .reading-guide > div {
+        background: var(--paper);
+        padding: 13px 15px;
+      }
+      .reading-guide span {
+        float: left;
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        margin-right: 9px;
+        border-radius: 50%;
+        background: #2364f5;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .reading-guide strong {
+        display: block;
+        font-size: 11px;
+      }
+      .reading-guide p {
+        margin: 3px 0 0 31px;
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .queue-summary {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .task-detail > summary {
+        grid-template-columns: auto minmax(220px, 1fr) auto 18px;
+      }
+      .action-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 3px 8px;
+        background: #183b67;
+        color: #8fbaff;
+        font-size: 10px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+      .task-count {
+        font-size: 10px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .task-body {
+        padding: 18px;
+      }
+      .task-explanation {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .task-explanation section {
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        padding: 14px;
+      }
+      .task-explanation h4 {
+        margin: 0 0 7px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: #aeb8ca;
+      }
+      .task-explanation p {
+        margin: 0;
+        font-size: 12px;
+        color: #c5ccda;
+      }
+      .task-explanation ol,
+      .task-explanation ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      .task-explanation li {
+        border: 0;
+        border-radius: 0;
+        padding: 3px 0;
+        color: #c5ccda;
+        font-size: 11px;
+      }
+      .task-explanation .file-list {
+        list-style: none;
+        padding: 0;
+      }
+      .task-explanation .file-list li {
+        font:
+          10px/1.5 ui-monospace,
+          SFMono-Regular,
+          Consolas,
+          monospace;
+        overflow-wrap: anywhere;
+        color: #9eb8f2;
+      }
+      .task-note {
+        margin-top: 12px;
+        border-left: 3px solid #755b1a;
+        background: #17150d;
+        padding: 10px 12px;
+      }
+      .task-note strong {
+        font-size: 11px;
+      }
+      .task-note p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .evidence-link {
+        margin: 13px 0 0;
+      }
+      .evidence-link a {
+        font-size: 11px;
+        font-weight: 750;
+      }
+      .finding-overview {
+        border-top: 0;
+        margin-top: 0;
+      }
+      .source-details {
+        margin-top: 10px;
+      }
+      .source-details summary {
+        cursor: pointer;
+        color: #8fbaff;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .source-details pre {
+        margin-top: 8px;
+      }
+      @media (max-width: 720px) {
+        .reading-guide,
+        .task-explanation {
+          grid-template-columns: 1fr;
+        }
+        .task-detail > summary {
+          grid-template-columns: minmax(0, 1fr) 18px;
+        }
+        .task-detail > summary > span,
+        .task-count {
+          display: none;
+        }
+      }
+      @media print {
+        .reading-guide > div,
+        .task-explanation section {
+          background: #fff;
+        }
+        .task-explanation p,
+        .task-explanation li {
+          color: #111827;
+        }
+        .action-pill {
+          background: #eaf0ff;
+          color: #245fe5;
+        }
+      }
     </style>
   </head>
   <body>
-    <main id="top">
-      <header class="hero">
-        <span class="kicker">CODEBASESCAN / LOCAL SECURITY REVIEW</span>
-        <h1>Review-worthy SaaS — fixture export</h1>
-        <div class="hero-meta">
-          <span>Audit 00000000</span><span>2026-09-08T12:00:00.000Z</span><span>8 files</span
-          ><span>draft</span
-          ><code>Snapshot be14a0f1bb2a1bdd297d624383573f6e2b0f9cddee87343b5fdd736509ae2b48</code>
+    <div class="report-app">
+      <aside class="report-sidebar">
+        <div class="brand">
+          <div class="brand-mark">TW</div>
+          <div><strong>CODEBASESCAN</strong><small>Audit review</small></div>
         </div>
-      </header>
-      <aside class="callout">
-        <strong>Evidence-led review, not a security certification.</strong> Severity and human
-        disposition are separate. Missing or failed coverage never counts as a clean result.
+        <div class="nav-label">Report</div>
+        <nav class="report-nav" aria-label="Report sections">
+          <a class="current" aria-current="page" href="#overview"
+            ><span class="nav-icon">⌂</span><span>Overview</span></a
+          ><a href="#risks"><span class="nav-icon">!</span><span>Top risks</span></a
+          ><a href="#coverage"><span class="nav-icon">◫</span><span>Coverage</span></a
+          ><a href="#technical"><span class="nav-icon">⌘</span><span>Technical data</span></a
+          ><a href="#findings"><span class="nav-icon">◆</span><span>Findings</span></a>
+        </nav>
+        <div class="side-meta">
+          <strong>Review-worthy SaaS — fixture export</strong>Audit 00000000<br />Local static
+          review
+        </div>
       </aside>
-      <section aria-labelledby="summary-title">
-        <span class="kicker">DECISION SUPPORT</span>
-        <h2 id="summary-title">Review summary</h2>
-        <div class="summary-grid">
-          <div class="summary-card"><strong>7</strong><span>Need human review</span></div>
-          <div class="summary-card"><strong>4</strong><span>Critical + high pending</span></div>
-          <div class="summary-card"><strong>0</strong><span>Reviewed candidates</span></div>
-          <div class="summary-card"><strong>11</strong><span>Coverage gaps</span></div>
-        </div>
-      </section>
-      <nav class="report-section" aria-labelledby="priority-title">
-        <span class="kicker">START HERE</span>
-        <h2 id="priority-title">Review priorities</h2>
-        <ol class="priority-list">
-          <li>
-            <a href="#finding-1"
-              ><span class="severity high">high</span
-              ><span
-                >Sensitive configuration uses a public environment name<small
-                  >src/lib/config.ts</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-2"
-              ><span class="severity high">high</span
-              ><span
-                >Destructive agent tool needs permission review<small
-                  >src/agents/account.ts</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-3"
-              ><span class="severity high">high</span
-              ><span
-                >Dynamic code execution needs trust-boundary review<small
-                  >src/lib/expression.ts</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-4"
-              ><span class="severity high">high</span
-              ><span
-                >Raw SQL execution needs input tracing<small
-                  >src/app/api/search/route.ts</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-5"
-              ><span class="severity medium">medium</span
-              ><span
-                >Object lookup needs tenant authorization review<small
-                  >src/app/api/projects/[id]/route.ts</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-6"
-              ><span class="severity medium">medium</span
-              ><span
-                >HTML rendering bypass needs sanitization review<small
-                  >src/components/preview.tsx</small
-                ></span
-              ></a
-            >
-          </li>
-          <li>
-            <a href="#finding-7"
-              ><span class="severity medium">medium</span
-              ><span
-                >Wildcard cross-origin policy needs context review<small
-                  >src/lib/cors.ts</small
-                ></span
-              ></a
-            >
-          </li>
-        </ol>
-      </nav>
-      <section class="report-section">
-        <div class="section-head">
-          <div>
-            <span class="kicker">WHAT ACTUALLY RAN</span>
-            <h2>Coverage</h2>
+      <div class="report-main">
+        <header class="topbar">
+          <div class="breadcrumb">
+            <span>Audits</span><span>›</span><strong>Review-worthy SaaS — fixture export</strong
+            ><span class="status gap">draft</span>
           </div>
-          <span class="status gap">11 gaps</span>
-        </div>
-        <ul class="coverage-list">
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Project structure profile</strong>
-              <p>
-                Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5
-                symbol(s), 8 call edge(s), and 6 security-relevant fact(s).
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT RUN</span>
-            <div>
-              <strong>Framework-aware authorization</strong>
-              <p>No scanner run was recorded for this capability.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT RUN</span>
-            <div>
-              <strong>Next.js application security</strong>
-              <p>No scanner run was recorded for this capability.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT RUN</span>
-            <div>
-              <strong>React client security</strong>
-              <p>No scanner run was recorded for this capability.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Node.js supply-chain integrity</strong>
-              <p>
-                Inspected 1 manifest(s), 0 lockfile(s), 4 dependency specifier(s), and 0 resolved
-                lock entry(s) without installing packages.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>JavaScript/TypeScript dependency structure</strong>
-              <p>
-                7 modules and 0 local dependencies were mapped; 0 cycle(s) and 4 orphan candidate(s)
-                are mechanical review data, not vulnerabilities. Target configuration was not
-                loaded. dependency-cruiser 18.2.0 is covered by the CodebaseScan scanner
-                compatibility fixtures.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>JavaScript/TypeScript code duplication</strong>
-              <p>
-                0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source fragments
-                were discarded. Duplicates are maintainability evidence, not vulnerabilities. jscpd
-                5.2.0 is covered by the CodebaseScan scanner compatibility fixtures.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Code quality metrics</strong>
-              <p>
-                5 function(s) measured; 0 complexity, size, or parameter hotspot(s). 0 existing
-                coverage artifact(s) imported. Metrics are review evidence, not vulnerabilities.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Dead code and dependency usage</strong>
-              <p>
-                0 unused file candidate(s), 0 unused dependency candidate(s), and 0 unused export
-                candidate(s). All target plugins and configuration loaders were disabled. knip
-                6.35.1 is covered by the CodebaseScan scanner compatibility fixtures.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Built-in static patterns</strong>
-              <p>
-                Seven bounded regex heuristics executed against inert fixtures. Duration not
-                measured in this reproducible export.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">DISABLED</span>
-            <div>
-              <strong>Static code analysis</strong>
-              <p>Not executed for this fixture export.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">DISABLED</span>
-            <div>
-              <strong>Secret scanning</strong>
-              <p>Not executed for this fixture export.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">DISABLED</span>
-            <div>
-              <strong>Dependency vulnerabilities</strong>
-              <p>OSV lookup was disabled for this reproducible fixture export.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status complete">COMPLETE</span>
-            <div>
-              <strong>Security configuration</strong>
-              <p>Conservative framework and configuration posture checks executed locally.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT RUN</span>
-            <div>
-              <strong>HTTP runtime posture</strong>
-              <p>No scanner run was recorded for this capability.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">DISABLED</span>
-            <div>
-              <strong>AI contextual analysis</strong>
-              <p>Model inference was disabled. Deterministic findings remain available.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT SUPPORTED</span>
-            <div>
-              <strong>Infrastructure as Code</strong>
-              <p>
-                No dedicated Terraform, CloudFormation, or equivalent policy scanner is implemented.
-              </p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT SUPPORTED</span>
-            <div>
-              <strong>Cloud IAM</strong>
-              <p>Cloud account and effective IAM policy analysis are outside this release.</p>
-            </div>
-          </li>
-          <li>
-            <span class="status gap">NOT PERFORMED</span>
-            <div>
-              <strong>Dynamic exploitation</strong>
-              <p>
-                CodebaseScan does not exploit targets, brute-force authentication, or crawl
-                applications.
-              </p>
-            </div>
-          </li>
-        </ul>
-      </section>
-      <section class="report-section">
-        <div class="section-head">
-          <div>
-            <span class="kicker">SOURCE MODEL</span>
-            <h2>Project structure</h2>
+          <div class="top-actions">
+            <a class="button primary" href="#findings">Browse findings</a>
           </div>
-          <span class="status complete">complete</span>
-        </div>
-        <p>7 source files and 226 AST nodes were parsed as data. Target code was not executed.</p>
-        <div class="facts">
-          <span><strong>2</strong> entry points</span><span><strong>5</strong> symbols</span
-          ><span><strong>8</strong> call edges</span><span><strong>6</strong> security facts</span>
-        </div>
-        <p class="muted">Frameworks: Next.js App Router, Prisma.</p>
-      </section>
-      <section class="report-section">
-        <span class="kicker">SOURCE REVIEW</span>
-        <h2>Supply chain, quality, structure, and duplication</h2>
-        <div class="facts">
-          <span><strong>1</strong> manifests</span><span><strong>0</strong> lockfiles</span
-          ><span><strong>4</strong> dependency specs</span
-          ><span><strong>0</strong> supply-chain candidates</span>
-        </div>
-        <h3>Supply-chain checks</h3>
-        <ul>
-          <li>dangerousLifecycleScripts: 0</li>
-          <li>unsafeDependencySpecs: 0</li>
-          <li>weakLockfileIntegrity: 0</li>
-          <li>insecureLockfileUrls: 0</li>
-          <li>unexpectedLockfileHosts: 0</li>
-          <li>manifestLockMismatches: 0</li>
-        </ul>
-        <div class="facts">
-          <span><strong>5</strong> functions measured</span
-          ><span><strong>0</strong> quality hotspots</span
-          ><span><strong>0</strong> unused file candidates</span
-          ><span><strong>0</strong> coverage artifacts</span>
-        </div>
-        <div class="facts">
-          <span><strong>7</strong> modules</span><span><strong>0</strong> local dependencies</span
-          ><span><strong>0</strong> cycles</span><span><strong>4</strong> orphan candidates</span>
-        </div>
-        <div class="facts">
-          <span><strong>0</strong> clones</span><span><strong>0</strong> duplicated lines</span
-          ><span><strong>0%</strong> duplication</span>
-        </div>
-        <p class="muted">
-          These measurements are bounded review evidence, not vulnerabilities or proof of adequate
-          testing.
-        </p>
-      </section>
-      <section class="report-section">
-        <span class="kicker">CONTROL PACK 0.4.0</span>
-        <h2>Security checklist</h2>
-        <div class="facts checklist-facts">
-          <span><strong>0</strong> EVIDENCED</span><span><strong>3</strong> GAP CANDIDATE</span
-          ><span><strong>14</strong> UNVERIFIED</span><span><strong>8</strong> NOT APPLICABLE</span
-          ><span><strong>0</strong> PARTIAL</span><span><strong>0</strong> FAILED</span>
-        </div>
-        <div class="controls">
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">authentication · TW-CTRL-AUTHN-001</span>
-            </div>
-            <h3>Sensitive mutations authenticate a principal</h3>
-            <p>No supported sensitive mutation boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Test each boundary without a session/token and confirm
-              rejection before the sensitive operation.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">authentication · TW-CTRL-AUTHN-002</span>
-            </div>
-            <h3>Sensitive read routes receive an authentication review</h3>
-            <p>
-              No missing-authentication candidate was found across 2 mapped sensitive read route(s).
-            </p>
-            <p>
-              <strong>Verify:</strong> Test anonymous and wrong-tenant reads. Confirm intentionally
-              public routes expose only approved fields.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">authorization · TW-CTRL-AUTHZ-001</span>
-            </div>
-            <h3>Administrative mutations enforce permission</h3>
-            <p>No supported admin/internal mutation boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Test an authenticated non-admin principal against every
-              privileged action.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">authorization · TW-CTRL-AUTHZ-002</span>
-            </div>
-            <h3>Dynamic resource access is tenant or owner scoped</h3>
-            <p>
-              0 of 1 dynamic database boundary(s) contain a recognized tenant, owner, account,
-              organization, or user scope in the captured call arguments.
-            </p>
-            <p>
-              <strong>Verify:</strong> Run cross-tenant and wrong-owner identifier tests and inspect
-              effective RLS/database policy.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">GAP_CANDIDATE</span
-              ><span class="meta">input-validation · TW-CTRL-INPUT-001</span>
-            </div>
-            <h3>Sensitive entry points validate caller-controlled input</h3>
-            <p>
-              0 of 2 sensitive entry point(s) contain a recognized validation call within five
-              explicit call hops.
-            </p>
-            <p>
-              <strong>Verify:</strong> Test malformed, oversized, unexpected-type, and boundary
-              input before the sensitive operation.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">GAP_CANDIDATE</span
-              ><span class="meta">input-validation · TW-CTRL-INJECTION-001</span>
-            </div>
-            <h3>Raw SQL keeps request data out of query structure</h3>
-            <p>1 raw SQL input-flow candidate(s) require review.</p>
-            <p>
-              <strong>Verify:</strong> Trace each query fragment, replace structural interpolation
-              with parameters, and test metacharacter payloads without modifying production data.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">input-validation · TW-CTRL-COMMAND-001</span>
-            </div>
-            <h3>Process execution keeps request data out of commands and executable selection</h3>
-            <p>No supported process execution boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Use fixed executables and argument arrays without a shell,
-              then test separators, option injection, encoding, and unexpected executable names.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">input-validation · TW-CTRL-PATH-001</span>
-            </div>
-            <h3>Filesystem paths remain inside server-owned roots</h3>
-            <p>No supported filesystem boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Test decoded parent traversal, absolute paths, separators,
-              symlinks, and race conditions against the canonical storage root.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">integrations · TW-CTRL-OUTBOUND-001</span>
-            </div>
-            <h3>Outbound destinations are server-owned or safely constrained</h3>
-            <p>No supported outbound request boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Test untrusted public, private, loopback, metadata,
-              DNS-rebinding, and redirect destinations against the effective egress policy.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">integrations · TW-CTRL-REDIRECT-001</span>
-            </div>
-            <h3>Redirect destinations are constrained</h3>
-            <p>No supported redirect boundary was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Test external, scheme-relative, encoded, mixed-case, and
-              userinfo-form destinations against the effective redirect policy.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">input-validation · TW-CTRL-UPLOAD-001</span>
-            </div>
-            <h3>File uploads enforce size, content, and storage-path constraints</h3>
-            <p>
-              No decisive upload gap was mapped, but the profiler cannot prove that uploads are
-              absent or fully constrained.
-            </p>
-            <p>
-              <strong>Verify:</strong> Test byte limits, file count, MIME/content mismatch,
-              polyglots, generated names, traversal, overwrite, and storage execution policy.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">integrations · TW-CTRL-WEBHOOK-001</span>
-            </div>
-            <h3>Webhook authenticity is verified before processing</h3>
-            <p>No supported webhook/callback boundary reaching a sensitive operation was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Send missing, invalid, replayed, and stale signatures and
-              confirm rejection before parsing or persistence.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">browser-security · TW-CTRL-HEADERS-001</span>
-            </div>
-            <h3>Browser security policies are declared and observed</h3>
-            <p>No effective runtime response was available to confirm browser policies.</p>
-            <p>
-              <strong>Verify:</strong> Observe representative production responses and verify CSP,
-              frame, MIME, referrer, permissions, and transport policies.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">authentication · TW-CTRL-SESSION-001</span>
-            </div>
-            <h3>Sensitive cookies use explicit protection attributes</h3>
-            <p>No cookie-based session signal was mapped.</p>
-            <p>
-              <strong>Verify:</strong> Inspect effective Set-Cookie attributes and test production
-              HTTPS, expiry, logout, fixation, and CSRF behavior.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">browser-security · TW-CTRL-CORS-001</span>
-            </div>
-            <h3>Cross-origin access is intentionally constrained</h3>
-            <p>
-              No effective cross-origin policy was observed; same-origin-only operation is possible
-              but unverified.
-            </p>
-            <p>
-              <strong>Verify:</strong> Test trusted and untrusted Origin values, credential mode,
-              preflight behavior, and server-side authorization independently.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">GAP_CANDIDATE</span
-              ><span class="meta">secrets · TW-CTRL-SECRETS-001</span>
-            </div>
-            <h3>Captured current source has no detected secret exposure candidate</h3>
-            <p>1 secret or client/server configuration candidate(s) require review.</p>
-            <p>
-              <strong>Verify:</strong> Review Git history, CI variables, deployment secrets,
-              rotation, and provider-side secret scanning separately.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">NOT_APPLICABLE</span
-              ><span class="meta">dependencies · TW-CTRL-DEPS-001</span>
-            </div>
-            <h3>Resolved dependencies are checked against OSV</h3>
-            <p>No supported resolved npm/pnpm/Yarn lockfile dependency was available.</p>
-            <p>
-              <strong>Verify:</strong> Review advisory freshness, runtime reachability, exploit
-              preconditions, and supported upgrade paths.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">runtime · TW-CTRL-RUNTIME-001</span>
-            </div>
-            <h3>Approved HTTP response posture is observed</h3>
-            <p>No target URL was explicitly approved for runtime observation.</p>
-            <p>
-              <strong>Verify:</strong> Probe representative production routes and deployment layers
-              under explicit authorization.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">logging · TW-CTRL-LOGGING-001</span>
-            </div>
-            <h3>Sensitive operations emit security-relevant audit events</h3>
-            <p>
-              0 of 2 mapped sensitive boundary(s) contain a recognized audit/security logging call.
-            </p>
-            <p>
-              <strong>Verify:</strong> Confirm event content, actor, target, outcome, correlation
-              ID, retention, access controls, and alerting in the real logging system.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">logging · TW-CTRL-ERRORS-001</span>
-            </div>
-            <h3>Sensitive boundaries define explicit failure handling</h3>
-            <p>
-              0 of 2 mapped sensitive boundary(s) contain an explicit catch clause within five call
-              hops.
-            </p>
-            <p>
-              <strong>Verify:</strong> Exercise dependency, validation, authorization, and storage
-              failures; confirm safe responses and useful internal diagnostics.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">authorization · TW-CTRL-NEXT-001</span>
-            </div>
-            <h3>Next.js caching keeps user and tenant data isolated</h3>
-            <p>
-              No supported user-specific cache isolation candidate was found in the bounded Next.js
-              scan.
-            </p>
-            <p>
-              <strong>Verify:</strong> Test two users or tenants against warm cache entries and
-              inspect Cache-Control behavior at the deployed edge.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">secrets · TW-CTRL-NEXT-002</span>
-            </div>
-            <h3>Next.js client boundaries exclude privileged configuration and response data</h3>
-            <p>
-              No supported privileged public environment or sensitive server response field
-              candidate was found.
-            </p>
-            <p>
-              <strong>Verify:</strong> Inspect production client bundles, RSC payloads, and API
-              responses for privileged values.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">input-validation · TW-CTRL-REACT-001</span>
-            </div>
-            <h3>Dynamic HTML preserves React output encoding</h3>
-            <p>
-              No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the bounded
-              React scan.
-            </p>
-            <p>
-              <strong>Verify:</strong> Test script, event-handler, URL, SVG, malformed markup, and
-              mutation-XSS payloads at every intentional HTML rendering boundary.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">browser-security · TW-CTRL-REACT-002</span>
-            </div>
-            <h3>Client navigation, storage, and messaging use constrained browser boundaries</h3>
-            <p>
-              No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern was
-              found.
-            </p>
-            <p>
-              <strong>Verify:</strong> Exercise untrusted URLs, message origins, storage access
-              after script injection, and external new-tab navigation.
-            </p>
-          </section>
-          <section class="control">
-            <div>
-              <span class="status gap">UNVERIFIED</span
-              ><span class="meta">secrets · TW-CTRL-REACT-003</span>
-            </div>
-            <h3>Server and Client Component boundaries keep privileged data on the server</h3>
-            <p>
-              No supported server-only import, sensitive prop, async Client Component, or private
-              environment boundary candidate was found.
-            </p>
-            <p>
-              <strong>Verify:</strong> Inspect serialized RSC payloads and production client bundles
-              for credentials, privileged session objects, and server-only modules.
-            </p>
-          </section>
-        </div>
-      </section>
-      <section class="findings-title">
-        <span class="kicker">EVIDENCE AND ACTIONS</span>
-        <h2>Findings</h2>
-        <p class="muted">7 review candidates. Static signals require human validation.</p>
-      </section>
-      <article class="finding" id="finding-1">
-        <header class="finding-head">
-          <div>
-            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
         </header>
-        <h2>Sensitive configuration uses a public environment name</h2>
-        <p>
-          A sensitive-looking setting has a browser-public naming convention. No active credential
-          or actual browser bundle exposure has been verified.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/lib/config.ts:1–5</h3>
-            <pre>
+        <main class="report-content" id="top">
+          <section id="overview" class="section-shell" style="margin-top: 0">
+            <div class="overview-hero">
+              <div>
+                <div class="eyebrow">Executive overview · Review summary</div>
+                <h1>Code audit review</h1>
+                <p>
+                  Start with the highest-risk work, confirm the evidence, then verify each
+                  correction.
+                </p>
+              </div>
+              <aside class="review-note">
+                <strong>Human review required</strong>
+                <p>
+                  7 findings require human input. Static evidence does not establish exploitability
+                  or certification.
+                </p>
+              </aside>
+            </div>
+            <div class="executive-metrics">
+              <article class="executive-metric">
+                <span>Finding candidates</span><strong>7</strong>
+                <p>Unique findings linked to captured evidence</p>
+              </article>
+              <article class="executive-metric">
+                <span>Critical + high</span><strong>4</strong>
+                <p>Pending candidates requiring prioritization</p>
+              </article>
+              <article class="executive-metric">
+                <span>Grouped work</span><strong>7</strong>
+                <p>Root-cause tasks instead of repeated occurrences</p>
+              </article>
+              <article class="executive-metric">
+                <span>Coverage</span><strong>8 / 0</strong>
+                <p>Complete capabilities / partial capabilities</p>
+              </article>
+            </div>
+            <div class="reading-guide" aria-label="How to read this report">
+              <div>
+                <span>1</span><strong>Choose a risk</strong>
+                <p>Start with critical and high items at the top.</p>
+              </div>
+              <div>
+                <span>2</span><strong>Confirm the evidence</strong>
+                <p>Open the task and inspect the listed files before changing code.</p>
+              </div>
+              <div>
+                <span>3</span><strong>Fix and verify</strong>
+                <p>Run tests, build, and a new audit before closing the item.</p>
+              </div>
+            </div>
+          </section>
+          <section id="risks" class="section-shell">
+            <div class="section-heading">
+              <div>
+                <div class="eyebrow">01 · Prioritize</div>
+                <h2>Top risks</h2>
+              </div>
+              <p>
+                Start here. Each row groups evidence that points to the same underlying problem.
+              </p>
+            </div>
+            <ol class="risk-table">
+              <li>
+                <a href="#finding-1"
+                  ><span class="severity high">high</span
+                  ><span
+                    >Sensitive configuration uses a public environment name<small
+                      >src/lib/config.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-2"
+                  ><span class="severity high">high</span
+                  ><span
+                    >Destructive agent tool needs permission review<small
+                      >src/agents/account.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-3"
+                  ><span class="severity high">high</span
+                  ><span
+                    >Dynamic code execution needs trust-boundary review<small
+                      >src/lib/expression.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-4"
+                  ><span class="severity high">high</span
+                  ><span
+                    >Raw SQL execution needs input tracing<small
+                      >src/app/api/search/route.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-5"
+                  ><span class="severity medium">medium</span
+                  ><span
+                    >Object lookup needs tenant authorization review<small
+                      >src/app/api/projects/[id]/route.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-6"
+                  ><span class="severity medium">medium</span
+                  ><span
+                    >HTML rendering bypass needs sanitization review<small
+                      >src/components/preview.tsx</small
+                    ></span
+                  ></a
+                >
+              </li>
+              <li>
+                <a href="#finding-7"
+                  ><span class="severity medium">medium</span
+                  ><span
+                    >Wildcard cross-origin policy needs context review<small
+                      >src/lib/cors.ts</small
+                    ></span
+                  ></a
+                >
+              </li>
+            </ol>
+          </section>
+          <section id="coverage" class="section-shell">
+            <div class="section-heading">
+              <div>
+                <div class="eyebrow">03 · Trust boundaries</div>
+                <h2>Coverage</h2>
+              </div>
+              <p>
+                Complete, partial, skipped, and unsupported checks remain distinct. Missing coverage
+                never becomes a clean result.
+              </p>
+            </div>
+            <div class="coverage-panel">
+              <div class="section-head" style="padding: 18px 18px 0">
+                <div><strong>8 complete · 16 not complete</strong></div>
+                <span class="status gap">16 gaps</span>
+              </div>
+              <ul class="coverage-list">
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Project structure profile</strong>
+                    <p>
+                      Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry
+                      point(s), 5 symbol(s), 0 resolved call edge(s), 6 security-relevant fact(s), 1
+                      declared component(s), 0 cross-component import edge(s), 0 declarative
+                      TypeScript path alias(es), 0 captured workspace package entry point(s), and 0
+                      declarative SaaS semantics file(s).
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Framework-aware authorization</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>SaaS application security</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Next.js application security</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>React client security</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Static accessibility</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Imported Axe runtime accessibility</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Web discovery and SEO posture</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Static privacy</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>Static reliability</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Node.js supply-chain integrity</strong>
+                    <p>
+                      Inspected 1 manifest(s), 0 lockfile(s), 4 dependency specifier(s), and 0
+                      resolved lock entry(s) without installing packages.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>JavaScript/TypeScript dependency structure</strong>
+                    <p>
+                      7 modules and 0 local dependencies were mapped; 0 cycle(s) found (0 retained),
+                      4 orphan candidate(s) found (4 retained), and 0 coupling hotspot(s) found (0
+                      retained). These are mechanical review data, not vulnerabilities. Target
+                      configuration was not loaded. dependency-cruiser 18.2.0 is covered by the
+                      CodebaseScan scanner compatibility fixtures.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>JavaScript/TypeScript code duplication</strong>
+                    <p>
+                      0 clone(s), 0 duplicated line(s), and 0% duplication were measured. Source
+                      fragments were discarded. Duplicates are maintainability evidence, not
+                      vulnerabilities. jscpd 5.2.0 is covered by the CodebaseScan scanner
+                      compatibility fixtures.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Code quality metrics</strong>
+                    <p>
+                      5 function(s) measured; 0 complexity, size, or parameter hotspot(s) found (0
+                      retained). 0 existing coverage artifact(s) imported. Metrics are review
+                      evidence, not vulnerabilities.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Dead code and dependency usage</strong>
+                    <p>
+                      4 unused file candidate(s) found (4 retained), 1 source-unreferenced runtime
+                      dependency candidate(s) found (1 retained), and 0 unused export/type
+                      candidate(s) found (0 retained). All target plugins and executable
+                      configuration loaders were disabled. knip 6.35.1 is covered by the
+                      CodebaseScan scanner compatibility fixtures.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Built-in static patterns</strong>
+                    <p>
+                      Seven bounded regex heuristics executed against inert fixtures. Duration not
+                      measured in this reproducible export.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">DISABLED</span>
+                  <div>
+                    <strong>Static code analysis</strong>
+                    <p>Not executed for this fixture export.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">DISABLED</span>
+                  <div>
+                    <strong>Secret scanning</strong>
+                    <p>Not executed for this fixture export.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">DISABLED</span>
+                  <div>
+                    <strong>Dependency vulnerabilities</strong>
+                    <p>OSV lookup was disabled for this reproducible fixture export.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status complete">COMPLETE</span>
+                  <div>
+                    <strong>Security configuration</strong>
+                    <p>Conservative framework and configuration posture checks executed locally.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT RUN</span>
+                  <div>
+                    <strong>HTTP runtime posture</strong>
+                    <p>No scanner run was recorded for this capability.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT SUPPORTED</span>
+                  <div>
+                    <strong>Infrastructure as Code</strong>
+                    <p>
+                      No dedicated Terraform, CloudFormation, or equivalent policy scanner is
+                      implemented.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT SUPPORTED</span>
+                  <div>
+                    <strong>Cloud IAM</strong>
+                    <p>Cloud account and effective IAM policy analysis are outside this release.</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="status gap">NOT PERFORMED</span>
+                  <div>
+                    <strong>Dynamic exploitation</strong>
+                    <p>
+                      CodebaseScan does not exploit targets, brute-force authentication, or crawl
+                      applications.
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </section>
+          <section id="technical" class="section-shell">
+            <div class="section-heading">
+              <div>
+                <div class="eyebrow">04 · Inspect</div>
+                <h2>Technical data</h2>
+              </div>
+              <p>Secondary evidence stays collapsed until a reviewer needs it.</p>
+            </div>
+            <p class="technical-intro">Open only the evidence needed for the current decision.</p>
+            <details class="detail-group">
+              <summary>Policy, modes, and review state</summary>
+              <div class="detail-group-body"></div>
+            </details>
+            <details class="detail-group">
+              <summary>Source model and correlated evidence</summary>
+              <div class="detail-group-body">
+                <section class="report-section">
+                  <div class="section-head">
+                    <div>
+                      <span class="kicker">SOURCE MODEL</span>
+                      <h2>Project structure</h2>
+                    </div>
+                    <span class="status complete">complete</span>
+                  </div>
+                  <p>
+                    7 source files and 226 AST nodes were parsed as data. Target code was not
+                    executed.
+                  </p>
+                  <div class="facts">
+                    <span><strong>2</strong> entry points</span
+                    ><span><strong>5</strong> symbols</span
+                    ><span><strong>0</strong> call edges</span
+                    ><span><strong>6</strong> security facts</span
+                    ><span><strong>1</strong> components</span
+                    ><span><strong>0</strong> cross-component imports</span>
+                  </div>
+                  <p class="muted">
+                    Frameworks: Next.js App Router 16 [supported], React 19 [supported], Prisma 6
+                    [unverified].
+                  </p>
+                  <h3>Declared package boundaries</h3>
+                  <ul>
+                    <li><strong>review-worthy-saas</strong> (.): 7 source file(s).</li>
+                  </ul>
+                </section>
+                <section class="report-section">
+                  <span class="kicker">DATA FLOW INVENTORY</span>
+                  <h2>Observed signals and declared context</h2>
+                  <p>
+                    <strong>Observed</strong> entries come from static source facts.
+                    <strong>Declared</strong> data and boundaries come from project configuration
+                    and are not proof of runtime behavior.
+                  </p>
+                  <div class="facts">
+                    <span><strong>4</strong> observed signals</span
+                    ><span><strong>3</strong> operation types</span
+                    ><span><strong>0</strong> declared data classes</span
+                    ><span><strong>0</strong> declared boundaries</span>
+                  </div>
+                  <h3>Observed operations</h3>
+                  <ul>
+                    <li>persistent-storage: 1</li>
+                    <li>response: 2</li>
+                    <li>sensitive-read: 1</li>
+                  </ul>
+                </section>
+              </div>
+            </details>
+            <details class="detail-group">
+              <summary>Contracts and control evidence</summary>
+              <div class="detail-group-body">
+                <section class="report-section">
+                  <span class="kicker">CONTROL PACK 0.5.0</span>
+                  <h2>Security checklist</h2>
+                  <div class="facts checklist-facts">
+                    <span><strong>0</strong> EVIDENCED</span
+                    ><span><strong>3</strong> GAP CANDIDATE</span
+                    ><span><strong>14</strong> UNVERIFIED</span
+                    ><span><strong>15</strong> NOT APPLICABLE</span
+                    ><span><strong>0</strong> PARTIAL</span><span><strong>0</strong> FAILED</span>
+                  </div>
+                  <div class="controls">
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authentication · TW-CTRL-AUTHN-001</span>
+                      </div>
+                      <h3>Sensitive mutations authenticate a principal</h3>
+                      <p>No supported sensitive mutation boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test each boundary without a session/token and
+                        confirm rejection before the sensitive operation.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">authentication · TW-CTRL-AUTHN-002</span>
+                      </div>
+                      <h3>Sensitive read routes receive an authentication review</h3>
+                      <p>
+                        No missing-authentication candidate was found across 2 mapped sensitive read
+                        route(s).
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test anonymous and wrong-tenant reads. Confirm
+                        intentionally public routes expose only approved fields.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authorization · TW-CTRL-AUTHZ-001</span>
+                      </div>
+                      <h3>Administrative mutations enforce permission</h3>
+                      <p>No supported admin/internal mutation boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test an authenticated non-admin principal against
+                        every privileged action.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">authorization · TW-CTRL-AUTHZ-002</span>
+                      </div>
+                      <h3>Dynamic resource access is tenant or owner scoped</h3>
+                      <p>
+                        0 of 1 dynamic database boundary(s) contain a recognized tenant, owner,
+                        account, organization, or user scope in the captured call arguments.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Run cross-tenant and wrong-owner identifier tests
+                        and inspect effective RLS/database policy.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">GAP_CANDIDATE</span
+                        ><span class="meta">input-validation · TW-CTRL-INPUT-001</span>
+                      </div>
+                      <h3>Sensitive entry points validate caller-controlled input</h3>
+                      <p>
+                        0 of 2 sensitive entry point(s) contain a recognized validation call within
+                        five explicit call hops.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test malformed, oversized, unexpected-type, and
+                        boundary input before the sensitive operation.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">GAP_CANDIDATE</span
+                        ><span class="meta">input-validation · TW-CTRL-INJECTION-001</span>
+                      </div>
+                      <h3>Raw SQL keeps request data out of query structure</h3>
+                      <p>1 raw SQL input-flow candidate(s) require review.</p>
+                      <p>
+                        <strong>Verify:</strong> Trace each query fragment, replace structural
+                        interpolation with parameters, and test metacharacter payloads without
+                        modifying production data.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">input-validation · TW-CTRL-COMMAND-001</span>
+                      </div>
+                      <h3>
+                        Process execution keeps request data out of commands and executable
+                        selection
+                      </h3>
+                      <p>No supported process execution boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Use fixed executables and argument arrays without a
+                        shell, then test separators, option injection, encoding, and unexpected
+                        executable names.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">input-validation · TW-CTRL-PATH-001</span>
+                      </div>
+                      <h3>Filesystem paths remain inside server-owned roots</h3>
+                      <p>No supported filesystem boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test decoded parent traversal, absolute paths,
+                        separators, symlinks, and race conditions against the canonical storage
+                        root.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">integrations · TW-CTRL-OUTBOUND-001</span>
+                      </div>
+                      <h3>Outbound destinations are server-owned or safely constrained</h3>
+                      <p>No supported outbound request boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test untrusted public, private, loopback, metadata,
+                        DNS-rebinding, and redirect destinations against the effective egress
+                        policy.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">integrations · TW-CTRL-REDIRECT-001</span>
+                      </div>
+                      <h3>Redirect destinations are constrained</h3>
+                      <p>No supported redirect boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test external, scheme-relative, encoded,
+                        mixed-case, and userinfo-form destinations against the effective redirect
+                        policy.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">input-validation · TW-CTRL-UPLOAD-001</span>
+                      </div>
+                      <h3>File uploads enforce size, content, and storage-path constraints</h3>
+                      <p>
+                        No decisive upload gap was mapped, but the profiler cannot prove that
+                        uploads are absent or fully constrained.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test byte limits, file count, MIME/content
+                        mismatch, polyglots, generated names, traversal, overwrite, and storage
+                        execution policy.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">integrations · TW-CTRL-WEBHOOK-001</span>
+                      </div>
+                      <h3>Webhook authenticity is verified before processing</h3>
+                      <p>
+                        No supported webhook/callback boundary reaching a sensitive operation was
+                        mapped.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Send missing, invalid, replayed, and stale
+                        signatures and confirm rejection before parsing or persistence.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">integrations · TW-CTRL-SAAS-WEBHOOK-001</span>
+                      </div>
+                      <h3>Webhook side effects resist duplicate delivery</h3>
+                      <p>
+                        No supported webhook/callback boundary reaching a sensitive operation was
+                        mapped.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Replay the same provider event concurrently and
+                        after a failure; confirm one durable effect and safe retry recovery.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authentication · TW-CTRL-SAAS-ABUSE-001</span>
+                      </div>
+                      <h3>Abuse-sensitive routes apply rate limits</h3>
+                      <p>No supported abuse-sensitive boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Burst requests by IP and account identifier, then
+                        confirm bounded retries, useful backoff, and no easy key rotation bypass.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authorization · TW-CTRL-SAAS-BILLING-001</span>
+                      </div>
+                      <h3>Billing mutations derive charged values on the server</h3>
+                      <p>No supported billing-provider mutation was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Tamper with plan, price, product, amount, currency,
+                        quantity, discount, and tenant ownership; compare the provider-side charge
+                        with the server catalog.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authentication · TW-CTRL-SAAS-RECOVERY-001</span>
+                      </div>
+                      <h3>Recovery and invitation tokens have a bounded lifecycle</h3>
+                      <p>No supported recovery, invitation, or verification boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test expiry, replay, concurrent redemption, account
+                        binding, user enumeration, token disclosure, and invalidation after password
+                        or email changes.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authentication · TW-CTRL-SAAS-OAUTH-001</span>
+                      </div>
+                      <h3>OAuth/OIDC flows bind redirects and authorization responses</h3>
+                      <p>No supported OAuth/OIDC boundary was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Test missing/reused state, PKCE mismatch, nonce
+                        mismatch, redirect variants, login CSRF, account-link confusion, and
+                        authorization-code replay.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">authorization · TW-CTRL-SAAS-TENANT-001</span>
+                      </div>
+                      <h3>Tenant-aware data operations enforce a server-side scope</h3>
+                      <p>
+                        No tenant-aware database boundary was established by the captured semantics
+                        and source.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Exercise every operation as two tenants, including
+                        list, lookup, update, delete, export, background job, and administrative
+                        paths; inspect effective RLS separately.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">browser-security · TW-CTRL-SAAS-CSRF-001</span>
+                      </div>
+                      <h3>Cookie-authenticated mutations validate request origin or CSRF token</h3>
+                      <p>No mapped sensitive mutation also contained a cookie operation.</p>
+                      <p>
+                        <strong>Verify:</strong> Send cross-site form, fetch, null-Origin, and
+                        sibling-subdomain requests; confirm rejection before the sensitive effect.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">browser-security · TW-CTRL-HEADERS-001</span>
+                      </div>
+                      <h3>Browser security policies are declared and observed</h3>
+                      <p>
+                        No effective runtime response was available to confirm browser policies.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Observe representative production responses and
+                        verify CSP, frame, MIME, referrer, permissions, and transport policies.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">authentication · TW-CTRL-SESSION-001</span>
+                      </div>
+                      <h3>Sensitive cookies use explicit protection attributes</h3>
+                      <p>No cookie-based session signal was mapped.</p>
+                      <p>
+                        <strong>Verify:</strong> Inspect effective Set-Cookie attributes and test
+                        production HTTPS, expiry, logout, fixation, and CSRF behavior.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">browser-security · TW-CTRL-CORS-001</span>
+                      </div>
+                      <h3>Cross-origin access is intentionally constrained</h3>
+                      <p>
+                        No effective cross-origin policy was observed; same-origin-only operation is
+                        possible but unverified.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test trusted and untrusted Origin values,
+                        credential mode, preflight behavior, and server-side authorization
+                        independently.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">GAP_CANDIDATE</span
+                        ><span class="meta">secrets · TW-CTRL-SECRETS-001</span>
+                      </div>
+                      <h3>Captured current source has no detected secret exposure candidate</h3>
+                      <p>1 secret or client/server configuration candidate(s) require review.</p>
+                      <p>
+                        <strong>Verify:</strong> Review Git history, CI variables, deployment
+                        secrets, rotation, and provider-side secret scanning separately.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">NOT_APPLICABLE</span
+                        ><span class="meta">dependencies · TW-CTRL-DEPS-001</span>
+                      </div>
+                      <h3>Resolved dependencies are checked against OSV</h3>
+                      <p>No supported resolved npm/pnpm/Yarn lockfile dependency was available.</p>
+                      <p>
+                        <strong>Verify:</strong> Review advisory freshness, runtime reachability,
+                        exploit preconditions, and supported upgrade paths.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">runtime · TW-CTRL-RUNTIME-001</span>
+                      </div>
+                      <h3>Approved HTTP response posture is observed</h3>
+                      <p>No target URL was explicitly approved for runtime observation.</p>
+                      <p>
+                        <strong>Verify:</strong> Probe representative production routes and
+                        deployment layers under explicit authorization.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">logging · TW-CTRL-LOGGING-001</span>
+                      </div>
+                      <h3>Sensitive operations emit security-relevant audit events</h3>
+                      <p>
+                        0 of 2 mapped sensitive boundary(s) contain a recognized audit/security
+                        logging call.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Confirm event content, actor, target, outcome,
+                        correlation ID, retention, access controls, and alerting in the real logging
+                        system.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">logging · TW-CTRL-ERRORS-001</span>
+                      </div>
+                      <h3>Sensitive boundaries define explicit failure handling</h3>
+                      <p>
+                        0 of 2 mapped sensitive boundary(s) contain an explicit catch clause within
+                        five call hops.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Exercise dependency, validation, authorization, and
+                        storage failures; confirm safe responses and useful internal diagnostics.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">authorization · TW-CTRL-NEXT-001</span>
+                      </div>
+                      <h3>Next.js caching keeps user and tenant data isolated</h3>
+                      <p>
+                        No supported user-specific cache isolation candidate was found in the
+                        bounded Next.js scan.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test two users or tenants against warm cache
+                        entries and inspect Cache-Control behavior at the deployed edge.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">secrets · TW-CTRL-NEXT-002</span>
+                      </div>
+                      <h3>
+                        Next.js client boundaries exclude privileged configuration and response data
+                      </h3>
+                      <p>
+                        No supported privileged public environment or sensitive server response
+                        field candidate was found.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Inspect production client bundles, RSC payloads,
+                        and API responses for privileged values.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">input-validation · TW-CTRL-REACT-001</span>
+                      </div>
+                      <h3>Dynamic HTML preserves React output encoding</h3>
+                      <p>
+                        No unsanitized dynamic dangerouslySetInnerHTML candidate was found in the
+                        bounded React scan.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Test script, event-handler, URL, SVG, malformed
+                        markup, and mutation-XSS payloads at every intentional HTML rendering
+                        boundary.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">browser-security · TW-CTRL-REACT-002</span>
+                      </div>
+                      <h3>
+                        Client navigation, storage, and messaging use constrained browser boundaries
+                      </h3>
+                      <p>
+                        No supported unsafe client URL, Web Storage, postMessage, or new-tab pattern
+                        was found.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Exercise untrusted URLs, message origins, storage
+                        access after script injection, and external new-tab navigation.
+                      </p>
+                    </section>
+                    <section class="control">
+                      <div>
+                        <span class="status gap">UNVERIFIED</span
+                        ><span class="meta">secrets · TW-CTRL-REACT-003</span>
+                      </div>
+                      <h3>
+                        Server and Client Component boundaries keep privileged data on the server
+                      </h3>
+                      <p>
+                        No supported server-only import, sensitive prop, async Client Component, or
+                        private environment boundary candidate was found.
+                      </p>
+                      <p>
+                        <strong>Verify:</strong> Inspect serialized RSC payloads and production
+                        client bundles for credentials, privileged session objects, and server-only
+                        modules.
+                      </p>
+                    </section>
+                  </div>
+                </section>
+              </div>
+            </details>
+            <details class="detail-group">
+              <summary>Mechanical analysis and rule quality</summary>
+              <div class="detail-group-body">
+                <section class="report-section">
+                  <span class="kicker">SOURCE REVIEW</span>
+                  <h2>Supply chain, quality, structure, and duplication</h2>
+                  <div class="facts">
+                    <span><strong>1</strong> manifests</span
+                    ><span><strong>0</strong> lockfiles</span
+                    ><span><strong>4</strong> dependency specs</span
+                    ><span><strong>0</strong> supply-chain candidates</span>
+                  </div>
+                  <h3>Supply-chain checks</h3>
+                  <ul>
+                    <li>dangerousLifecycleScripts: 0</li>
+                    <li>unsafeDependencySpecs: 0</li>
+                    <li>weakLockfileIntegrity: 0</li>
+                    <li>insecureLockfileUrls: 0</li>
+                    <li>unexpectedLockfileHosts: 0</li>
+                    <li>manifestLockMismatches: 0</li>
+                  </ul>
+                  <div class="facts">
+                    <span><strong>5</strong> functions measured</span
+                    ><span><strong>0</strong> quality hotspots</span
+                    ><span><strong>4</strong> unused file candidates</span
+                    ><span><strong>0</strong> coverage artifacts</span>
+                  </div>
+                  <h3>Unused file candidates</h3>
+                  <ul>
+                    <li>src/agents/account.ts</li>
+                    <li>src/components/preview.tsx</li>
+                    <li>src/lib/cors.ts</li>
+                    <li>src/lib/expression.ts</li>
+                  </ul>
+                  <h3>Unused dependency candidates</h3>
+                  <ul>
+                    <li>@prisma/client</li>
+                  </ul>
+                  <div class="facts">
+                    <span><strong>7</strong> modules</span
+                    ><span><strong>0</strong> local dependencies</span
+                    ><span><strong>0</strong> cycles</span
+                    ><span><strong>4</strong> orphan candidates</span>
+                  </div>
+                  <div class="facts">
+                    <span><strong>0</strong> clones</span
+                    ><span><strong>0</strong> duplicated lines</span
+                    ><span><strong>0%</strong> duplication</span>
+                  </div>
+                  <p class="muted">
+                    These measurements are bounded review evidence, not vulnerabilities or proof of
+                    adequate testing.
+                  </p>
+                </section>
+              </div>
+            </details>
+          </section>
+          <section id="findings" class="section-shell">
+            <div class="section-heading">
+              <div>
+                <div class="eyebrow">06 · Evidence</div>
+                <h2>All findings</h2>
+              </div>
+              <p>
+                7 review candidates. Open one row for evidence, remediation, analysis, and human
+                disposition.
+              </p>
+            </div>
+            <details class="finding" id="finding-1">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity high">high</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Sensitive configuration uses a public environment name</strong
+                ><span class="finding-location">src/lib/config.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A sensitive-looking setting has a browser-public naming convention. No active
+                    credential or actual browser bundle exposure has been verified.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect credential exposure, unintended access, or the
+                    need to rotate a real secret. The high label comes from the detector; this
+                    report does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/lib/config.ts:1–5</h3>
+                    <p>
+                      Rule TW-005 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export const configuration = {
   serviceKey: process.env.NEXT_PUBLIC_SERVICE_ROLE_KEY,
   environment: &#39;fixture-only&#39;,
 };
 </pre>
-            <p>
-              Rule TW-005 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Keep privileged credentials in server-only configuration. If exposure is verified,
-            rotate the credential and review its use.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-2">
-        <header class="finding-head">
-          <div>
-            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>Destructive agent tool needs permission review</h2>
-        <p>
-          A potentially destructive operation appears in an agent tool list. The pattern cannot
-          determine whether approval and authorization are enforced inside the tool.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/agents/account.ts:4–8</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-005
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Keep privileged credentials in server-only configuration. If exposure is
+                    verified, rotate the credential and review its use.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-2">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity high">high</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Destructive agent tool needs permission review</strong
+                ><span class="finding-location">src/agents/account.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A potentially destructive operation appears in an agent tool list. The pattern
+                    cannot determine whether approval and authorization are enforced inside the
+                    tool.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect the trust boundary between untrusted content,
+                    model output, and tools. The high label comes from the detector; this report
+                    does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/agents/account.ts:4–8</h3>
+                    <p>
+                      Rule TW-007 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export const accountAgent = createAgent({
   model: &#39;local-fixture-model&#39;,
   tools: [readUser, deleteUser, issueRefund],
 });
 </pre>
-            <p>
-              Rule TW-007 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Apply authorization inside each tool, restrict its capability, and require explicit
-            approval where the operation warrants it.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-3">
-        <header class="finding-head">
-          <div>
-            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>Dynamic code execution needs trust-boundary review</h2>
-        <p>
-          A dynamic execution sink was detected. This is a pattern match, not proof of
-          attacker-controlled execution.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/lib/expression.ts:1–4</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-007
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Apply authorization inside each tool, restrict its capability, and require
+                    explicit approval where the operation warrants it.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-3">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity high">high</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Dynamic code execution needs trust-boundary review</strong
+                ><span class="finding-location">src/lib/expression.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A dynamic execution sink was detected. This is a pattern match, not proof of
+                    attacker-controlled execution.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect maintainability and the chance that concentrated
+                    complexity hides future defects. The high label comes from the detector; this
+                    report does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/lib/expression.ts:1–4</h3>
+                    <p>
+                      Rule TW-003 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export function evaluateExpression(expression: string) {
   return eval(expression);
 }
 </pre>
-            <p>
-              Rule TW-003 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Replace dynamic code execution with explicit operations where possible; otherwise
-            document and enforce the trust boundary.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-4">
-        <header class="finding-head">
-          <div>
-            <span class="severity high">high</span><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>Raw SQL execution needs input tracing</h2>
-        <p>
-          An unsafe SQL execution API is present. User control of the query and runtime reachability
-          have not been established.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/app/api/search/route.ts:3–8</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-003
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Replace dynamic code execution with explicit operations where possible;
+                    otherwise document and enforce the trust boundary.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-4">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity high">high</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Raw SQL execution needs input tracing</strong
+                ><span class="finding-location">src/app/api/search/route.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    An unsafe SQL execution API is present. User control of the query and runtime
+                    reachability have not been established.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect whether untrusted input can influence a
+                    privileged interpreter or operation. The high label comes from the detector;
+                    this report does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/app/api/search/route.ts:3–8</h3>
+                    <p>
+                      Rule TW-001 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export async function GET(request: Request) {
   const term = new URL(request.url).searchParams.get(&#39;term&#39;);
   const records = await database.$queryRawUnsafe(`SELECT name FROM projects WHERE name = &#39;${term}&#39;`);
   return Response.json(records);
 }
 </pre>
-            <p>
-              Rule TW-001 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Prefer parameterized queries. Trace every value reaching this call before deciding
-            whether an injection vulnerability exists.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-5">
-        <header class="finding-head">
-          <div>
-            <span class="severity medium">medium</span
-            ><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>Object lookup needs tenant authorization review</h2>
-        <p>
-          An object lookup begins with an ID filter. This is a review hotspot, not evidence of a
-          missing authorization check; inspect middleware, service policy, RLS and the complete call
-          path.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/app/api/projects/[id]/route.ts:5–10</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-001
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Prefer parameterized queries. Trace every value reaching this call before
+                    deciding whether an injection vulnerability exists.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-5">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity medium">medium</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Object lookup needs tenant authorization review</strong
+                ><span class="finding-location">src/app/api/projects/[id]/route.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    An object lookup begins with an ID filter. This is a review hotspot, not
+                    evidence of a missing authorization check; inspect middleware, service policy,
+                    RLS and the complete call path.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect which users or tenants can read data or perform
+                    privileged actions. The medium label comes from the detector; this report does
+                    not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/app/api/projects/[id]/route.ts:5–10</h3>
+                    <p>
+                      Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
   await requireSession(request);
   const { id } = await context.params;
   const project = await database.project.findUnique({ where: { id } });
   return Response.json(project);
 }
 </pre>
-            <p>
-              Rule TW-004 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Verify object-level access for the authenticated tenant. Add a regression test using two
-            tenants and reject cross-tenant access.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-6">
-        <header class="finding-head">
-          <div>
-            <span class="severity medium">medium</span
-            ><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>HTML rendering bypass needs sanitization review</h2>
-        <p>
-          Raw HTML reaches a React rendering sink. The scanner does not prove that the value is
-          attacker-controlled or unsanitized.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/components/preview.tsx:1–4</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-004
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Verify object-level access for the authenticated tenant. Add a regression test
+                    using two tenants and reject cross-tenant access.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-6">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity medium">medium</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>HTML rendering bypass needs sanitization review</strong
+                ><span class="finding-location">src/components/preview.tsx</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    Raw HTML reaches a React rendering sink. The scanner does not prove that the
+                    value is attacker-controlled or unsanitized.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect whether untrusted input can influence a
+                    privileged interpreter or operation. The medium label comes from the detector;
+                    this report does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/components/preview.tsx:1–4</h3>
+                    <p>
+                      Rule TW-002 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export function Preview({ html }: { html: string }) {
   return &lt;article dangerouslySetInnerHTML={{ __html: html }} /&gt;;
 }
 </pre>
-            <p>
-              Rule TW-002 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
-            </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Establish the source of the HTML and verify an appropriate sanitizer. Prefer rendering
-            text when rich HTML is unnecessary.
-          </p>
-        </section>
-      </article>
-      <article class="finding" id="finding-7">
-        <header class="finding-head">
-          <div>
-            <span class="severity medium">medium</span
-            ><span class="meta">builtin · needs review</span>
-          </div>
-          <a href="#top">Back to summary ↑</a>
-        </header>
-        <h2>Wildcard cross-origin policy needs context review</h2>
-        <p>
-          A wildcard CORS origin was found. Public endpoints may intentionally permit it;
-          authentication and exposed data determine the risk.
-        </p>
-        <section class="finding-section">
-          <h3>Evidence</h3>
-          <div class="evidence">
-            <h3>src/lib/cors.ts:1–4</h3>
-            <pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-002
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Establish the source of the HTML and verify an appropriate sanitizer. Prefer
+                    rendering text when rich HTML is unnecessary.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-7">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity medium">medium</span
+                  ><span class="meta">Source review · needs review</span></span
+                ><strong>Wildcard cross-origin policy needs context review</strong
+                ><span class="finding-location">src/lib/cors.ts</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A wildcard CORS origin was found. Public endpoints may intentionally permit it;
+                    authentication and exposed data determine the risk.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect the effective protection provided by application
+                    or deployment settings. The medium label comes from the detector; this report
+                    does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>src/lib/cors.ts:1–4</h3>
+                    <p>
+                      Rule TW-006 matched a review-relevant code pattern. Runtime exploitability is
+                      unverified.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
 export function responseHeaders() {
   return { &#39;Access-Control-Allow-Origin&#39;: &#39;*&#39; };
 }
 </pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Trace the captured declaration to the effective environment or framework
+                      configuration.
+                    </li>
+                    <li>
+                      Verify the resulting runtime behavior separately; source declarations alone
+                      are not proof.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> not rated · <strong>Detector:</strong> Source
+                    review · <strong>Rule:</strong> TW-006
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Define expected browser origins and validate the credential model. Do not treat
+                    CORS as an authorization mechanism.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+          </section>
+          <footer>
+            <h2>Limitations</h2>
+            <ul>
+              <li>This is an inert fixture export generated directly by the deterministic core.</li>
+              <li>No optional external security scanner or runtime exploit test was executed.</li>
+              <li>
+                Bundled dependency and duplication analysis ran against an isolated inert snapshot;
+                its output is maintainability evidence, not a vulnerability verdict.
+              </li>
+              <li>
+                All findings are review candidates; there are no automatically confirmed
+                vulnerabilities.
+              </li>
+              <li>
+                Regex heuristics can match comments and miss indirect flows. This is not a security
+                certification.
+              </li>
+            </ul>
             <p>
-              Rule TW-006 matched a review-relevant code pattern. Runtime exploitability is
-              unverified.
+              Generated locally by CodebaseScan. No scripts, external fonts, or tracking are
+              embedded in this report.
             </p>
-          </div>
-        </section>
-        <section class="finding-section remediation">
-          <h3>Recommended next step</h3>
-          <p>
-            Define expected browser origins and validate the credential model. Do not treat CORS as
-            an authorization mechanism.
-          </p>
-        </section>
-      </article>
-      <footer>
-        <h2>Limitations</h2>
-        <ul>
-          <li>
-            This is an inert fixture export generated directly by the deterministic core, not an
-            executed LangGraph audit.
-          </li>
-          <li>
-            No model, optional external security scanner, or runtime exploit test was executed.
-          </li>
-          <li>
-            Bundled dependency and duplication analysis ran against an isolated inert snapshot; its
-            output is maintainability evidence, not a vulnerability verdict.
-          </li>
-          <li>
-            All findings are review candidates; there are no automatically confirmed
-            vulnerabilities.
-          </li>
-          <li>
-            Regex heuristics can match comments and miss indirect flows. This is not a security
-            certification.
-          </li>
-        </ul>
-        <p>
-          Generated locally by CodebaseScan. No scripts, external fonts, or tracking are embedded in
-          this report.
-        </p>
-      </footer>
-    </main>
+          </footer>
+        </main>
+      </div>
+    </div>
   </body>
 </html>

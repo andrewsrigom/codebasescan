@@ -59,6 +59,14 @@ function publicAuditId(snapshotDigest: string): string {
   return `00000000-0000-4000-8000-${digest(`public-demo:\0${snapshotDigest}`).slice(0, 12)}`;
 }
 
+function withoutModelAnalysis(
+  finding: AuditReport['findings'][number],
+): AuditReport['findings'][number] {
+  const deterministic = { ...finding };
+  delete deterministic.analysis;
+  return deterministic;
+}
+
 function publicDemoReport(
   source: AuditReport,
   ledger: CalibrationLedger,
@@ -73,9 +81,9 @@ function publicDemoReport(
   if (!retainedFingerprints.size)
     throw new Error('Public demo requires at least one retained finding.');
 
-  const findings = source.findings.filter((finding) =>
-    retainedFingerprints.has(finding.fingerprint),
-  );
+  const findings = source.findings
+    .filter((finding) => retainedFingerprints.has(finding.fingerprint))
+    .map(withoutModelAnalysis);
   if (findings.length !== retainedFingerprints.size)
     throw new Error('A retained calibration entry no longer matches the source report.');
 
@@ -87,13 +95,16 @@ function publicDemoReport(
       projectName: options.projectName,
       snapshotDigest: digest(`public-demo:\0${source.snapshotDigest}`),
       findings,
+      aiMode: 'disabled',
+      aiUsage: undefined,
+      coverage: source.coverage?.filter((capability) => capability.id !== 'ai-context'),
       riskCorrelation: undefined,
       reviewImport: undefined,
       suppressionImport: undefined,
       limitations: [
         ...source.limitations,
-        'This public example is anonymized and curated from an authorized real repository.',
-        'Only candidates retained by a model-assisted static source review are shown. Independent human validation and runtime testing were not performed.',
+        'This public demo is sanitized and curated from an authorized real repository.',
+        'Only selected candidates are shown. Independent owner validation and runtime testing were not performed.',
       ],
       publication: 'draft',
     },
@@ -106,9 +117,9 @@ function addPublicDisclosure(html: string, retainedFindings: number): string {
   const css =
     '.public-demo-note{margin-top:14px;border:1px solid #244d8d;background:#0d1b33;border-radius:12px;padding:14px 15px;color:#c9d8f5}.public-demo-note strong{display:block;color:#fff;font-size:12px}.public-demo-note p{margin:6px 0 0;font-size:11px;color:#9fb2d4}';
   const disclosure =
-    '<aside class="public-demo-note"><strong>Anonymized public example</strong><p>Generated from an authorized real repository. This curated view retains ' +
+    '<aside class="public-demo-note"><strong>Public demo</strong><p>Sanitized from an authorized real repository. This curated view retains ' +
     retainedFindings +
-    ' candidates after model-assisted source review. It is not a certification or a substitute for human validation.</p></aside>';
+    ' selected candidates. It is not a certification or a substitute for independent validation.</p></aside>';
   const withCss = html.replace('</style>', css + '</style>');
   const overviewEnd = '</section><section id="risks"';
   if (!withCss.includes(overviewEnd)) throw new Error('Public demo insertion point is missing.');
