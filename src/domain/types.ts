@@ -111,6 +111,8 @@ export interface Finding {
     | 'next'
     | 'react'
     | 'accessibility'
+    | 'axe'
+    | 'web'
     | 'privacy'
     | 'reliability'
     | 'environment'
@@ -246,6 +248,7 @@ export const auditModes = [
   'next-react',
   'maintainability',
   'release-readiness',
+  'web-posture',
 ] as const;
 export type AuditMode = (typeof auditModes)[number];
 export interface AuditModeSelection {
@@ -1023,7 +1026,7 @@ export interface AuditEvent {
   at: string;
 }
 export interface AuditReport {
-  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
+  schemaVersion: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
   auditId: string;
   projectName: string;
   createdAt: string;

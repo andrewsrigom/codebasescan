@@ -28,7 +28,7 @@ test('portable suppression requires and matches an exact source target', () => {
   const applied = parseAuditReport(
     applySuppressionLedger(report, ledger, '2026-09-08T13:00:00.000Z'),
   );
-  assert.equal(applied.schemaVersion, 14);
+  assert.equal(applied.schemaVersion, 15);
   assert.equal(applied.suppressionImport?.applied, 1);
   assert.equal(applied.findings[0]?.suppression?.owner, 'Security team');
   assert.equal(applied.findings[0]?.suppression?.target?.ruleId, report.findings[0]?.ruleId);

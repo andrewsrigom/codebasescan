@@ -141,7 +141,7 @@ export function applySuppressionLedger(
   ].sort();
   return {
     ...report,
-    schemaVersion: 14,
+    schemaVersion: 15,
     findings: report.findings.map((finding) => {
       const entry = applicable.get(finding.fingerprint);
       return entry

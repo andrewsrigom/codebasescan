@@ -69,6 +69,8 @@ export function buildCoverage(
     scannerCapability(runs, 'next-security', 'Next.js application security', 'NOT RUN'),
     scannerCapability(runs, 'react-security', 'React client security', 'NOT RUN'),
     scannerCapability(runs, 'accessibility-static', 'Static accessibility', 'NOT RUN'),
+    scannerCapability(runs, 'axe-results', 'Imported Axe runtime accessibility', 'NOT PERFORMED'),
+    scannerCapability(runs, 'web-posture', 'Web discovery and SEO posture', 'NOT RUN'),
     scannerCapability(runs, 'privacy-static', 'Static privacy', 'NOT RUN'),
     scannerCapability(runs, 'reliability-static', 'Static reliability', 'NOT RUN'),
     scannerCapability(runs, 'supply-chain', 'Node.js supply-chain integrity', 'NOT RUN'),

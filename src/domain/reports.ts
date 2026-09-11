@@ -762,6 +762,8 @@ function humanFindingSource(source: AuditReport['findings'][number]['source']): 
     next: 'Next.js check',
     react: 'React check',
     accessibility: 'Accessibility check',
+    axe: 'Imported Axe result',
+    web: 'Web posture check',
     privacy: 'Privacy check',
     reliability: 'Reliability check',
     environment: 'Environment check',

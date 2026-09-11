@@ -73,6 +73,8 @@ const finding = z.looseObject({
     'next',
     'react',
     'accessibility',
+    'axe',
+    'web',
     'privacy',
     'reliability',
     'environment',
@@ -1034,6 +1036,7 @@ export const auditReportSchema = z.looseObject({
     z.literal(12),
     z.literal(13),
     z.literal(14),
+    z.literal(15),
   ]),
   auditId: shortText,
   projectName: shortText,
@@ -1055,12 +1058,13 @@ export const auditReportSchema = z.looseObject({
           'next-react',
           'maintainability',
           'release-readiness',
+          'web-posture',
         ]),
         version: shortText,
         enabled: z.boolean(),
       }),
     )
-    .max(8)
+    .max(9)
     .optional(),
   findings: z.array(finding).max(10_000),
   scanners: z.array(scanner).max(1_000),
@@ -1145,9 +1149,10 @@ const storedOptionsSchema = z.looseObject({
         'next-react',
         'maintainability',
         'release-readiness',
+        'web-posture',
       ]),
     )
-    .max(8)
+    .max(9)
     .optional(),
   scopePreflight: scopePreflight.optional(),
 });

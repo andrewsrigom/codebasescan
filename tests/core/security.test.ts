@@ -350,6 +350,20 @@ test('large files are excluded and coverage is marked truncated', async (context
   assert.equal(estimate.predictedTruncated, true);
   assert.deepEqual(estimate.reasons, ['per-file-byte-limit']);
 });
+test('snapshot captures only conventional text web posture artifacts', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-web-files-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'public'));
+  await writeFile(path.join(root, 'public', 'robots.txt'), 'User-agent: *\nAllow: /\n');
+  await writeFile(path.join(root, 'public', 'sitemap.xml'), '<urlset />');
+  await writeFile(path.join(root, 'public', 'llms.txt'), '# Product\n');
+  await writeFile(path.join(root, 'public', 'notes.txt'), 'not an audit input');
+  const snapshot = await captureSnapshot(root);
+  assert.deepEqual(
+    snapshot.files.map((file) => file.path),
+    ['public/llms.txt', 'public/robots.txt', 'public/sitemap.xml'],
+  );
+});
 test('large generated TypeScript modules within the bounded limit are retained', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-large-source-'));
   context.after(() => rm(root, { recursive: true, force: true }));

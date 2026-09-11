@@ -43,6 +43,7 @@ import { scanArchitecture, scanDuplication } from '../scanners/mechanical.ts';
 import { scanSupplyChain } from '../scanners/supply-chain.ts';
 import { scanCodeQuality } from '../scanners/quality.ts';
 import { scanAccessibilityStatic } from '../scanners/accessibility-static.ts';
+import { scanWebPosture } from '../scanners/web-posture.ts';
 import { scanPrivacyStatic } from '../scanners/privacy-static.ts';
 import { scanReliabilityStatic } from '../scanners/reliability-static.ts';
 import { scanEnvironmentContract } from '../scanners/environment-contract.ts';
@@ -341,14 +342,19 @@ export function buildAuditGraph(options: {
               'Static accessibility review',
               'accessibility-static',
             ),
+            skippedByMode(
+              'axe-results',
+              'Imported Axe runtime accessibility',
+              'accessibility-static',
+            ),
           ],
         };
       const source = await checkedSnapshot(state);
       const result = await cachedScan(
         source,
         'accessibility-static',
-        '0.3.0',
-        ['accessibility-static'],
+        '0.4.0',
+        ['accessibility-static', 'axe-results'],
         () => scanAccessibilityStatic(source),
       );
       event(
@@ -356,6 +362,19 @@ export function buildAuditGraph(options: {
         'accessibility_static',
         `${result.findings.length} static accessibility candidate(s).`,
       );
+      return { findings: result.findings, scanners: result.runs };
+    })
+    .addNode('web_posture', async (state) => {
+      if (!modeEnabled(enabledModes, 'web-posture'))
+        return {
+          findings: [],
+          scanners: [skippedByMode('web-posture', 'Web discovery and SEO posture', 'web-posture')],
+        };
+      const source = await checkedSnapshot(state);
+      const result = await cachedScan(source, 'web-posture', '0.1.0', ['web-posture'], () =>
+        scanWebPosture(source),
+      );
+      event(state, 'web_posture', `${result.findings.length} web posture candidate(s).`);
       return { findings: result.findings, scanners: [result.run] };
     })
     .addNode('privacy_static', async (state) => {
@@ -832,7 +851,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 14,
+        schemaVersion: 15,
         auditId: state.auditId,
         projectName,
         createdAt,
@@ -978,6 +997,7 @@ export function buildAuditGraph(options: {
     .addEdge('project_profile', 'next_security')
     .addEdge('project_profile', 'react_security')
     .addEdge('project_profile', 'accessibility_static')
+    .addEdge('project_profile', 'web_posture')
     .addEdge('project_profile', 'privacy_static')
     .addEdge('project_profile', 'reliability_static')
     .addEdge('snapshot', 'environment_contract')
@@ -1003,6 +1023,7 @@ export function buildAuditGraph(options: {
         'next_security',
         'react_security',
         'accessibility_static',
+        'web_posture',
         'privacy_static',
         'reliability_static',
         'environment_contract',

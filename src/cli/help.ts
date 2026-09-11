@@ -1,5 +1,5 @@
 const auditModes =
-  'security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness';
+  'security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness,web-posture';
 
 const commandHelp: Record<string, string> = {
   audit: `Usage: codebasescan audit [project] [options]

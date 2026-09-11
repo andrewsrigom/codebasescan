@@ -46,6 +46,7 @@ const excludedFiles = new Set([
   '.semgrep.yml',
   '.semgrep.yaml',
 ]);
+const webPostureFiles = new Set(['robots.txt', 'sitemap.xml', 'llms.txt']);
 const testSegments = new Set([
   'test',
   'tests',
@@ -123,6 +124,7 @@ function fileExclusion(name: string): 'sensitive-file' | 'unsupported-file' | nu
   if (
     excludedFiles.has(name) ||
     (!extensions.has(path.extname(name)) &&
+      !webPostureFiles.has(name.toLowerCase()) &&
       name !== 'Dockerfile' &&
       name !== 'yarn.lock' &&
       !isEnvironmentTemplate(name))

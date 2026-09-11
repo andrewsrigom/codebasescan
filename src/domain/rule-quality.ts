@@ -47,9 +47,10 @@ const benchmarked = new Set([
   ...Array.from({ length: 9 }, (_, index) => `react:TW-REACT${String(index + 1).padStart(3, '0')}`),
   ...Array.from({ length: 9 }, (_, index) => `saas:TW-SAAS${String(index + 1).padStart(3, '0')}`),
   ...Array.from(
-    { length: 4 },
+    { length: 6 },
     (_, index) => `accessibility:TW-A11Y${String(index + 1).padStart(3, '0')}`,
   ),
+  ...Array.from({ length: 5 }, (_, index) => `web:TW-WEB${String(index + 1).padStart(3, '0')}`),
   ...Array.from(
     { length: 3 },
     (_, index) => `privacy:TW-PRIV${String(index + 1).padStart(3, '0')}`,
@@ -75,6 +76,8 @@ const frameworks: Partial<Record<Finding['source'], string[]>> = {
   next: ['Next.js'],
   react: ['React', 'Next.js'],
   accessibility: ['React JSX', 'Next.js'],
+  axe: ['Axe JSON result format'],
+  web: ['React', 'Next.js'],
   privacy: ['Node.js', 'React', 'Next.js'],
   reliability: ['Node.js', 'Next.js request boundaries'],
   environment: ['Node.js', 'Next.js', 'Vite'],
@@ -93,6 +96,10 @@ const limitations: Partial<Record<Finding['source'], string[]>> = {
   accessibility: [
     'Focus order, contrast, layout, and assistive-technology behavior are not tested.',
   ],
+  axe: [
+    'Imported Axe results reflect only pages, states, browsers, and rules exercised externally.',
+  ],
+  web: ['Source declarations do not prove deployed crawler, metadata, or indexing behavior.'],
   privacy: [
     'Purpose, consent, retention, deletion, and actual third-party transfer are unverified.',
   ],
@@ -112,6 +119,8 @@ const wcag: Record<string, string[]> = {
   'TW-A11Y002': ['2.1.1', '4.1.2'],
   'TW-A11Y003': ['3.1.1'],
   'TW-A11Y004': ['1.3.1', '3.3.2', '4.1.2'],
+  'TW-A11Y005': ['4.1.2'],
+  'TW-A11Y006': ['2.1.1', '4.1.2'],
 };
 
 function dispositionCounts(findings: Finding[]): Record<Finding['disposition'], number> {

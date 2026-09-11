@@ -1,7 +1,8 @@
 import ts from 'typescript';
 import type { Finding, ScannerRun, Snapshot, SourceFile } from '../domain/types.ts';
-import { makeFinding, sourceEvidence } from '../domain/findings.ts';
+import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { isRuntimeSource } from '../security/paths.ts';
+import { redact } from '../security/redact.ts';
 
 const maximumFindings = 300;
 const jsxSource = /\.(?:[cm]?tsx|jsx)$/i;
@@ -127,6 +128,37 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
             'Intrinsic img element has no alt attribute.',
           ),
         );
+      if (tag === 'iframe' && !attribute(opening, 'title') && !hasSpreadAttributes(opening))
+        findings.push(
+          finding(
+            file,
+            source,
+            opening,
+            'TW-A11Y005',
+            'Inline frame has no static accessible name',
+            'An intrinsic iframe has no title attribute, so its purpose may not be announced clearly.',
+            'Add a concise title describing the embedded content or forward a verified title prop.',
+            'Intrinsic iframe has no title attribute.',
+          ),
+        );
+      if (
+        tag === 'a' &&
+        attribute(opening, 'onclick') &&
+        !attribute(opening, 'href') &&
+        !hasSpreadAttributes(opening)
+      )
+        findings.push(
+          finding(
+            file,
+            source,
+            opening,
+            'TW-A11Y006',
+            'Anchor click handler has no navigation target',
+            'An intrinsic anchor has a click handler but no href, so native keyboard and link behavior are not established.',
+            'Use a button for an action or provide a real href when the element navigates.',
+            'Clickable intrinsic anchor has no href attribute.',
+          ),
+        );
       if (
         (tag === 'div' || tag === 'span') &&
         attribute(opening, 'onclick') &&
@@ -194,9 +226,124 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
   return { findings, parseFailed: false };
 }
 
+function axeText(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .trim()
+    .slice(0, 500);
+  return normalized ? redact(normalized) : fallback;
+}
+
+function axeSeverity(value: unknown): Finding['severity'] {
+  if (value === 'critical') return 'high';
+  if (value === 'serious') return 'medium';
+  if (value === 'moderate') return 'low';
+  return 'info';
+}
+
+function importAxeResults(snapshot: Snapshot): { findings: Finding[]; run: ScannerRun } {
+  const started = performance.now();
+  const file = snapshot.files.find(
+    (candidate) =>
+      isRuntimeSource(candidate) &&
+      ['codebasescan.axe.json', 'axe-results.json', 'axe-report.json'].includes(
+        candidate.path.toLowerCase(),
+      ),
+  );
+  if (!file)
+    return {
+      findings: [],
+      run: {
+        id: 'axe-results',
+        name: 'Imported Axe runtime accessibility',
+        status: 'skipped',
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        findings: 0,
+        detail:
+          'No root codebasescan.axe.json, axe-results.json, or axe-report.json artifact was captured. CodebaseScan did not execute the target application or a browser.',
+        version: '0.1.0',
+      },
+    };
+  try {
+    const parsed: unknown = JSON.parse(file.content);
+    const documents = Array.isArray(parsed) ? parsed.slice(0, 20) : [parsed];
+    const findings: Finding[] = [];
+    let violations = 0;
+    for (const document of documents) {
+      if (!document || typeof document !== 'object' || Array.isArray(document))
+        throw new Error('invalid document');
+      const rawViolations = (document as Record<string, unknown>).violations;
+      if (!Array.isArray(rawViolations)) throw new Error('missing violations');
+      for (const value of rawViolations.slice(0, maximumFindings - findings.length)) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+        const violation = value as Record<string, unknown>;
+        if (typeof violation.id !== 'string' || !/^[a-z0-9-]{1,100}$/i.test(violation.id)) continue;
+        const nodes = Array.isArray(violation.nodes) ? Math.min(violation.nodes.length, 10_000) : 0;
+        const observation = `Imported Axe rule ${violation.id} reported ${nodes} affected node(s); selectors and HTML were not retained.`;
+        const evidence = {
+          id: digest(`${file.path}:${violation.id}:${observation}`).slice(0, 16),
+          kind: 'observed' as const,
+          scope: file.scope,
+          file: file.path,
+          startLine: 1,
+          endLine: 1,
+          focusLine: 1,
+          excerpt: `Axe ${violation.id}: ${nodes} affected node(s).`,
+          fileDigest: file.digest,
+          observation,
+        };
+        findings.push(
+          makeFinding({
+            source: 'axe',
+            ruleId: `AXE-${violation.id.toUpperCase()}`,
+            title: axeText(violation.help, `Axe reported ${violation.id}`),
+            category: 'accessibility',
+            severity: axeSeverity(violation.impact),
+            sourceSeverity:
+              typeof violation.impact === 'string' ? violation.impact.slice(0, 40) : 'unknown',
+            description: `${axeText(violation.description, 'Axe reported a runtime accessibility issue.')} The imported artifact groups ${nodes} affected node(s).`,
+            remediation:
+              'Review the Axe rule in the tested page, correct the affected markup, and rerun the external accessibility test.',
+            cwe: [],
+            evidence: [evidence],
+          }),
+        );
+        violations++;
+      }
+    }
+    const partial = findings.length >= maximumFindings || documents.length >= 20;
+    return {
+      findings,
+      run: {
+        id: 'axe-results',
+        name: 'Imported Axe runtime accessibility',
+        status: partial ? 'partial' : 'completed',
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        findings: findings.length,
+        detail: `Imported ${violations} bounded Axe violation group(s) from ${file.path}. Selectors, HTML fragments, and browser execution were not retained or performed.`,
+        version: '0.1.0',
+      },
+    };
+  } catch {
+    return {
+      findings: [],
+      run: {
+        id: 'axe-results',
+        name: 'Imported Axe runtime accessibility',
+        status: 'failed',
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        findings: 0,
+        detail: `${file.path} is not a bounded Axe JSON result artifact.`,
+        version: '0.1.0',
+      },
+    };
+  }
+}
+
 export function scanAccessibilityStatic(snapshot: Snapshot): {
   findings: Finding[];
-  run: ScannerRun;
+  runs: ScannerRun[];
 } {
   const started = performance.now();
   const files = snapshot.files.filter((file) => isRuntimeSource(file) && jsxSource.test(file.path));
@@ -208,19 +355,23 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
     findings.push(...result.findings.slice(0, maximumFindings - findings.length));
     if (findings.length >= maximumFindings) break;
   }
+  const imported = importAxeResults(snapshot);
   const partial = snapshot.truncated || parseFailures > 0 || findings.length >= maximumFindings;
   return {
-    findings,
-    run: {
-      id: 'accessibility-static',
-      name: 'Static accessibility review',
-      status: files.length ? (partial ? 'partial' : 'completed') : 'skipped',
-      durationMs: Math.max(0, Math.round(performance.now() - started)),
-      findings: findings.length,
-      detail: files.length
-        ? `Inspected ${files.length} JSX file(s) for four bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior were not tested.`
-        : 'No runtime JSX source was available for static accessibility review.',
-      version: '0.3.0',
-    },
+    findings: [...findings, ...imported.findings],
+    runs: [
+      {
+        id: 'accessibility-static',
+        name: 'Static accessibility review',
+        status: files.length ? (partial ? 'partial' : 'completed') : 'skipped',
+        durationMs: Math.max(0, Math.round(performance.now() - started)),
+        findings: findings.length,
+        detail: files.length
+          ? `Inspected ${files.length} JSX file(s) for six bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior require imported external evidence.`
+          : 'No runtime JSX source was available for static accessibility review.',
+        version: '0.4.0',
+      },
+      imported.run,
+    ],
   };
 }
