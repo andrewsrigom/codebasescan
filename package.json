@@ -1,6 +1,6 @@
 {
   "name": "codebasescan",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "description": "Local-first static auditing for Node.js, React, and Next.js codebases.",

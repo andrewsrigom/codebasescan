@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </Link>
           <Navigation />
           <div className="sidebar-bottom">
-            <div className="sidebar-version">v0.2.1</div>
+            <div className="sidebar-version">v0.3.0</div>
           </div>
         </aside>
         <div className="app-shell">
