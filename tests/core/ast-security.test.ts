@@ -545,6 +545,14 @@ test('webhook management APIs and response serialization are not inbound webhook
     'pages/api/teams/[slug]/webhooks/[endpointId].ts',
   );
   assert.ok(!ids.includes('TW-AST008'));
+  const nextManagementIds = astRuleIds(
+    `export async function PUT(request: Request) {
+      const body = await request.json();
+      return Response.json(await updateWebhookSettings(body));
+    }`,
+    'src/app/api/webhooks/route.ts',
+  );
+  assert.ok(!nextManagementIds.includes('TW-AST008'));
 });
 
 test('client modules referencing server environment values are identified', () => {

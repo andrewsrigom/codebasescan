@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Limited inbound webhook signature-order findings to POST or method-unknown handlers so webhook
+  configuration endpoints are not mistaken for provider callbacks.
 - Kept middleware data operations separate from route operations so a shared Next.js proxy can
   contribute authentication evidence without fabricating database findings for every matched route.
 - Reduced environment-contract noise by excluding writes and recognized optional/default reads

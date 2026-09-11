@@ -864,6 +864,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
         );
         if (
           isWebhookEntrypoint(entrypoint) &&
+          (entrypoint.methods.length === 0 || entrypoint.methods.includes('POST')) &&
           bodyParse &&
           (!verification || bodyParse.getStart() < verification.getStart())
         ) {
@@ -1180,7 +1181,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.6.0',
+        version: '0.7.0',
       },
     };
 
@@ -1266,7 +1267,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.6.0',
+      version: '0.7.0',
     },
   };
 }
