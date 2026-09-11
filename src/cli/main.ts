@@ -16,6 +16,7 @@ import { compareReports } from '../domain/comparison.ts';
 import { baselineCiGate, ciGate } from '../domain/ci.ts';
 import { evaluateReports } from '../domain/evaluation.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
+import { maximumAuditReportBytes, maximumAuditReportMegabytes } from '../reporting/limits.ts';
 import { buildRemediationPlan, buildRemediationTaskBundle } from '../domain/remediation.ts';
 import {
   auditModes,
@@ -163,8 +164,10 @@ function render(report: AuditReport, format: string): string {
 async function loadBaseline(file: string): Promise<AuditReport> {
   const resolved = path.resolve(file);
   const metadata = await stat(resolved);
-  if (!metadata.isFile() || metadata.size > 16 * 1024 * 1024)
-    throw new Error('Baseline report must be a regular JSON file no larger than 16 MB.');
+  if (!metadata.isFile() || metadata.size > maximumAuditReportBytes)
+    throw new Error(
+      `Baseline report must be a regular JSON file no larger than ${maximumAuditReportMegabytes} MB.`,
+    );
   try {
     return parseAuditReport(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
   } catch (error) {
@@ -178,8 +181,10 @@ async function loadReportArtifact(location: string): Promise<AuditReport> {
   const metadata = await stat(resolved);
   const file = metadata.isDirectory() ? path.join(resolved, 'audit-report.json') : resolved;
   const fileMetadata = metadata.isDirectory() ? await stat(file) : metadata;
-  if (!fileMetadata.isFile() || fileMetadata.size > 16 * 1024 * 1024)
-    throw new Error('Audit report must be a regular JSON file no larger than 16 MB.');
+  if (!fileMetadata.isFile() || fileMetadata.size > maximumAuditReportBytes)
+    throw new Error(
+      `Audit report must be a regular JSON file no larger than ${maximumAuditReportMegabytes} MB.`,
+    );
   try {
     return parseAuditReport(JSON.parse(await readFile(file, 'utf8')) as unknown);
   } catch {

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import type { AuditReport } from '../domain/types.ts';
 import { digest } from '../domain/findings.ts';
+import { maximumAuditReportBytes } from './limits.ts';
 import { parseAuditReport } from '../domain/report-schema.ts';
 import {
   toCycloneDx,
@@ -156,7 +157,7 @@ async function readIndexedReport(directory: string): Promise<AuditReport | null>
       !auditArtifact ||
       typeof auditArtifact.bytes !== 'number' ||
       auditArtifact.bytes < 0 ||
-      auditArtifact.bytes > 16 * 1024 * 1024 ||
+      auditArtifact.bytes > maximumAuditReportBytes ||
       typeof auditArtifact.sha256 !== 'string' ||
       !/^[a-f0-9]{64}$/.test(auditArtifact.sha256)
     )
