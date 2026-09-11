@@ -44,9 +44,9 @@ The actual tarball was installed into an empty generated project. Each smoke ran
 
 | Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
 | ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
-| Node 24 / npm     | 257,497 B | 1,155,677 B      | 95,452,330 B           | 5.04 s  | 2.18 s |
-| Node 24 / pnpm    | 257,497 B | 1,155,677 B      | 95,537,612 B           | 1.92 s  | 2.53 s |
-| Node 24 / Yarn    | 257,497 B | 1,155,677 B      | 104,943,330 B          | 4.28 s  | 2.27 s |
+| Node 24 / npm     | 259,299 B | 1,164,991 B      | 95,461,644 B           | 5.00 s  | 2.14 s |
+| Node 24 / pnpm    | 259,299 B | 1,164,991 B      | 95,546,926 B           | 1.98 s  | 2.58 s |
+| Node 24 / Yarn    | 259,299 B | 1,164,991 B      | 104,952,644 B          | 3.83 s  | 2.36 s |
 
 The tarball contains 94 files. Next.js, React, shadcn, SQLite checkpoint, and Ollama packages are
 not installed for the default CLI.
