@@ -309,6 +309,24 @@ function hasInlinePayloadValidation(
       true,
     );
     const payloadNames = new Set<string>();
+    if (entrypoint.kind === 'server-action') {
+      const collectEntrypointParameters = (node: ts.Node): void => {
+        if (ts.isFunctionDeclaration(node) && node.name?.text === entrypoint.name)
+          for (const parameter of node.parameters)
+            for (const name of bindingNames(parameter.name)) payloadNames.add(name);
+        if (
+          ts.isVariableDeclaration(node) &&
+          ts.isIdentifier(node.name) &&
+          node.name.text === entrypoint.name &&
+          node.initializer &&
+          (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
+        )
+          for (const parameter of node.initializer.parameters)
+            for (const name of bindingNames(parameter.name)) payloadNames.add(name);
+        ts.forEachChild(node, collectEntrypointParameters);
+      };
+      collectEntrypointParameters(source);
+    }
     const collect = (node: ts.Node): void => {
       if (ts.isVariableDeclaration(node) && node.initializer) {
         if (requestBodyCall(node.initializer))
@@ -636,7 +654,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
         findings: 0,
         detail:
           'No supported Next.js framework signal was mapped. No clean Next.js result is implied.',
-        version: '0.4.1',
+        version: '0.4.2',
       },
     };
 
@@ -653,7 +671,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s) for authenticated reads, object scope, input validation, user-specific caching, public environment exposure, and sensitive response fields.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.4.1',
+      version: '0.4.2',
     },
   };
 }

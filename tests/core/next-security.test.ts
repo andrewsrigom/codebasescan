@@ -192,6 +192,25 @@ test('Next.js mutation rule recognizes bounded inline payload validation', () =>
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
 });
 
+test('Next.js mutation rule follows Server Action parameter normalization', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': '{"dependencies":{"next":"16.0.0"}}',
+    'src/app/actions.ts': `
+      'use server';
+      function normalizeField(value: FormDataEntryValue | null): string {
+        return typeof value === 'string' ? value.trim() : '';
+      }
+      export async function deleteProjectAction(formData: FormData) {
+        const projectId = normalizeField(formData.get('projectId'));
+        if (!projectId) throw new Error('Missing project id');
+        await db.project.delete({ where: { id: projectId } });
+      }
+    `,
+  });
+  const result = scanNextSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
 test('Next.js rules recognize descriptive authentication and validation wrappers', () => {
   const result = scan(
     `
