@@ -26,6 +26,8 @@ Notable changes are recorded here.
   downgrade newer reports.
 - Added bounded direct and transitive dependency paths for npm lockfiles and Yarn Classic/Berry,
   including hoisted, nested, and repeated workspace declarations.
+- Added declared dynamic-execution ground truth and a synchronization test so per-rule fixture
+  metrics cannot drift from the benchmark corpus.
 
 ## 0.2.1 — 2026-09-11
 

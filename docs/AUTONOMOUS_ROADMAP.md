@@ -181,7 +181,7 @@ downgraded; no broad accuracy claim relies only on synthetic fixtures.
 Current workflow-v32 corpus pass produces 156 candidates across five projects after increasing the
 bounded snapshot to cover all 5,980 supported files. All five snapshots and structural profiles are
 complete. Detector tuning removed known generic ID-lookup, comment, design-token, current-path, and
-recognized-validation noise without weakening the 55-case synthetic benchmark. The aggregate
+recognized-validation noise without weakening the 56-case synthetic benchmark. The aggregate
 truthfully reports zero reviewed candidates and keeps `accuracyClaimReady` false until the
 independent review ledgers are populated.
 

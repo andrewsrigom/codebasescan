@@ -10,7 +10,8 @@ the target project.
 
 The audit workflow is `codebasescan-audit-v32`. Twenty-seven scanner/profile results fan into
 normalization. The audit-mode pack is `1.0.0`. Report schema v16 and report-index schema v1 are
-current. The generic SaaS layer consists of:
+current. Rule-quality schema v3 synchronizes declared per-rule metrics with benchmark ground truth.
+The generic SaaS layer consists of:
 
 - safe root `codebasescan.config.json`/JSONC semantics;
 - bounded declared project context, verified script names, and an observed data map;

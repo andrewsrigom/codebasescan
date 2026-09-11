@@ -22,8 +22,8 @@ Linux/WSL is the supported 0.3 candidate environment. Native Windows and macOS a
 | npm run format:check        | Passed                                                                                  |
 | npm run typecheck           | Passed                                                                                  |
 | npm run lint                | Passed, zero warnings                                                                   |
-| npm test                    | 367 passed                                                                              |
-| npm run benchmark           | TP 55, FP 0, FN 0; precision 1.00, recall 1.00                                          |
+| npm test                    | 368 passed                                                                              |
+| npm run benchmark           | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
 | React benchmark subset      | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |

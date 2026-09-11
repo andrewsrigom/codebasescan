@@ -136,5 +136,5 @@ and infrastructure evidence remains not performed, not run, or unsupported as ap
 
 The versioned calibration aggregate still has zero independent candidate labels and zero completed
 false-negative reviews, so `accuracyClaimReady` remains false. The fixture benchmark is a separate
-regression gate: 55 true positives, zero false positives, and zero false negatives on declared
+regression gate: 56 true positives, zero false positives, and zero false negatives on declared
 synthetic ground truth.

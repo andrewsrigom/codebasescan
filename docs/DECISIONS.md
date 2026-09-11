@@ -351,3 +351,11 @@ paths per resolved package, limits each path to twelve package hops, and stops a
 routes. npm hoisting and nested installs are resolved against captured package entries. Repeated
 workspace declarations remain separate roots. An unresolved Yarn selector produces no inferred
 path. No package manager, lifecycle script, or target configuration executes.
+
+## 2026-09-11 — synchronized declared fixture metrics
+
+Rule-quality schema v3 marks a rule as fixture-measured only when that exact scanner/rule pair is
+present in declared benchmark ground truth. A repository test reconstructs the expected catalog
+from every `ground-truth.json` file and fails on missing or stale entries. Dynamic execution now has
+its own inert positive fixture paired with the existing comment-only negative fixture. Synthetic
+metrics remain separate from independent real-project calibration.
