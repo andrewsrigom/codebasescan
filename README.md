@@ -2,6 +2,8 @@
 
 CodebaseScan audits Node.js, React, and Next.js repositories from the command line and produces a static report you can keep, compare, or host.
 
+[Open the anonymized public example report](https://andrewsrigom.github.io/codebasescan/). It is a curated one-page snapshot from an authorized real repository. Findings remain review candidates, not a certification.
+
 I built it for a common situation: the repository is available, but production logs and telemetry are not. The tool starts with source code, package metadata, lockfiles, and inert configuration. It does not run the project being audited, and AI is not required.
 
 > CodebaseScan is under active development. WSL2/Linux and Node.js 22.16+ are the tested environment today.
