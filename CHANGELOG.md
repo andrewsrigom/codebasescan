@@ -1,8 +1,8 @@
 # Changelog
 
-Notable changes are recorded here. CodebaseScan has not published a stable release yet.
+Notable changes are recorded here.
 
-## 0.2.0 — unreleased
+## 0.2.0 — 2026-09-11
 
 - Added a stable script-free `codebasescan-report/index.html` and versioned
   `report-index.json` that point to the newest immutable audit and retain bounded history.
@@ -14,6 +14,8 @@ Notable changes are recorded here. CodebaseScan has not published a stable relea
   Axe JSON without executing the target application or retaining selectors/raw HTML.
 - Added real packed-package install tests for npm, pnpm, and Yarn, with Node 22.16 and Node 24 CI
   coverage.
+- Added an npm publish dry-run regression gate that preserves the installed `codebasescan` command.
+- Pinned release workflow dependencies and added a manual GitHub release dry-run that cannot publish.
 - Kept Next.js/shadcn UI dependencies out of the default CLI install and made SQLite/Ollama
   integrations optional peers.
 - Replaced the one-shot CLI's in-memory SQLite database with a dedicated ephemeral store, removing

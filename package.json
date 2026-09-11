@@ -1,7 +1,7 @@
 {
   "name": "codebasescan",
   "version": "0.2.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "description": "Local-first static auditing for Node.js, React, and Next.js codebases.",
   "license": "MIT",
