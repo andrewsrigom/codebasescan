@@ -12,29 +12,12 @@ import { auditWorkflowVersion } from '../domain/versions.ts';
 import { redact } from '../security/redact.ts';
 import type { AuditExecutionStore } from './audit-store.ts';
 
-interface Usage {
-  calls: number;
-  cacheHits: number;
-  inputTokens: number;
-  outputTokens: number;
-  approximateCostUsd: number;
-}
-
 const timestamp = () => new Date().toISOString();
-const emptyUsage = (): Usage => ({
-  calls: 0,
-  cacheHits: 0,
-  inputTokens: 0,
-  outputTokens: 0,
-  approximateCostUsd: 0,
-});
 
 export class EphemeralAuditStore implements AuditExecutionStore {
   private readonly projectsById = new Map<string, Project>();
   private readonly auditsById = new Map<string, Audit>();
   private readonly eventKeys = new Set<string>();
-  private readonly usageByAudit = new Map<string, Usage>();
-  private readonly aiCache = new Map<string, { createdAt: number; value: string }>();
 
   close(): void {}
 
@@ -119,60 +102,5 @@ export class EphemeralAuditStore implements AuditExecutionStore {
 
   applySuppressions(_projectId: string, findings: Finding[]): Finding[] {
     return findings;
-  }
-
-  reserveAiCall(
-    auditId: string,
-    estimatedInputTokens: number,
-    limits: { calls: number; inputTokens: number; outputTokens: number; outputPerCall: number },
-  ): { maximumOutputTokens: number } {
-    const usage = this.usageByAudit.get(auditId) ?? emptyUsage();
-    const remainingOutput = limits.outputTokens - usage.outputTokens;
-    if (usage.calls >= limits.calls) throw new Error('AI call budget exhausted.');
-    if (usage.inputTokens + estimatedInputTokens > limits.inputTokens)
-      throw new Error('AI input-token budget exhausted.');
-    if (remainingOutput < 100) throw new Error('AI output-token budget exhausted.');
-    usage.calls += 1;
-    usage.inputTokens += estimatedInputTokens;
-    this.usageByAudit.set(auditId, usage);
-    return { maximumOutputTokens: Math.min(limits.outputPerCall, remainingOutput) };
-  }
-
-  finalizeAiCall(
-    auditId: string,
-    estimatedInputTokens: number,
-    actual: { inputTokens: number; outputTokens: number; approximateCostUsd: number },
-  ): void {
-    const usage = this.usageByAudit.get(auditId) ?? emptyUsage();
-    usage.inputTokens = Math.max(0, usage.inputTokens - estimatedInputTokens + actual.inputTokens);
-    usage.outputTokens += actual.outputTokens;
-    usage.approximateCostUsd += actual.approximateCostUsd;
-    this.usageByAudit.set(auditId, usage);
-  }
-
-  recordAiCacheHit(auditId: string): void {
-    const usage = this.usageByAudit.get(auditId) ?? emptyUsage();
-    usage.cacheHits += 1;
-    this.usageByAudit.set(auditId, usage);
-  }
-
-  aiUsage(auditId: string): Usage {
-    return structuredClone(this.usageByAudit.get(auditId) ?? emptyUsage());
-  }
-
-  readAiCache<T>(key: string, maximumAgeMs: number): T | null {
-    const cached = this.aiCache.get(key);
-    if (!cached || Date.now() - cached.createdAt > maximumAgeMs) return null;
-    try {
-      return JSON.parse(cached.value) as T;
-    } catch {
-      return null;
-    }
-  }
-
-  saveAiCache(key: string, value: unknown): void {
-    const serialized = JSON.stringify(value);
-    if (serialized.length > 64 * 1024) throw new Error('AI cache entry is too large.');
-    this.aiCache.set(key, { createdAt: Date.now(), value: serialized });
   }
 }

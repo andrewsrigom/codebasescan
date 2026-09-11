@@ -2,8 +2,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { configuration } from '../server/config.ts';
 import { AuditStore } from '../server/store.ts';
 import { cleanupStaleScannerStaging } from '../scanners/external.ts';
-import { disableRemoteTracing } from '../security/privacy.ts';
-disableRemoteTracing();
+import { disableTelemetry } from '../security/privacy.ts';
+disableTelemetry();
 process.umask(0o077);
 const config = configuration();
 const store = new AuditStore(config.databasePath);
@@ -20,9 +20,7 @@ const heartbeat = setInterval(() => {
   store.heartbeat(token);
   if (activeId && store.audit(activeId).status === 'cancelled') active?.abort();
 }, 2000);
-console.log(
-  `CodebaseScan worker ready. Read-only scans, AI ${config.aiMode}, one audit at a time.`,
-);
+console.log('CodebaseScan worker ready. Read-only deterministic scans, one audit at a time.');
 try {
   const removedStagingDirectories = await cleanupStaleScannerStaging(config.temporaryDirectory);
   if (removedStagingDirectories)
@@ -44,7 +42,7 @@ try {
         store.transition(
           audit.id,
           'queued',
-          'Worker stopped. A checkpoint resume will be attempted.',
+          'Worker stopped. The deterministic audit will restart from the captured project root.',
         );
       else
         store.transition(

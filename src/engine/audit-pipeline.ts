@@ -1,6 +1,9 @@
-import { Annotation, END, START, StateGraph, interrupt } from '@langchain/langgraph';
-import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import path from 'node:path';
+import {
+  DeterministicPipeline,
+  PIPELINE_END as END,
+  PIPELINE_START as START,
+} from './deterministic-pipeline.ts';
 import type {
   ArchitectureAnalysis,
   ApiContractAnalysis,
@@ -53,12 +56,9 @@ import { scanApiContract } from '../scanners/api-contract.ts';
 import { scanDatabaseContract } from '../scanners/database-contract.ts';
 import { scanWebhookContract } from '../scanners/webhook-contract.ts';
 import { scanFeatureFlags } from '../scanners/feature-flags.ts';
-import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
+import { captureSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
-import type { Reviewer } from './model.ts';
 import type { AuditExecutionStore } from './audit-store.ts';
-import { buildReviewGraph } from './review-graph.ts';
-import { agentReviewDepthLimits } from '../domain/agent-depth.ts';
 import { runCachedScan } from './scanner-cache.ts';
 const mergeRuns = (left: ScannerRun[], right: ScannerRun[]) => [
   ...new Map([...left, ...right].map((run) => [run.id, run])).values(),
@@ -73,94 +73,75 @@ function skippedByMode(id: string, name: string, mode: AuditMode): ScannerRun {
     detail: `Disabled by audit mode selection. Enable ${mode} to run this capability.`,
   };
 }
-export const AuditState = Annotation.Root({
-  auditId: Annotation<string>(),
-  executionFingerprint: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
-  snapshotDigest: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
-  fileCount: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
-  skipped: Annotation<Record<string, number>>({
-    reducer: (_, value) => value,
-    default: () => ({}),
-  }),
-  truncated: Annotation<boolean>({ reducer: (_, value) => value, default: () => false }),
-  findings: Annotation<Finding[]>({ reducer: mergeFindings, default: () => [] }),
-  normalizedFindings: Annotation<Finding[]>({ reducer: (_, value) => value, default: () => [] }),
-  scanners: Annotation<ScannerRun[]>({ reducer: mergeRuns, default: () => [] }),
-  httpProbe: Annotation<HttpProbeReport | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  dependencies: Annotation<Dependency[]>({ reducer: (_, value) => value, default: () => [] }),
-  projectProfile: Annotation<ProjectProfile | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  architectureAnalysis: Annotation<ArchitectureAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  duplicationAnalysis: Annotation<DuplicationAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  supplyChainAnalysis: Annotation<SupplyChainAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  codeQualityAnalysis: Annotation<CodeQualityAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  environmentContract: Annotation<EnvironmentContractAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  testEvidence: Annotation<TestEvidenceAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  apiContract: Annotation<ApiContractAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  databaseContract: Annotation<DatabaseContractAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  webhookContract: Annotation<WebhookContractAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  featureFlags: Annotation<FeatureFlagAnalysis | null>({
-    reducer: (_, value) => value,
-    default: () => null,
-  }),
-  analyzed: Annotation<Finding[]>({ reducer: mergeFindings, default: () => [] }),
-  cursor: Annotation<number>({ reducer: (_, value) => value, default: () => 0 }),
-  reviewNote: Annotation<string>({ reducer: (_, value) => value, default: () => '' }),
-  report: Annotation<AuditReport | null>({ reducer: (_, value) => value, default: () => null }),
-});
-type State = typeof AuditState.State;
-
-function nextReviewableFinding(state: State): { finding: Finding; index: number } | null {
-  for (let index = state.cursor; index < state.normalizedFindings.length; index++) {
-    const finding = state.normalizedFindings[index];
-    if (finding && finding.category !== 'secrets') return { finding, index };
-  }
-  return null;
+interface State {
+  auditId: string;
+  snapshotDigest: string;
+  fileCount: number;
+  skipped: Record<string, number>;
+  truncated: boolean;
+  findings: Finding[];
+  normalizedFindings: Finding[];
+  scanners: ScannerRun[];
+  httpProbe: HttpProbeReport | null;
+  dependencies: Dependency[];
+  projectProfile: ProjectProfile | null;
+  architectureAnalysis: ArchitectureAnalysis | null;
+  duplicationAnalysis: DuplicationAnalysis | null;
+  supplyChainAnalysis: SupplyChainAnalysis | null;
+  codeQualityAnalysis: CodeQualityAnalysis | null;
+  environmentContract: EnvironmentContractAnalysis | null;
+  testEvidence: TestEvidenceAnalysis | null;
+  apiContract: ApiContractAnalysis | null;
+  databaseContract: DatabaseContractAnalysis | null;
+  webhookContract: WebhookContractAnalysis | null;
+  featureFlags: FeatureFlagAnalysis | null;
+  report: AuditReport | null;
 }
 
-export function buildAuditGraph(options: {
+function initialState(input: { auditId: string }): State {
+  return {
+    auditId: input.auditId,
+    snapshotDigest: '',
+    fileCount: 0,
+    skipped: {},
+    truncated: false,
+    findings: [],
+    normalizedFindings: [],
+    scanners: [],
+    httpProbe: null,
+    dependencies: [],
+    projectProfile: null,
+    architectureAnalysis: null,
+    duplicationAnalysis: null,
+    supplyChainAnalysis: null,
+    codeQualityAnalysis: null,
+    environmentContract: null,
+    testEvidence: null,
+    apiContract: null,
+    databaseContract: null,
+    webhookContract: null,
+    featureFlags: null,
+    report: null,
+  };
+}
+
+function mergeState(state: State, update: Partial<State>): State {
+  return {
+    ...state,
+    ...update,
+    findings: update.findings ? mergeFindings(state.findings, update.findings) : state.findings,
+    scanners: update.scanners ? mergeRuns(state.scanners, update.scanners) : state.scanners,
+  };
+}
+
+export function buildAuditPipeline(options: {
   root: string;
   projectName: string;
   config: Configuration;
   store: AuditExecutionStore;
-  checkpointer: BaseCheckpointSaver;
-  reviewer: Reviewer | null;
   httpProbe?: HttpProbeOptions;
   gitHistorySecrets?: boolean;
   modes?: AuditMode[];
-  humanReview?: boolean;
   signal?: AbortSignal;
 }) {
   const {
@@ -168,16 +149,12 @@ export function buildAuditGraph(options: {
     projectName,
     config,
     store,
-    checkpointer,
-    reviewer,
     httpProbe,
     gitHistorySecrets = false,
     modes,
-    humanReview = true,
     signal,
   } = options;
   const enabledModes = new Set(resolveAuditModes(modes));
-  const maximumAnalyzedFindings = agentReviewDepthLimits[config.aiDepth].maximumFindings;
   const scannerCache = {
     directory: config.scannerCacheDirectory ?? path.join(config.dataDirectory, 'scanner-cache'),
     enabled: config.scannerCache ?? true,
@@ -211,11 +188,11 @@ export function buildAuditGraph(options: {
     const source = await snapshot();
     if (state.snapshotDigest && state.snapshotDigest !== source.digest)
       throw new Error(
-        'Source changed after the checkpoint. Start a new audit; evidence from different snapshots will not be mixed.',
+        'Source changed during the audit. Start a new audit; evidence from different snapshots will not be mixed.',
       );
     return source;
   };
-  return new StateGraph(AuditState)
+  return new DeterministicPipeline<State, { auditId: string }>(initialState, mergeState)
     .addNode('snapshot', async (state) => {
       const source = await snapshot();
       event(
@@ -847,45 +824,14 @@ export function buildAuditGraph(options: {
       );
       return { normalizedFindings };
     })
-    .addNode('investigate', async (state) => {
-      if (!reviewer) return { cursor: state.normalizedFindings.length };
-      const reviewable = nextReviewableFinding(state);
-      if (!reviewable) return { cursor: state.normalizedFindings.length };
-      const { finding, index } = reviewable;
-      const source = redactedSnapshot(await checkedSnapshot(state));
-      const graph = buildReviewGraph(
-        source,
-        reviewer,
-        state.projectProfile ?? undefined,
-        signal,
-        config.aiDepth,
-      );
-      const result = await graph.invoke({ finding }, { signal, recursionLimit: 12 });
-      const reviewed = { ...finding, ...(result.analysis ? { analysis: result.analysis } : {}) };
-      store.event(
-        state.auditId,
-        `investigate:${finding.id}`,
-        'investigate',
-        `Reviewed ${finding.ruleId}; source disposition remains ${finding.disposition}.`,
-      );
-      return { analyzed: [reviewed], cursor: index + 1 };
-    })
     .addNode('prepare_report', (state) => {
       const createdAt = new Date().toISOString();
       const audit = store.audit(state.auditId);
       const scopePreflight = audit.options.scopePreflight;
       const findings = store.applySuppressions(
         audit.projectId,
-        attachProvenance(
-          mergeFindings(state.normalizedFindings, state.analyzed),
-          state.scanners,
-          createdAt,
-        ),
+        attachProvenance(state.normalizedFindings, state.scanners, createdAt),
       );
-      const modelAnalyses = findings.flatMap((finding) =>
-        finding.analysis?.provider ? [finding.analysis] : [],
-      );
-      const storedUsage = store.aiUsage(state.auditId);
       const checklist = buildSecurityChecklist({
         ...(state.projectProfile ? { projectProfile: state.projectProfile } : {}),
         findings,
@@ -913,7 +859,7 @@ export function buildAuditGraph(options: {
         filesAnalyzed: state.fileCount,
         skipped: state.skipped,
         truncated: state.truncated,
-        aiMode: config.aiMode,
+        aiMode: 'disabled',
         auditModes: auditModeSelections(modes),
         findings,
         scanners: state.scanners,
@@ -932,45 +878,7 @@ export function buildAuditGraph(options: {
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
-        coverage: buildCoverage(state.scanners, findings, config.aiMode),
-        ...(config.aiMode !== 'disabled'
-          ? {
-              aiUsage: {
-                provider: config.aiMode,
-                models: [...new Set(modelAnalyses.flatMap((analysis) => analysis.model ?? []))],
-                calls: config.aiMode === 'openai' ? storedUsage.calls : modelAnalyses.length,
-                cacheHits: config.aiMode === 'openai' ? storedUsage.cacheHits : 0,
-                inputTokens:
-                  config.aiMode === 'openai'
-                    ? storedUsage.inputTokens
-                    : modelAnalyses.reduce(
-                        (sum, analysis) => sum + (analysis.tokenUsage?.inputTokens ?? 0),
-                        0,
-                      ),
-                outputTokens:
-                  config.aiMode === 'openai'
-                    ? storedUsage.outputTokens
-                    : modelAnalyses.reduce(
-                        (sum, analysis) => sum + (analysis.tokenUsage?.outputTokens ?? 0),
-                        0,
-                      ),
-                ...(config.aiMode === 'openai' &&
-                (config.openaiInputCostPerMillion !== undefined ||
-                  config.openaiOutputCostPerMillion !== undefined)
-                  ? { approximateCostUsd: storedUsage.approximateCostUsd }
-                  : {}),
-                contextFilesSent: [
-                  ...new Set(modelAnalyses.flatMap((analysis) => analysis.contextFilesSent ?? [])),
-                ],
-                contextIdsSent: [
-                  ...new Set(modelAnalyses.flatMap((analysis) => analysis.contextIdsSent ?? [])),
-                ],
-                redactionApplied: modelAnalyses.some(
-                  (analysis) => analysis.redactionApplied === true,
-                ),
-              },
-            }
-          : {}),
+        coverage: buildCoverage(state.scanners, findings, 'disabled'),
         publication: 'draft',
         limitations: [
           'This is a bounded static review, not a pentest, compliance audit, or security certification.',
@@ -980,7 +888,7 @@ export function buildAuditGraph(options: {
                 'HTTP observations apply only to the explicitly approved URL, response, and time; they do not establish whole-application runtime coverage.',
               ]
             : ['HTTP runtime posture was not run because no target was explicitly approved.']),
-          'AI assessments cannot confirm findings, lower scanner severity, or suppress candidates automatically.',
+          'Agent review is external to the audit. Agent conclusions must remain separate from deterministic scanner evidence.',
           'Dependency resolution is limited to captured npm, pnpm, and Yarn lockfiles. OSV presence does not establish runtime reachability or exploitability.',
           'Supply-chain checks inspect captured declarations and integrity metadata; private registries and intentional local dependencies still require trust review.',
           'Dependency cycles, orphan modules, coupling, and duplicated blocks are maintainability evidence. They are not security vulnerabilities by themselves.',
@@ -988,13 +896,6 @@ export function buildAuditGraph(options: {
           'Imported coverage artifacts describe a prior test run and do not prove which commit, environment, or security behavior was exercised.',
           'Secret files, Git history, symlinks, binary files, generated output and unsupported formats are excluded.',
           'Regex patterns can match comments and miss indirect flows; middleware, RLS and runtime policy need human review.',
-          ...(reviewer &&
-          state.normalizedFindings.filter((finding) => finding.category !== 'secrets').length >
-            maximumAnalyzedFindings
-            ? [
-                `Contextual analysis was limited to ${maximumAnalyzedFindings} candidates. Remaining candidates are preserved without contextual assessment.`,
-              ]
-            : []),
           ...(state.truncated
             ? [
                 'The source snapshot was truncated. Review skipped files before relying on coverage.',
@@ -1011,36 +912,8 @@ export function buildAuditGraph(options: {
       event(
         state,
         'prepare_report',
-        humanReview
-          ? 'Draft report saved. Waiting for an analyst to review publication.'
-          : 'Draft report saved for non-interactive execution. Findings remain unconfirmed.',
+        'Deterministic report saved. Findings remain review candidates.',
       );
-      return { report };
-    })
-    .addNode('human_review', () => {
-      const decision = interrupt({
-        kind: 'publication_review',
-        message:
-          'Review the evidence before publishing. Publishing does not confirm unresolved findings.',
-      }) as {
-        note?: unknown;
-      };
-      if (typeof decision?.note !== 'string' || decision.note.trim().length < 12)
-        throw new Error('A publication review note is required.');
-      return { reviewNote: decision.note.trim().slice(0, 2000) };
-    })
-    .addNode('publish', (state) => {
-      if (!state.report) throw new Error('No report was prepared.');
-      const latest = store.audit(state.auditId).report;
-      const report: AuditReport = {
-        ...state.report,
-        findings: latest?.findings ?? state.report.findings,
-        checklist: latest?.checklist ?? state.report.checklist,
-        publication: 'reviewed',
-        reviewNote: state.reviewNote,
-      };
-      store.saveProgress(state.auditId, report);
-      event(state, 'publish', 'Report published with review dispositions and limitations intact.');
       return { report };
     })
     .addEdge(START, 'snapshot')
@@ -1098,16 +971,7 @@ export function buildAuditGraph(options: {
       ],
       'normalize',
     )
-    .addConditionalEdges('normalize', (state) =>
-      reviewer && nextReviewableFinding(state) ? 'investigate' : 'prepare_report',
-    )
-    .addConditionalEdges('investigate', (state) =>
-      state.analyzed.length < maximumAnalyzedFindings && nextReviewableFinding(state)
-        ? 'investigate'
-        : 'prepare_report',
-    )
-    .addConditionalEdges('prepare_report', () => (humanReview ? 'human_review' : END))
-    .addEdge('human_review', 'publish')
-    .addEdge('publish', END)
-    .compile({ checkpointer });
+    .addEdge('normalize', 'prepare_report')
+    .addEdge('prepare_report', END)
+    .compile();
 }

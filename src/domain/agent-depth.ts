@@ -72,6 +72,6 @@ export const agentReviewDepthLimits: Record<AgentReviewDepth, AgentReviewDepthLi
 export function parseAgentReviewDepth(value: string | undefined): AgentReviewDepth {
   const depth = value?.trim() || 'standard';
   if (!agentReviewDepths.includes(depth as AgentReviewDepth))
-    throw new Error('CODEBASESCAN_AI_DEPTH must be quick, standard, or deep.');
+    throw new Error('Agent review depth must be quick, standard, or deep.');
   return depth as AgentReviewDepth;
 }

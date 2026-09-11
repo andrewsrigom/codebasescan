@@ -28,7 +28,6 @@ const tabs = [
   'Project map',
   'Source analysis',
   'Checklist',
-  'Investigations',
   'Dependencies',
   'Coverage',
   'Workflow',
@@ -195,7 +194,6 @@ export function AuditWorkspace({
         : coverageGaps > 0
           ? `No pending candidate decisions. Review ${coverageGaps} coverage ${coverageGaps === 1 ? 'gap' : 'gaps'} before relying on this report.`
           : 'No pending candidate decisions in the captured scope.';
-  const investigations = findings.filter((finding) => finding.analysis?.provider);
   const projectMapRows = useMemo(() => {
     const profile = projectProfile;
     if (!profile) return [];
@@ -391,9 +389,6 @@ export function AuditWorkspace({
             {label === 'Remediation' && remediationPlan && (
               <span className="tab-count">{remediationPlan.summary.tasks}</span>
             )}
-            {label === 'Investigations' && investigations.length > 0 && (
-              <span className="tab-count">{investigations.length}</span>
-            )}
             {label === 'Source analysis' && report && (
               <span className="tab-count">{sourceAnalysisCount}</span>
             )}
@@ -520,10 +515,10 @@ export function AuditWorkspace({
             <section className="panel">
               <div className="panel-header">
                 <div>
-                  <h2>Investigation activity</h2>
-                  <p>Observable steps, not hidden model reasoning.</p>
+                  <h2>Audit activity</h2>
+                  <p>Observable deterministic scanner stages.</p>
                 </div>
-                <Badge>LANGGRAPH</Badge>
+                <Badge>STATIC PIPELINE</Badge>
               </div>
               <ol className="timeline">
                 {events.slice(-5).map((event) => (
@@ -557,14 +552,8 @@ export function AuditWorkspace({
                 </p>
               </div>
               <div className="detail-row">
-                <span>Model inference</span>
-                <Badge>
-                  {report?.aiMode === 'ollama'
-                    ? 'Local Ollama'
-                    : report?.aiMode === 'openai'
-                      ? 'OpenAI opt-in'
-                      : 'Disabled'}
-                </Badge>
+                <span>Analysis engine</span>
+                <Badge>Deterministic</Badge>
               </div>
               <div className="detail-row">
                 <span>Target execution</span>
@@ -1029,70 +1018,6 @@ export function AuditWorkspace({
           )}
         </section>
       )}
-      {tab === 'Investigations' && (
-        <section
-          className="panel"
-          id="audit-panel-investigations"
-          role="tabpanel"
-          aria-labelledby="audit-tab-investigations"
-        >
-          <div className="panel-header">
-            <div>
-              <h2>Bounded AI investigations</h2>
-              <p>Model context supports review; deterministic findings remain unchanged.</p>
-            </div>
-            <Badge>{report?.aiMode ?? 'disabled'}</Badge>
-          </div>
-          {report?.aiUsage && (
-            <div className="panel-body checklist-summary">
-              <Badge>{report.aiUsage.calls} calls</Badge>
-              <Badge>{report.aiUsage.inputTokens} input tokens</Badge>
-              <Badge>{report.aiUsage.outputTokens} output tokens</Badge>
-              <Badge>{report.aiUsage.cacheHits} cache hits</Badge>
-              <Badge>{report.aiUsage.contextIdsSent?.length ?? 0} context IDs</Badge>
-              {report.aiUsage.approximateCostUsd !== undefined && (
-                <Badge>${report.aiUsage.approximateCostUsd.toFixed(4)} estimated</Badge>
-              )}
-            </div>
-          )}
-          {investigations.length ? (
-            <div className="finding-list">
-              {investigations.map((finding) => (
-                <button
-                  className="finding-row"
-                  key={finding.id}
-                  onClick={() => setSelected(finding)}
-                >
-                  <span className="finding-indicator medium">
-                    <Icon name="branch" />
-                  </span>
-                  <span className="finding-content">
-                    <span className="finding-row-title">{finding.title}</span>
-                    <span className="finding-location">
-                      {finding.analysis?.assessment.replaceAll('_', ' ')} · confidence{' '}
-                      {finding.analysis?.confidence ?? 'unknown'}
-                    </span>
-                  </span>
-                  <span className="finding-row-end">
-                    <Badge>{finding.analysis?.provider}</Badge>
-                    <span className="finding-state">
-                      {finding.analysis?.cached ? 'cache hit' : 'fresh'}
-                    </span>
-                  </span>
-                  <Icon name="arrow" size={16} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No model investigation was performed">
-              <p>
-                Disabled mode is fully functional. Enable local Ollama or explicitly configure
-                OpenAI only when contextual analysis is worth the cost.
-              </p>
-            </EmptyState>
-          )}
-        </section>
-      )}
       {tab === 'Coverage' && (
         <div
           className="coverage-grid"
@@ -1318,13 +1243,10 @@ export function AuditWorkspace({
         >
           <div className="panel-header">
             <div>
-              <h2>Audit graph</h2>
-              <p>
-                Persistent checkpoints, parallel scanners, bounded investigation, human publication
-                review.
-              </p>
+              <h2>Audit pipeline</h2>
+              <p>Bounded snapshot, parallel deterministic scanners, normalization and reporting.</p>
             </div>
-            <Badge>ONE THREAD PER AUDIT</Badge>
+            <Badge>DETERMINISTIC</Badge>
           </div>
           <div className="workflow">
             <div className="graph-node done">
@@ -1361,17 +1283,10 @@ export function AuditWorkspace({
             <div className="graph-connector">↓</div>
             <div className="graph-node">Normalize &amp; prioritize candidates</div>
             <div className="graph-connector">↓</div>
-            <div className="graph-node loop">
-              <Icon name="branch" />
-              Read → assess → request context <span>≤ 2 rounds / finding · ≤ 12 findings</span>
+            <div className="graph-node done">
+              <Icon name="download" />
+              Build portable HTML and machine-readable artifacts
             </div>
-            <div className="graph-connector">↓</div>
-            <div className={`graph-node ${audit.status === 'awaiting_review' ? 'waiting' : ''}`}>
-              <Icon name="lock" />
-              Human publication review <span>interrupt() → Command(resume)</span>
-            </div>
-            <div className="graph-connector">↓</div>
-            <div className="graph-node">Publish with unresolved findings intact</div>
           </div>
         </section>
       )}

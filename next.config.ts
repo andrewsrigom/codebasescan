@@ -3,7 +3,6 @@ const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   turbopack: { root: process.cwd() },
-  serverExternalPackages: ['better-sqlite3', '@langchain/langgraph-checkpoint-sqlite'],
   async headers() {
     return [
       {

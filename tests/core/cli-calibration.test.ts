@@ -14,7 +14,7 @@ function runCli(cwd: string, arguments_: string[]) {
   const result = spawnSync(
     process.execPath,
     ['--experimental-strip-types', path.resolve('src/cli/main.ts'), ...arguments_],
-    { cwd, encoding: 'utf8', env: { ...process.env, CODEBASESCAN_AI: 'disabled' } },
+    { cwd, encoding: 'utf8', env: process.env },
   );
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   return result;

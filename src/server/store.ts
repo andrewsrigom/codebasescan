@@ -81,14 +81,6 @@ export class AuditStore {
       CREATE TABLE IF NOT EXISTS worker_lock (
         name TEXT PRIMARY KEY, token TEXT NOT NULL, pid INTEGER NOT NULL, heartbeat TEXT NOT NULL
       );
-      CREATE TABLE IF NOT EXISTS ai_usage (
-        audit_id TEXT PRIMARY KEY REFERENCES audits(id), calls INTEGER NOT NULL DEFAULT 0,
-        cache_hits INTEGER NOT NULL DEFAULT 0, input_tokens INTEGER NOT NULL DEFAULT 0,
-        output_tokens INTEGER NOT NULL DEFAULT 0, approximate_cost_usd REAL NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS ai_cache (
-        cache_key TEXT PRIMARY KEY, response_json TEXT NOT NULL, created_at TEXT NOT NULL
-      );
       CREATE TABLE IF NOT EXISTS report_revisions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         audit_id TEXT NOT NULL REFERENCES audits(id),
@@ -535,96 +527,5 @@ export class AuditStore {
     const row = this.db.prepare("SELECT heartbeat FROM worker_lock WHERE name = 'local'").get() as
       Row | undefined;
     return Boolean(row && Date.now() - Date.parse(String(row.heartbeat)) < 10000);
-  }
-  reserveAiCall(
-    auditId: string,
-    estimatedInputTokens: number,
-    limits: { calls: number; inputTokens: number; outputTokens: number; outputPerCall: number },
-  ): { maximumOutputTokens: number } {
-    this.db.exec('BEGIN IMMEDIATE');
-    try {
-      this.db.prepare('INSERT OR IGNORE INTO ai_usage(audit_id) VALUES (?)').run(auditId);
-      const usage = this.db
-        .prepare('SELECT * FROM ai_usage WHERE audit_id = ?')
-        .get(auditId) as Row;
-      const remainingOutput = limits.outputTokens - Number(usage.output_tokens);
-      if (Number(usage.calls) >= limits.calls) throw new Error('AI call budget exhausted.');
-      if (Number(usage.input_tokens) + estimatedInputTokens > limits.inputTokens)
-        throw new Error('AI input-token budget exhausted.');
-      if (remainingOutput < 100) throw new Error('AI output-token budget exhausted.');
-      this.db
-        .prepare(
-          'UPDATE ai_usage SET calls = calls + 1, input_tokens = input_tokens + ? WHERE audit_id = ?',
-        )
-        .run(estimatedInputTokens, auditId);
-      this.db.exec('COMMIT');
-      return { maximumOutputTokens: Math.min(limits.outputPerCall, remainingOutput) };
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
-    }
-  }
-  finalizeAiCall(
-    auditId: string,
-    estimatedInputTokens: number,
-    actual: { inputTokens: number; outputTokens: number; approximateCostUsd: number },
-  ): void {
-    this.db
-      .prepare(
-        `UPDATE ai_usage SET input_tokens = MAX(0, input_tokens - ? + ?),
-         output_tokens = output_tokens + ?, approximate_cost_usd = approximate_cost_usd + ?
-         WHERE audit_id = ?`,
-      )
-      .run(
-        estimatedInputTokens,
-        actual.inputTokens,
-        actual.outputTokens,
-        actual.approximateCostUsd,
-        auditId,
-      );
-  }
-  recordAiCacheHit(auditId: string): void {
-    this.db.prepare('INSERT OR IGNORE INTO ai_usage(audit_id) VALUES (?)').run(auditId);
-    this.db
-      .prepare('UPDATE ai_usage SET cache_hits = cache_hits + 1 WHERE audit_id = ?')
-      .run(auditId);
-  }
-  aiUsage(auditId: string): {
-    calls: number;
-    cacheHits: number;
-    inputTokens: number;
-    outputTokens: number;
-    approximateCostUsd: number;
-  } {
-    const row = this.db.prepare('SELECT * FROM ai_usage WHERE audit_id = ?').get(auditId) as
-      Row | undefined;
-    return {
-      calls: Number(row?.calls ?? 0),
-      cacheHits: Number(row?.cache_hits ?? 0),
-      inputTokens: Number(row?.input_tokens ?? 0),
-      outputTokens: Number(row?.output_tokens ?? 0),
-      approximateCostUsd: Number(row?.approximate_cost_usd ?? 0),
-    };
-  }
-  readAiCache<T>(key: string, maximumAgeMs: number): T | null {
-    const row = this.db.prepare('SELECT * FROM ai_cache WHERE cache_key = ?').get(key) as
-      Row | undefined;
-    if (!row || Date.now() - Date.parse(String(row.created_at)) > maximumAgeMs) return null;
-    try {
-      return JSON.parse(String(row.response_json)) as T;
-    } catch {
-      return null;
-    }
-  }
-  saveAiCache(key: string, value: unknown): void {
-    const serialized = JSON.stringify(value);
-    if (serialized.length > 64 * 1024) throw new Error('AI cache entry is too large.');
-    this.db
-      .prepare(
-        `INSERT INTO ai_cache(cache_key, response_json, created_at) VALUES (?, ?, ?)
-         ON CONFLICT(cache_key) DO UPDATE SET response_json = excluded.response_json,
-         created_at = excluded.created_at`,
-      )
-      .run(key, serialized, now());
   }
 }

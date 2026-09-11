@@ -11,47 +11,41 @@ export default function SettingsPage() {
           <h1>Local settings</h1>
           <p className="subtitle">
             Configuration is explicit and server-side. The UI cannot change executable paths or
-            model hosts.
+            scanner permissions.
           </p>
         </div>
       </div>
       <div className="coverage-grid">
         <section className="panel">
           <div className="panel-header">
-            <h2>Model &amp; privacy</h2>
-            <Badge tone={config.aiMode === 'openai' ? 'medium' : 'success'}>
-              {config.aiMode === 'openai' ? 'CLOUD OPT-IN' : 'LOCAL FIRST'}
-            </Badge>
+            <h2>Audit boundaries</h2>
+            <Badge tone="success">LOCAL FIRST</Badge>
           </div>
           <div className="panel-body">
             <div className="detail-row">
-              <span>Inference mode</span>
-              <strong>{config.aiMode}</strong>
+              <span>Analysis engine</span>
+              <strong>Deterministic</strong>
             </div>
             <div className="detail-row">
-              <span>Model</span>
-              <strong>{config.model || 'Not configured'}</strong>
+              <span>Target execution</span>
+              <strong>Never</strong>
             </div>
             <div className="detail-row">
-              <span>Model endpoint</span>
-              <code>
-                {config.aiMode === 'openai' ? 'api.openai.com/v1/responses' : '127.0.0.1:11434'}
-              </code>
+              <span>Built-in model calls</span>
+              <strong>None</strong>
             </div>
             <div className="detail-row">
               <span>Remote tracing</span>
               <strong>Disabled by worker</strong>
             </div>
             <p className="small muted">
-              OpenAI is disabled unless CODEBASESCAN_AI=openai. Cloud mode sends only bounded,
-              relevant, redacted context with store=false. Use OS egress controls when strict
-              offline operation is required.
+              CodebaseScan does not require an account, API key, or model provider. Exported review
+              rules can be used separately by an authorized coding agent.
             </p>
             <pre className="command">
-              CODEBASESCAN_AI=ollama
+              npx codebasescan audit .
               <br />
-              OLLAMA_MODEL=your-downloaded-model
-              <br /># or CODEBASESCAN_AI=openai with OPENAI_MODEL and OPENAI_API_KEY
+              npx codebasescan agent install codex .
             </pre>
           </div>
         </section>

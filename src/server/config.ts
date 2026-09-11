@@ -1,10 +1,5 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  agentReviewDepthLimits,
-  parseAgentReviewDepth,
-  type AgentReviewDepth,
-} from '../domain/agent-depth.ts';
 
 const bundledRulesDirectory = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -15,23 +10,8 @@ const bundledRulesDirectory = path.resolve(
 export interface Configuration {
   dataDirectory: string;
   databasePath: string;
-  checkpointPath: string;
   temporaryDirectory: string;
   rulesDirectory: string;
-  aiMode: 'disabled' | 'ollama' | 'openai';
-  aiDepth: AgentReviewDepth;
-  model: string;
-  strongModel: string;
-  openaiApiKey?: string;
-  aiTimeoutMs: number;
-  aiMaxRetries: number;
-  aiMaxCalls: number;
-  aiMaxCallsPerFinding: number;
-  aiInputTokenBudget: number;
-  aiOutputTokenBudget: number;
-  aiMaxOutputTokensPerCall: number;
-  openaiInputCostPerMillion?: number;
-  openaiOutputCostPerMillion?: number;
   semgrep: boolean;
   gitleaks: boolean;
   osv: boolean;
@@ -52,81 +32,17 @@ function boundedInteger(
     throw new Error(`Expected an integer between ${minimum} and ${maximum}.`);
   return parsed;
 }
-function optionalNumber(value: string | undefined): number | undefined {
-  if (value === undefined || value === '') return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10000)
-    throw new Error('OpenAI token prices must be numbers between 0 and 10000.');
-  return parsed;
-}
 export function configuration(): Configuration {
   const dataDirectory = path.resolve(
     /* turbopackIgnore: true */ process.env.CODEBASESCAN_DATA_DIR || '.codebasescan',
   );
-  const requestedAiMode = process.env.CODEBASESCAN_AI ?? 'disabled';
-  if (!['disabled', 'ollama', 'openai'].includes(requestedAiMode))
-    throw new Error('CODEBASESCAN_AI must be disabled, ollama, or openai.');
-  const aiMode = requestedAiMode as Configuration['aiMode'];
-  const aiDepth = parseAgentReviewDepth(process.env.CODEBASESCAN_AI_DEPTH);
-  const depthDefaults = agentReviewDepthLimits[aiDepth];
-  const model =
-    aiMode === 'ollama'
-      ? (process.env.OLLAMA_MODEL?.trim() ?? '')
-      : aiMode === 'openai'
-        ? (process.env.OPENAI_MODEL?.trim() ?? '')
-        : '';
-  if (aiMode === 'ollama' && !model)
-    throw new Error('Set OLLAMA_MODEL to an already downloaded local model.');
-  const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
-  if (aiMode === 'openai' && (!model || !openaiApiKey))
-    throw new Error('Set OPENAI_MODEL and OPENAI_API_KEY before enabling OpenAI analysis.');
   return {
     dataDirectory,
     databasePath: path.join(dataDirectory, 'application.sqlite'),
-    checkpointPath: path.join(dataDirectory, 'checkpoints.sqlite'),
     temporaryDirectory: path.join(dataDirectory, 'temporary'),
     rulesDirectory: process.env.CODEBASESCAN_RULES_DIR
       ? path.resolve(process.env.CODEBASESCAN_RULES_DIR)
       : bundledRulesDirectory,
-    aiMode,
-    aiDepth,
-    model,
-    strongModel: process.env.OPENAI_STRONG_MODEL?.trim() ?? '',
-    ...(openaiApiKey ? { openaiApiKey } : {}),
-    aiTimeoutMs: boundedInteger(process.env.CODEBASESCAN_AI_TIMEOUT_MS, 30000, 1000, 120000),
-    aiMaxRetries: boundedInteger(process.env.CODEBASESCAN_AI_MAX_RETRIES, 1, 0, 3),
-    aiMaxCalls: boundedInteger(
-      process.env.CODEBASESCAN_AI_MAX_CALLS,
-      depthDefaults.defaultMaximumCalls,
-      1,
-      100,
-    ),
-    aiMaxCallsPerFinding: boundedInteger(
-      process.env.CODEBASESCAN_AI_MAX_CALLS_PER_FINDING,
-      depthDefaults.defaultMaximumCallsPerFinding,
-      1,
-      6,
-    ),
-    aiInputTokenBudget: boundedInteger(
-      process.env.CODEBASESCAN_AI_INPUT_TOKEN_BUDGET,
-      depthDefaults.defaultInputTokenBudget,
-      1000,
-      2000000,
-    ),
-    aiOutputTokenBudget: boundedInteger(
-      process.env.CODEBASESCAN_AI_OUTPUT_TOKEN_BUDGET,
-      depthDefaults.defaultOutputTokenBudget,
-      100,
-      200000,
-    ),
-    aiMaxOutputTokensPerCall: boundedInteger(
-      process.env.CODEBASESCAN_AI_MAX_OUTPUT_TOKENS_PER_CALL,
-      depthDefaults.defaultMaximumOutputTokensPerCall,
-      100,
-      10000,
-    ),
-    openaiInputCostPerMillion: optionalNumber(process.env.OPENAI_INPUT_COST_PER_MTOK),
-    openaiOutputCostPerMillion: optionalNumber(process.env.OPENAI_OUTPUT_COST_PER_MTOK),
     semgrep: process.env.CODEBASESCAN_SEMGREP === 'true',
     gitleaks: process.env.CODEBASESCAN_GITLEAKS === 'true',
     osv: process.env.CODEBASESCAN_OSV === 'true',

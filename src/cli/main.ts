@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
 import { captureSnapshot, estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
-import { disableRemoteTracing } from '../security/privacy.ts';
+import { disableTelemetry } from '../security/privacy.ts';
 import {
   toCycloneDx,
   toHtml,
@@ -74,7 +74,7 @@ import { buildAgentReport } from '../domain/agent-report.ts';
 import { agentReviewRulePack } from '../domain/agent-rules.ts';
 import { installCodexSkill } from './agent-skill.ts';
 
-disableRemoteTracing();
+disableTelemetry();
 process.umask(0o077);
 const config = configuration();
 const arguments_ = process.argv.slice(2);
@@ -616,7 +616,6 @@ try {
         ...config,
         dataDirectory: temporary,
         databasePath: ':memory:',
-        checkpointPath: path.join(temporary, 'checkpoints.sqlite'),
         temporaryDirectory: path.join(temporary, 'scanner-staging'),
         scannerCacheDirectory: path.join(config.dataDirectory, 'scanner-cache'),
       };
@@ -627,10 +626,7 @@ try {
       const audit = ciStore.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
       ciStore.claim(audit.id);
       progress.phase('Running deterministic scanners');
-      await executeAudit(ciStore, audit.id, ciConfig, undefined, {
-        humanReview: false,
-        checkpointMode: 'memory',
-      });
+      await executeAudit(ciStore, audit.id, ciConfig);
       const completed = ciStore.audit(audit.id);
       if (completed.status !== 'completed' || !completed.report)
         throw new Error('Non-interactive audit did not produce a complete draft report.');

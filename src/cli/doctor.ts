@@ -157,16 +157,6 @@ export async function runDoctor(config: Configuration): Promise<DoctorCheck[]> {
     dependencyCruiser,
     jscpd,
     advisories,
-    {
-      name: 'AI mode',
-      status: config.aiMode === 'openai' ? 'warn' : 'pass',
-      detail:
-        config.aiMode === 'disabled'
-          ? 'disabled; audits make no model calls.'
-          : config.aiMode === 'ollama'
-            ? `local Ollama model configured: ${config.model}.`
-            : `OpenAI cloud mode enabled with model ${config.model}; API key is configured but not displayed.`,
-    },
   ];
 }
 
