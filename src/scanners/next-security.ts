@@ -166,6 +166,17 @@ function publicReadRoute(entrypoint: ProjectEntrypoint): boolean {
   );
 }
 
+function isStateChangingFact(fact: ProjectFact): boolean {
+  if (fact.kind === 'billing' || fact.kind === 'raw-sql' || fact.kind === 'command-execution')
+    return true;
+  if (fact.kind === 'file-access')
+    return /(?:write|append|unlink|rename|createwritestream)/i.test(fact.signal);
+  return (
+    fact.kind === 'database' &&
+    /(?:^|\.)(?:create|update|upsert|delete|executeraw|transaction)$/i.test(fact.signal)
+  );
+}
+
 function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Finding[] {
   const findings: Finding[] = [];
   for (const entrypoint of profile.entrypoints) {
@@ -226,12 +237,13 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
       if (candidate) findings.push(candidate);
     }
 
-    if (isMutatingEntrypoint(entrypoint) && !validated) {
+    const stateChanging = facts.find(isStateChangingFact);
+    if (isMutatingEntrypoint(entrypoint) && stateChanging && !validated) {
       const candidate = structuralFinding({
         snapshot,
         profile,
         entrypoint,
-        fact: sensitive,
+        fact: stateChanging,
         ruleId: 'TW-NEXT006',
         title: 'Sensitive mutation has no mapped input validation',
         category: 'configuration',
@@ -438,7 +450,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
         findings: 0,
         detail:
           'No supported Next.js framework signal was mapped. No clean Next.js result is implied.',
-        version: '0.1.0',
+        version: '0.2.0',
       },
     };
 
@@ -455,7 +467,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s) for authenticated reads, object scope, input validation, user-specific caching, public environment exposure, and sensitive response fields.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.1.0',
+      version: '0.2.0',
     },
   };
 }

@@ -132,6 +132,19 @@ test('Next.js mutation rule requires recognized validation before sensitive work
   assert.ok(!safe.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
 });
 
+test('Next.js mutation rule does not treat a database read as a state change', () => {
+  const result = scan(
+    `
+      export async function POST() {
+        await requireUser();
+        return Response.json(await db.project.findUnique({ where: { id: 'fixed-id' } }));
+      }
+    `,
+    'src/app/api/project/route.ts',
+  );
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
 test('Next.js rules recognize descriptive authentication and validation wrappers', () => {
   const result = scan(
     `

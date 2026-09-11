@@ -25,7 +25,7 @@ export interface AstSecurityResult {
   run: ScannerRun;
 }
 
-export function preferStructuralFindings(findings: Finding[]): Finding[] {
+export function preferStructuralFindings(findings: Finding[], profile?: ProjectProfile): Finding[] {
   const structuralLocations = new Set(
     findings.flatMap((finding) =>
       ['TW-AST004', 'TW-AST009', 'TW-NEXT004', 'TW-REACT001'].includes(finding.ruleId)
@@ -33,11 +33,25 @@ export function preferStructuralFindings(findings: Finding[]): Finding[] {
         : [],
     ),
   );
+  const structurallyAnalyzedFiles = new Set(
+    profile
+      ? [
+          ...profile.entrypoints.map((item) => item.file),
+          ...profile.symbols.map((item) => item.file),
+          ...profile.imports.map((item) => item.file),
+          ...profile.facts.map((item) => item.file),
+        ]
+      : [],
+  );
   return findings.filter(
     (finding) =>
       !(
         ['TW-001', 'TW-005', 'TW-P003'].includes(finding.ruleId) &&
         finding.evidence.some((item) => structuralLocations.has(`${item.file}:${item.startLine}`))
+      ) &&
+      !(
+        finding.ruleId === 'TW-004' &&
+        finding.evidence.some((item) => structurallyAnalyzedFiles.has(item.file))
       ),
   );
 }
@@ -1165,7 +1179,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.4.0',
+        version: '0.5.0',
       },
     };
 
@@ -1250,7 +1264,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.4.0',
+      version: '0.5.0',
     },
   };
 }

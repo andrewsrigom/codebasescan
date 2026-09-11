@@ -725,3 +725,17 @@ test('a decisive AST flow replaces the same-location broad raw SQL pattern', () 
   assert.ok(reconciled.some((finding) => finding.ruleId === 'TW-AST004'));
   assert.ok(!reconciled.some((finding) => finding.ruleId === 'TW-001'));
 });
+
+test('the structural profile replaces generic ID lookup hotspots for parsed files', () => {
+  const snapshot = snapshotOf(
+    'export async function load(id: string) { return db.project.findUnique({ where: { id } }); }',
+    'src/data.ts',
+  );
+  const profile = profileProject(snapshot).profile;
+  const broad = scanPatterns(snapshot);
+  assert.ok(broad.some((finding) => finding.ruleId === 'TW-004'));
+  assert.ok(
+    !preferStructuralFindings(broad, profile).some((finding) => finding.ruleId === 'TW-004'),
+  );
+  assert.ok(preferStructuralFindings(broad).some((finding) => finding.ruleId === 'TW-004'));
+});
