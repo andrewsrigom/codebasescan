@@ -35,6 +35,12 @@ const reactEntryPaths = [
   'src/App.tsx',
   'src/App.jsx',
 ] as const;
+const desktopFrameworkPackages = new Set([
+  'electron',
+  'electron-builder',
+  '@tauri-apps/api',
+  '@capacitor/core',
+]);
 
 function manifestFrameworks(snapshot: Snapshot, prefix = ''): Set<string> {
   const manifest = snapshot.files.find(
@@ -108,6 +114,29 @@ function candidate(
 
 function componentPath(prefix: string, relative: string): string {
   return prefix ? `${prefix}/${relative}` : relative;
+}
+
+function desktopContainer(snapshot: Snapshot, prefix: string, frameworks: Set<string>): boolean {
+  if ([...desktopFrameworkPackages].some((dependency) => frameworks.has(dependency))) return true;
+  const segments = prefix.split('/').filter(Boolean);
+  const parent = segments.slice(0, -1).join('/');
+  const nearbyRoots = new Set([prefix, parent]);
+  const markers = [
+    'wails.json',
+    'tauri.conf.json',
+    'src-tauri/tauri.conf.json',
+    'electron-builder.yml',
+    'electron-builder.yaml',
+  ];
+  return [...nearbyRoots].some((root) =>
+    markers.some((marker) =>
+      snapshot.files.some(
+        (file) =>
+          isRuntimeSource(file) &&
+          file.path.toLowerCase() === componentPath(root, marker).toLowerCase(),
+      ),
+    ),
+  );
 }
 
 function manifestRoots(snapshot: Snapshot): Set<string> {
@@ -211,6 +240,7 @@ export function scanWebPosture(snapshot: Snapshot): { findings: Finding[]; run: 
   const candidatePrefixes = manifestRoots(snapshot);
   for (const prefix of conventionalMonorepoRoots(webFiles)) candidatePrefixes.add(prefix);
   const componentPrefixes = new Set<string>();
+  let desktopEntriesExcluded = 0;
   for (const prefix of candidatePrefixes) {
     const frameworks = manifestFrameworks(snapshot, prefix);
     const nextEntry =
@@ -221,6 +251,10 @@ export function scanWebPosture(snapshot: Snapshot): { findings: Finding[]; run: 
       groupedAppFile(snapshot, prefix, 'layout');
     const reactEntry = componentFile(snapshot, prefix, [...reactEntryPaths]);
     if (nextEntry || nextLayout || (frameworks.has('react') && reactEntry)) {
+      if (desktopContainer(snapshot, prefix, frameworks)) {
+        desktopEntriesExcluded++;
+        continue;
+      }
       componentPrefixes.add(prefix);
     }
   }
@@ -233,8 +267,11 @@ export function scanWebPosture(snapshot: Snapshot): { findings: Finding[]; run: 
         status: 'skipped',
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
-        detail: 'No React, Next.js, or conventional web entry point was identified.',
-        version: '0.4.0',
+        detail:
+          desktopEntriesExcluded > 0
+            ? `No public-web application entry point was identified. ${desktopEntriesExcluded} desktop-container entry point(s) were excluded from Web Presence.`
+            : 'No React, Next.js, or conventional web entry point was identified.',
+        version: '0.5.0',
       },
     };
 
@@ -323,7 +360,7 @@ export function scanWebPosture(snapshot: Snapshot): { findings: Finding[]; run: 
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: findings.length,
       detail: `Checked ${componentPrefixes.size} web app root(s) for robots policy, sitemap, Next.js metadata, and optional llms.txt presence. robots=${robotsPresent}; sitemap=${sitemapsPresent}; llms.txt=${llmsPresent}. Deployment behavior was not inferred from source.`,
-      version: '0.4.0',
+      version: '0.5.0',
     },
   };
 }

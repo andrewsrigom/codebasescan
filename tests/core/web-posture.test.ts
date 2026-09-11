@@ -78,3 +78,41 @@ test('non-web repositories skip web posture without missing-file findings', () =
   assert.deepEqual(result.findings, []);
   assert.equal(result.run.status, 'skipped');
 });
+
+test('desktop webviews are excluded while ordinary React web apps remain applicable', () => {
+  const result = scanWebPosture(
+    snapshotFromFiles({
+      'package.json': JSON.stringify({ private: true }),
+      'apps/desktop/wails.json': JSON.stringify({ name: 'DesktopApp' }),
+      'apps/desktop/frontend/package.json': JSON.stringify({
+        dependencies: { react: '19.0.0' },
+      }),
+      'apps/desktop/frontend/src/App.tsx': `export function App() { return <main>Desktop</main>; }`,
+      'apps/site/package.json': JSON.stringify({ dependencies: { react: '19.0.0' } }),
+      'apps/site/src/App.tsx': `export function App() { return <main>Website</main>; }`,
+    }),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.evidence[0]?.file),
+    ['apps/site/src/App.tsx', 'apps/site/src/App.tsx'],
+  );
+  assert.deepEqual(result.findings.map((finding) => finding.ruleId).sort(), [
+    'TW-WEB001',
+    'TW-WEB002',
+  ]);
+});
+
+test('desktop-only React webviews make Web Presence not applicable', () => {
+  const result = scanWebPosture(
+    snapshotFromFiles({
+      'apps/desktop/wails.json': JSON.stringify({ name: 'DesktopApp' }),
+      'apps/desktop/frontend/package.json': JSON.stringify({
+        dependencies: { react: '19.0.0' },
+      }),
+      'apps/desktop/frontend/src/App.tsx': `export function App() { return <main>Desktop</main>; }`,
+    }),
+  );
+  assert.deepEqual(result.findings, []);
+  assert.equal(result.run.status, 'skipped');
+  assert.match(result.run.detail, /desktop-container/);
+});
