@@ -1,154 +1,114 @@
 # Validation
 
-Last full local gate: **2026-09-10 BRT**.
+Last full local release gate: **2026-09-10 BRT**.
 
-Environment:
+## Environment
 
 - WSL2, Ubuntu 24.04.4 LTS
-- Node.js 24.19.0, npm 11.17.0
+- Node.js 24.19.0 and npm 11.17.0
+- additional installed-package smoke: Node.js 22.22.1
 - Next.js 16.3.4
 - Semgrep 1.176.1
 - Gitleaks 8.30.1
 - dependency-cruiser 18.2.0
 - jscpd 5.2.0
 
-## Current results
+Linux/WSL is the supported 0.2 environment. Native Windows and macOS are not claimed.
 
-| Check                         | Result                                                                 |
-| ----------------------------- | ---------------------------------------------------------------------- |
-| npm run format:check          | Passed                                                                 |
-| npm run typecheck             | Passed                                                                 |
-| npm run lint                  | Passed, zero warnings                                                  |
-| npm test                      | 323 passed                                                             |
-| npm run test:graph            | 13 passed, including real scanners, cache, and worker recovery         |
-| npm run benchmark             | TP 55, FP 1, FN 0; precision 0.9821, recall 1.00                       |
-| AST benchmark subset          | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                         |
-| Next.js benchmark subset      | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                          |
-| React benchmark subset        | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
-| SaaS benchmark subset         | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                          |
-| npm run build                 | Passed                                                                 |
-| npm run test:e2e              | 7 passed in Chromium                                                   |
-| npm run test:package          | 83 files; 229,060 packed bytes; required CLI/scanner files present     |
-| npm audit --audit-level=low   | 0 known vulnerabilities                                                |
-| npm run cli -- doctor         | 9 checks passed                                                        |
-| Browser workspace             | Real `seusaas` report rendered with compact project-map data           |
-| Standalone HTML report        | Decision summary, priority links, mobile width 390/390, no script tags |
-| Ten-project source evaluation | 10 profiles, 1,010 files, 0 truncations, 23 final candidates           |
-| Owner-authorized scale pass   | 2 profiles, 2,235 files, 0 truncations, 6.62–9.82 s, 448–574 MiB peak  |
-| Latest `seusaas` offline run  | 1,201 files, 108 candidates, 61 remediation tasks, 0 comparison churn  |
-| `seusaas` verification loop   | 6/6 commands applied, 0 unmatched, 61 tasks honestly kept open         |
-| `robs-web` portability run    | 1,070 files, 6 candidates, 0 dedicated SaaS-rule candidates            |
+## Release gate
 
-The earlier full offline `seusaas-platform` calibration run (`640cc6fb-771c-49e9-9072-c87fc53ad94e`) included Semgrep, Gitleaks, OSV,
-dependency-cruiser, jscpd, Knip, supply-chain checks, TypeScript quality metrics,
-the project profile, and the built-in AST/Next.js/React/SaaS rules. It captured 1,196 files and
-mapped 739 runtime modules, 295 local dependencies, one cycle, 50 orphan candidates, and 188
-coupling hotspots (100 detail rows retained). It measured 6,064 functions and found 259 quality
-hotspots (200 retained), 54 duplicate blocks (2.7026%), 55 unused-file candidates, 6
-source-unreferenced runtime dependencies, 149 unused exports, 78 unused types, and 21 unlisted
-dependency candidates. The profile completed with 124 entry points, 5,707 symbols, 21,692 call
-edges, 1,653 security facts, and 11 captured workspace package entry points. Semgrep produced no finding and
-reported one explicit partial parse at
-`apps/analytics/src/features/reports/reports-preview.tsx:87`; all other omitted detail is reported
-with exact totals. The checklist retained 8 evidenced controls, 11 gap candidates, 7 unverified
-controls, 3 partial controls, and 3 not-applicable controls. The 124 security candidates were 4
-critical, 63 high, 49 medium, and 8 low: 101 exact-version OSV advisories plus 23 source candidates.
-The dedicated SaaS scanner contributed 12 `TW-SAAS004` internal-error response candidates; it did
-not treat them as confirmed runtime leaks. Indirect workspace-package billing evidence remains
-explicitly partial rather than being promoted to proof.
-The corrected pnpm inventory retained 1,094 distinct dependencies, including full scoped-package
-names. It mapped bounded parent paths for 1,085 dependencies and every one of the 26 dependency
-remediation tasks. Remediation plans were verified in the workspace, static HTML, Markdown, and
-focused Codex task bundles. The terminal flow also passed static-directory generation, baseline
-before/after output, packed-content validation, and a real 17 KiB focused task export. Calibration against this run
-removed 45 reproducible false positives without weakening the declared benchmark. No target code,
-configuration module, test, or package lifecycle script ran.
+| Check                       | Result                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| npm run release:metadata    | Passed; 0.2.0 metadata valid and `private: true` still blocks publish                   |
+| npm run format:check        | Passed                                                                                  |
+| npm run typecheck           | Passed                                                                                  |
+| npm run lint                | Passed, zero warnings                                                                   |
+| npm test                    | 340 passed                                                                              |
+| npm run benchmark           | TP 55, FP 1, FN 0; precision 0.9821, recall 1.00                                        |
+| AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
+| Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
+| React benchmark subset      | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
+| SaaS benchmark subset       | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
+| npm run test:graph          | 13 passed, including real scanners, cache, and worker recovery                          |
+| npm run build               | Passed                                                                                  |
+| npm run test:e2e            | 7 passed in Chromium                                                                    |
+| npm audit --audit-level=low | 0 known vulnerabilities                                                                 |
+| codebasescan doctor         | Runtime and bundled scanner checks passed; offline OSV cache absent warning is explicit |
 
-The correction run (`400022d9-50e6-4e1f-a8c6-8d20ad402d27`) captured 1,200 files and retained 108
-candidates: 3 critical, 48 high, 29 medium, and 28 low. It produced 61 remaining tasks and no
-failed scanner. A real baseline comparison after the authorized `better-auth` and `postcss`
-upgrades reported 22 resolved advisory instances, 108 unchanged findings, and zero new findings.
-The resolved set included 10 `better-auth`, 8 `postcss`, 3 `nanoid`, and 1 `kysely` advisory
-instances. This run proved comparison schema v3 and remediation-result schema v2 against lockfile
-line churn: unchanged advisories no longer appeared as false resolved/new pairs.
+The benchmark measures declared inert fixtures. It is not a generic accuracy claim or a security
+certification.
 
-The correction contract now has paired tests for exact external test/build command evidence,
-failed commands, incomplete verification, stale after-snapshot binding, unmatched commands, strict
-raw-output rejection, schema generation, and finalized static artifacts. Remediation-result schema
-v3 retains the external ledger digest and bounded execution provenance while preserving the audit's
-no-execution boundary.
+## Packed installation
 
-The real `seusaas` verification baseline
-(`1a5e9d0c-2b32-4dbc-9c6d-1272fff0a189`) and after audit
-(`7617ec6b-5a25-461e-9754-33ea2ae4192b`) captured 1,201 supported files and 108 candidates. The
-external ledger recorded the exact `env:check`, `lint`, `test`, `typecheck`, `boundary:check`,
-and `build` argument arrays with timestamps, durations, exit codes, output sizes, and output
-SHA-256 digests. Finalization applied all six records and rejected none. Across 61 remediation
-tasks, 61 project-test checks, 61 project-build checks, and 61 CodebaseScan-rescan checks passed; 41
-finding-absence checks and 20 deterministic-control checks failed because the underlying security
-work was intentionally not claimed as complete. The final comparison retained 108 unchanged
-findings with zero new and zero resolved.
+The actual tarball was installed into an empty generated project. Each smoke ran the installed
+`doctor`, `init`, full static `audit`, stable report history, and loopback report server.
 
-The first finalization exposed one false resolved/new pair after a finding moved from line 693 to
-665 without changing its rule, file, evidence excerpt, or observation. Source lifecycle identity
-now ignores line-only movement while exact fingerprints remain available for review and
-suppression. The ledger is still explicit about its limit: executor authentication is false and
-network use is unknown, so this proves deterministic binding and command-result accounting, not a
-signed attestation.
+| Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
+| ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
+| Node 24 / npm     | 245,508 B | 1,099,828 B      | 95,396,481 B           | 6.05 s  | 2.78 s |
+| Node 22 / npm     | 245,508 B | 1,099,828 B      | 95,396,358 B           | 4.86 s  | 3.17 s |
+| Node 24 / pnpm    | 245,508 B | 1,099,828 B      | 95,481,763 B           | 6.86 s  | 2.93 s |
+| Node 24 / Yarn    | 245,508 B | 1,099,828 B      | 104,887,481 B          | 10.02 s | 2.61 s |
 
-The structurally different `robs-web` portability run captured 1,070 files and completed its
-project profile. It produced 6 total candidates and no dedicated SaaS-rule candidate. Different
-SaaS controls were applicable there, which confirms that the checklist is driven by detected
-structure instead of copying the `seusaas` result. These two runs are calibration evidence, not
-owner-confirmed security ground truth.
+The tarball contains 90 files. Next.js, React, shadcn, SQLite checkpoint, and Ollama packages are
+not installed for the default CLI. Node 22 one-shot commands do not load `node:sqlite` or emit its
+experimental warning.
 
-The benchmark measures declared inert fixtures. It is not a generic accuracy claim. The public-project pass has manual triage but not owner-confirmed ground truth; see [Real-project evaluation](REAL_PROJECT_EVALUATION.md).
+## Real-project calibration
+
+These audits parsed captured source and manifests only. No target configuration module,
+dependency installation, lifecycle script, test, build, or application code ran.
+
+| Project           | Snapshot                                                    | Findings                             | Tasks                | Coverage               | Important interpretation                                                 |
+| ----------------- | ----------------------------------------------------------- | ------------------------------------ | -------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| seusaas-platform  | 1,201 / 1,201, complete                                     | 29: 2 high, 2 medium, 23 low, 2 info | 39                   | 14 complete, 2 partial | Three web app roots; two informational crawler/sitemap candidates        |
+| robs-web          | 1,074 / 1,074, complete                                     | 15: 11 medium, 1 low, 3 info         | 23                   | 15 complete, 1 partial | Next.js root route group recognized as one app                           |
+| capta-core        | 1,500 / 2,580, truncated by file/per-file/total-byte limits | 164: 17 high, 116 medium, 31 low     | 159                  | 16 partial             | Owner triage is required; counts cannot support a complete verdict       |
+| fengsoft-commerce | 425 / 425, complete                                         | 0                                    | 6 verification tasks | 12 complete            | No React/Next web root detected; zero is not a clean full-stack verdict  |
+| severyn           | 307 / 307 supported files, complete                         | 2 info                               | 5 verification tasks | 15 complete            | Primarily outside the JS/TS focus, with one detected React web component |
+
+For all five projects, imported Axe evidence was `NOT PERFORMED`, the authorized HTTP probe was
+not run, and infrastructure/cloud behavior was not inferred. Optional external scanners and OSV
+coverage depend on the selected local configuration. These runs prove portability, bounded
+failure, and report honesty; they are not independent owner-confirmed security ground truth.
 
 ## What the gate covers
 
-- bounded snapshot and path protections;
+- bounded snapshot, path, symlink, size, and hostile-input protections;
 - runtime/test/example scope separation;
 - project profiling and code-first security rules;
 - Node.js manifest and npm/pnpm/Yarn lockfile integrity checks;
-- explicit coverage, checklist, provenance, and report validation;
-- LangGraph interrupt/resume and SQLite persistence;
-- Semgrep and Gitleaks local adapters;
-- bounded dependency structure and duplication reports without loading target configuration;
-- isolated Knip candidates, source-only runtime dependency references, complexity, size, and
-  existing coverage summaries;
-- OSV, HTTP, and OpenAI contracts with bounded failure behavior;
-- human finding/control review, publication, exports, comparison, and CI gates;
-- desktop/mobile navigation and the main review flow.
+- nine audit modes with explicit coverage and applicability;
+- paired static accessibility and web-posture rules plus bounded Axe import;
+- LangGraph fan-in, interrupt/resume, memory and SQLite checkpoints;
+- Semgrep and Gitleaks isolated local adapters;
+- dependency structure, duplication, dead code, complexity, and imported coverage summaries;
+- OSV, HTTP, Ollama, and OpenAI boundaries with opt-in and bounded failure behavior;
+- immutable report packages, stable history, schemas, integrity manifest, comparison, and policy;
+- CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
+- persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.
 
-OpenAI uses mocked Responses API contracts because no API key was supplied. Ollama is optional and was not installed.
+## Remaining publication actions
 
-## Remaining release work
+- push the current release candidate and require the public GitHub matrix to pass;
+- confirm the npm name immediately before publication and secure the npm account with 2FA;
+- inspect the final tarball and generated report for private data;
+- configure the protected npm OIDC publisher;
+- remove `private: true` only in the explicit release commit;
+- push the matching version tag, verify npm provenance/fresh install, then create the GitHub release.
 
-- independent owner-confirmed review, including manually found false negatives and durable dispositions;
-- live economical/strong OpenAI and local Ollama comparison only with explicit cost approval;
-- fresh comprehensive accessibility audit;
-- clean-clone and any claimed native Windows/macOS support checks;
-- private vulnerability-reporting route and name/trademark review before publishing;
-- broader scanner-version and abrupt-failure compatibility matrix.
-
-These gaps do not block the validated local WSL2 workflow. They do block broader platform, model-quality, accuracy, or public-production claims.
+Independent owner-confirmed ground truth, native platforms, signed reviewer/executor identity,
+large-project sharding, and formal trademark clearance remain later maturity work.
 
 ## Reproduce
 
 ```bash
 npm ci
-npm run format:check
-npm run typecheck
-npm run lint
-npm test
-npm run test:graph
-npm run benchmark
-npm run build
+npm run release:check
 npm run test:e2e
-npm run test:package
-npm audit --audit-level=low
+npm run test:package:pnpm
+npm run test:package:yarn
 ```
 
-External security scanner tests require the trusted Semgrep and Gitleaks binaries on PATH.
-dependency-cruiser, jscpd, and Knip are pinned project dependencies. Default AI mode remains
-disabled.
+External scanner integration tests require trusted Semgrep and Gitleaks binaries on `PATH`.
+Default AI mode remains disabled.

@@ -34,6 +34,8 @@ current. The generic SaaS layer consists of:
 - six paired JSX accessibility rules plus bounded import of externally generated Axe JSON.
 - a stable static report root with latest audit and immutable history.
 - install/init/doctor/audit/open CLI flows smoke-tested with npm, pnpm, and Yarn.
+- a dedicated ephemeral execution store keeps one-shot audits off `node:sqlite`; persistent
+  worker/UI commands load SQLite only when selected.
 
 No production scanner or configuration default contains reference-project names or paths.
 

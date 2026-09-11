@@ -16,6 +16,8 @@ Notable changes are recorded here. CodebaseScan has not published a stable relea
   coverage.
 - Kept Next.js/shadcn UI dependencies out of the default CLI install and made SQLite/Ollama
   integrations optional peers.
+- Replaced the one-shot CLI's in-memory SQLite database with a dedicated ephemeral store, removing
+  Node 22's experimental SQLite warning while preserving LangGraph memory checkpoints and AI budgets.
 - Added npm public-access/provenance metadata while retaining the pre-publication `private` guard.
 - Calibrated the current source-only build on `seusaas-platform`, `robs-web`, `capta-core`,
   `fengsoft-commerce`, and `severyn`, preserving unsupported and partial coverage instead of
