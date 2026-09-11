@@ -51,7 +51,8 @@ Only after the release candidate is green:
 
 `scripts/check-release.mjs` rejects a tag/version mismatch, missing provenance/public-access
 metadata, wrong repository identity, or a package that is still private. The workflow cannot
-publish from a fork.
+publish from a fork. A rerun verifies the registry tarball against the local package integrity and
+finishes without trying to overwrite an identical published version; any mismatch fails closed.
 
 If npm trusted publishing cannot be configured before the first package exists, do not weaken the
 workflow or commit a token. The maintainer must authenticate directly with npm and approve the

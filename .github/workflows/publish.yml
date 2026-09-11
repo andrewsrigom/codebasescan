@@ -67,4 +67,4 @@ jobs:
       - name: Run release gate
         run: npm run release:check
       - name: Publish with trusted npm OIDC
-        run: npm publish
+        run: node scripts/publish-release.mjs
