@@ -15,6 +15,7 @@ import {
   effectiveEntrypointFacts,
   isMutatingEntrypoint,
   isWebhookEntrypoint,
+  reachableSymbols,
   sensitiveProjectFactKinds,
 } from '../domain/project-graph.ts';
 import { isRuntimeSource } from '../security/paths.ts';
@@ -177,6 +178,184 @@ function isStateChangingFact(fact: ProjectFact): boolean {
   );
 }
 
+function consumesRequestPayload(
+  snapshot: Snapshot,
+  profile: ProjectProfile,
+  entrypoint: ProjectEntrypoint,
+): boolean {
+  if (entrypoint.kind === 'trpc-procedure' || entrypoint.kind === 'server-action') return true;
+  return reachableSourceFragments(snapshot, profile, entrypoint).some((source) =>
+    /\b(?:request|req)\s*\.\s*(?:json|formData|text|arrayBuffer)\s*\(|\bformData\s*\.\s*(?:get|getAll|entries)\s*\(/i.test(
+      source,
+    ),
+  );
+}
+
+function reachableSourceFragments(
+  snapshot: Snapshot,
+  profile: ProjectProfile,
+  entrypoint: ProjectEntrypoint,
+): string[] {
+  const symbols = new Map(profile.symbols.map((symbol) => [symbol.id, symbol]));
+  const files = new Map(snapshot.files.map((file) => [file.path, file]));
+  const fragments: string[] = [];
+  for (const symbolId of reachableSymbols(profile, entrypoint)) {
+    const symbol = symbols.get(symbolId);
+    const file = symbol ? files.get(symbol.file) : undefined;
+    if (!symbol || !file) continue;
+    const lines = file.content.split(/\r?\n/);
+    fragments.push(
+      lines.slice(Math.max(0, symbol.line - 1), symbol.endLine ?? symbol.line).join('\n'),
+    );
+  }
+  return fragments;
+}
+
+function bindingNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) return [name.text];
+  return name.elements.flatMap((element) =>
+    ts.isOmittedExpression(element) ? [] : bindingNames(element.name),
+  );
+}
+
+function requestBodyCall(node: ts.Node | undefined): boolean {
+  let value = node;
+  while (
+    value &&
+    (ts.isAwaitExpression(value) ||
+      ts.isParenthesizedExpression(value) ||
+      ts.isAsExpression(value) ||
+      ts.isTypeAssertionExpression(value) ||
+      ts.isNonNullExpression(value) ||
+      ts.isSatisfiesExpression(value))
+  )
+    value = value.expression;
+  return Boolean(
+    value &&
+    ts.isCallExpression(value) &&
+    /(?:^|\.)(?:json|formData|text|arrayBuffer)$/i.test(callName(value)),
+  );
+}
+
+function referencesName(node: ts.Node | undefined, names: Set<string>): boolean {
+  if (!node) return false;
+  let found = false;
+  const visit = (child: ts.Node): void => {
+    if (found) return;
+    if (ts.isIdentifier(child) && names.has(child.text)) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return found;
+}
+
+function validationExpression(node: ts.Node, payloadNames: Set<string>): boolean {
+  if (ts.isTypeOfExpression(node) && referencesName(node.expression, payloadNames)) return true;
+  if (
+    ts.isPrefixUnaryExpression(node) &&
+    node.operator === ts.SyntaxKind.ExclamationToken &&
+    referencesName(node.operand, payloadNames)
+  )
+    return true;
+  if (ts.isBinaryExpression(node)) {
+    const comparisonOperators = new Set([
+      ts.SyntaxKind.EqualsEqualsToken,
+      ts.SyntaxKind.EqualsEqualsEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsEqualsToken,
+      ts.SyntaxKind.LessThanToken,
+      ts.SyntaxKind.LessThanEqualsToken,
+      ts.SyntaxKind.GreaterThanToken,
+      ts.SyntaxKind.GreaterThanEqualsToken,
+    ]);
+    if (comparisonOperators.has(node.operatorToken.kind) && referencesName(node, payloadNames))
+      return true;
+  }
+  if (ts.isCallExpression(node)) {
+    const name = callName(node);
+    if (
+      /(?:^|\.)(?:isArray|isFinite|isInteger|test|includes)$/i.test(name) &&
+      node.arguments.some((argument) => referencesName(argument, payloadNames))
+    )
+      return true;
+    if (
+      /(?:validate|parse|normalize|sanitize|coerce)[A-Za-z0-9_]*(?:input|payload|body|request)?$/i.test(
+        name,
+      ) &&
+      node.arguments.some((argument) => referencesName(argument, payloadNames))
+    )
+      return true;
+  }
+  let found = false;
+  ts.forEachChild(node, (child) => {
+    if (!found) found = validationExpression(child, payloadNames);
+  });
+  return found;
+}
+
+function hasInlinePayloadValidation(
+  snapshot: Snapshot,
+  profile: ProjectProfile,
+  entrypoint: ProjectEntrypoint,
+): boolean {
+  for (const fragment of reachableSourceFragments(snapshot, profile, entrypoint)) {
+    const source = ts.createSourceFile(
+      'inline-validation.ts',
+      fragment,
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const payloadNames = new Set<string>();
+    const collect = (node: ts.Node): void => {
+      if (ts.isVariableDeclaration(node) && node.initializer) {
+        if (requestBodyCall(node.initializer))
+          for (const name of bindingNames(node.name)) payloadNames.add(name);
+        else if (referencesName(node.initializer, payloadNames))
+          for (const name of bindingNames(node.name)) payloadNames.add(name);
+      }
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isIdentifier(node.left) &&
+        requestBodyCall(node.right)
+      )
+        payloadNames.add(node.left.text);
+      ts.forEachChild(node, collect);
+    };
+    collect(source);
+    if (!payloadNames.size) continue;
+    let validated = false;
+    const inspect = (node: ts.Node): void => {
+      if (validated) return;
+      if (
+        (ts.isIfStatement(node) || ts.isConditionalExpression(node)) &&
+        validationExpression(
+          ts.isIfStatement(node) ? node.expression : node.condition,
+          payloadNames,
+        )
+      ) {
+        validated = true;
+        return;
+      }
+      if (
+        ts.isCallExpression(node) &&
+        validationExpression(node, payloadNames) &&
+        referencesName(node, payloadNames)
+      ) {
+        validated = true;
+        return;
+      }
+      ts.forEachChild(node, inspect);
+    };
+    inspect(source);
+    if (validated) return true;
+  }
+  return false;
+}
+
 function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Finding[] {
   const findings: Finding[] = [];
   for (const entrypoint of profile.entrypoints) {
@@ -189,7 +368,9 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
     );
     const authorized = facts.some((fact) => fact.kind === 'authorization');
     const scoped = facts.some((fact) => fact.kind === 'resource-scope');
-    const validated = facts.some((fact) => fact.kind === 'validation');
+    const validated =
+      facts.some((fact) => fact.kind === 'validation') ||
+      hasInlinePayloadValidation(snapshot, profile, entrypoint);
     const read = entrypoint.methods.some((method) => ['GET', 'HEAD'].includes(method));
 
     if (read && !authenticated && !publicReadRoute(entrypoint)) {
@@ -238,7 +419,12 @@ function structuralFindings(snapshot: Snapshot, profile: ProjectProfile): Findin
     }
 
     const stateChanging = facts.find(isStateChangingFact);
-    if (isMutatingEntrypoint(entrypoint) && stateChanging && !validated) {
+    if (
+      isMutatingEntrypoint(entrypoint) &&
+      stateChanging &&
+      consumesRequestPayload(snapshot, profile, entrypoint) &&
+      !validated
+    ) {
       const candidate = structuralFinding({
         snapshot,
         profile,
@@ -450,7 +636,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
         findings: 0,
         detail:
           'No supported Next.js framework signal was mapped. No clean Next.js result is implied.',
-        version: '0.2.0',
+        version: '0.4.1',
       },
     };
 
@@ -467,7 +653,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s) for authenticated reads, object scope, input validation, user-specific caching, public environment exposure, and sensitive response fields.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.2.0',
+      version: '0.4.1',
     },
   };
 }

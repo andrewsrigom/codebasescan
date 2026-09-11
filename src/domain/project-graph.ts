@@ -46,7 +46,7 @@ function graphEdges(profile: ProjectProfile): Map<string, ProjectCallEdge[]> {
   return edges;
 }
 
-function reachableSymbols(
+export function reachableSymbols(
   profile: ProjectProfile,
   entrypoint: ProjectEntrypoint,
   maximumDepth = maximumCallDepth,

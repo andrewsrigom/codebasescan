@@ -326,7 +326,7 @@ export function buildAuditGraph(options: {
       if (!state.projectProfile)
         throw new Error('Project profile was not available to Next.js security analysis.');
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'next-security', '0.2.0', ['next-security'], () =>
+      const result = await cachedScan(source, 'next-security', '0.4.1', ['next-security'], () =>
         scanNextSecurity(source, state.projectProfile!),
       );
       event(state, 'next_security', `${result.findings.length} Next.js security candidate(s).`);

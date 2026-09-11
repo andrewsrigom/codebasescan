@@ -111,7 +111,7 @@ test('Next.js mutation rule requires recognized validation before sensitive work
     `
       export async function POST(request: Request) {
         await requireUser();
-        const body = await request.json();
+        const body = (await request.json()) as Record<string, unknown>;
         return Response.json(await db.account.create({ data: body }));
       }
     `,
@@ -142,6 +142,53 @@ test('Next.js mutation rule does not treat a database read as a state change', (
     `,
     'src/app/api/project/route.ts',
   );
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
+test('Next.js mutation rule does not require a body schema for a parameter-only delete', () => {
+  const snapshot = snapshotOf(
+    `
+      export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+        const { id } = await params;
+        await db.project.delete({ where: { id } });
+        return Response.json({ ok: true });
+      }
+    `,
+    'src/app/api/projects/[id]/route.ts',
+  );
+  snapshot.files.push({
+    path: 'package.json',
+    scope: 'runtime',
+    content: JSON.stringify({ dependencies: { next: '16.0.0' } }),
+    digest: 'manifest',
+    bytes: 47,
+  });
+  const result = scanNextSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
+test('Next.js mutation rule recognizes bounded inline payload validation', () => {
+  const snapshot = snapshotOf(
+    `
+      export async function POST(request: Request) {
+        const body = await request.json();
+        if (typeof body.name !== 'string' || body.name.length > 120) {
+          return Response.json({ error: 'invalid name' }, { status: 400 });
+        }
+        await db.project.create({ data: { name: body.name } });
+        return Response.json({ ok: true });
+      }
+    `,
+    'src/app/api/projects/route.ts',
+  );
+  snapshot.files.push({
+    path: 'package.json',
+    scope: 'runtime',
+    content: JSON.stringify({ dependencies: { next: '16.0.0' } }),
+    digest: 'manifest',
+    bytes: 47,
+  });
+  const result = scanNextSecurity(snapshot, profileProject(snapshot).profile);
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
 });
 
