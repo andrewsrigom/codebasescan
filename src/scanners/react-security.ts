@@ -14,10 +14,16 @@ const maximumFindings = 300;
 const reactSource = /\.(?:[cm]?tsx|jsx)$/i;
 const sensitiveName =
   /(?:api[_-]?key|authorization|cookie|jwt|password|private[_-]?key|refresh[_-]?token|secret|session|token)/i;
+const visualTokenName =
+  /(?:background|border|color|design|font|foreground|radius|shadow|size|spacing|theme)[A-Za-z0-9_-]*token|token[A-Za-z0-9_-]*(?:background|border|color|design|font|foreground|radius|shadow|size|spacing|theme)/i;
 const serverOnlyImport =
   /^(?:server-only|next\/headers|next\/server|node:fs(?:\/promises)?|@prisma\/client)$/;
 const explicitBrowserInputName =
   /^(?:callbackUrl|continueUrl|destination|next|nextUrl|params|redirect|redirectTo|returnTo|returnUrl|searchParams|targetUrl)$/i;
+
+function sensitiveBoundaryName(name: string): boolean {
+  return sensitiveName.test(name) && !visualTokenName.test(name);
+}
 
 export interface ReactSecurityResult {
   findings: Finding[];
@@ -540,7 +546,10 @@ function sensitiveServerProps(
         const component = node.tagName.getText(source).split('.')[0] ?? '';
         if (clientBindings.has(component))
           for (const property of node.attributes.properties) {
-            if (!ts.isJsxAttribute(property) || !sensitiveName.test(property.name.getText(source)))
+            if (
+              !ts.isJsxAttribute(property) ||
+              !sensitiveBoundaryName(property.name.getText(source))
+            )
               continue;
             findings.push(
               reactFinding({
@@ -595,7 +604,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.4.0',
+        version: '0.4.1',
       },
     };
 
@@ -617,7 +626,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.4.0',
+      version: '0.4.1',
     },
   };
 }

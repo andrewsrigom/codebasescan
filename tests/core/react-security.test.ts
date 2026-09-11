@@ -94,6 +94,25 @@ test('Client Components may pass sensitive-shaped props to nested Client Compone
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
 });
 
+test('Server Components may pass visual design tokens to Client Components', () => {
+  const snapshot = snapshotFromFiles({
+    'src/app/page.tsx': `
+      import { ThemePreview } from '../components/theme-preview';
+      export default function Page() {
+        return <ThemePreview initialBackgroundColorToken="surface-primary" />;
+      }
+    `,
+    'src/components/theme-preview.tsx': `
+      'use client';
+      export function ThemePreview({ initialBackgroundColorToken }) {
+        return <div data-token={initialBackgroundColorToken} />;
+      }
+    `,
+  });
+  const result = scanReactSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
+});
+
 test('safe React boundaries avoid client security candidates', () => {
   const result = scan(`
     'use client';
