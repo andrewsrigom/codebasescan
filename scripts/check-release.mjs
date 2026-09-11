@@ -19,7 +19,7 @@ requireValue(
   packageJson.repository?.url === expectedRepository,
   'Package repository must match the public provenance source.',
 );
-requireValue(packageJson.bin?.codebasescan === './bin/codebasescan.mjs', 'CLI bin is missing.');
+requireValue(packageJson.bin?.codebasescan === 'bin/codebasescan.mjs', 'CLI bin is missing.');
 requireValue(packageJson.publishConfig?.access === 'public', 'npm access must be public.');
 requireValue(packageJson.publishConfig?.provenance === true, 'npm provenance must be enabled.');
 requireValue(

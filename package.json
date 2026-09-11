@@ -27,7 +27,7 @@
     "provenance": true
   },
   "bin": {
-    "codebasescan": "./bin/codebasescan.mjs"
+    "codebasescan": "bin/codebasescan.mjs"
   },
   "files": [
     "bin",
@@ -56,7 +56,8 @@
     "test:package:pnpm": "npm run build:cli && node scripts/test-install.mjs pnpm",
     "test:package:yarn": "npm run build:cli && node scripts/test-install.mjs yarn",
     "release:metadata": "node scripts/check-release.mjs prepare",
-    "release:check": "npm run release:metadata && npm run format:check && npm run typecheck && npm run lint && npm test && npm run benchmark && npm run test:graph && npm run build && npm run test:package && npm audit --audit-level=low && npm run cli -- doctor --quiet",
+    "release:dry-run": "node scripts/check-publish-dry-run.mjs",
+    "release:check": "npm run release:metadata && npm run format:check && npm run typecheck && npm run lint && npm test && npm run benchmark && npm run test:graph && npm run build && npm run test:package && npm run release:dry-run && npm audit --audit-level=low && npm run cli -- doctor --quiet",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:graph",
