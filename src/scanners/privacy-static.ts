@@ -8,6 +8,7 @@ const sourcePattern = /\.[cm]?[jt]sx?$/i;
 const sensitive =
   /(?:access[_-]?token|address|authorization|card|cookie|credential|date[_-]?of[_-]?birth|dob|email|jwt|password|phone|refresh[_-]?token|secret|session|ssn|tax[_-]?id)/i;
 const protectedValue = /(?:hash|mask|redact|sanitize|tokenize)\w*\s*\(/i;
+const protectedIdentifier = /(?:hashed|masked|redacted|sanitized|tokenized)/i;
 
 function lineOf(source: ts.SourceFile, node: ts.Node): number {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
@@ -21,13 +22,51 @@ function stringValue(expression: ts.Expression | undefined): string | undefined 
   return expression && ts.isStringLiteralLike(expression) ? expression.text : undefined;
 }
 
-function loggedPayloadText(expression: ts.Expression): string {
-  if (ts.isStringLiteralLike(expression)) return '';
+function containsSensitiveUnprotectedValue(expression: ts.Expression): boolean {
+  const source = expression.getSourceFile();
+  if (ts.isStringLiteralLike(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
+    return false;
+  if (ts.isIdentifier(expression))
+    return sensitive.test(expression.text) && !protectedIdentifier.test(expression.text);
   if (ts.isTemplateExpression(expression))
-    return expression.templateSpans
-      .map((span) => span.expression.getText(expression.getSourceFile()))
-      .join(' ');
-  return expression.getText(expression.getSourceFile());
+    return expression.templateSpans.some((span) =>
+      containsSensitiveUnprotectedValue(span.expression),
+    );
+  if (ts.isCallExpression(expression)) {
+    if (protectedValue.test(expression.getText(source))) return false;
+    return (
+      sensitive.test(callName(expression.expression)) ||
+      expression.arguments.some(containsSensitiveUnprotectedValue)
+    );
+  }
+  if (ts.isPropertyAccessExpression(expression))
+    return (
+      sensitive.test(expression.name.text) ||
+      containsSensitiveUnprotectedValue(expression.expression)
+    );
+  if (ts.isElementAccessExpression(expression))
+    return (
+      containsSensitiveUnprotectedValue(expression.expression) ||
+      (expression.argumentExpression
+        ? containsSensitiveUnprotectedValue(expression.argumentExpression)
+        : false)
+    );
+  if (ts.isObjectLiteralExpression(expression))
+    return expression.properties.some((property) => {
+      if (ts.isPropertyAssignment(property))
+        return containsSensitiveUnprotectedValue(property.initializer);
+      if (ts.isShorthandPropertyAssignment(property))
+        return containsSensitiveUnprotectedValue(property.name);
+      if (ts.isSpreadAssignment(property))
+        return containsSensitiveUnprotectedValue(property.expression);
+      return false;
+    });
+  let found = false;
+  ts.forEachChild(expression, (child) => {
+    if (found || !ts.isExpression(child)) return;
+    found = containsSensitiveUnprotectedValue(child);
+  });
+  return found;
 }
 
 function privacyFinding(
@@ -69,7 +108,6 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
     if (ts.isCallExpression(node)) {
       const callee = callName(node.expression);
       const key = stringValue(node.arguments[0]);
-      const loggedPayloads = node.arguments.map(loggedPayloadText);
       if (
         key &&
         sensitive.test(key) &&
@@ -91,7 +129,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
         );
       if (
         /(?:^|\.)(?:console|logger|log)\.(?:debug|info|log|warn|error)$/i.test(callee) &&
-        loggedPayloads.some((payload) => sensitive.test(payload) && !protectedValue.test(payload))
+        node.arguments.some(containsSensitiveUnprotectedValue)
       )
         findings.push(
           privacyFinding(
@@ -154,7 +192,7 @@ export function scanPrivacyStatic(snapshot: Snapshot): { findings: Finding[]; ru
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded URL, logging, and browser-storage privacy candidates; ${parseFailures} parse failure(s). Data purpose, retention, consent, and runtime transfers remain unverified.`
         : 'No supported runtime source was available for static privacy review.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }

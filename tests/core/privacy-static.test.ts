@@ -39,6 +39,27 @@ test('sensitive words in a static log message are not treated as logged data', (
   assert.deepEqual(result.findings, []);
 });
 
+test('diagnostic metadata about secret scanning is not treated as secret data', () => {
+  const result = scanPrivacyStatic(
+    snapshotOf(`
+      console.error(JSON.stringify({ check: 'secrets', status: 'error', findings }, null, 2));
+      console.log(JSON.stringify({ check: 'secrets', status: 'ok', findings: 0 }));
+      logger.warn({ event: 'logging.redaction_check', outcome: 'safe' });
+    `),
+  );
+  assert.deepEqual(result.findings, []);
+});
+
+test('sensitive values nested in serialized log objects remain candidates', () => {
+  const result = scanPrivacyStatic(
+    snapshotOf(`console.error(JSON.stringify({ status: 'error', payload: { accessToken } }));`),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-PRIV002'],
+  );
+});
+
 test('sensitive template expressions remain privacy candidates', () => {
   const result = scanPrivacyStatic(snapshotOf('logger.info(`signed in as ${email}`);'));
   assert.deepEqual(
