@@ -18,7 +18,7 @@ Options:
   --allow-private-network   Allow the explicit probe URL to use a private address
   --secret-history          Inspect bounded Git history with Gitleaks when available
   --allow-partial-snapshot  Accept a project that exceeds snapshot limits
-  --format <format>         json, md, html, sarif, sbom, bundle, agent-plan, rule-quality
+  --format <format>         json, md, html, sarif, sbom, bundle, agent-report, agent-rules
   --output <file>           Write a single-format artifact instead of the static report
   --open                    Serve the report on loopback after the audit
   --port <number>           Loopback report server port (default: 4173)
@@ -70,7 +70,7 @@ Queue an audit for the separately running local worker.`,
 List audits stored in the local persistent workspace.`,
   export: `Usage: codebasescan export <audit-id> <format>
 
-Export json, md, html, sarif, sbom, bundle, agent-plan, or rule-quality.`,
+Export json, md, html, sarif, sbom, bundle, agent-plan, agent-report, agent-rules, or rule-quality.`,
   compare: `Usage: codebasescan compare <base-audit-id> <current-audit-id>
 
 Compare two stored audits without changing scanner evidence.`,

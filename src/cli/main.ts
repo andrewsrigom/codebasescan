@@ -70,6 +70,8 @@ import {
   type FalseNegativeReviewState,
 } from '../domain/calibration.ts';
 import { parseCalibrationLedger, parseCalibrationReport } from '../domain/calibration-schema.ts';
+import { buildAgentReport } from '../domain/agent-report.ts';
+import { agentReviewRulePack } from '../domain/agent-rules.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -136,10 +138,14 @@ function render(report: AuditReport, format: string): string {
       'bundle',
       'plan',
       'agent-plan',
+      'agent-report',
+      'agent-rules',
       'rule-quality',
     ].includes(format)
   )
-    throw new Error('Use json, md, html, sarif, sbom, bundle, plan, agent-plan, or rule-quality.');
+    throw new Error(
+      'Use json, md, html, sarif, sbom, bundle, plan, agent-plan, agent-report, agent-rules, or rule-quality.',
+    );
   return format === 'html'
     ? toHtml(report)
     : format === 'md'
@@ -151,11 +157,15 @@ function render(report: AuditReport, format: string): string {
               ? toCycloneDx(report)
               : format === 'bundle'
                 ? toInvestigationBundle(report)
-                : format === 'rule-quality'
-                  ? buildRuleQualityReport(report)
-                  : format === 'plan' || format === 'agent-plan'
-                    ? buildRemediationPlan(report)
-                    : report,
+                : format === 'agent-report'
+                  ? buildAgentReport(report)
+                  : format === 'agent-rules'
+                    ? agentReviewRulePack
+                    : format === 'rule-quality'
+                      ? buildRuleQualityReport(report)
+                      : format === 'plan' || format === 'agent-plan'
+                        ? buildRemediationPlan(report)
+                        : report,
           null,
           2,
         );
@@ -729,7 +739,15 @@ try {
       const report = store.audit(target).report;
       if (!report) throw new Error('No report is available for this audit.');
       const format = arguments_[2] ?? 'json';
-      const extension = ['bundle', 'sbom', 'plan', 'agent-plan', 'rule-quality'].includes(format)
+      const extension = [
+        'bundle',
+        'sbom',
+        'plan',
+        'agent-plan',
+        'agent-report',
+        'agent-rules',
+        'rule-quality',
+      ].includes(format)
         ? `${format}.json`
         : format;
       const destination = path.resolve(`codebasescan-${report.auditId}.${extension}`);

@@ -11,6 +11,8 @@ import { remediationPlanArtifactDigest } from '../../src/domain/verification-led
 import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts';
 import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
 import { parsePolicyResult } from '../../src/domain/policy-schema.ts';
+import { parseAgentReport } from '../../src/domain/agent-report-schema.ts';
+import { parseAgentReviewRulePack } from '../../src/domain/agent-rules.ts';
 import {
   sampleApiContract,
   sampleDatabaseContract,
@@ -50,6 +52,10 @@ test('static report writes a self-contained versioned artifact directory', async
       'webhook-contract.json',
       'feature-flags.json',
       'agent-plan.json',
+      'agent-report.json',
+      'agent-report.schema.json',
+      'agent-rules.json',
+      'agent-rules.schema.json',
       'remediation-plan.json',
       'agent-plan.schema.json',
       'run-manifest.schema.json',
@@ -86,6 +92,10 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('DETERMINISTIC POLICY'));
   assert.ok(html.includes('Policy result'));
   assert.ok(html.includes('href="agent-plan.json"'));
+  assert.ok(html.includes('href="agent-report.json"'));
+  assert.ok(html.includes('href="agent-report.schema.json"'));
+  assert.ok(html.includes('href="agent-rules.json"'));
+  assert.ok(html.includes('href="agent-rules.schema.json"'));
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
   assert.ok(html.includes('href="review-ledger.schema.json"'));
@@ -143,6 +153,23 @@ test('static report writes a self-contained versioned artifact directory', async
   );
   const plan = parseRemediationPlan(JSON.parse(agentPlan));
   assert.equal(plan.audit.id, report.auditId);
+  const agentReport = parseAgentReport(
+    JSON.parse(await readFile(path.join(result.directory, 'agent-report.json'), 'utf8')),
+  );
+  assert.equal(agentReport.audit.id, report.auditId);
+  assert.equal(agentReport.plan.audit.id, report.auditId);
+  const agentRules = parseAgentReviewRulePack(
+    JSON.parse(await readFile(path.join(result.directory, 'agent-rules.json'), 'utf8')),
+  );
+  assert.ok(agentRules.rules.length >= 10);
+  const agentReportSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'agent-report.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(agentReportSchema.properties?.schemaVersion?.const, 1);
+  const agentRulesSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'agent-rules.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(agentRulesSchema.properties?.schemaVersion?.const, 1);
   const schema = JSON.parse(
     await readFile(path.join(result.directory, 'agent-plan.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };

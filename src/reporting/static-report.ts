@@ -33,6 +33,13 @@ import {
   calibrationLedgerJsonSchema,
   calibrationReportJsonSchema,
 } from '../domain/calibration-schema.ts';
+import { buildAgentReport } from '../domain/agent-report.ts';
+import { agentReportJsonSchema, parseAgentReport } from '../domain/agent-report-schema.ts';
+import {
+  agentReviewRulePack,
+  agentReviewRulePackJsonSchema,
+  parseAgentReviewRulePack,
+} from '../domain/agent-rules.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -375,6 +382,8 @@ export async function writeStaticReport(
   }
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
+  const agentReport = parseAgentReport(buildAgentReport(report));
+  const agentRules = parseAgentReviewRulePack(agentReviewRulePack);
   const ruleQuality = parseRuleQualityReport(buildRuleQualityReport(report));
   const policyResult = parsePolicyResult(
     options.policyResult ?? buildPolicyResult(report, 'advisory'),
@@ -478,6 +487,26 @@ export async function writeStaticReport(
       path: 'agent-plan.json',
       mediaType: 'application/json',
       content: json(plan),
+    },
+    {
+      path: 'agent-report.json',
+      mediaType: 'application/json',
+      content: json(agentReport),
+    },
+    {
+      path: 'agent-report.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(agentReportJsonSchema()),
+    },
+    {
+      path: 'agent-rules.json',
+      mediaType: 'application/json',
+      content: json(agentRules),
+    },
+    {
+      path: 'agent-rules.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(agentReviewRulePackJsonSchema()),
     },
     {
       path: 'remediation-plan.json',
