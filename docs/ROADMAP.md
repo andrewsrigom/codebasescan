@@ -63,7 +63,7 @@ These are product maturity items, not reasons to hide current coverage:
 - new framework/provider/ORM shapes only when real projects expose a reproducible miss.
 
 The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
-`aster-streaming-platform`, and `severyn`. The current workflow-v31 pass captured all 5,980
+`aster-streaming-platform`, and `severyn`. The current workflow-v32 pass captured all 5,980
 supported files without snapshot truncation and produced 156 candidates. The versioned aggregate
 tests portability and detector behavior; reviewer labels and false-negative review remain
 incomplete, so it is not an accuracy claim.

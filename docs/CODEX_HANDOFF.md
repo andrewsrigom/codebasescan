@@ -8,7 +8,7 @@ bounded snapshot, parses target code/configuration as untrusted data, runs deter
 and exports a human report plus machine-readable remediation artifacts. It never installs or runs
 the target project.
 
-The audit workflow is `codebasescan-audit-v31`. Twenty-seven scanner/profile results fan into
+The audit workflow is `codebasescan-audit-v32`. Twenty-seven scanner/profile results fan into
 normalization. The audit-mode pack is `1.0.0`. Report schema v16 and report-index schema v1 are
 current. The generic SaaS layer consists of:
 
@@ -26,6 +26,7 @@ current. The generic SaaS layer consists of:
 - bounded workspace package-export and imported-reexport resolution.
 - TypeScript workspace entrypoint recovery from captured `dist`/`build` declarations.
 - a resolved-only local call graph with profile-version-aware downstream cache invalidation.
+- bounded npm, pnpm, Yarn Classic, and Yarn Berry dependency parent paths for remediation.
 - bounded security-critical test-reference evidence without executing target tests.
 - captured OpenAPI/Swagger operation consistency against mapped Next.js and Express routes.
 - captured Prisma/Drizzle/SQL schema, migration, and source-entity consistency.

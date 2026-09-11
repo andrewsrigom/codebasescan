@@ -19,7 +19,7 @@ source-risk paths, environment/OpenAPI/database/webhook/feature-flag contracts, 
 coverage, monorepo ownership, test references, and component-aware lifecycle comparison. Phase 6
 has a reproducible five-project corpus covering `seusaas-platform`, `robs-web`, `capta-core`,
 `aster-streaming-platform`, and `severyn`; a separate versioned calibration ledger, anonymized
-aggregate, CLI review commands, and accuracy-claim gate are implemented. The workflow-v31 pass
+aggregate, CLI review commands, and accuracy-claim gate are implemented. The workflow-v32 pass
 captured 5,980 supported files without snapshot truncation and produced 156 candidates. Independent
 dispositions and false-negative review remain. Phase 10 now includes the installable CLI, stable
 static report root, npm/pnpm/Yarn clean install smoke tests, Node 22/24 CI, package dependency
@@ -178,7 +178,7 @@ after removing project-specific identifiers and sensitive content.
 Gate: different projects produce useful, different results; repeated false positives are fixed or
 downgraded; no broad accuracy claim relies only on synthetic fixtures.
 
-Current workflow-v31 corpus pass produces 156 candidates across five projects after increasing the
+Current workflow-v32 corpus pass produces 156 candidates across five projects after increasing the
 bounded snapshot to cover all 5,980 supported files. All five snapshots and structural profiles are
 complete. Detector tuning removed known generic ID-lookup, comment, design-token, current-path, and
 recognized-validation noise without weakening the 55-case synthetic benchmark. The aggregate

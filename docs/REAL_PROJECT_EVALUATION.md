@@ -115,7 +115,7 @@ human disposition and optional AI evaluation begin.
 
 ## 2026-09-11 complete-snapshot calibration refresh
 
-The current workflow-v31 build repeated the owner-authorized corpus after increasing the bounded
+The current workflow-v32 build repeated the owner-authorized corpus after increasing the bounded
 snapshot, excluding conventional generated output, and compacting the structural graph to resolved
 local call edges. Package entrypoints that declare captured TypeScript through conventional
 `dist`, `build`, `lib`, or `out` paths are mapped back to source without loading package code.
@@ -129,9 +129,10 @@ local call edges. Package entrypoints that declare captured TypeScript through c
 | severyn                  |   314 | complete         | 0                                    |     3 | 14 complete, 0 partial |
 
 The five reports cover 5,980 supported files and 156 source candidates with no snapshot or
-structural-profile truncation. Remaining partial states are explicit bounded mechanical-analysis
-retention or safe target-configuration limits; runtime Axe, HTTP, deployment, and infrastructure
-evidence remains not performed, not run, or unsupported as applicable.
+structural-profile truncation. Bounded lockfile parent paths were retained for 4,945 of 5,141
+resolved dependency records across the corpus. Remaining partial states are explicit bounded
+mechanical-analysis retention or safe target-configuration limits; runtime Axe, HTTP, deployment,
+and infrastructure evidence remains not performed, not run, or unsupported as applicable.
 
 The versioned calibration aggregate still has zero independent candidate labels and zero completed
 false-negative reviews, so `accuracyClaimReady` remains false. The fixture benchmark is a separate

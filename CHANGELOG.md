@@ -24,6 +24,8 @@ Notable changes are recorded here.
   when the profile version changes.
 - Centralized the current report schema version so portable review and suppression imports cannot
   downgrade newer reports.
+- Added bounded direct and transitive dependency paths for npm lockfiles and Yarn Classic/Berry,
+  including hoisted, nested, and repeated workspace declarations.
 
 ## 0.2.1 — 2026-09-11
 

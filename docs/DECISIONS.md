@@ -342,3 +342,12 @@ in its cache variant. Workflow v31 invalidates earlier checkpoints and cache ent
 profile cannot be combined with stale downstream findings or coverage. Report schema version 16 is
 centralized and portable review/suppression imports emit the current schema instead of downgrading
 the report.
+
+## 2026-09-11 — bounded multi-manager dependency paths
+
+Dependency remediation now derives parent paths from captured npm v1/v2/v3 package graphs, pnpm
+importers/snapshots, and Yarn Classic/Berry dependency stanzas. Traversal retains at most three
+paths per resolved package, limits each path to twelve package hops, and stops after 20,000 queued
+routes. npm hoisting and nested installs are resolved against captured package entries. Repeated
+workspace declarations remain separate roots. An unresolved Yarn selector produces no inferred
+path. No package manager, lifecycle script, or target configuration executes.
