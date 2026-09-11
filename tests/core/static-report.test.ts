@@ -39,8 +39,9 @@ test('static report writes a self-contained versioned artifact directory', async
     result.manifest.files.map((file) => file.path),
     [
       'index.html',
-      'audit-report.json',
+      'report-index-entry.json',
       'run-manifest.json',
+      'audit-report.json',
       'risk-paths.json',
       'environment-contract.json',
       'test-evidence.json',
@@ -217,6 +218,11 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.match(manifest.files[0]?.sha256 ?? '', /^[a-f0-9]{64}$/);
   assert.equal(result.rootEntrypoint, path.join(temporary, 'index.html'));
   assert.equal(result.index.latestAuditId, report.auditId);
+  const storedIndexEntry = JSON.parse(
+    await readFile(path.join(result.directory, 'report-index-entry.json'), 'utf8'),
+  ) as { auditId: string; findings: { total: number } };
+  assert.equal(storedIndexEntry.auditId, report.auditId);
+  assert.equal(storedIndexEntry.findings.total, report.findings.length);
   const rootHtml = await readFile(result.rootEntrypoint, 'utf8');
   assert.ok(rootHtml.includes('Audit history'));
   assert.ok(rootHtml.includes(`href="./${report.auditId}/index.html"`));

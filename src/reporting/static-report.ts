@@ -181,6 +181,54 @@ async function readIndexedReport(directory: string): Promise<AuditReport | null>
   }
 }
 
+async function readStoredIndexEntry(directory: string): Promise<StaticReportIndexEntry | null> {
+  try {
+    const manifestFile = path.join(directory, 'manifest.json');
+    const manifestMetadata = await lstat(manifestFile);
+    if (
+      !manifestMetadata.isFile() ||
+      manifestMetadata.isSymbolicLink() ||
+      manifestMetadata.size > 1024 * 1024
+    )
+      return null;
+    const manifestValue: unknown = JSON.parse(await readFile(manifestFile, 'utf8'));
+    if (
+      !isRecord(manifestValue) ||
+      manifestValue.schemaVersion !== staticReportVersion ||
+      manifestValue.kind !== 'codebasescan-static-report' ||
+      !Array.isArray(manifestValue.files)
+    )
+      return null;
+    const indexArtifact = manifestValue.files.find(
+      (value): value is Record<string, unknown> =>
+        isRecord(value) && value.path === 'report-index-entry.json',
+    );
+    if (
+      !indexArtifact ||
+      typeof indexArtifact.bytes !== 'number' ||
+      indexArtifact.bytes < 1 ||
+      indexArtifact.bytes > 16 * 1024 ||
+      typeof indexArtifact.sha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(indexArtifact.sha256)
+    )
+      return null;
+    const entryFile = path.join(directory, 'report-index-entry.json');
+    const entryMetadata = await lstat(entryFile);
+    if (
+      !entryMetadata.isFile() ||
+      entryMetadata.isSymbolicLink() ||
+      entryMetadata.size !== indexArtifact.bytes
+    )
+      return null;
+    const content = await readFile(entryFile, 'utf8');
+    if (digest(content) !== indexArtifact.sha256) return null;
+    const entry: unknown = JSON.parse(content);
+    return isIndexEntry(entry) && entry.auditId === path.basename(directory) ? entry : null;
+  } catch {
+    return null;
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(
     /[&<>"']/g,
@@ -277,6 +325,11 @@ async function updateStaticReportIndex(root: string): Promise<StaticReportIndex>
     .slice(0, 500);
   const audits: StaticReportIndexEntry[] = [];
   for (const entry of entries) {
+    const stored = await readStoredIndexEntry(path.join(root, entry.name));
+    if (stored) {
+      audits.push(stored);
+      continue;
+    }
     const report = await readIndexedReport(path.join(root, entry.name));
     if (report && report.auditId === entry.name) audits.push(reportIndexEntry(report));
   }
@@ -346,6 +399,11 @@ export async function writeStaticReport(
         ruleQuality,
         policyResult,
       }),
+    },
+    {
+      path: 'report-index-entry.json',
+      mediaType: 'application/json',
+      content: json(reportIndexEntry(report)),
     },
     {
       path: 'audit-report.json',
