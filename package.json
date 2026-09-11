@@ -13,6 +13,19 @@
     "url": "https://github.com/andrewsrigom/codebasescan/issues"
   },
   "homepage": "https://github.com/andrewsrigom/codebasescan#readme",
+  "keywords": [
+    "audit",
+    "code-analysis",
+    "nextjs",
+    "react",
+    "security",
+    "static-analysis",
+    "typescript"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "bin": {
     "codebasescan": "./bin/codebasescan.mjs"
   },
@@ -42,6 +55,8 @@
     "test:package": "npm run build:cli && node scripts/check-package.mjs && node scripts/test-install.mjs npm",
     "test:package:pnpm": "npm run build:cli && node scripts/test-install.mjs pnpm",
     "test:package:yarn": "npm run build:cli && node scripts/test-install.mjs yarn",
+    "release:metadata": "node scripts/check-release.mjs prepare",
+    "release:check": "npm run release:metadata && npm run format:check && npm run typecheck && npm run lint && npm test && npm run benchmark && npm run test:graph && npm run build && npm run test:package && npm audit --audit-level=low && npm run cli -- doctor --quiet",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run typecheck && npm run lint && npm test && npm run test:graph",

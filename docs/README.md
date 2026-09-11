@@ -7,6 +7,7 @@ Start here:
 - [Validation](VALIDATION.md) — current checks, environment, and known gaps.
 - [Current handoff](CODEX_HANDOFF.md) — verified repository state and continuation notes.
 - [Roadmap](ROADMAP.md) — completed work and next priorities.
+- [Releasing](RELEASING.md) — guarded npm publication and provenance checklist.
 
 Deeper references:
 

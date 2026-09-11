@@ -1,0 +1,44 @@
+name: Publish CodebaseScan
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'andrewsrigom/codebasescan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      LANGSMITH_TRACING: 'false'
+      LANGCHAIN_TRACING_V2: 'false'
+      CODEBASESCAN_AI: disabled
+      CODEBASESCAN_SEMGREP: 'false'
+      CODEBASESCAN_GITLEAKS: 'false'
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Match package, release guard, and tag
+        run: node scripts/check-release.mjs publish
+      - name: Run release gate
+        run: npm run release:check
+      - name: Publish with trusted npm OIDC
+        run: npm publish
