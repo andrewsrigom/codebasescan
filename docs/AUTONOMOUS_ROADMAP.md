@@ -14,16 +14,15 @@ changes, but cannot overwrite scanner evidence, invent coverage, or verify its o
 
 ## Implementation checkpoint — 2026-09-10
 
-Phases 1–4 are implemented. Phase 5 currently includes bounded source-risk paths, sanitized
-environment-contract consistency, framework-major rule coverage, declared monorepo component
-ownership, cross-component import evidence, security-critical test relationships, and captured
-OpenAPI/source route consistency, database schema/migration/source correlation, webhook
-endpoint/control/event correlation, and feature-flag declaration/usage/default correlation.
-Provider-specific and richer cross-contract correlation remain. Baseline comparison now attributes
-new, resolved, unchanged, recurring, severity, disposition, and ownership changes by component.
-Phase 6 has a reproducible five-project corpus covering the named project set; independent owner
-dispositions and false-negative review remain. Phase 8 now includes schema-validated advisory,
-balanced, and strict policy results with stable CLI exit codes. Human report refinement remains.
+Phases 1–5, 7, and 8 are implemented for the 0.2 release boundary. Correlated evidence includes
+source-risk paths, environment/OpenAPI/database/webhook/feature-flag contracts, framework-major
+coverage, monorepo ownership, test references, and component-aware lifecycle comparison. Phase 6
+has a reproducible five-project corpus covering `seusaas-platform`, `robs-web`, `capta-core`,
+`fengsoft-commerce`, and `severyn`; independent owner dispositions and false-negative review
+remain. Phase 10 now includes the installable CLI, stable static report root, npm/pnpm/Yarn clean
+install smoke tests, Node 22/24 CI, package dependency separation, guarded provenance metadata, and
+a public security-reporting route. Native Windows/macOS claims, signed releases, and independent
+ground truth remain.
 
 Portable scoped suppressions are implemented with owner, justification, supporting evidence,
 creation/expiry, and exact fingerprint/rule/path/source-digest matching. Stale, expired, and
@@ -97,9 +96,12 @@ Expose composable, versioned modes:
 - `next-react`: routing, Server Actions, caching, RSC boundaries, and client sinks;
 - `maintainability`: architecture, duplication, dead code, complexity, imported coverage;
 - `release-readiness`: coverage failures, risky scripts, operational evidence, unresolved work.
+- `web-posture`: robots, sitemap, Next.js metadata, optional llms.txt presence, and declared web
+  discovery posture.
 
-Modes select fixed CodebaseScan-owned packs and never target plugins. Runtime Playwright/axe remains a
-separately authorized future mode.
+Modes select fixed CodebaseScan-owned packs and never target plugins. Static accessibility has six
+paired JSX rules. A separately authorized browser runner may supply a bounded Axe JSON artifact;
+CodebaseScan imports it without launching the target application or browser.
 
 Gate: every mode reports version, applicability, coverage, and retained/omitted counts. Disabled is
 visibly different from zero findings.
@@ -223,6 +225,10 @@ Implemented: static exports publish a validated policy result and schema. `balan
 new-only baseline adoption, while `strict` includes existing debt; incomplete blocking coverage
 uses a distinct exit code from finding failure.
 
+Implemented: a stable script-free root presents the newest audit and immutable bounded history.
+Detailed identifiers stay available in machine artifacts while the human view leads with evidence,
+impact, uncertainty, and next review action.
+
 Keep raw detail lazy and bounded. Accessibility, mobile layout, script-free static output, and
 truthful empty/error states are release gates.
 
@@ -249,11 +255,12 @@ comparisons require explicit credential, spend, or download approval and measure
 
 ## Phase 10 — release hardening
 
-- clean-clone installation and package-content checks on supported platforms;
+- clean-clone installation and package-content checks on supported platforms (implemented for
+  Linux/WSL, Node 22.16/24, npm/pnpm/Yarn);
 - incremental/cache behavior keyed by snapshot and scanner versions (implemented for deterministic
   scanners; cross-snapshot file-level incrementality remains future work);
 - abrupt-failure and resource-limit matrix for external scanners;
-- CLI reference, JSON Schemas, rule-pack changelog, and correction-flow guide;
+- CLI help, init, doctor, JSON configuration schema, package contents, and correction-flow guide;
 - versioned run manifest, coverage manifest, policy-result schema, policy profiles, and stable exit
   code contract;
 - scoped suppression file with expiry/staleness checks and an audit trail;
@@ -261,8 +268,10 @@ comparisons require explicit credential, spend, or download approval and measure
 - explicit finding lifecycle for new, confirmed, accepted, fixed, stale, and reappearing work;
 - parser fuzzing, malformed-repository tests, deterministic replay, and hostile-input containment;
 - signed release artifacts, checksums, a CodebaseScan SBOM, and pinned scanner compatibility data;
-- comprehensive UI and static-report accessibility pass;
-- name/trademark review, private vulnerability route, and support policy.
+- externally generated Axe evidence import and static-report accessibility checks; a fresh
+  comprehensive browser audit remains;
+- public project/package naming review and private vulnerability route; formal legal trademark
+  clearance remains the maintainer's release decision.
 
 Docker, CI integrations, Kubernetes, Terraform, hosted teams, billing, and public deployment stay
 outside this roadmap until local package and evidence-quality gates are complete.

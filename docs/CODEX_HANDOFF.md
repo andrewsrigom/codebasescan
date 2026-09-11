@@ -8,13 +8,14 @@ bounded snapshot, parses target code/configuration as untrusted data, runs deter
 and exports a human report plus machine-readable remediation artifacts. It never installs or runs
 the target project.
 
-The audit workflow is `codebasescan-audit-v28`. Twenty-five scanner/profile results fan into
-normalization. The audit-mode pack is `0.9.0`. The generic SaaS layer consists of:
+The audit workflow is `codebasescan-audit-v29`. Twenty-seven scanner/profile results fan into
+normalization. The audit-mode pack is `1.0.0`. Report schema v15 and report-index schema v1 are
+current. The generic SaaS layer consists of:
 
 - safe root `codebasescan.config.json`/JSONC semantics;
 - bounded declared project context, verified script names, and an observed data map;
 - static accessibility, privacy, and reliability candidate scanners with paired controls;
-- eight composable mode selections with default-complete execution and explicit disabled coverage;
+- nine composable mode selections with default-complete execution and explicit disabled coverage;
 - project vocabulary and wrapper aliases visible in the project profile;
 - a dedicated `saas-security` scanner with nine source rules;
 - bounded source-risk paths backed by entrypoint IDs, resolved call IDs, exact symbol ranges,
@@ -29,6 +30,10 @@ normalization. The audit-mode pack is `0.9.0`. The generic SaaS layer consists o
 - lifecycle diff v2 with local-history recurrence and per-component summaries.
 - lifecycle diff v3 with dependency advisory identity independent of lockfile line movement.
 - agent-plan v5 and task-bundle v3 component/test context for focused authorized corrections.
+- static web discovery/SEO posture for React, Next.js, monorepos, and route groups.
+- six paired JSX accessibility rules plus bounded import of externally generated Axe JSON.
+- a stable static report root with latest audit and immutable history.
+- install/init/doctor/audit/open CLI flows smoke-tested with npm, pnpm, and Yarn.
 
 No production scanner or configuration default contains reference-project names or paths.
 

@@ -8,7 +8,7 @@ I built it for a common situation: the repository is available, but production l
 
 ## What it checks
 
-A default audit runs eight offline modes:
+A default audit runs nine offline modes:
 
 - application and framework security;
 - SaaS controls such as tenant scope, billing input, tokens, webhooks, and error exposure;
@@ -17,13 +17,28 @@ A default audit runs eight offline modes:
 - maintainability, duplicate code, dependency structure, and dead code;
 - static accessibility checks;
 - privacy-related source patterns;
-- reliability and release-readiness gaps.
+- reliability and release-readiness gaps;
+- web discovery and SEO posture, including robots, sitemap, Next.js metadata, and optional llms.txt presence.
 
 Findings are review candidates, not proof that a vulnerability is exploitable. Coverage is part of the result, so a scanner failure or unsupported area cannot look like a clean audit.
 
-## Try it from source
+## Install
 
-CodebaseScan is not published to npm yet.
+The intended installation is a project-local development dependency:
+
+```bash
+npm install --save-dev codebasescan
+npx codebasescan init
+npx codebasescan doctor
+npx codebasescan audit .
+```
+
+pnpm and Yarn installations are also tested. Package dependencies install with CodebaseScan; the
+target project's dependencies, scripts, configuration modules, tests, and application code are
+never installed or executed by an audit. The persistent review application and local Ollama adapter
+use optional peer dependencies and are not required for the terminal report.
+
+CodebaseScan is not published to npm yet. Until the first release, test the same flow from source:
 
 ```bash
 git clone https://github.com/andrewsrigom/codebasescan.git
@@ -31,29 +46,31 @@ cd codebasescan
 npm ci
 npm run build:cli
 npm link
-codebasescan doctor
 ```
 
-Run it from the repository you want to inspect:
+Then run `codebasescan init`, `codebasescan doctor`, and `codebasescan audit .` inside the
+repository you want to inspect. The audit stays local. Add `--open` to start a loopback-only
+server for the generated report; stop it with Ctrl+C.
 
-```bash
-cd /path/to/project
-codebasescan audit . --open
-```
-
-The audit stays local. `--open` starts a loopback-only server for the generated report. Stop it with Ctrl+C.
-
-To reopen the newest report later:
+To reopen the report history later:
 
 ```bash
 codebasescan open codebasescan-report
 ```
 
-You can also open `codebasescan-report/<audit-id>/index.html` directly or publish the whole audit directory as a static site. Review the report before hosting it because file paths and project metadata may be sensitive.
+You can also open `codebasescan-report/index.html` directly or host the complete
+`codebasescan-report/` directory as a static site. The stable root always points to the newest
+audit and lists immutable earlier audit directories. Review the files before hosting them because
+paths, excerpts, and project metadata may be sensitive.
 
 ## Report files
 
-Each run creates one immutable directory under `codebasescan-report/`. The main files are:
+Each run creates one immutable directory under `codebasescan-report/`. The root contains:
+
+- `index.html` — stable latest-and-history view;
+- `report-index.json` — versioned machine-readable history.
+
+Each immutable audit directory contains:
 
 - `index.html` — human-readable report;
 - `audit-report.json` — complete machine-readable result;
@@ -75,7 +92,7 @@ All modes run by default. Select a smaller set when needed:
 
 ```bash
 codebasescan audit . --modes security,saas,next-react
-codebasescan audit . --modes accessibility-static,privacy,reliability
+codebasescan audit . --modes accessibility-static,privacy,reliability,web-posture
 ```
 
 Modes that were not selected remain visible as disabled coverage.
@@ -121,6 +138,12 @@ CODEBASESCAN_OSV=true
 The scanner binaries must already be installed and trusted. OSV receives package names and exact resolved versions only.
 
 An optional model investigation layer also exists, but it is off by default and is not needed for the mechanical audit. There is no automatic local-to-cloud fallback.
+
+For browser accessibility evidence, generate a standard Axe JSON result outside CodebaseScan and
+place it at the project root as `codebasescan.axe.json`, `axe-results.json`, or
+`axe-report.json`. CodebaseScan imports bounded violation groups but does not launch the target
+application or a browser. Without that artifact, runtime accessibility is explicitly
+`NOT PERFORMED`.
 
 ## CI
 
@@ -184,6 +207,7 @@ Useful references:
 - [Validation](docs/VALIDATION.md)
 - [Engineering decisions](docs/DECISIONS.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Releasing](docs/RELEASING.md)
 - [Documentation index](docs/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)

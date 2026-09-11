@@ -4,6 +4,22 @@ Notable changes are recorded here. CodebaseScan has not published a stable relea
 
 ## 0.2.0 — unreleased
 
+- Added a stable script-free `codebasescan-report/index.html` and versioned
+  `report-index.json` that point to the newest immutable audit and retain bounded history.
+- Added CLI help, `init`, JSON configuration schema, non-interactive CI behavior, phase timing,
+  concise errors, and report-history reopening.
+- Added the ninth `web-posture` mode for React/Next.js roots, monorepos, Next.js route groups,
+  robots, sitemap, metadata, and optional llms.txt evidence.
+- Expanded paired static accessibility coverage and added bounded import of externally generated
+  Axe JSON without executing the target application or retaining selectors/raw HTML.
+- Added real packed-package install tests for npm, pnpm, and Yarn, with Node 22.16 and Node 24 CI
+  coverage.
+- Kept Next.js/shadcn UI dependencies out of the default CLI install and made SQLite/Ollama
+  integrations optional peers.
+- Added npm public-access/provenance metadata while retaining the pre-publication `private` guard.
+- Calibrated the current source-only build on `seusaas-platform`, `robs-web`, `capta-core`,
+  `fengsoft-commerce`, and `severyn`, preserving unsupported and partial coverage instead of
+  treating zero findings as a clean verdict.
 - Added framework-aware project mapping, code-first security rules, and a versioned control checklist.
 - Added bounded LangGraph investigation with optional Ollama/OpenAI providers and manual Codex bundles.
 - Added persistent local audits, human review, comparison, CI gates, and JSON, Markdown, HTML, SARIF exports.

@@ -11,7 +11,7 @@ application SQLite (jobs, reports, budgets, AI cache)
         |
 single long-running worker
         |
-LangGraph audit workflow <-------- separate SQLite checkpointer
+LangGraph audit workflow <-------- persistent UI: SQLite / CLI: memory
         |
         +-- bounded read-only source snapshot
         +-- deterministic project profile + AST security rules
@@ -21,6 +21,8 @@ LangGraph audit workflow <-------- separate SQLite checkpointer
         +-- dependency structure + duplicate-code reports
         +-- built-in source patterns
         +-- application posture scanner
+        +-- web discovery and SEO posture
+        +-- optional imported Axe result
         +-- optional Semgrep / Gitleaks processes
         +-- lockfile inventory + optional fixed-host OSV API
         +-- optional approved HTTP response probe
@@ -32,7 +34,13 @@ LangGraph audit workflow <-------- separate SQLite checkpointer
 
 Next.js never owns a long-running audit. The worker claims persisted jobs and handles cancellation independently of the browser. CI uses the same graph with an ephemeral store and skips only the human publication interrupt.
 
-Application state uses Node `node:sqlite`. Graph checkpoints use `@langchain/langgraph-checkpoint-sqlite` in a separate file. Schema migration adds per-audit options, AI usage, content-addressed AI cache, and append-only report-revision tables without rewriting old reports. Reports and stored options are runtime-schema validated on write/read.
+Application state uses Node `node:sqlite`. Persistent UI/worker graphs can use
+`@langchain/langgraph-checkpoint-sqlite` in a separate file; the installable one-shot CLI uses
+LangGraph's in-memory checkpointer. SQLite and Ollama adapters are optional peers, so a terminal
+audit does not install the Next.js review application or native SQLite bindings. Schema migration
+adds per-audit options, AI usage, content-addressed AI cache, and append-only report-revision tables
+without rewriting old reports. Reports and stored options are runtime-schema validated on
+write/read.
 
 ## Audit graph
 
@@ -45,6 +53,7 @@ START -> snapshot
               +-> Next security+
               +-> React security+
               +-> accessibility+
+              +-> web posture --+
               +-> privacy ------+
               +-> reliability --+
               +-> dependencies -+
@@ -65,9 +74,13 @@ START -> snapshot
                          CI: draft report ----------> END
 ```
 
-The nineteen scanner/profile results publish through reducers. Fan-in waits for completed, partial, skipped, or failed status from every capability. When no reviewer is configured, the graph moves directly from normalization to report preparation. Plain TypeScript performs parsing, process execution, URL validation, normalization, and report transforms; LangGraph is reserved for lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The twenty-seven scanner/profile results publish through reducers. Fan-in waits for completed,
+partial, skipped, or failed status from every capability. When no reviewer is configured, the graph
+moves directly from normalization to report preparation. Plain TypeScript performs parsing,
+process execution, URL validation, normalization, and report transforms; LangGraph is reserved for
+lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
 
-All eight offline modes are enabled when an audit has no explicit selection. A focused selection
+All nine offline modes are enabled when an audit has no explicit selection. A focused selection
 keeps the same graph topology but short-circuits unrelated nodes before scanner execution. Those
 nodes emit explicit mode-disabled runs, preserving fan-in and preventing omitted analysis from
 appearing clean. The selected mode list participates in the checkpoint execution fingerprint.
@@ -102,6 +115,13 @@ findings that could not be correlated and states that a static path is not runti
 
 `ast-security.ts` uses profile relationships for authentication, permission, and tenant/owner scope. It performs bounded local and selected five-hop request-flow checks for SQL/NoSQL, SSRF, redirects, process execution, filesystem paths, unsafe deserialization, dynamic regular expressions, property writes, mass assignment, uploads, webhook ordering, cookie attributes, and client/server configuration. `saas-security.ts` adds focused source-to-sink rules for billing trust, ownership/privilege assignment, token entropy/lifecycle, error responses, sensitive logs/URLs, and OAuth redirects. `next-security.ts` and `react-security.ts` add framework-specific route, caching, response, client-navigation, browser-storage, messaging, rendering, and server/client-boundary rules. Target executable configuration, plugins, types, and dependencies are never loaded or executed.
 
+`accessibility-static.ts` checks bounded JSX semantics and can import a root Axe JSON result that
+was produced by an external authorized browser run. It retains violation summaries while dropping
+selectors and HTML fragments; when the artifact is absent, runtime accessibility remains
+`NOT PERFORMED`. `web-posture.ts` identifies root Next.js and React entries, including monorepo
+packages and Next.js route groups, then correlates static robots, sitemap, metadata, and optional
+llms.txt evidence. It does not infer deployment or search-engine behavior.
+
 `supply-chain.ts` parses package manifests and npm/pnpm/Yarn lockfiles as data. It reports high-risk lifecycle declarations, plaintext or unpinned dependency sources, missing/weak integrity, non-default registry hosts, and npm manifest/lock drift. Private registries and intentional local sources remain review candidates rather than automatic compromise claims.
 
 `quality.ts` measures function complexity, size, and parameter count through the CodebaseScan-owned TypeScript parser. Knip runs from a pinned local entry point in a temporary snapshot containing captured source, script-free sanitized workspace manifests, and a generated JSON configuration that disables every target plugin/config loader. Safe Knip JSON/JSONC exclusions, TypeScript aliases, workspace declarations, conventional configuration entry points, and source paths referenced by package scripts are imported only as bounded data. Test references participate in Knip reachability but remain excluded from production security rules. Only bounded paths and symbols are retained, while exact category totals remain visible when detail rows reach a limit. Existing `coverage-summary.json` and `lcov.info` aggregates can be imported; CodebaseScan does not run target tests.
@@ -117,7 +137,10 @@ The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S
 Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code and excludes recognized local npm/Yarn workspace packages from advisory queries. pnpm importer/snapshot relationships produce bounded parent paths for direct and transitive remediation; npm/Yarn parent paths remain explicit future fidelity work. Exact-version records in the compact local advisory database are used without network access. Manual refresh is separately opt-in, uses the fixed OSV API host, and sends only package name/version pairs. Pagination and advisory fetches have fixed request/result limits. Full responses are compacted, aliases are consolidated, withdrawn records are ignored, package-level severity is retained, CVSS v3 vectors are scored when labels are absent, and cache/report data distinguish source-reference hints from runtime reachability or exploitability.
 
 The terminal-first audit uses the same graph with an ephemeral local store and writes a static,
-script-free report directory. The remediation plan is a versioned plan-only contract. A baseline
+script-free report directory. Every audit directory is immutable. A versioned root
+`report-index.json` and script-free `index.html` are replaced atomically, providing one stable
+URL for the newest result and retained history. The whole root can be hosted as static files
+without a database or application server. The remediation plan is a versioned plan-only contract. A baseline
 audit adds a deterministic before/after result, while the `task` command reduces that contract to
 one task and its referenced report evidence for bounded agent input. The `finalize` command reads
 existing before/after audit artifacts and a strict external verification ledger. It matches exact

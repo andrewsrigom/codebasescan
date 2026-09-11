@@ -1,92 +1,75 @@
 # Roadmap
 
-The full execution sequence and release gates are maintained in
-[Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md).
+The detailed engineering sequence lives in
+[Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md). This page tracks the product boundary and the
+remaining gates.
 
-## Completed — serious local audit workflow
+## Current release candidate — 0.2.0
 
-- Real Next.js/worker/LangGraph/SQLite workflow and browser validation.
-- Semgrep and Gitleaks adapters validated with installed binaries and version reporting.
-- Conservative TypeScript/Node/Next posture rules with paired vulnerable/benign fixtures.
-- Approved single-URL HTTP posture probe with SSRF, metadata, redirect, method, timeout, and size controls.
-- npm/pnpm/Yarn resolved dependency inventory, manually refreshed offline OSV matching, source-reference reachability hints, and CycloneDX 1.6 export.
-- Explicit coverage, provenance, OpenAI Responses API adapter, cloud redaction, prompt-injection controls, benchmark, audit comparison, and CI mode.
-- Deterministic TypeScript/JavaScript project profiling, framework-aware AST auth/authz, bounded direct request flows, and paired benign fixtures.
-- Versioned security checklist, evidence-ID context broker, structured AI investigation, Project Map/Investigations UI, and bounded Codex bundle.
-- Runtime-validated report persistence, append-only revisions, and anonymized human-outcome/AI-cost aggregation.
-- Runtime/test/example source separation, pre-audit scope estimates, explicit partial-snapshot approval, baseline-aware CI artifacts, and scanner compatibility warnings.
-- Actual dead-worker `SIGKILL` recovery, checkpoint/config compatibility guards, and persisted AI request reservations.
-- Bounded OSV pagination, CVSS v3 scoring, package-specific severity, advisory modification display, and local npm/Yarn workspace-package exclusion.
-- Initial ten-project source-only evaluation: 1,010 files, complete profiles, lockfile/alias/entrypoint/upload hardening, and documented manual triage without a broad accuracy claim.
-- Dedicated React client-boundary rules cover dynamic HTML, navigation, Web Storage, postMessage, new-tab isolation, async Client Components, and sensitive server-to-client props.
-- Dedicated Next.js rules cover sensitive reads, tenant/owner scope, mutation validation, user-specific caching, public secret-shaped configuration, shared authenticated caching, and sensitive response fields.
-- The approved passive HTTP probe now covers effective headers, CSP, CORS reflection and variation, sensitive cookie metadata, shared caching, and redirect downgrades without crawling or mutation.
-- Secret scanning distinguishes probable runtime matches from test/example fixture candidates and supports an explicit, redacted Git-history mode.
-- Findings now carry detector confidence, probable exposure, priority scores, merged evidence, expiring project exceptions, and a selectable project baseline.
-- Every dedicated Next.js and React rule now has declared vulnerable ground truth plus paired benign benchmark coverage.
-- The local environment doctor, fixed disposition, quality filters, and owner-authorized 1,000+ file scale pass are complete.
-- Pinned offline dependency-cruiser and jscpd adapters now add bounded cycles, coupling hotspots, orphan candidates, and duplicate locations without loading target configuration or retaining raw duplicate fragments.
-- The project map now shows observed authentication, authorization, validation, and sensitive-operation evidence for each mapped request boundary.
-- Local Semgrep coverage now includes JWT verification gaps, Node VM execution, disabled TLS verification, MongoDB `$where`, error-stack responses, sensitive logging, unsafe unserialization, and credentials in URL parameters.
-- Node.js supply-chain review now covers high-risk lifecycle scripts, unsafe/unpinned sources, lockfile URLs and integrity, registry hosts, and npm manifest/lock drift without installing packages.
-- Pinned Knip analysis runs against a script-free sanitized manifest with every target plugin disabled; reports retain bounded unused-file, dependency, export, and type candidates.
-- TypeScript quality metrics now retain function complexity, size, and parameter hotspots and import only bounded existing coverage aggregates.
-- Bounded architecture, quality, dead-code, and duplication reports now preserve exact totals alongside retained detail counts; Semgrep parser diagnostics expose only safe snapshot file/line locations.
-- Structural source review now recognizes tRPC procedures and common Node/React/Next data/auth/validation libraries, follows selected tainted arguments across five explicit calls, and covers command/path/NoSQL/deserialization/regex/prototype/mass-assignment candidates.
-- Safe declarative project ingestion now applies Knip JSON/JSONC exclusions, npm/pnpm workspaces, package-script entry hints, and TypeScript path aliases without executing target configuration. Test references participate only in maintenance reachability.
-- The 1,196-file `seusaas-platform` pressure test now calibrates nested React client boundaries, descriptive auth/validation wrappers, scoped service helpers, public submission routes, new-tab protection, and structured-log matching; 45 reproducible false positives were removed while benchmark recall stayed unchanged.
-- Dependency findings now collapse into actionable package/version plans with conservative OSV fix coverage, lazy full-inventory rendering, and matching Markdown, HTML, and Codex bundle exports. Modern pnpm scoped packages retain their complete names.
-- The installable terminal command now generates self-contained static report directories with human HTML, audit JSON, prioritized remediation tasks, bounded Codex evidence, SARIF, CycloneDX, and artifact hashes by default.
-- Baseline runs now emit deterministic before/after remediation results, and focused task bundles let an authorized agent consume one work item without sending the complete report.
-- pnpm dependency inventory now retains bounded lockfile parent paths, so direct owners are visible for transitive remediation without loading project configuration.
-- Generic declarative SaaS semantics now support bounded tenant/owner/role/billing/token vocabulary, security wrapper aliases, and constrained public routes without executable project configuration.
-- A dedicated SaaS graph node now reviews client-controlled billing, ownership/privilege assignment, token entropy/storage/expiry, internal error responses, sensitive logs/URLs, and OAuth redirect trust with paired vulnerable and benign benchmarks.
-- The checklist now exposes mechanical SaaS controls for tenant scope, rate limiting, webhook replay, CSRF, billing trust, recovery-token lifecycle, and OAuth uncertainty without converting missing evidence into a confirmed vulnerability.
-- Next.js posture review now flags explicit wildcard Server Action origins and broad or insecure remote image declarations.
-- Captured workspace package exports and imported reexport bridges now participate in the bounded project graph without loading package code or build configuration.
-- Static accessibility, privacy, and reliability scanners add nine paired source rules for JSX semantics, sensitive URL/log/browser storage, request timeouts, and swallowed errors.
-- Bounded source-risk paths now connect eligible findings to proven entrypoint/call/sensitive-operation chains, and sanitized environment templates are compared with named source usage without retaining values.
-- Detected Next.js, React, and Express majors now publish supported, partial, or unverified static-rule coverage instead of silently applying a generic compatibility assumption.
-- Captured package manifests now define bounded monorepo components; source entities retain their owner and reports expose cross-component imports without treating a package boundary as a proven security boundary.
+CodebaseScan now has the intended local CLI workflow:
 
-## Next — independent real-project ground truth
+1. install it as a project development dependency;
+2. run `codebasescan init` and `codebasescan doctor`;
+3. run one command against an authorized repository;
+4. receive a stable `codebasescan-report/index.html` with newest result and immutable history;
+5. use the same directory as a static hosted report when its contents are safe to expose.
 
-Repeat evaluation on owner-authorized applications with production context and independent human review. Record durable dispositions, manually discovered false negatives, duplicate rate, time to first useful result, coverage, and later AI cost per accepted finding. Do not publish generic accuracy claims from fixtures or the initial public source pass.
+The default offline audit has nine selectable modes for Node.js, JavaScript, TypeScript, React, and
+Next.js projects. It emits a human report plus versioned JSON, agent plan, run manifest, policy,
+SARIF, CycloneDX, Markdown, contract, comparison, and integrity artifacts. Missing or partial
+coverage is explicit and there is no global security score.
 
-Extend structural analysis only from observed real-project failures: more ORM/query-builder shapes, nested wrapper composition, streaming parsers, cookie overloads, and framework-specific guards. Keep unsupported relationships explicit.
+Implemented release work:
 
-Continue calibrating the generic SaaS pack on structurally different owner-authorized applications. The initial `seusaas-platform` and `robs-web` runs establish pressure and portability checks, not owner-confirmed ground truth. Add new provider/ORM adapters only after recording missed source shapes or reproducible false positives; do not encode one reference project's names or directory layout into rules.
+- bounded source snapshots that never load target code or executable configuration;
+- deterministic security, SaaS, Next.js, React, accessibility, privacy, reliability,
+  maintainability, supply-chain, release, and web-posture checks;
+- npm, pnpm, Yarn Classic/Berry lockfile parsing and clean package-install smoke tests;
+- optional trusted Semgrep/Gitleaks, offline OSV cache, and explicitly approved single-URL probe;
+- optional import of externally generated Axe results without running a target browser;
+- safe JSON/JSONC project vocabulary and editor schema;
+- CLI help, non-interactive CI behavior, phase/timing output, simple errors, and report reopening;
+- baseline lifecycle, suppressions, human dispositions, policy exit codes, and focused agent bundles;
+- LangGraph orchestration with in-memory CLI checkpoints and optional persistent SQLite review;
+- script-free static report root, latest pointer, immutable bounded history, and artifact hashes;
+- Node 22.16/24 CI plus npm, pnpm, and Yarn clean-install coverage;
+- dependency split that keeps Next.js/shadcn UI, SQLite, and Ollama out of the default CLI install;
+- MIT license, English public documentation, contribution/security policies, public repository,
+  private vulnerability reporting, and guarded provenance metadata.
 
-Extend npm/Yarn parent-path fidelity only from real monorepo failures and add broader stale/withdrawn advisory fixtures. Current reachability is an explicit source-reference hint, not proof that vulnerable code executes.
+## Final gates before npm
 
-## Next — correlated mechanical value
+- Run the complete release gate from a clean worktree and record exact test/package measurements.
+- Push the release-candidate commits and require the public GitHub workflow to pass.
+- Confirm the unscoped npm name immediately before publication and confirm account 2FA/recovery.
+- Review the packed tarball and static report for accidental secrets or private project paths.
+- Keep `private: true` until the maintainer explicitly authorizes publication.
+- On publication only: remove the private guard, publish with public access and provenance, verify
+  the installed tarball from npm, then create the matching Git tag and GitHub release.
 
-Correlate existing entry points, request flows, sensitive operations, responses, and findings into
-bounded evidence paths without claiming runtime exploitability. Add captured contract-consistency
-checks for environment declarations, OpenAPI routes, schema/migration declarations, webhooks, and
-feature flags. Preserve component ownership and trust boundaries in monorepos.
+No automated workflow publishes the package during ordinary pushes.
 
-Add a component-aware change view for introduced, resolved, changed, and reappearing work while
-keeping the full unresolved inventory visible.
+## Evidence still needed after 0.2
 
-Add security-critical code without related test evidence, dependency license/policy inventory, and
-report provenance suitable for later signing. Source-reference test evidence is not proof that a
-test asserts the relevant control.
+These are product maturity items, not reasons to hide current coverage:
 
-## Next — operational hardening
+- independent owner-confirmed review of findings, false positives, and manually found false
+  negatives across structurally different SaaS projects;
+- a scalable snapshot/sharding design for projects beyond current file/byte limits;
+- native Windows and macOS gates before claiming those platforms; 0.2 supports Linux/WSL;
+- externally supplied authenticated browser/API evidence for runtime accessibility and deployed
+  controls, with its own authorization and provenance contract;
+- signed release artifacts and stronger reviewer/executor identity;
+- dependency license policy and broader npm/Yarn transitive parent-path fidelity;
+- new framework/provider/ORM shapes only when real projects expose a reproducible miss.
 
-Expand fault injection beyond the tested worker `SIGKILL`, budget reservation, and checkpoint/config mismatch paths. Add deeper AI-cache migration validation and OS resource containment guidance for hostile repositories.
-
-## Next — model validation
-
-Run one economical and one explicitly configured stronger OpenAI model plus one local Ollama model against the same scanner evidence and adversarial repository text. Record invalid citations, abstentions, latency, tokens, configured-price cost, and whether a stronger model materially improves contextual triage. Add opt-in checklist-gap investigation only if finding investigation demonstrates measurable review value. Do not create a generic model benchmark.
-
-## Public release
-
-The repository includes an MIT license, contribution and security policies, issue templates, CI, and dependency updates.
-
-Before publishing: record a short demo, run a fresh comprehensive accessibility audit, verify the CodebaseScan name/trademark, test a clean clone, choose any native-platform support, and enable a private vulnerability-reporting route. Publish CI status only from a real public workflow.
+The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
+`fengsoft-commerce`, and `severyn`. It tests portability and unsupported-language behavior; it
+is not owner-confirmed security ground truth.
 
 ## Deliberately later
 
-Trivy, IaC/cloud IAM, dependency reachability, a human-approved patch proposal flow, broader DAST, MCP, generic RAG, multi-agent supervisors, cloud teams, billing, RBAC, compliance frameworks, and exploitation require separate product/security justification.
+AI-assisted investigation, automated fixes, Docker/CI target execution, Kubernetes, Terraform,
+cloud IAM, broader DAST, exploitation, hosted teams, RBAC, billing, and compliance certification
+remain separate projects with separate threat models. Mechanical source evidence stays useful
+without them.

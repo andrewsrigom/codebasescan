@@ -249,3 +249,43 @@ favor of exit code, duration, byte count, and SHA-256 metadata. Remediation-resu
 the ledger and keeps an otherwise resolved task partial when declared verification is incomplete.
 `finalize` combines existing artifacts without rerunning the target. Executor authentication and
 changed-file attestation remain explicit future work.
+
+## 2026-09-10 — stable static report root
+
+Every terminal audit remains an immutable directory keyed by audit ID. A versioned
+`report-index.json` and script-free root `index.html` are updated atomically and link the newest
+result plus bounded history. Users can keep one local bookmark or host the complete report root as
+static files without running the review application. The report still contains sensitive evidence
+and has no access-control layer; hosting is an explicit user decision.
+
+## 2026-09-10 — small terminal installation boundary
+
+The packaged CLI keeps deterministic scanners and LangGraph core as runtime dependencies. Next.js,
+React, shadcn UI dependencies, SQLite checkpoint persistence, and the Ollama adapter are development
+or optional peer dependencies. One-shot terminal audits use an in-memory checkpointer; the
+persistent review application keeps SQLite. Clean installs are exercised with npm, pnpm, and Yarn
+on Node 22.16 and npm on Node 24. Linux/WSL is the supported 0.2 environment; native Windows and
+macOS remain unclaimed until their own path, process, and package-manager gates exist.
+
+## 2026-09-10 — external runtime accessibility evidence
+
+CodebaseScan does not start or navigate the target application. An authorized external browser
+runner may place a standard Axe JSON artifact at the project root. The snapshot imports bounded
+violation groups, removes selectors and raw HTML, and reports exactly which artifact was used.
+Absence is `NOT PERFORMED`, never a clean accessibility result.
+
+## 2026-09-10 — source-only web posture mode
+
+The ninth default mode correlates React/Next.js root entries with robots, sitemap, Next.js metadata,
+and optional llms.txt declarations. Monorepo package roots and Next.js root route groups are
+recognized without treating nested routes as separate applications. Missing declarations are
+informational review candidates because source cannot prove whether an app is public or how a
+deployment behaves. Workflow v29, audit-mode pack 1.0.0, report schema v15, and report-index schema
+v1 identify this behavior.
+
+## 2026-09-10 — guarded npm release provenance
+
+The package declares public npm access and provenance metadata while retaining `private: true`
+until an explicit publication decision. The repository URL must remain the exact public GitHub
+source. The first release requires a clean release gate and deliberate removal of the private guard;
+no commit or CI event in normal development can publish the package.
