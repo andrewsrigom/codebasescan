@@ -457,3 +457,7 @@ export function reviewRulesForFinding(finding: Finding): AgentReviewRule[] {
 export function parseAgentReviewRulePack(value: unknown): AgentReviewRulePack {
   return agentReviewRulePackSchema.parse(value);
 }
+
+export function agentReviewRulePackJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(agentReviewRulePackSchema) as Record<string, unknown>;
+}
