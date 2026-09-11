@@ -28,13 +28,18 @@ function snapshot(files: Record<string, string>): Snapshot {
 
 test('npm lockfile inventory uses resolved versions and direct/transitive relationships', () => {
   const source = snapshot({
-    'package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+    'package.json':
+      '{"dependencies":{"alpha":"^1.0.0"},"optionalDependencies":{"optional-runtime":"1.0.0"}}',
     'package-lock.json': JSON.stringify({
       lockfileVersion: 3,
       packages: {
-        '': { dependencies: { alpha: '^1.0.0' } },
+        '': {
+          dependencies: { alpha: '^1.0.0' },
+          optionalDependencies: { 'optional-runtime': '1.0.0' },
+        },
         'node_modules/alpha': { version: '1.2.3' },
         'node_modules/alpha/node_modules/beta': { version: '2.0.0' },
+        'node_modules/optional-runtime': { version: '1.0.0', optional: true },
       },
     }),
   });
@@ -42,6 +47,8 @@ test('npm lockfile inventory uses resolved versions and direct/transitive relati
   assert.equal(result.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
   assert.equal(result.find((item) => item.name === 'alpha')?.relationship, 'direct');
   assert.equal(result.find((item) => item.name === 'beta')?.relationship, 'transitive');
+  assert.equal(result.find((item) => item.name === 'optional-runtime')?.relationship, 'direct');
+  assert.equal(result.find((item) => item.name === 'optional-runtime')?.scope, 'runtime');
 });
 
 test('pnpm and Yarn lockfiles produce resolved package inventory', () => {
@@ -126,6 +133,82 @@ snapshots:
   assert.equal(result.find((item) => item.name === 'gamma')?.relationship, 'transitive');
 });
 
+test('npm inventory follows hoisted and nested dependency paths', () => {
+  const result = resolvedInventory(
+    snapshot({
+      'package.json': '{"dependencies":{"alpha":"1.2.3"}}',
+      'package-lock.json': JSON.stringify({
+        lockfileVersion: 3,
+        packages: {
+          '': { dependencies: { alpha: '1.2.3' } },
+          'node_modules/alpha': {
+            version: '1.2.3',
+            dependencies: { beta: '^2.0.0', delta: '^4.0.0' },
+          },
+          'node_modules/beta': { version: '2.1.0', dependencies: { gamma: '3.0.0' } },
+          'node_modules/beta/node_modules/gamma': { version: '3.0.0' },
+          'node_modules/alpha/node_modules/delta': { version: '4.2.0' },
+        },
+      }),
+    }),
+  ).dependencies;
+  assert.deepEqual(result.find((item) => item.name === 'alpha')?.parentChains, [
+    ['package.json', 'alpha@1.2.3'],
+  ]);
+  assert.deepEqual(result.find((item) => item.name === 'gamma')?.parentChains, [
+    ['package.json', 'alpha@1.2.3', 'beta@2.1.0', 'gamma@3.0.0'],
+  ]);
+  assert.deepEqual(result.find((item) => item.name === 'delta')?.parentChains, [
+    ['package.json', 'alpha@1.2.3', 'delta@4.2.0'],
+  ]);
+});
+
+test('Yarn Classic and Berry inventories retain transitive parent paths', () => {
+  const classic = resolvedInventory(
+    snapshot({
+      'package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+      'yarn.lock': `alpha@^1.0.0:
+  version "1.2.3"
+  dependencies:
+    beta "^2.0.0"
+
+beta@^2.0.0:
+  version "2.1.0"
+  dependencies:
+    gamma "3.0.0"
+
+gamma@3.0.0:
+  version "3.0.0"
+`,
+    }),
+  ).dependencies;
+  assert.deepEqual(classic.find((item) => item.name === 'gamma')?.parentChains, [
+    ['package.json', 'alpha@1.2.3', 'beta@2.1.0', 'gamma@3.0.0'],
+  ]);
+
+  const berry = resolvedInventory(
+    snapshot({
+      'package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+      'yarn.lock': `__metadata:
+  version: 8
+"alpha@npm:^1.0.0":
+  version: 1.2.3
+  dependencies:
+    beta: "npm:^2.0.0"
+"beta@npm:^2.0.0":
+  version: 2.1.0
+  dependencies:
+    gamma: "npm:3.0.0"
+"gamma@npm:3.0.0":
+  version: 3.0.0
+`,
+    }),
+  ).dependencies;
+  assert.deepEqual(berry.find((item) => item.name === 'gamma')?.parentChains, [
+    ['package.json', 'alpha@1.2.3', 'beta@2.1.0', 'gamma@3.0.0'],
+  ]);
+});
+
 test('workspace lockfiles exclude local packages but retain direct external dependencies', () => {
   const npm = resolvedInventory(
     snapshot({
@@ -165,6 +248,25 @@ test('workspace lockfiles exclude local packages but retain direct external depe
     false,
   );
   assert.equal(yarn.find((item) => item.name === 'alpha')?.resolvedVersion, '1.2.3');
+});
+
+test('Yarn inventory preserves every workspace that declares the same package', () => {
+  const result = resolvedInventory(
+    snapshot({
+      'package.json': '{"workspaces":["packages/*"]}',
+      'packages/api/package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+      'packages/web/package.json': '{"dependencies":{"alpha":"^1.0.0"}}',
+      'yarn.lock': `__metadata:
+  version: 8
+"alpha@npm:^1.0.0":
+  version: 1.2.3
+`,
+    }),
+  ).dependencies;
+  assert.deepEqual(result.find((item) => item.name === 'alpha')?.parentChains, [
+    ['packages/api/package.json', 'alpha@1.2.3'],
+    ['packages/web/package.json', 'alpha@1.2.3'],
+  ]);
 });
 
 test('CVSS v3 vectors are scored without understating critical advisories', () => {

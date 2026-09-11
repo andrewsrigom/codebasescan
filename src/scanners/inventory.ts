@@ -3,12 +3,15 @@ import { parseDocument } from 'yaml';
 import type { Dependency, Snapshot, SourceFile } from '../domain/types.ts';
 import { isRuntimeSource } from '../security/paths.ts';
 
+export const dependencyInventoryVersion = '0.2.0';
+
 type Scope = Dependency['scope'];
 interface Declaration {
   requestedVersion: string;
   manifest: string;
   scope: Scope;
 }
+type DeclarationMap = Map<string, Declaration[]>;
 
 function object(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -16,8 +19,8 @@ function object(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function declarations(snapshot: Snapshot): Map<string, Declaration> {
-  const result = new Map<string, Declaration>();
+function declarations(snapshot: Snapshot): DeclarationMap {
+  const result: DeclarationMap = new Map();
   for (const file of snapshot.files.filter(isRuntimeSource)) {
     if (file.path.split('/').at(-1) !== 'package.json') continue;
     try {
@@ -25,13 +28,21 @@ function declarations(snapshot: Snapshot): Map<string, Declaration> {
       if (!manifest) continue;
       for (const [key, scope] of [
         ['dependencies', 'runtime'],
+        ['optionalDependencies', 'runtime'],
         ['devDependencies', 'development'],
       ] as const) {
         const section = object(manifest[key]);
         if (!section) continue;
-        for (const [name, version] of Object.entries(section))
-          if (typeof version === 'string' && !result.has(name))
-            result.set(name, { requestedVersion: version, manifest: file.path, scope });
+        for (const [name, version] of Object.entries(section)) {
+          if (typeof version !== 'string') continue;
+          const existing = result.get(name) ?? [];
+          if (existing.some((item) => item.manifest === file.path && item.scope === scope))
+            continue;
+          result.set(name, [
+            ...existing,
+            { requestedVersion: version, manifest: file.path, scope },
+          ]);
+        }
       }
     } catch {
       /* Invalid manifests remain an explicit coverage limitation at scanner level. */
@@ -47,7 +58,7 @@ function lockLine(file: SourceFile, needle: string): number {
 
 function dependency(
   file: SourceFile,
-  declared: Map<string, Declaration>,
+  declared: DeclarationMap,
   name: string,
   version: string,
   development: boolean,
@@ -56,8 +67,11 @@ function dependency(
   parentChains?: string[][],
 ): Dependency | null {
   if (!name || !version || name.length > 214 || version.length > 200) return null;
-  const declaredDependency = declared.get(name);
-  const direct = directOverride ?? Boolean(declaredDependency);
+  const declarations = declared.get(name) ?? [];
+  const parentManifest = parentChains?.find((chain) => chain.length >= 2)?.[0];
+  const declaredDependency =
+    declarations.find((item) => item.manifest === parentManifest) ?? declarations[0];
+  const direct = directOverride ?? declarations.length > 0;
   const declaration = direct ? declaredDependency : undefined;
   return {
     name,
@@ -80,17 +94,129 @@ function npmName(packagePath: string, entry: Record<string, unknown>): string {
   return index < 0 ? '' : packagePath.slice(index + marker.length);
 }
 
-function npmLock(file: SourceFile, declared: Map<string, Declaration>): Dependency[] {
+const maximumParentChains = 3;
+const maximumParentDepth = 12;
+
+interface DependencyGraphSeed {
+  node: string;
+  chain: string[];
+}
+
+function dependencySections(
+  entry: Record<string, unknown>,
+  includeDevelopment = false,
+): [string, unknown][] {
+  const names = includeDevelopment
+    ? ['dependencies', 'devDependencies', 'optionalDependencies']
+    : ['dependencies', 'optionalDependencies'];
+  return names.flatMap((name) => Object.entries(object(entry[name]) ?? {}));
+}
+
+function graphParentChains(
+  labels: Map<string, string>,
+  adjacency: Map<string, Set<string>>,
+  seeds: DependencyGraphSeed[],
+): Map<string, string[][]> {
+  const chains = new Map<string, string[][]>();
+  const queue: DependencyGraphSeed[] = [];
+  const seenRoutes = new Set<string>();
+
+  const enqueue = (node: string, chain: string[]) => {
+    const label = labels.get(node);
+    if (!label) return;
+    const existing = chains.get(label) ?? [];
+    const duplicate = existing.some(
+      (candidate) => candidate.join('\u0000') === chain.join('\u0000'),
+    );
+    if (!duplicate && existing.length >= maximumParentChains) return;
+    addParentChain(chains, label, chain);
+    const routeKey = `${node}\u0000${chain.join('\u0000')}`;
+    if (seenRoutes.has(routeKey)) return;
+    seenRoutes.add(routeKey);
+    queue.push({ node, chain });
+  };
+
+  for (const seed of seeds) enqueue(seed.node, seed.chain);
+  let cursor = 0;
+  while (cursor < queue.length && cursor < 20_000) {
+    const current = queue[cursor++];
+    if (!current || current.chain.length >= maximumParentDepth + 1) continue;
+    for (const target of adjacency.get(current.node) ?? []) {
+      const label = labels.get(target);
+      if (!label || current.chain.includes(label)) continue;
+      enqueue(target, [...current.chain, label]);
+    }
+  }
+  return chains;
+}
+
+function resolveNpmPackagePath(
+  packages: Record<string, unknown>,
+  sourcePath: string,
+  name: string,
+): string | null {
+  let directory = sourcePath;
+  while (true) {
+    const candidate = directory
+      ? path.posix.join(directory, 'node_modules', name)
+      : path.posix.join('node_modules', name);
+    const entry = object(packages[candidate]);
+    if (entry && entry.link !== true && typeof entry.version === 'string') return candidate;
+    if (!directory) return null;
+    const parent = path.posix.dirname(directory);
+    directory = parent === '.' || parent === directory ? '' : parent;
+  }
+}
+
+function npmParentChains(packages: Record<string, unknown>): Map<string, string[][]> {
+  const labels = new Map<string, string>();
+  const adjacency = new Map<string, Set<string>>();
+  const seeds: DependencyGraphSeed[] = [];
+
+  for (const [packagePath, raw] of Object.entries(packages)) {
+    if (!packagePath || !packagePath.includes('node_modules/')) continue;
+    const entry = object(raw);
+    if (!entry || entry.link === true || typeof entry.version !== 'string') continue;
+    const name = npmName(packagePath, entry);
+    if (name) labels.set(packagePath, `${name}@${entry.version}`);
+  }
+
+  for (const [packagePath, raw] of Object.entries(packages)) {
+    const entry = object(raw);
+    if (!entry || entry.link === true) continue;
+    if (labels.has(packagePath)) {
+      const targets = new Set<string>();
+      for (const [name] of dependencySections(entry)) {
+        const target = resolveNpmPackagePath(packages, packagePath, name);
+        if (target) targets.add(target);
+      }
+      adjacency.set(packagePath, targets);
+      continue;
+    }
+    if (packagePath.includes('node_modules/')) continue;
+    const manifest = packagePath ? path.posix.join(packagePath, 'package.json') : 'package.json';
+    for (const [name] of dependencySections(entry, true)) {
+      const target = resolveNpmPackagePath(packages, packagePath, name);
+      const label = target ? labels.get(target) : undefined;
+      if (target && label) seeds.push({ node: target, chain: [manifest, label] });
+    }
+  }
+  return graphParentChains(labels, adjacency, seeds);
+}
+
+function npmLock(file: SourceFile, declared: DeclarationMap): Dependency[] {
   const root = object(JSON.parse(file.content));
   if (!root) return [];
   const packages = object(root.packages);
   if (packages) {
+    const parentChains = npmParentChains(packages);
     const output: Dependency[] = [];
     for (const [packagePath, raw] of Object.entries(packages)) {
       if (!packagePath || !packagePath.includes('node_modules/')) continue;
       const entry = object(raw);
       if (!entry || entry.link === true || typeof entry.version !== 'string') continue;
       const name = npmName(packagePath, entry);
+      const chains = parentChains.get(`${name}@${entry.version}`);
       const item = dependency(
         file,
         declared,
@@ -98,16 +224,19 @@ function npmLock(file: SourceFile, declared: Map<string, Declaration>): Dependen
         entry.version,
         entry.dev === true,
         `"${packagePath}"`,
+        chains ? chains.some((chain) => chain.length === 2) : undefined,
+        chains,
       );
       if (item) output.push(item);
     }
     return output;
   }
   const output: Dependency[] = [];
-  const walk = (tree: Record<string, unknown>, direct: boolean) => {
+  const walk = (tree: Record<string, unknown>, direct: boolean, parentChain: string[]) => {
     for (const [name, raw] of Object.entries(tree)) {
       const entry = object(raw);
       if (!entry || typeof entry.version !== 'string') continue;
+      const chain = [...parentChain, `${name}@${entry.version}`];
       const item = dependency(
         file,
         declared,
@@ -116,14 +245,15 @@ function npmLock(file: SourceFile, declared: Map<string, Declaration>): Dependen
         entry.dev === true,
         `"${name}"`,
         direct,
+        [chain],
       );
       if (item) output.push(item);
       const nested = object(entry.dependencies);
-      if (nested) walk(nested, false);
+      if (nested) walk(nested, false, chain);
     }
   };
   const tree = object(root.dependencies);
-  if (tree) walk(tree, true);
+  if (tree) walk(tree, true, ['package.json']);
   return output;
 }
 
@@ -141,9 +271,6 @@ function pnpmPackageKey(key: string): { name: string; version: string } | null {
     ? { name: legacy[1], version: legacy[2].split('(')[0] ?? '' }
     : null;
 }
-
-const maximumParentChains = 3;
-const maximumParentDepth = 12;
 
 function pnpmReference(name: string, raw: unknown): { name: string; version: string } | null {
   const entry = object(raw);
@@ -220,7 +347,7 @@ function pnpmParentChains(root: Record<string, unknown>): Map<string, string[][]
   return chains;
 }
 
-function pnpmLock(file: SourceFile, declared: Map<string, Declaration>): Dependency[] {
+function pnpmLock(file: SourceFile, declared: DeclarationMap): Dependency[] {
   const document = parseDocument(file.content, { schema: 'core' });
   if (document.errors.length) throw new Error('Invalid pnpm lockfile.');
   const root = object(document.toJS({ maxAliasCount: 20 }));
@@ -248,27 +375,143 @@ function pnpmLock(file: SourceFile, declared: Map<string, Declaration>): Depende
   return output;
 }
 
-function yarnClassic(file: SourceFile, declared: Map<string, Declaration>): Dependency[] {
+interface YarnGraphNode {
+  key: string;
+  name: string;
+  version: string;
+  selectors: string[];
+  dependencies: [string, string][];
+  needle: string;
+}
+
+function unquote(value: string): string {
+  const trimmed = value.trim();
+  return /^(?:"[\s\S]*"|'[\s\S]*')$/.test(trimmed) ? trimmed.slice(1, -1) : trimmed;
+}
+
+function yarnSelectors(header: string): string[] {
+  return (header.match(/"[^"]*"|'[^']*'|[^,]+/g) ?? []).map(unquote).filter(Boolean);
+}
+
+function yarnSelectorName(selector: string): string {
+  const npmMarker = selector.lastIndexOf('@npm:');
+  const split =
+    npmMarker > 0
+      ? npmMarker
+      : selector.startsWith('@')
+        ? selector.indexOf('@', 1)
+        : selector.indexOf('@');
+  return split > 0 ? selector.slice(0, split) : '';
+}
+
+function yarnGraphParentChains(
+  nodes: YarnGraphNode[],
+  declared: DeclarationMap,
+  berry: boolean,
+): Map<string, string[][]> {
+  const labels = new Map(nodes.map((node) => [node.key, `${node.name}@${node.version}`]));
+  const selectorToNode = new Map<string, string>();
+  for (const node of nodes)
+    for (const selector of node.selectors) selectorToNode.set(selector, node.key);
+
+  const resolve = (name: string, reference: string) => {
+    const candidates = [`${name}@${reference}`];
+    if (berry && !reference.startsWith('npm:')) candidates.unshift(`${name}@npm:${reference}`);
+    return candidates.map((candidate) => selectorToNode.get(candidate)).find(Boolean);
+  };
+
+  const adjacency = new Map<string, Set<string>>();
+  for (const node of nodes) {
+    const targets = new Set<string>();
+    for (const [name, reference] of node.dependencies) {
+      const target = resolve(name, reference);
+      if (target) targets.add(target);
+    }
+    adjacency.set(node.key, targets);
+  }
+
+  const seeds: DependencyGraphSeed[] = [];
+  for (const [name, declarations] of declared) {
+    for (const declaration of declarations) {
+      const target = resolve(name, declaration.requestedVersion);
+      const label = target ? labels.get(target) : undefined;
+      if (target && label) seeds.push({ node: target, chain: [declaration.manifest, label] });
+    }
+  }
+  return graphParentChains(labels, adjacency, seeds);
+}
+
+function yarnClassicNodes(file: SourceFile): YarnGraphNode[] {
+  const lines = file.content.split('\n');
+  const nodes: YarnGraphNode[] = [];
+  let cursor = 0;
+  while (cursor < lines.length) {
+    const headerLine = lines[cursor] ?? '';
+    if (!headerLine || /^\s|^#/.test(headerLine) || !headerLine.endsWith(':')) {
+      cursor++;
+      continue;
+    }
+    const body: string[] = [];
+    let next = cursor + 1;
+    while (next < lines.length && (/^\s/.test(lines[next] ?? '') || !(lines[next] ?? ''))) {
+      body.push(lines[next] ?? '');
+      next++;
+    }
+    const selectors = yarnSelectors(headerLine.slice(0, -1));
+    const name = yarnSelectorName(selectors[0] ?? '');
+    const versionMatch = body
+      .map((line) => /^\s{2}version\s+(["'][^"']+["']|\S+)\s*$/.exec(line))
+      .find(Boolean);
+    const version = unquote(versionMatch?.[1] ?? '');
+    const dependencies: [string, string][] = [];
+    let dependencySection = false;
+    for (const line of body) {
+      if (/^\s{2}(?:dependencies|optionalDependencies):\s*$/.test(line)) {
+        dependencySection = true;
+        continue;
+      }
+      if (/^\s{2}\S/.test(line)) dependencySection = false;
+      if (!dependencySection || !/^\s{4}\S/.test(line)) continue;
+      const match = /^\s{4}(["'][^"']+["']|\S+)\s+(["'][^"']+["']|\S+)\s*$/.exec(line);
+      if (match?.[1] && match[2]) dependencies.push([unquote(match[1]), unquote(match[2])]);
+    }
+    if (name && version)
+      nodes.push({
+        key: `classic:${cursor}`,
+        name,
+        version,
+        selectors,
+        dependencies,
+        needle: headerLine,
+      });
+    cursor = next;
+  }
+  return nodes;
+}
+
+function yarnClassic(file: SourceFile, declared: DeclarationMap): Dependency[] {
+  const nodes = yarnClassicNodes(file);
+  const parentChains = yarnGraphParentChains(nodes, declared, false);
   const output: Dependency[] = [];
-  const stanza = /^(?:"([^"]+)"|([^\s][^:]*)):\s*\n\s+version\s+["']([^"']+)["']/gm;
-  for (const match of file.content.matchAll(stanza)) {
-    const selector = match[1] ?? match[2] ?? '';
-    const first = selector.split(',')[0]?.trim().replace(/^"|"$/g, '') ?? '';
-    const split = first.startsWith('@') ? first.indexOf('@', 1) : first.indexOf('@');
-    const name = split > 0 ? first.slice(0, split) : '';
-    const version = match[3] ?? '';
-    const item = dependency(file, declared, name, version, false, match[0], declared.has(name));
+  for (const node of nodes) {
+    const chains = parentChains.get(`${node.name}@${node.version}`);
+    const item = dependency(
+      file,
+      declared,
+      node.name,
+      node.version,
+      false,
+      node.needle,
+      chains ? chains.some((chain) => chain.length === 2) : declared.has(node.name),
+      chains,
+    );
     if (item) output.push(item);
   }
   return output;
 }
 
-function yarnBerry(file: SourceFile, declared: Map<string, Declaration>): Dependency[] {
-  const document = parseDocument(file.content, { schema: 'core' });
-  if (document.errors.length) throw new Error('Invalid Yarn lockfile.');
-  const root = object(document.toJS({ maxAliasCount: 20 }));
-  if (!root) return [];
-  const output: Dependency[] = [];
+function yarnBerryNodes(root: Record<string, unknown>): YarnGraphNode[] {
+  const nodes: YarnGraphNode[] = [];
   for (const [selector, raw] of Object.entries(root)) {
     if (selector === '__metadata') continue;
     const entry = object(raw);
@@ -279,19 +522,43 @@ function yarnBerry(file: SourceFile, declared: Map<string, Declaration>): Depend
       (typeof entry.resolution === 'string' && entry.resolution.includes('@workspace:'))
     )
       continue;
-    const first = selector.split(',')[0]?.trim() ?? '';
-    const npmMarker = first.lastIndexOf('@npm:');
-    const fallback = first.startsWith('@') ? first.indexOf('@', 1) : first.indexOf('@');
-    const split = npmMarker > 0 ? npmMarker : fallback;
-    const name = split > 0 ? first.slice(0, split) : '';
+    const selectors = yarnSelectors(selector);
+    const name = yarnSelectorName(selectors[0] ?? '');
+    if (!name) continue;
+    const dependencies = dependencySections(entry).flatMap(([dependencyName, reference]) =>
+      typeof reference === 'string' ? ([[dependencyName, reference]] as [string, string][]) : [],
+    );
+    nodes.push({
+      key: `berry:${selector}`,
+      name,
+      version: entry.version,
+      selectors,
+      dependencies,
+      needle: selector,
+    });
+  }
+  return nodes;
+}
+
+function yarnBerry(file: SourceFile, declared: DeclarationMap): Dependency[] {
+  const document = parseDocument(file.content, { schema: 'core' });
+  if (document.errors.length) throw new Error('Invalid Yarn lockfile.');
+  const root = object(document.toJS({ maxAliasCount: 20 }));
+  if (!root) return [];
+  const nodes = yarnBerryNodes(root);
+  const parentChains = yarnGraphParentChains(nodes, declared, true);
+  const output: Dependency[] = [];
+  for (const node of nodes) {
+    const chains = parentChains.get(`${node.name}@${node.version}`);
     const item = dependency(
       file,
       declared,
-      name,
-      entry.version,
+      node.name,
+      node.version,
       false,
-      selector,
-      declared.has(name),
+      node.needle,
+      chains ? chains.some((chain) => chain.length === 2) : declared.has(node.name),
+      chains,
     );
     if (item) output.push(item);
   }
@@ -348,16 +615,24 @@ export function resolvedInventory(snapshot: Snapshot): DependencyInventory {
       records.set(key, { ...previous, ...(parentChains.length ? { parentChains } : {}) });
     }
   }
-  for (const [name, declaration] of declared) {
-    if ([...records.values()].some((item) => item.name === name && item.relationship === 'direct'))
-      continue;
-    records.set(`manifest:${declaration.manifest}:${name}`, {
-      name,
-      requestedVersion: declaration.requestedVersion,
-      manifest: declaration.manifest,
-      scope: declaration.scope,
-      relationship: 'direct',
-    });
+  for (const [name, declarations] of declared) {
+    for (const declaration of declarations) {
+      const represented = [...records.values()].some(
+        (item) =>
+          item.name === name &&
+          item.relationship === 'direct' &&
+          (item.manifest === declaration.manifest ||
+            item.parentChains?.some((chain) => chain[0] === declaration.manifest)),
+      );
+      if (represented) continue;
+      records.set(`manifest:${declaration.manifest}:${name}`, {
+        name,
+        requestedVersion: declaration.requestedVersion,
+        manifest: declaration.manifest,
+        scope: declaration.scope,
+        relationship: 'direct',
+      });
+    }
   }
   return {
     dependencies: [...records.values()].sort(

@@ -13,7 +13,7 @@ import type {
 import { digest, makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { redact } from '../security/redact.ts';
 import { isRuntimeSource } from '../security/paths.ts';
-import { resolvedInventory } from './inventory.ts';
+import { dependencyInventoryVersion, resolvedInventory } from './inventory.ts';
 
 const batchSchema = z.object({
   results: z.array(
@@ -23,6 +23,10 @@ const batchSchema = z.object({
     }),
   ),
 });
+
+function scannerVersion(source: 'api' | 'local'): string {
+  return `${source === 'api' ? 'API v1' : 'Local OSV snapshot v1'} + inventory ${dependencyInventoryVersion}`;
+}
 const recordSchema = z.object({
   id: z.string().min(1).max(100),
   modified: z.string().max(100).optional(),
@@ -511,7 +515,7 @@ export async function scanOsv(
         detail: inventory.errors.length
           ? 'A supported lockfile was malformed; no clean dependency result is implied.'
           : 'No resolved npm, pnpm, or Yarn lockfile packages were available. Declared ranges were not queried.',
-        version: enabled ? 'API v1' : 'Local OSV snapshot v1',
+        version: scannerVersion(enabled ? 'api' : 'local'),
       },
     };
   const cache = await readCache(cachePath);
@@ -546,7 +550,7 @@ export async function scanOsv(
           covered === 0
             ? `The local advisory database has no records for ${resolved.length} resolved package(s). No network request was made and no clean result is implied.`
             : `Checked ${covered} of ${resolved.length} resolved package(s) against the local advisory database without network access.${covered < resolved.length ? ' Packages not present in the database remain unverified.' : ''}`,
-        version: 'Local OSV snapshot v1',
+        version: scannerVersion('local'),
       },
     };
   }
@@ -693,7 +697,7 @@ export async function scanOsv(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: `OSV lookup failed: ${redact(error instanceof Error ? error.message : 'unknown failure')}. No clean result is implied.`,
-        version: 'API v1',
+        version: scannerVersion('api'),
       },
     };
   }
@@ -716,7 +720,7 @@ export async function scanOsv(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: findings.length,
       detail: `Queried OSV for ${resolved.length} resolved npm ecosystem package(s). Only package names and versions left the machine; reachability was not assessed.${inventory.errors.length ? ' Some lockfiles were malformed.' : ''}`,
-      version: 'API v1',
+      version: scannerVersion('api'),
     },
   };
 }
