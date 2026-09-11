@@ -202,7 +202,7 @@ test('static report writes a self-contained versioned artifact directory', async
   const ruleQualitySchema = JSON.parse(
     await readFile(path.join(result.directory, 'rule-quality.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
-  assert.equal(ruleQualitySchema.properties?.schemaVersion?.const, 2);
+  assert.equal(ruleQualitySchema.properties?.schemaVersion?.const, 3);
   const calibrationLedgerSchema = JSON.parse(
     await readFile(path.join(result.directory, 'calibration-ledger.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
