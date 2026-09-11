@@ -259,7 +259,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await writeFile(path.join(root, '.env'), 'SECRET=fixture');
   await writeFile(
     path.join(root, '.env.example'),
-    'PUBLIC_URL=https://example.test\nSECRET_TOKEN=must-not-be-retained\n',
+    'PUBLIC_URL=https://example.test\nSECRET_TOKEN=must-not-be-retained\n# OPTIONAL_TOKEN=placeholder\n',
   );
   await writeFile(path.join(root, '.env.production.sample'), 'DATABASE_URL=private-value\n');
   await writeFile(path.join(root, 'node_modules', 'ignored.ts'), 'eval(input)');
@@ -279,7 +279,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   );
   assert.equal(
     snapshot.files.find((file) => file.path === '.env.example')?.content,
-    'PUBLIC_URL=\nSECRET_TOKEN=\n',
+    'PUBLIC_URL=\nSECRET_TOKEN=\nOPTIONAL_TOKEN=\n',
   );
   assert.equal(
     snapshot.files.find((file) => file.path === '.env.production.sample')?.content,
@@ -287,6 +287,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   );
   assert.equal(JSON.stringify(snapshot).includes('must-not-be-retained'), false);
   assert.equal(JSON.stringify(snapshot).includes('private-value'), false);
+  assert.equal(JSON.stringify(snapshot).includes('placeholder'), false);
   assert.equal(snapshot.skipped['sensitive-file'], 1);
   if (process.platform !== 'win32') assert.equal(snapshot.skipped['symbolic-link'], 1);
 });

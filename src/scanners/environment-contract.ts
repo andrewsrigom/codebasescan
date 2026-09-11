@@ -55,6 +55,71 @@ interface NamedAccess extends EnvironmentContractLocation {
   node: ts.Node;
 }
 
+const logicalFallbackOperators = new Set([
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+]);
+const comparisonOperators = new Set([
+  ts.SyntaxKind.EqualsEqualsToken,
+  ts.SyntaxKind.EqualsEqualsEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsToken,
+  ts.SyntaxKind.ExclamationEqualsEqualsToken,
+]);
+const requiredFallbackPattern = /(?:assert|fail|missing|required|throw)/i;
+const defaultReaderPattern = /(?:^|\.)(?:parse|read)[A-Z0-9_]/;
+
+function isEnvironmentWrite(node: ts.Node): boolean {
+  let current = node;
+  while (
+    current.parent &&
+    (ts.isParenthesizedExpression(current.parent) || ts.isNonNullExpression(current.parent))
+  )
+    current = current.parent;
+  const parent = current.parent;
+  return Boolean(
+    parent &&
+    ((ts.isBinaryExpression(parent) &&
+      parent.left === current &&
+      parent.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      parent.operatorToken.kind <= ts.SyntaxKind.LastAssignment) ||
+      (ts.isDeleteExpression(parent) && parent.expression === current)),
+  );
+}
+
+function isRequiredContractRead(node: ts.Node, source: ts.SourceFile): boolean {
+  let current = node;
+  while (current.parent && !ts.isStatement(current.parent)) {
+    const parent = current.parent;
+    if (
+      (ts.isPropertyAccessExpression(parent) || ts.isElementAccessExpression(parent)) &&
+      parent.expression === current &&
+      parent.questionDotToken
+    )
+      return false;
+    if (ts.isBinaryExpression(parent)) {
+      if (comparisonOperators.has(parent.operatorToken.kind)) return false;
+      if (logicalFallbackOperators.has(parent.operatorToken.kind)) {
+        const fallback = parent.right.getText(source);
+        if (parent.left !== current || !requiredFallbackPattern.test(fallback)) return false;
+      }
+    }
+    if (ts.isConditionalExpression(parent) && parent.condition === current) return false;
+    if (ts.isCallExpression(parent)) {
+      const argumentIndex = parent.arguments.findIndex((argument) => argument === current);
+      const callee = parent.expression.getText(source).replaceAll(' ', '');
+      if (
+        argumentIndex >= 0 &&
+        argumentIndex < parent.arguments.length - 1 &&
+        defaultReaderPattern.test(callee)
+      )
+        return false;
+    }
+    current = parent;
+  }
+  return true;
+}
+
 function scriptKind(file: string): ts.ScriptKind {
   if (/\.[cm]?tsx$/i.test(file)) return ts.ScriptKind.TSX;
   if (/\.jsx$/i.test(file)) return ts.ScriptKind.JSX;
@@ -143,10 +208,10 @@ function collectSourceAccesses(
   const visit = (node: ts.Node): void => {
     if (ts.isPropertyAccessExpression(node)) {
       const syntax = environmentBase(node.expression, source);
-      if (syntax) add(node.name.text, syntax, node);
+      if (syntax && !isEnvironmentWrite(node)) add(node.name.text, syntax, node);
     } else if (ts.isElementAccessExpression(node)) {
       const syntax = environmentBase(node.expression, source);
-      if (syntax) {
+      if (syntax && !isEnvironmentWrite(node)) {
         const argument = node.argumentExpression;
         if (argument && ts.isStringLiteralLike(argument)) add(argument.text, syntax, node);
         else if (dynamic.length < dynamicLimit)
@@ -176,7 +241,7 @@ function declaredVariables(file: SourceFile): { names: string[]; truncated: bool
   const names = new Set<string>();
   let truncated = false;
   for (const line of file.content.split(/\r?\n/)) {
-    const match = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    const match = /^\s*(?:#\s*)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
     if (!match?.[1] || names.has(match[1])) continue;
     if (names.size >= maximumDeclarations) {
       truncated = true;
@@ -311,7 +376,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
     sourceFiles.length || templates.length ? (truncated ? 'partial' : 'complete') : 'unsupported';
   const analysis: EnvironmentContractAnalysis = {
     schemaVersion: 1,
-    version: '1.0.0',
+    version: '1.3.0',
     status,
     templates: templateSummaries,
     variables,
@@ -332,7 +397,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
     truncated,
     limitations: [
       'Only named process.env, import.meta.env, and direct destructuring accesses in captured JavaScript or TypeScript are compared.',
-      'Template values are discarded before the snapshot; this analysis retains names only.',
+      'Template values are discarded before the snapshot; this analysis retains names only. Commented NAME= placeholders count as documented optional declarations.',
       ...(templates.length
         ? [
             'A name missing from captured templates may still be intentionally supplied by deployment infrastructure.',
@@ -341,12 +406,18 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
             'No captured environment template was available, so non-platform names remain unverified rather than undocumented.',
           ]),
       'Unused declarations may be consumed by frameworks, package scripts, external services, or files outside the bounded snapshot.',
-      'Only security-, authentication-, credential-, data-service-, or payment-shaped undocumented names become findings; all other mismatches remain visible in this contract.',
+      'Only security-, authentication-, credential-, data-service-, or payment-shaped undocumented names with at least one required-looking read become findings. Writes, comparisons, and recognized fallback/default reads remain visible in the contract without creating a candidate.',
     ],
   };
-  const findingNames = undocumented.filter((name) => reviewCandidateName.test(name));
+  const findingNames = undocumented.filter(
+    (name) =>
+      reviewCandidateName.test(name) &&
+      (byName.get(name) ?? []).some((access) => isRequiredContractRead(access.node, access.source)),
+  );
   const findings = findingNames.slice(0, maximumFindings).flatMap((name) => {
-    const first = byName.get(name)?.[0];
+    const first = (byName.get(name) ?? []).find((access) =>
+      isRequiredContractRead(access.node, access.source),
+    );
     return first ? [contractFinding(first)] : [];
   });
   return {
@@ -362,7 +433,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
         status === 'unsupported'
           ? 'No supported runtime source or sanitized environment template was available.'
           : `Compared ${variables.length} named environment use(s) with ${templates.length} sanitized template(s); ${undocumented.length} undocumented (${findingNames.length} high-signal review candidates), ${unverified.length} unverified, ${unusedDeclarations.length} declared but not observed, and ${dynamicAccesses.length} dynamic access(es). Values were not retained.`,
-      version: '1.0.0',
+      version: '1.3.0',
     },
   };
 }

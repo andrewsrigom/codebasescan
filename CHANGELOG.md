@@ -4,6 +4,9 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Reduced environment-contract noise by excluding writes and recognized optional/default reads
+  from findings while retaining them in machine-readable coverage. Sanitized templates now preserve
+  commented `NAME=` placeholders without retaining comments or values.
 - Removed built-in model orchestration and its LangChain/LangGraph dependencies. CodebaseScan now
   keeps its audit engine deterministic and exports versioned contracts for separately authorized
   coding agents.

@@ -111,7 +111,7 @@ function isEnvironmentTemplate(name: string): boolean {
 function sanitizeEnvironmentTemplate(content: string): string {
   const names = new Set<string>();
   for (const line of content.split(/\r?\n/)) {
-    const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    const match = /^\s*(?:#\s*)?(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
     if (match?.[1]) names.add(match[1]);
   }
   return names.size ? `${[...names].map((name) => `${name}=`).join('\n')}\n` : '';

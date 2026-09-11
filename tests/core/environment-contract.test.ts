@@ -60,3 +60,33 @@ test('malformed source and bounded dynamic access make coverage partial', () => 
   assert.equal(result.analysis.dynamicAccesses.length, 1);
   assert.equal(result.run.status, 'partial');
 });
+
+test('environment contract keeps optional defaults and writes out of the finding queue', () => {
+  const result = scanEnvironmentContract(
+    snapshotFromFiles({
+      '.env.example': 'DOCUMENTED_SECRET=\n# OPTIONAL_DOCUMENTED_SECRET=\n',
+      'src/config.ts': `
+        process.env.RESOLVED_SECRET = resolveSecret();
+        const optionalSecret = process.env.OPTIONAL_SECRET ?? '';
+        const alternateSecret = process.env.PRIMARY_SECRET || process.env.SECONDARY_SECRET;
+        const flag = process.env.AUTH_DISABLE_RATE_LIMIT === 'true';
+        const retries = readPositiveInt(process.env.AUTH_RETRIES, 3);
+        const optionalRedisUrl = process.env.OPTIONAL_REDIS_URL?.trim();
+        const requiredSecret = process.env.REQUIRED_SECRET;
+      `,
+    }),
+  );
+
+  assert.ok(!result.analysis.variables.some((variable) => variable.name === 'RESOLVED_SECRET'));
+  assert.deepEqual(
+    result.findings.map((finding) => finding.evidence[0]?.observation),
+    [
+      'Environment name REQUIRED_SECRET is referenced but absent from captured environment templates. No value was read.',
+    ],
+  );
+  assert.ok(result.analysis.undocumented.includes('OPTIONAL_SECRET'));
+  assert.ok(result.analysis.undocumented.includes('AUTH_RETRIES'));
+  assert.ok(result.analysis.undocumented.includes('OPTIONAL_REDIS_URL'));
+  assert.ok(!result.analysis.undocumented.includes('OPTIONAL_DOCUMENTED_SECRET'));
+  assert.ok(result.analysis.unusedDeclarations.includes('OPTIONAL_DOCUMENTED_SECRET'));
+});

@@ -437,7 +437,7 @@ export function buildAuditPipeline(options: {
       const result = await cachedScan(
         source,
         'environment-contract',
-        '1.0.0',
+        '1.3.0',
         ['environment-contract'],
         () => scanEnvironmentContract(source),
       );

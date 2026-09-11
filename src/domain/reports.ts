@@ -1237,7 +1237,7 @@ export function toHtml(
       (report.environmentContract.status === 'complete' ? 'complete' : 'gap') +
       '">' +
       e(report.environmentContract.status) +
-      '</span></div><p>Named source accesses are compared with sanitized environment templates. Values and comments are discarded before the snapshot.</p><div class="summary-grid"><div class="summary-card"><strong>' +
+      '</span></div><p>Named source accesses are compared with sanitized environment templates. Values and free-form comments are discarded; uncommented and commented NAME= declarations are retained.</p><div class="summary-grid"><div class="summary-card"><strong>' +
       report.environmentContract.summary.used +
       '</strong><span>Named uses</span></div><div class="summary-card"><strong>' +
       report.environmentContract.summary.undocumented +
