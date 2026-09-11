@@ -1,6 +1,12 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { Disposition, Finding } from '../domain/types.ts';
+import {
+  humanFindingImpact,
+  humanFindingLimitations,
+  humanFindingSource,
+  humanVerificationSteps,
+} from '../domain/finding-guidance.ts';
 import { Icon } from './icon.tsx';
 import { Badge, SeverityBadge } from './audit-primitives.tsx';
 import { mutate } from './new-audit.tsx';
@@ -80,10 +86,7 @@ export function FindingDetails({
       <div className="drawer-body">
         <div className="row gap">
           <SeverityBadge severity={finding.severity} />
-          <Badge>{finding.source}</Badge>
-          {finding.confidence && <Badge>confidence {finding.confidence}</Badge>}
-          {finding.exposure && <Badge>{finding.exposure.replaceAll('_', ' ')}</Badge>}
-          {finding.priority !== undefined && <Badge>priority {finding.priority}</Badge>}
+          <Badge>{humanFindingSource(finding.source)}</Badge>
           <Badge tone="neutral">{finding.disposition.replaceAll('_', ' ')}</Badge>
         </div>
         {finding.secret && (
@@ -98,7 +101,14 @@ export function FindingDetails({
         <h2 id="finding-title" className="finding-title">
           {finding.title}
         </h2>
-        <p>{finding.description}</p>
+        <section>
+          <h3 className="section-label">What CodebaseScan found</h3>
+          <p>{finding.description}</p>
+        </section>
+        <section>
+          <h3 className="section-label">Why it matters</h3>
+          <p>{humanFindingImpact(finding)}</p>
+        </section>
         <div className="notice">
           <Icon name="info" />
           <span>
@@ -107,7 +117,7 @@ export function FindingDetails({
           </span>
         </div>
         <section>
-          <h3 className="section-label">Evidence</h3>
+          <h3 className="section-label">Where to look</h3>
           {finding.evidence.map((evidence) => (
             <div className="evidence" key={evidence.id}>
               <div className="code-header">
@@ -115,13 +125,41 @@ export function FindingDetails({
                 <span>
                   {evidence.file}: {evidence.startLine} – {evidence.endLine}
                 </span>
-                <Badge>{evidence.scope ?? evidence.kind ?? 'source'}</Badge>
               </div>
-              <pre className="code-block">{evidence.excerpt}</pre>
               <p className="small">{evidence.observation}</p>
-              <span className="digest">SHA-256 {evidence.fileDigest.slice(0, 16)} …</span>
+              <details>
+                <summary>Show captured source</summary>
+                <pre className="code-block">{evidence.excerpt}</pre>
+              </details>
             </div>
           ))}
+        </section>
+        <section>
+          <h3 className="section-label">How to verify manually</h3>
+          <ol className="limitations">
+            {humanVerificationSteps(finding).map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </section>
+        <section>
+          <h3 className="section-label">Confidence and limitations</h3>
+          <p>
+            <strong>Confidence:</strong> {finding.confidence ?? 'not rated'}
+          </p>
+          <ul className="limitations">
+            {humanFindingLimitations(finding).map((limitation) => (
+              <li key={limitation}>{limitation}</li>
+            ))}
+          </ul>
+          <details>
+            <summary>Show detector details</summary>
+            <p className="small mono">
+              {finding.ruleId} · {finding.source}
+              {finding.priority !== undefined ? ` · priority ${finding.priority}` : ''}
+              {finding.exposure ? ` · ${finding.exposure.replaceAll('_', ' ')}` : ''}
+            </p>
+          </details>
         </section>
         {finding.runtimeVerification && (
           <section>
@@ -238,8 +276,8 @@ export function FindingDetails({
           </section>
         )}
         {finding.provenance && (
-          <section>
-            <h3 className="section-label">Provenance</h3>
+          <details>
+            <summary>Show technical provenance</summary>
             <div className="detail-row">
               <span>Detected by</span>
               <strong>{finding.provenance.detector.replaceAll('-', ' ')}</strong>
@@ -257,10 +295,10 @@ export function FindingDetails({
               <span>Evidence</span>
               <span>{finding.provenance.evidenceKinds.join(', ')}</span>
             </div>
-          </section>
+          </details>
         )}
         <section>
-          <h3 className="section-label">Recommended next step</h3>
+          <h3 className="section-label">What to do next</h3>
           <p>{finding.remediation}</p>
           <div className="row gap">
             {finding.cwe.map((cwe) => (
