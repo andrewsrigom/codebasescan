@@ -19,6 +19,9 @@ const ignoredDirectories = new Set([
   'coverage',
   'storybook-static',
   '_pagefind',
+  'generated',
+  '__generated__',
+  '.generated',
   'test-results',
   'codebasescan-report',
   '.codebasescan',
@@ -71,10 +74,10 @@ const testSegments = new Set([
 ]);
 const exampleSegments = new Set(['example', 'examples', 'storybook', '.storybook', 'stories']);
 export const snapshotLimits = {
-  files: 1500,
-  bytesPerFile: 512 * 1024,
+  files: 4000,
+  bytesPerFile: 2 * 1024 * 1024,
   lockfileBytes: 4 * 1024 * 1024,
-  totalBytes: 8 * 1024 * 1024,
+  totalBytes: 32 * 1024 * 1024,
 };
 async function projectIgnore(root: string) {
   const matcher = ignore();

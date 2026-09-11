@@ -9,6 +9,7 @@ import {
   classifySourceScope,
   captureSnapshot,
   estimateProjectScope,
+  snapshotLimits,
   validateProjectRoot,
 } from '../../src/security/paths.ts';
 import { redact } from '../../src/security/redact.ts';
@@ -339,10 +340,28 @@ test('project gitignore rules exclude local artifacts while preserving exception
   assert.equal(estimate.supportedFiles, 2);
   assert.equal(estimate.predictedTruncated, false);
 });
+test('snapshot excludes conventional generated output directories', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-generated-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  for (const directory of ['generated', '__generated__', '.generated']) {
+    await mkdir(path.join(root, directory));
+    await writeFile(path.join(root, directory, 'client.ts'), 'eval(input)');
+  }
+  await writeFile(path.join(root, 'source.ts'), 'export const source = true;');
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.deepEqual(
+    snapshot.files.map((file) => file.path),
+    ['source.ts'],
+  );
+  assert.equal(snapshot.skipped['excluded-directory'], 3);
+  assert.equal(estimate.supportedFiles, 1);
+  assert.equal(estimate.predictedTruncated, false);
+});
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-large-'));
   context.after(() => rm(root, { recursive: true, force: true }));
-  await writeFile(path.join(root, 'large.ts'), 'a'.repeat(600_000));
+  await writeFile(path.join(root, 'large.ts'), 'a'.repeat(snapshotLimits.bytesPerFile + 1));
   const snapshot = await captureSnapshot(root);
   const estimate = await estimateProjectScope(root);
   assert.equal(snapshot.truncated, true);
@@ -378,7 +397,7 @@ test('large generated TypeScript modules within the bounded limit are retained',
   assert.equal(snapshot.files[0]?.path, 'generated.ts');
   assert.equal(snapshot.truncated, false);
   assert.equal(estimate.oversizedFiles, 0);
-  assert.equal(estimate.limits.bytesPerFile, 512 * 1024);
+  assert.equal(estimate.limits.bytesPerFile, snapshotLimits.bytesPerFile);
 });
 test('realistic lockfiles use a separate bounded size allowance', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-lockfile-size-'));
