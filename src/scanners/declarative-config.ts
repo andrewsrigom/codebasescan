@@ -761,13 +761,32 @@ function packageExportTarget(value: unknown, depth = 0): string | undefined {
 
 function capturedSourceTarget(base: string, paths: Set<string>): string | undefined {
   const candidates = new Set<string>([base]);
-  const extension = path.posix.extname(base);
-  if (!extension)
-    for (const candidate of ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']) {
-      candidates.add(`${base}${candidate}`);
-      candidates.add(`${base}/index${candidate}`);
-    }
+  const sourceExtension = /(?:\.d)?\.[cm]?[jt]sx?$/i.exec(base)?.[0];
+  const stem = sourceExtension ? base.slice(0, -sourceExtension.length) : base;
+  for (const candidate of ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs']) {
+    candidates.add(`${stem}${candidate}`);
+    if (!sourceExtension) candidates.add(`${base}/index${candidate}`);
+  }
   return [...candidates].find((candidate) => paths.has(candidate));
+}
+
+function capturedPackageSourceTarget(
+  base: string,
+  directory: string,
+  paths: Set<string>,
+): string | undefined {
+  const direct = capturedSourceTarget(base, paths);
+  if (direct) return direct;
+  const relative = directory ? base.slice(directory.length + 1) : base;
+  const emitted = /^(?:dist|build|lib|out)\/(.+)$/.exec(relative)?.[1];
+  if (!emitted) return undefined;
+  const candidates = [
+    path.posix.join(directory, emitted),
+    ...(emitted.startsWith('src/') ? [] : [path.posix.join(directory, 'src', emitted)]),
+  ];
+  return candidates
+    .map((candidate) => capturedSourceTarget(candidate, paths))
+    .find((candidate): candidate is string => Boolean(candidate));
 }
 
 export function declarativeWorkspacePackageEntrypoints(snapshot: Snapshot): {
@@ -802,7 +821,7 @@ export function declarativeWorkspacePackageEntrypoints(snapshot: Snapshot): {
       const base = path.posix.normalize(path.posix.join(directory, normalizedTarget));
       const contained = directory ? base.startsWith(`${directory}/`) : !base.startsWith('../');
       if (!contained) return [];
-      const captured = capturedSourceTarget(base, sourcePaths);
+      const captured = capturedPackageSourceTarget(base, directory, sourcePaths);
       return captured ? [captured] : [];
     })[0];
     if (resolved) entries.push({ name, manifest: manifest.path, file: resolved });

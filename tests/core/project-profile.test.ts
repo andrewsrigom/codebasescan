@@ -179,6 +179,29 @@ test('captured workspace package exports resolve without loading package code', 
   );
 });
 
+test('workspace build entry points map back to captured TypeScript source', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': JSON.stringify({ name: 'fixture-root', workspaces: ['packages/*'] }),
+    'packages/config/package.json': JSON.stringify({
+      name: '@fixture/config',
+      exports: { '.': { types: './dist/src/index.d.ts', import: './dist/src/index.js' } },
+    }),
+    'packages/config/src/index.ts': `export function loadConfiguration() { return {}; }`,
+    'src/main.ts': `
+      import { loadConfiguration } from '@fixture/config';
+      export function start() { return loadConfiguration(); }
+    `,
+  });
+
+  const profile = profileProject(snapshot).profile;
+  assert.equal(profile.status, 'complete');
+  assert.equal(
+    profile.imports.find((item) => item.specifier === '@fixture/config')?.resolvedFile,
+    'packages/config/src/index.ts',
+  );
+  assert.ok(profile.calls.some((call) => call.callee === 'loadConfiguration'));
+});
+
 test('declarative SaaS semantics recognize project vocabulary and helpers', () => {
   const snapshot = snapshotFromFiles({
     'package.json': JSON.stringify({ scripts: { test: 'node --test', build: 'next build' } }),

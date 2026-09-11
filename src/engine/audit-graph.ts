@@ -266,7 +266,7 @@ export function buildAuditGraph(options: {
       const result = await cachedScan(
         source,
         'project-profile',
-        '0.10.0',
+        '0.10.1',
         ['project-profile'],
         () => profileProject(source),
       );
