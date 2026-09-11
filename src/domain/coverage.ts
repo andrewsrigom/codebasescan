@@ -1,10 +1,4 @@
-import type {
-  AuditReport,
-  CoverageCapability,
-  CoverageStatus,
-  Finding,
-  ScannerRun,
-} from './types.ts';
+import type { CoverageCapability, CoverageStatus, ScannerRun } from './types.ts';
 
 function runStatus(run: ScannerRun, skipped: CoverageStatus): CoverageStatus {
   if (run.status === 'completed') return 'COMPLETE';
@@ -39,29 +33,7 @@ function scannerCapability(
   };
 }
 
-function aiCapability(aiMode: AuditReport['aiMode'], findings: Finding[]): CoverageCapability {
-  if (aiMode === 'disabled')
-    return {
-      id: 'ai-context',
-      label: 'AI contextual analysis',
-      status: 'DISABLED',
-      detail: 'Model inference was disabled. Deterministic findings remain available.',
-    };
-  const modelAnalyses = findings.filter((item) => item.analysis?.kind === aiMode);
-  const inconclusive = modelAnalyses.filter((item) => item.analysis?.assessment === 'inconclusive');
-  return {
-    id: 'ai-context',
-    label: 'AI contextual analysis',
-    status: modelAnalyses.length === 0 ? 'FAILED' : inconclusive.length ? 'PARTIAL' : 'COMPLETE',
-    detail: `${modelAnalyses.length} finding(s) received ${aiMode} analysis; ${inconclusive.length} were inconclusive. Model analysis never suppresses scanner evidence.`,
-  };
-}
-
-export function buildCoverage(
-  runs: ScannerRun[],
-  findings: Finding[],
-  aiMode: AuditReport['aiMode'],
-): CoverageCapability[] {
+export function buildCoverage(runs: ScannerRun[]): CoverageCapability[] {
   return [
     scannerCapability(runs, 'project-profile', 'Project structure profile', 'NOT RUN'),
     scannerCapability(runs, 'ast-security', 'Framework-aware authorization', 'NOT RUN'),
@@ -89,7 +61,6 @@ export function buildCoverage(
     scannerCapability(runs, 'osv', 'Dependency vulnerabilities', 'DISABLED'),
     scannerCapability(runs, 'posture', 'Security configuration', 'NOT RUN'),
     scannerCapability(runs, 'http-probe', 'HTTP runtime posture', 'NOT RUN'),
-    aiCapability(aiMode, findings),
     {
       id: 'infrastructure-as-code',
       label: 'Infrastructure as Code',

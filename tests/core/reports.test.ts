@@ -190,7 +190,7 @@ test('Markdown includes scope and limitations', () => {
     note: 'Gateway enforcement was inspected in the authorized environment.',
     at: '2026-09-09T12:00:00.000Z',
   };
-  report.coverage = buildCoverage(report.scanners, report.findings, report.aiMode);
+  report.coverage = buildCoverage(report.scanners);
   report.mechanicalAnalysis = {
     schemaVersion: 1,
     architecture: {

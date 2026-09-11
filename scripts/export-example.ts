@@ -109,10 +109,10 @@ const report: AuditReport = {
     scanners,
     dependencies,
   }),
-  coverage: buildCoverage(scanners, findings, 'disabled'),
+  coverage: buildCoverage(scanners),
   limitations: [
-    'This is an inert fixture export generated directly by the deterministic core, not an executed LangGraph audit.',
-    'No model, optional external security scanner, or runtime exploit test was executed.',
+    'This is an inert fixture export generated directly by the deterministic core.',
+    'No optional external security scanner or runtime exploit test was executed.',
     'Bundled dependency and duplication analysis ran against an isolated inert snapshot; its output is maintainability evidence, not a vulnerability verdict.',
     'All findings are review candidates; there are no automatically confirmed vulnerabilities.',
     'Regex heuristics can match comments and miss indirect flows. This is not a security certification.',

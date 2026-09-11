@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { parseRemediationPlan } from '../../src/domain/remediation-schema.ts';
 import { parseRemediationResult } from '../../src/domain/remediation-schema.ts';
@@ -24,7 +24,7 @@ import {
   sampleWebhookContract,
 } from '../helpers.ts';
 
-test('static report writes a self-contained versioned artifact directory', async (context) => {
+test('static report writes a self-contained report directory', async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const report = sampleReport();
@@ -36,12 +36,11 @@ test('static report writes a self-contained versioned artifact directory', async
   report.webhookContract = sampleWebhookContract();
   report.featureFlags = sampleFeatureFlags();
   const result = await writeStaticReport(report, temporary);
-  assert.equal(result.directory, path.join(temporary, report.auditId));
+  assert.equal(result.directory, temporary);
   assert.deepEqual(
     result.manifest.files.map((file) => file.path),
     [
       'index.html',
-      'report-index-entry.json',
       'run-manifest.json',
       'audit-report.json',
       'risk-paths.json',
@@ -244,31 +243,16 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.equal(manifest.kind, 'codebasescan-static-report');
   assert.match(manifest.files[0]?.sha256 ?? '', /^[a-f0-9]{64}$/);
   assert.equal(result.rootEntrypoint, path.join(temporary, 'index.html'));
-  assert.equal(result.index.latestAuditId, report.auditId);
-  const storedIndexEntry = JSON.parse(
-    await readFile(path.join(result.directory, 'report-index-entry.json'), 'utf8'),
-  ) as { auditId: string; findings: { total: number } };
-  assert.equal(storedIndexEntry.auditId, report.auditId);
-  assert.equal(storedIndexEntry.findings.total, report.findings.length);
   const rootHtml = await readFile(result.rootEntrypoint, 'utf8');
-  assert.ok(rootHtml.includes('Audit history'));
-  assert.ok(rootHtml.includes(`href="./${report.auditId}/index.html"`));
+  assert.ok(rootHtml.includes('How to read this report'));
   assert.ok(!rootHtml.includes('<script'));
-  const rootIndex = JSON.parse(
-    await readFile(path.join(temporary, 'report-index.json'), 'utf8'),
-  ) as { schemaVersion: number; latestAuditId: string; audits: { auditId: string }[] };
-  assert.equal(rootIndex.schemaVersion, 1);
-  assert.equal(rootIndex.latestAuditId, report.auditId);
-  assert.deepEqual(
-    rootIndex.audits.map((audit) => audit.auditId),
-    [report.auditId],
-  );
 });
 
-test('static report root keeps immutable audit history and points to the newest audit', async (context) => {
+test('static report root is updated with the newest audit', async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const older = sampleReport();
+  older.riskCorrelation = sampleRiskCorrelation(older.findings[0]!.id);
   const newer = {
     ...sampleReport(),
     auditId: '00000000-0000-4000-8000-000000000099',
@@ -276,23 +260,26 @@ test('static report root keeps immutable audit history and points to the newest 
   };
   await writeStaticReport(older, temporary);
   const result = await writeStaticReport(newer, temporary);
-  assert.equal(result.index.latestAuditId, newer.auditId);
-  assert.deepEqual(
-    result.index.audits.map((audit) => audit.auditId),
-    [newer.auditId, older.auditId],
-  );
+  assert.equal(result.manifest.auditId, newer.auditId);
   assert.equal(
-    await readFile(path.join(temporary, older.auditId, 'audit-report.json'), 'utf8'),
-    `${JSON.stringify(older, null, 2)}\n`,
+    await readFile(path.join(temporary, 'audit-report.json'), 'utf8'),
+    `${JSON.stringify(newer, null, 2)}\n`,
   );
+  await assert.rejects(readFile(path.join(temporary, 'risk-paths.json'), 'utf8'), {
+    code: 'ENOENT',
+  });
 });
 
-test('static report refuses to overwrite an existing audit directory', async (context) => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-report-'));
+test('static report refuses to overwrite an unmanaged directory', async (context) => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-static-parent-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
-  const report = sampleReport();
-  await writeStaticReport(report, temporary);
-  await assert.rejects(() => writeStaticReport(report, temporary), /already exists/);
+  const destination = path.join(temporary, 'existing-site');
+  await mkdir(destination);
+  await writeFile(path.join(destination, 'index.html'), 'user content');
+  await assert.rejects(
+    () => writeStaticReport(sampleReport(), destination),
+    /not managed by CodebaseScan/,
+  );
 });
 
 test('static report records remediation progress when a baseline is supplied', async (context) => {

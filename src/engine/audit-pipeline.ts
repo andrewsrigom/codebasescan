@@ -878,7 +878,7 @@ export function buildAuditPipeline(options: {
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
-        coverage: buildCoverage(state.scanners, findings, 'disabled'),
+        coverage: buildCoverage(state.scanners),
         publication: 'draft',
         limitations: [
           'This is a bounded static review, not a pentest, compliance audit, or security certification.',

@@ -31,7 +31,7 @@ const runs: ScannerRun[] = [
 ];
 
 test('coverage keeps zero findings, scanner failure, and unsupported scope distinct', () => {
-  const coverage = buildCoverage(runs, [], 'disabled');
+  const coverage = buildCoverage(runs);
   assert.equal(coverage.find((item) => item.id === 'builtin')?.status, 'COMPLETE');
   assert.equal(coverage.find((item) => item.id === 'project-profile')?.status, 'NOT RUN');
   assert.equal(coverage.find((item) => item.id === 'ast-security')?.status, 'NOT RUN');
@@ -54,23 +54,22 @@ test('coverage keeps zero findings, scanner failure, and unsupported scope disti
     coverage.find((item) => item.id === 'dynamic-exploitation')?.status,
     'NOT PERFORMED',
   );
-  assert.equal(coverage.find((item) => item.id === 'ai-context')?.status, 'DISABLED');
+  assert.equal(
+    coverage.some((item) => item.id === 'ai-context'),
+    false,
+  );
 });
 
 test('coverage shows a mode-disabled scanner as disabled instead of clean', () => {
-  const coverage = buildCoverage(
-    [
-      {
-        id: 'privacy-static',
-        name: 'Static privacy review',
-        status: 'skipped',
-        durationMs: 0,
-        findings: 0,
-        detail: 'Disabled by audit mode selection. Enable privacy to run this capability.',
-      },
-    ],
-    [],
-    'disabled',
-  );
+  const coverage = buildCoverage([
+    {
+      id: 'privacy-static',
+      name: 'Static privacy review',
+      status: 'skipped',
+      durationMs: 0,
+      findings: 0,
+      detail: 'Disabled by audit mode selection. Enable privacy to run this capability.',
+    },
+  ]);
   assert.equal(coverage.find((item) => item.id === 'privacy-static')?.status, 'DISABLED');
 });

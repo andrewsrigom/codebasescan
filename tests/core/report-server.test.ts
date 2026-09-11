@@ -7,7 +7,7 @@ import { startReportServer, loadReportPackage } from '../../src/reporting/report
 import { writeStaticReport } from '../../src/reporting/static-report.ts';
 import { sampleReport } from '../helpers.ts';
 
-test('report package loader resolves the newest audit from a report root', async (context) => {
+test('report package loader resolves the current audit from a report root', async (context) => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-report-server-'));
   context.after(() => rm(temporary, { recursive: true, force: true }));
   const older = sampleReport();
@@ -21,18 +21,13 @@ test('report package loader resolves the newest audit from a report root', async
 
   const loaded = await loadReportPackage(temporary);
   assert.equal(loaded.report.auditId, newer.auditId);
-  assert.equal(loaded.directory, path.join(temporary, newer.auditId));
+  assert.equal(loaded.directory, temporary);
 
   const running = await startReportServer(temporary, 0);
   context.after(() => running.close());
-  const history = await fetch(running.url);
-  assert.equal(history.status, 200);
-  const historyHtml = await history.text();
-  assert.match(historyHtml, /Audit history/);
-  assert.match(historyHtml, new RegExp(`href="\\./${newer.auditId}/index\\.html"`));
-  const olderPage = await fetch(new URL(`${older.auditId}/index.html`, running.url));
-  assert.equal(olderPage.status, 200);
-  assert.match(await olderPage.text(), /Review summary/);
+  const current = await fetch(running.url);
+  assert.equal(current.status, 200);
+  assert.match(await current.text(), /Review summary/);
 });
 
 test('report server exposes only verified manifest artifacts on loopback', async (context) => {

@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import type { AuditReport } from '../domain/types.ts';
 import { digest } from '../domain/findings.ts';
-import { maximumAuditReportBytes } from './limits.ts';
-import { parseAuditReport } from '../domain/report-schema.ts';
 import {
   toCycloneDx,
   toHtml,
@@ -108,133 +106,8 @@ function describeArtifact(artifact: StaticArtifact): RunManifestOutput {
   };
 }
 
-function safeAuditSegment(auditId: string): string {
-  if (!/^[a-zA-Z0-9-]{1,100}$/.test(auditId))
-    throw new Error('Audit ID cannot be used as a report directory name.');
-  return auditId;
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function reportIndexEntry(report: AuditReport): StaticReportIndexEntry {
-  return {
-    auditId: report.auditId,
-    projectName: report.projectName,
-    generatedAt: report.createdAt,
-    directory: safeAuditSegment(report.auditId),
-    publication: report.publication,
-    findings: {
-      total: report.findings.length,
-      critical: report.findings.filter((finding) => finding.severity === 'critical').length,
-      high: report.findings.filter((finding) => finding.severity === 'high').length,
-    },
-    coverage: {
-      complete:
-        report.coverage?.filter((capability) => capability.status === 'COMPLETE').length ?? 0,
-      partial: report.coverage?.filter((capability) => capability.status === 'PARTIAL').length ?? 0,
-    },
-  };
-}
-
-async function readIndexedReport(directory: string): Promise<AuditReport | null> {
-  try {
-    const manifestFile = path.join(directory, 'manifest.json');
-    const manifestMetadata = await lstat(manifestFile);
-    if (
-      !manifestMetadata.isFile() ||
-      manifestMetadata.isSymbolicLink() ||
-      manifestMetadata.size > 1024 * 1024
-    )
-      return null;
-    const manifestValue: unknown = JSON.parse(await readFile(manifestFile, 'utf8'));
-    if (
-      !isRecord(manifestValue) ||
-      manifestValue.schemaVersion !== staticReportVersion ||
-      manifestValue.kind !== 'codebasescan-static-report' ||
-      !Array.isArray(manifestValue.files)
-    )
-      return null;
-    const auditArtifact = manifestValue.files.find(
-      (value): value is Record<string, unknown> =>
-        isRecord(value) && value.path === 'audit-report.json',
-    );
-    if (
-      !auditArtifact ||
-      typeof auditArtifact.bytes !== 'number' ||
-      auditArtifact.bytes < 0 ||
-      auditArtifact.bytes > maximumAuditReportBytes ||
-      typeof auditArtifact.sha256 !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(auditArtifact.sha256)
-    )
-      return null;
-    const reportFile = path.join(directory, 'audit-report.json');
-    const reportMetadata = await lstat(reportFile);
-    if (
-      !reportMetadata.isFile() ||
-      reportMetadata.isSymbolicLink() ||
-      reportMetadata.size !== auditArtifact.bytes
-    )
-      return null;
-    const content = await readFile(reportFile, 'utf8');
-    if (digest(content) !== auditArtifact.sha256) return null;
-    const report = parseAuditReport(JSON.parse(content) as unknown);
-    return manifestValue.auditId === report.auditId &&
-      manifestValue.generatedAt === report.createdAt
-      ? report
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-async function readStoredIndexEntry(directory: string): Promise<StaticReportIndexEntry | null> {
-  try {
-    const manifestFile = path.join(directory, 'manifest.json');
-    const manifestMetadata = await lstat(manifestFile);
-    if (
-      !manifestMetadata.isFile() ||
-      manifestMetadata.isSymbolicLink() ||
-      manifestMetadata.size > 1024 * 1024
-    )
-      return null;
-    const manifestValue: unknown = JSON.parse(await readFile(manifestFile, 'utf8'));
-    if (
-      !isRecord(manifestValue) ||
-      manifestValue.schemaVersion !== staticReportVersion ||
-      manifestValue.kind !== 'codebasescan-static-report' ||
-      !Array.isArray(manifestValue.files)
-    )
-      return null;
-    const indexArtifact = manifestValue.files.find(
-      (value): value is Record<string, unknown> =>
-        isRecord(value) && value.path === 'report-index-entry.json',
-    );
-    if (
-      !indexArtifact ||
-      typeof indexArtifact.bytes !== 'number' ||
-      indexArtifact.bytes < 1 ||
-      indexArtifact.bytes > 16 * 1024 ||
-      typeof indexArtifact.sha256 !== 'string' ||
-      !/^[a-f0-9]{64}$/.test(indexArtifact.sha256)
-    )
-      return null;
-    const entryFile = path.join(directory, 'report-index-entry.json');
-    const entryMetadata = await lstat(entryFile);
-    if (
-      !entryMetadata.isFile() ||
-      entryMetadata.isSymbolicLink() ||
-      entryMetadata.size !== indexArtifact.bytes
-    )
-      return null;
-    const content = await readFile(entryFile, 'utf8');
-    if (digest(content) !== indexArtifact.sha256) return null;
-    const entry: unknown = JSON.parse(content);
-    return isIndexEntry(entry) && entry.auditId === path.basename(directory) ? entry : null;
-  } catch {
-    return null;
-  }
 }
 
 function escapeHtml(value: string): string {
@@ -327,37 +200,64 @@ async function replaceFile(file: string, content: string): Promise<void> {
   }
 }
 
-async function updateStaticReportIndex(root: string): Promise<StaticReportIndex> {
-  const entries = (await readdir(root, { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory() && /^[A-Za-z0-9-]{1,100}$/.test(entry.name))
-    .slice(0, 500);
-  const audits: StaticReportIndexEntry[] = [];
-  for (const entry of entries) {
-    const stored = await readStoredIndexEntry(path.join(root, entry.name));
-    if (stored) {
-      audits.push(stored);
-      continue;
-    }
-    const report = await readIndexedReport(path.join(root, entry.name));
-    if (report && report.auditId === entry.name) audits.push(reportIndexEntry(report));
+async function managedArtifactPaths(root: string): Promise<string[]> {
+  try {
+    const file = path.join(root, 'manifest.json');
+    const metadata = await lstat(file);
+    if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > 1024 * 1024) return [];
+    const value: unknown = JSON.parse(await readFile(file, 'utf8'));
+    if (
+      !isRecord(value) ||
+      value.schemaVersion !== staticReportVersion ||
+      value.kind !== 'codebasescan-static-report' ||
+      !Array.isArray(value.files)
+    )
+      return [];
+    return value.files.flatMap((artifact) => {
+      if (!isRecord(artifact) || typeof artifact.path !== 'string') return [];
+      return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(artifact.path) ? [artifact.path] : [];
+    });
+  } catch {
+    return [];
   }
-  audits.sort(
-    (left, right) =>
-      right.generatedAt.localeCompare(left.generatedAt) ||
-      right.auditId.localeCompare(left.auditId),
-  );
-  const latest = audits[0];
-  if (!latest) throw new Error('Cannot build an empty static report index.');
-  const index: StaticReportIndex = {
-    schemaVersion: staticReportIndexVersion,
-    kind: 'codebasescan-report-index',
-    generatedAt: latest.generatedAt,
-    latestAuditId: latest.auditId,
-    audits,
-  };
-  await replaceFile(path.join(root, 'report-index.json'), json(index));
-  await replaceFile(path.join(root, 'index.html'), renderStaticReportIndex(index));
-  return index;
+}
+
+async function hasManagedMarker(root: string, marker: string): Promise<boolean> {
+  try {
+    const file = path.join(root, marker);
+    const metadata = await lstat(file);
+    if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.size > 1024 * 1024)
+      return false;
+    const value: unknown = JSON.parse(await readFile(file, 'utf8'));
+    return (
+      isRecord(value) &&
+      value.schemaVersion === 1 &&
+      (value.kind === 'codebasescan-static-report' || value.kind === 'codebasescan-report-index')
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function ensureManagedOutputRoot(root: string): Promise<void> {
+  try {
+    const metadata = await lstat(root);
+    if (!metadata.isDirectory() || metadata.isSymbolicLink())
+      throw new Error(`Report output is not a regular directory: ${root}`);
+    const entries = await readdir(root);
+    if (!entries.length) return;
+    for (const marker of ['manifest.json', 'report-index.json'])
+      if (await hasManagedMarker(root, marker)) return;
+    throw new Error(
+      `Report output already contains files and is not managed by CodebaseScan: ${root}`,
+    );
+  } catch (cause) {
+    if (cause instanceof Error && 'code' in cause && cause.code === 'ENOENT') {
+      await mkdir(root, { recursive: true, mode: 0o700 });
+      return;
+    }
+    throw cause;
+  }
 }
 
 export async function writeStaticReport(
@@ -368,18 +268,11 @@ export async function writeStaticReport(
   directory: string;
   rootEntrypoint: string;
   manifest: StaticReportManifest;
-  index: StaticReportIndex;
 }> {
   const root = path.resolve(outputRoot);
-  const directory = path.join(root, safeAuditSegment(report.auditId));
-  await mkdir(root, { recursive: true, mode: 0o700 });
-  try {
-    await mkdir(directory, { mode: 0o700 });
-  } catch (cause) {
-    if (cause instanceof Error && 'code' in cause && cause.code === 'EEXIST')
-      throw new Error(`Report directory already exists: ${directory}`);
-    throw cause;
-  }
+  const directory = root;
+  await ensureManagedOutputRoot(root);
+  const previousArtifacts = await managedArtifactPaths(root);
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
   const agentReport = parseAgentReport(buildAgentReport(report));
@@ -409,11 +302,6 @@ export async function writeStaticReport(
         ruleQuality,
         policyResult,
       }),
-    },
-    {
-      path: 'report-index-entry.json',
-      mediaType: 'application/json',
-      content: json(reportIndexEntry(report)),
     },
     {
       path: 'audit-report.json',
@@ -613,18 +501,19 @@ export async function writeStaticReport(
       : []),
   ];
   const runManifest = parseRunManifest(buildRunManifest(report, artifacts.map(describeArtifact)));
-  artifacts.splice(2, 0, {
+  artifacts.splice(1, 0, {
     path: 'run-manifest.json',
     mediaType: 'application/json',
     content: json(runManifest),
   });
   await Promise.all(
-    artifacts.map((artifact) =>
-      writeFile(path.join(directory, artifact.path), artifact.content, {
-        mode: 0o600,
-        flag: 'wx',
-      }),
-    ),
+    artifacts.map((artifact) => replaceFile(path.join(directory, artifact.path), artifact.content)),
+  );
+  const currentArtifacts = new Set(artifacts.map((artifact) => artifact.path));
+  await Promise.all(
+    previousArtifacts
+      .filter((artifact) => !currentArtifacts.has(artifact))
+      .map((artifact) => rm(path.join(directory, artifact), { force: true })),
   );
   const manifest: StaticReportManifest = {
     schemaVersion: staticReportVersion,
@@ -635,10 +524,6 @@ export async function writeStaticReport(
     entrypoint: 'index.html',
     files: artifacts.map(describeArtifact),
   };
-  await writeFile(path.join(directory, 'manifest.json'), json(manifest), {
-    mode: 0o600,
-    flag: 'wx',
-  });
-  const index = await updateStaticReportIndex(root);
-  return { directory, rootEntrypoint: path.join(root, 'index.html'), manifest, index };
+  await replaceFile(path.join(directory, 'manifest.json'), json(manifest));
+  return { directory, rootEntrypoint: path.join(root, 'index.html'), manifest };
 }
