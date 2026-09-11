@@ -19,11 +19,12 @@ source-risk paths, environment/OpenAPI/database/webhook/feature-flag contracts, 
 coverage, monorepo ownership, test references, and component-aware lifecycle comparison. Phase 6
 has a reproducible five-project corpus covering `seusaas-platform`, `robs-web`, `capta-core`,
 `aster-streaming-platform`, and `severyn`; a separate versioned calibration ledger, anonymized
-aggregate, CLI review commands, and accuracy-claim gate are implemented. Independent dispositions
-and false-negative review remain. Phase 10 now includes the installable CLI, stable static report root, npm/pnpm/Yarn clean
-install smoke tests, Node 22/24 CI, package dependency separation, guarded provenance metadata, and
-a public security-reporting route. Native Windows/macOS claims, signed releases, and independent
-ground truth remain.
+aggregate, CLI review commands, and accuracy-claim gate are implemented. The workflow-v31 pass
+captured 5,980 supported files without snapshot truncation and produced 156 candidates. Independent
+dispositions and false-negative review remain. Phase 10 now includes the installable CLI, stable
+static report root, npm/pnpm/Yarn clean install smoke tests, Node 22/24 CI, package dependency
+separation, guarded provenance metadata, and a public security-reporting route. Native
+Windows/macOS claims, signed releases, and independent ground truth remain.
 
 Portable scoped suppressions are implemented with owner, justification, supporting evidence,
 creation/expiry, and exact fingerprint/rule/path/source-digest matching. Stale, expired, and
@@ -32,7 +33,8 @@ unmatched records remain counted; reviewer identity/signature policy is still fu
 The versioned run manifest is implemented and publishes mode selection, snapshot limits, scanner
 status/duration, explicit coverage state, limitations, and output digests with a JSON Schema.
 Deterministic scanners now use a bounded local cache keyed by the exact snapshot, scanner version,
-workflow version, and safe variant. Runtime, advisory, Git-history, and external scanner evidence
+workflow version, and safe variant. Scanners that consume the structural profile also key their
+cache on the profile scanner version. Runtime, advisory, Git-history, and external scanner evidence
 is intentionally refreshed instead of replayed. Entries are atomically written with per-entry,
 entry-count, and total-size limits.
 
@@ -176,10 +178,12 @@ after removing project-specific identifiers and sensitive content.
 Gate: different projects produce useful, different results; repeated false positives are fixed or
 downgraded; no broad accuracy claim relies only on synthetic fixtures.
 
-Current corpus pass produces 145 candidates across five projects, down from 221 after eliminating
-generic ID-lookup duplicates in structurally parsed files and database-read mutation noise. The
-aggregate truthfully reports zero reviewed candidates and keeps `accuracyClaimReady` false until
-the independent review ledgers are populated.
+Current workflow-v31 corpus pass produces 156 candidates across five projects after increasing the
+bounded snapshot to cover all 5,980 supported files. All five snapshots and structural profiles are
+complete. Detector tuning removed known generic ID-lookup, comment, design-token, current-path, and
+recognized-validation noise without weakening the 55-case synthetic benchmark. The aggregate
+truthfully reports zero reviewed candidates and keeps `accuracyClaimReady` false until the
+independent review ledgers are populated.
 
 ## Phase 7 — bounded correction loop
 
@@ -263,8 +267,9 @@ comparisons require explicit credential, spend, or download approval and measure
 
 - clean-clone installation and package-content checks on supported platforms (implemented for
   Linux/WSL, Node 22.16/24, npm/pnpm/Yarn);
-- incremental/cache behavior keyed by snapshot and scanner versions (implemented for deterministic
-  scanners; cross-snapshot file-level incrementality remains future work);
+- incremental/cache behavior keyed by snapshot, scanner, workflow, safe variant, and structural
+  profile version (implemented for deterministic scanners; cross-snapshot file-level incrementality
+  remains future work);
 - abrupt-failure and resource-limit matrix for external scanners;
 - CLI help, init, doctor, JSON configuration schema, package contents, and correction-flow guide;
 - versioned run manifest, coverage manifest, policy-result schema, policy profiles, and stable exit

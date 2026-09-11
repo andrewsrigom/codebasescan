@@ -308,3 +308,37 @@ therefore retained only as fallback evidence outside structurally analyzed files
 validation rule now requires a state-changing operation; database reads no longer make a POST route
 a mutation candidate by themselves. Scanner versions change with detector behavior so the local
 cache cannot replay obsolete results.
+
+## 2026-09-11 — bounded runtime form observation
+
+The optional HTTP probe may inspect form metadata from the single explicitly approved HTML
+response. It follows no links, submits no form, retains no field value, and applies the same
+DNS/IP/redirect/body/time limits as the existing probe. Source-only audits remain unchanged and
+the absence of a probe remains `NOT RUN`.
+
+## 2026-09-11 — larger complete snapshots and compact report history
+
+The default bounded snapshot now accepts at most 4,000 supported files, 32 MiB total source, 2 MiB
+per ordinary source file, and 4 MiB per lockfile. Conventional generated, Pagefind, build, and
+framework output stays excluded. This covers the current five-project corpus without truncation;
+larger repositories must explicitly accept partial coverage until sharding exists. Static packages
+write a small integrity-checked index entry for root history, while trusted report readers accept a
+complete audit report up to 64 MiB. The root index never embeds the full large report.
+
+## 2026-09-11 — calibrated structural interpretation
+
+Broad lexical rules use TypeScript-parsed comment ranges so a template literal cannot make later
+comments look executable. Next.js validation follows captured reachable helpers and Server Action
+parameters. React client-boundary rules distinguish visual design values from credentials and
+treat `usePathname()` as a server-controlled current-path source. Project profiles retain only
+resolved local call edges and recover captured TypeScript workspace entrypoints from conventional
+`dist`, `build`, `lib`, or `out` declarations. Each behavior has a benign regression fixture and
+target code remains inert data.
+
+## 2026-09-11 — profile-aware cache and current report schema
+
+Every deterministic scanner that consumes the project profile includes the profile scanner version
+in its cache variant. Workflow v31 invalidates earlier checkpoints and cache entries so a newer
+profile cannot be combined with stale downstream findings or coverage. Report schema version 16 is
+centralized and portable review/suppression imports emit the current schema instead of downgrading
+the report.

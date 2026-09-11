@@ -54,7 +54,7 @@ These are product maturity items, not reasons to hide current coverage:
 
 - independent owner-confirmed review of findings, false positives, and manually found false
   negatives across structurally different SaaS projects;
-- a scalable snapshot/sharding design for projects beyond current file/byte limits;
+- optional sharding for repositories beyond the current 4,000-file / 32 MiB bounded snapshot;
 - native Windows and macOS gates before claiming those platforms; 0.2 supports Linux/WSL;
 - externally supplied authenticated browser/API evidence for runtime accessibility and deployed
   controls, with its own authorization and provenance contract;
@@ -63,9 +63,10 @@ These are product maturity items, not reasons to hide current coverage:
 - new framework/provider/ORM shapes only when real projects expose a reproducible miss.
 
 The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
-`aster-streaming-platform`, and `severyn`. The versioned aggregate currently contains 145
-candidates. It tests portability and detector behavior; reviewer labels and false-negative review
-remain incomplete, so it is not an accuracy claim.
+`aster-streaming-platform`, and `severyn`. The current workflow-v31 pass captured all 5,980
+supported files without snapshot truncation and produced 156 candidates. The versioned aggregate
+tests portability and detector behavior; reviewer labels and false-negative review remain
+incomplete, so it is not an accuracy claim.
 
 ## Deliberately later
 

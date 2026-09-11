@@ -10,6 +10,20 @@ Notable changes are recorded here.
   evidence observations first and source/provenance details collapsed.
 - Reduced real-project noise by suppressing generic ID-lookup hotspots when the structural scanner
   covered the file and by distinguishing database reads from state-changing Next.js operations.
+- Added bounded inspection of forms returned by the explicitly approved HTTP probe without crawling
+  or submitting them.
+- Expanded the bounded snapshot to 4,000 files, 32 MiB total, and 2 MiB per source file; excluded
+  conventional generated/Pagefind output and kept complete immutable reports readable up to 64 MiB.
+- Added a compact report-index entry so large audit packages retain stable latest/history navigation
+  without loading the complete report into the root index.
+- Reduced source-only noise by parsing comments reliably after template literals, recognizing
+  payload-scoped and Server Action validation, distinguishing visual design tokens, and trusting
+  navigation derived from the current pathname.
+- Compacted project profiles to resolved local call edges, mapped conventional workspace build
+  entrypoints back to captured TypeScript source, and invalidated every dependent scanner cache
+  when the profile version changes.
+- Centralized the current report schema version so portable review and suppression imports cannot
+  downgrade newer reports.
 
 ## 0.2.1 — 2026-09-11
 

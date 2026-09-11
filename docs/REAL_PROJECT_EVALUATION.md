@@ -68,7 +68,9 @@ Two owner-authorized private Next.js repositories were scanned locally after the
 
 The pass found two actionable detector-quality problems. Broad React prop taint produced 74 and 34 candidates; browser-source tracking and real navigation sinks reduced those sets to 2 and 9 without losing benchmark recall. Generic `.exec()` handling treated a regular-expression parser as command execution and produced 14 derived Next.js candidates; it now produces 0 for that path. Both regressions have benign tests. These are tuning results, not project security conclusions or generic accuracy claims.
 
-Current snapshot limits are 1,500 supported files, 8 MiB total source, 512 KiB per source file, 4 MiB per dependency lockfile, depth 24, and 12,000 visited entries. Preflight reports predicted truncation and requires explicit approval before a partial audit.
+Current snapshot limits are 4,000 supported files, 32 MiB total source, 2 MiB per source file,
+4 MiB per dependency lockfile, depth 24, and 12,000 visited entries. Preflight reports predicted
+truncation and requires explicit approval before a partial audit.
 
 ## 2026-09-10 five-project calibration pass
 
@@ -110,3 +112,28 @@ five-project set. Synthetic fixture results remain separate from real-project qu
 Process wall time and peak resident memory are now captured externally for this pass. Review time,
 time to first accepted result, manual misses, and accepted-finding cost remain unmeasured until
 human disposition and optional AI evaluation begin.
+
+## 2026-09-11 complete-snapshot calibration refresh
+
+The current workflow-v31 build repeated the owner-authorized corpus after increasing the bounded
+snapshot, excluding conventional generated output, and compacting the structural graph to resolved
+local call edges. Package entrypoints that declare captured TypeScript through conventional
+`dist`, `build`, `lib`, or `out` paths are mapped back to source without loading package code.
+
+| Project                  | Files | Snapshot/profile | Findings                             | Tasks | Core coverage          |
+| ------------------------ | ----: | ---------------- | ------------------------------------ | ----: | ---------------------- |
+| seusaas-platform         | 1,200 | complete         | 29: 2 high, 2 medium, 23 low, 2 info |    39 | 14 complete, 2 partial |
+| robs-web                 | 1,072 | complete         | 15: 11 medium, 1 low, 3 info         |    23 | 15 complete, 1 partial |
+| capta-core               | 2,555 | complete         | 109: 15 high, 28 medium, 66 low      |   100 | 12 complete, 4 partial |
+| aster-streaming-platform |   839 | complete         | 3: 1 low, 2 info                     |     9 | 14 complete, 2 partial |
+| severyn                  |   314 | complete         | 0                                    |     3 | 14 complete, 0 partial |
+
+The five reports cover 5,980 supported files and 156 source candidates with no snapshot or
+structural-profile truncation. Remaining partial states are explicit bounded mechanical-analysis
+retention or safe target-configuration limits; runtime Axe, HTTP, deployment, and infrastructure
+evidence remains not performed, not run, or unsupported as applicable.
+
+The versioned calibration aggregate still has zero independent candidate labels and zero completed
+false-negative reviews, so `accuracyClaimReady` remains false. The fixture benchmark is a separate
+regression gate: 55 true positives, zero false positives, and zero false negatives on declared
+synthetic ground truth.
