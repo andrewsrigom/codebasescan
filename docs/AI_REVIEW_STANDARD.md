@@ -20,20 +20,24 @@ Findings are enriched and sorted deterministically before AI is considered. Prio
 - dependency evidence: source referenced +7, direct but not referenced -2, other advisory -18;
 - finding evidence entirely in tests/examples: -15.
 
-The queue is sorted by priority and stable finding ID. Secret findings bypass model inference. The
-current finding workflow inspects at most 12 non-secret candidates per audit. AI does not roam the
-repository looking for additional problems.
+The queue is sorted by priority and stable finding ID. Secret findings bypass model inference.
+Review depth is explicit: quick inspects at most 6 candidates, standard 12, and deep 24. Standard
+and deep may issue bounded plain-text searches against the immutable captured snapshot. They cannot
+read outside that snapshot or turn search matches into findings without cited evidence.
 
 ## Context protocol
 
-The context broker exposes only opaque IDs related to the selected finding: evidence, entry points,
-symbols, security facts, and resolved calls. A model cannot request an arbitrary path.
+The context broker exposes opaque IDs related to the selected finding: evidence, entry points,
+symbols, security facts, resolved calls, and bounded search matches. A model cannot request an
+arbitrary path. Limits depend on the selected depth:
 
-- at most 60 catalog entries;
-- at most 12 initial entries;
-- at most 2 requested IDs per round;
-- at most 2 context rounds;
-- at most 6,000 characters per item and 16,000 total characters;
+- quick: 40 catalog entries, 8 initial items, 1 round, 8,000 context characters, no search;
+- standard: 60 catalog entries, 12 initial items, 2 requested IDs per round, 2 rounds, 16,000
+  context characters, and at most 3,000,000 snapshot characters searched;
+- deep: 120 catalog entries, 16 initial items, 4 requested IDs per round, 4 rounds, 40,000 context
+  characters, and at most 12,000,000 snapshot characters searched;
+- standard and deep accept at most 2 plain-text queries per round and return at most 4 or 8 matches;
+- every item remains capped at 6,000 characters;
 - every delivery is resolved against the immutable captured snapshot and redacted again.
 
 Unknown, duplicate, path-shaped, excessive, or unavailable requests are rejected. Secret files do
@@ -57,7 +61,7 @@ The response must validate against the versioned structured schema and include:
 - `confidence`, `explanation`, and cited `evidenceIds`;
 - `controlsFound`, `missingEvidence`, `impact`, and `preconditions`;
 - `remediationOptions` and `verificationPlan`;
-- `limitations` and optional bounded `requestedContextIds`;
+- `limitations`, bounded `requestedContextIds`, and bounded plain-text `searchQueries`;
 - provider, model, prompt version, delivered context IDs/files, rounds, truncation, redaction, token,
   cache, latency, and configured-cost provenance where available.
 
@@ -103,10 +107,17 @@ Feature-flag records are also navigation context. AI must preserve plan/environm
 dynamic keys as unknown, cite declaration and usage IDs, and may not infer runtime rollout state or
 dead code from a declaration-only, usage-only, or default-conflict candidate.
 
-## Expansion gate
+## Agent report and external review
 
-Checklist-gap investigation and whole-report synthesis remain future workflows. They may be enabled
-only after they use the same bounded ID protocol and structured result contract, have mocked failure
-and budget tests, and demonstrate better accepted-review value on authorized projects. Provider
-comparison must record invalid citations, abstention, latency, tokens, cost, and accepted outcomes;
-fixture success alone is insufficient.
+Every static package includes `agent-report.json` and `agent-rules.json`. The agent report joins
+the deterministic remediation plan with quick, standard, and deep workflows. The rule pack supplies
+questions, required evidence, risk and safe signals, search hints, false-positive checks, and
+limitations. The bundled `codebasescan-review` Codex skill consumes the same contract.
+
+Built-in LangGraph review remains bounded to the captured snapshot. An external Codex session may
+inspect the authorized working tree directly after the user installs or invokes the skill, but it
+must validate artifact hashes, treat repository content as untrusted, and keep newly discovered
+hypotheses separate from scanner output.
+
+Provider comparison must still record invalid citations, abstention, latency, tokens, cost, and
+accepted outcomes; fixture success alone is insufficient.

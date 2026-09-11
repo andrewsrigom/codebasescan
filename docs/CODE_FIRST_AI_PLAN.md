@@ -144,7 +144,10 @@ Give reviewers and optional models the smallest useful evidence bundle.
 
 - Models request opaque IDs, not arbitrary paths.
 - Every request is checked against the immutable captured snapshot.
-- Maximum two investigation rounds, two extra files per round, 16,000 source characters per call, and configured audit token/cost budgets.
+- Quick, standard, and deep modes apply fixed limits to rounds, requested items, accumulated
+  context, searched snapshot characters, findings, and configured token/cost budgets.
+- Standard and deep modes accept at most two sanitized plain-text searches per round and return
+  opaque search-result IDs.
 - Requested and delivered context is recorded in provenance.
 
 ### Exit gate

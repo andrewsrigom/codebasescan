@@ -4,7 +4,7 @@ The detailed engineering sequence lives in
 [Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md). This page tracks the product boundary and the
 remaining gates.
 
-## Current release — 0.2.1
+## Current source — 0.3.0 candidate
 
 CodebaseScan now has the intended local CLI workflow:
 
@@ -31,6 +31,9 @@ Implemented release work:
 - CLI help, non-interactive CI behavior, phase/timing output, simple errors, and report reopening;
 - baseline lifecycle, suppressions, human dispositions, policy exit codes, and focused agent bundles;
 - LangGraph orchestration with in-memory CLI checkpoints and optional persistent SQLite review;
+- versioned agent report and review-rule contracts with quick, standard, and deep investigation;
+- bounded snapshot search, structured LangChain local review, direct controlled OpenAI review, and
+  a packaged Codex review skill;
 - script-free static report root, latest pointer, immutable bounded history, and artifact hashes;
 - Node 22.16/24 CI plus npm, pnpm, and Yarn clean-install coverage;
 - dependency split that keeps Next.js/shadcn UI, SQLite, and Ollama out of the default CLI install;
@@ -63,14 +66,14 @@ These are product maturity items, not reasons to hide current coverage:
 - new framework/provider/ORM shapes only when real projects expose a reproducible miss.
 
 The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
-`aster-streaming-platform`, and `severyn`. The current workflow-v32 pass captured all 5,980
+`aster-streaming-platform`, and `severyn`. The workflow-v32 calibration pass captured all 5,980
 supported files without snapshot truncation and produced 156 candidates. The versioned aggregate
 tests portability and detector behavior; reviewer labels and false-negative review remain
 incomplete, so it is not an accuracy claim.
 
 ## Deliberately later
 
-AI-assisted investigation, automated fixes, Docker/CI target execution, Kubernetes, Terraform,
-cloud IAM, broader DAST, exploitation, hosted teams, RBAC, billing, and compliance certification
-remain separate projects with separate threat models. Mechanical source evidence stays useful
-without them.
+Autonomous fixes, Docker/CI target execution, Kubernetes, Terraform, cloud IAM, broader DAST,
+exploitation, hosted teams, RBAC, billing, and compliance certification remain separate projects
+with separate threat models. AI investigation is available, but provider comparison and
+owner-confirmed usefulness still belong to the calibration gate.

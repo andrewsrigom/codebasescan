@@ -22,13 +22,13 @@ Linux/WSL is the supported 0.3 candidate environment. Native Windows and macOS a
 | npm run format:check        | Passed                                                                                  |
 | npm run typecheck           | Passed                                                                                  |
 | npm run lint                | Passed, zero warnings                                                                   |
-| npm test                    | 368 passed                                                                              |
+| npm test                    | 379 passed                                                                              |
 | npm run benchmark           | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
 | React benchmark subset      | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
 | SaaS benchmark subset       | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
-| npm run test:graph          | 13 passed, including real scanners, cache, and worker recovery                          |
+| npm run test:graph          | 14 passed, including deep snapshot search, real scanners, cache, and worker recovery    |
 | npm run build               | Passed                                                                                  |
 | npm run test:e2e            | 7 passed in Chromium                                                                    |
 | npm audit --audit-level=low | 0 known vulnerabilities                                                                 |
@@ -44,11 +44,11 @@ The actual tarball was installed into an empty generated project. Each smoke ran
 
 | Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
 | ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
-| Node 24 / npm     | 259,299 B | 1,164,991 B      | 95,461,644 B           | 5.00 s  | 2.14 s |
-| Node 24 / pnpm    | 259,299 B | 1,164,991 B      | 95,546,926 B           | 1.98 s  | 2.58 s |
-| Node 24 / Yarn    | 259,299 B | 1,164,991 B      | 104,952,644 B          | 3.83 s  | 2.36 s |
+| Node 24 / npm     | 274,447 B | 1,219,104 B      | 95,519,559 B           | 10.89 s | 2.19 s |
+| Node 24 / pnpm    | 274,447 B | 1,219,104 B      | 95,604,841 B           | 2.13 s  | 2.30 s |
+| Node 24 / Yarn    | 274,447 B | 1,219,104 B      | 105,010,559 B          | 3.91 s  | 2.17 s |
 
-The tarball contains 94 files. Next.js, React, shadcn, SQLite checkpoint, and Ollama packages are
+The tarball contains 103 files. Next.js, React, shadcn, SQLite checkpoint, and Ollama packages are
 not installed for the default CLI.
 
 ## Real-project calibration
@@ -79,10 +79,12 @@ reports `accuracyClaimReady: false`.
 - Node.js manifest and npm/pnpm/Yarn lockfile integrity checks;
 - nine audit modes with explicit coverage and applicability;
 - paired static accessibility and web-posture rules plus bounded Axe import;
-- LangGraph fan-in, interrupt/resume, memory and SQLite checkpoints;
+- LangGraph fan-in, bounded quick/standard/deep context loops, snapshot-only search,
+  interrupt/resume, memory and SQLite checkpoints;
 - Semgrep and Gitleaks isolated local adapters;
 - dependency structure, duplication, dead code, complexity, and imported coverage summaries;
 - OSV, HTTP, Ollama, and OpenAI boundaries with opt-in and bounded failure behavior;
+- versioned agent report/rule schemas and the packaged Codex review skill installer;
 - immutable report packages, stable history, schemas, integrity manifest, comparison, and policy;
 - CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
 - persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.

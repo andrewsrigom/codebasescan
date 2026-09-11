@@ -8,8 +8,8 @@ bounded snapshot, parses target code/configuration as untrusted data, runs deter
 and exports a human report plus machine-readable remediation artifacts. It never installs or runs
 the target project.
 
-The audit workflow is `codebasescan-audit-v32`. Twenty-seven scanner/profile results fan into
-normalization. The audit-mode pack is `1.0.0`. Report schema v16 and report-index schema v1 are
+The audit workflow is `codebasescan-audit-v33`. Twenty-seven scanner/profile results fan into
+normalization. The audit-mode pack is `1.0.0`. Report schema v17 and report-index schema v1 are
 current. Rule-quality schema v3 synchronizes declared per-rule metrics with benchmark ground truth.
 The generic SaaS layer consists of:
 
@@ -34,6 +34,8 @@ The generic SaaS layer consists of:
 - lifecycle diff v2 with local-history recurrence and per-component summaries.
 - lifecycle diff v3 with dependency advisory identity independent of lockfile line movement.
 - agent-plan v5 and task-bundle v3 component/test context for focused authorized corrections.
+- agent-report v1, review-rule pack v1, bounded quick/standard/deep LangGraph investigation, and a
+  packaged Codex review skill.
 - static web discovery/SEO posture for React, Next.js, monorepos, and route groups.
 - six paired JSX accessibility rules plus bounded import of externally generated Axe JSON.
 - a stable static report root with latest audit and immutable history.

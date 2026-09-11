@@ -149,11 +149,16 @@ command or authenticates the executor.
 
 ## AI boundary
 
-`CODEBASESCAN_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`.
+`CODEBASESCAN_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`. `CODEBASESCAN_AI_DEPTH` selects `quick`, `standard`, or `deep`; each depth has fixed context, search, round, finding, and token-budget defaults.
 
-The context broker exposes a finding-specific catalog of opaque evidence, entry-point, symbol, fact, and resolved-call IDs. Models cannot name arbitrary repository paths. Delivery is checked against the immutable captured snapshot, rejects unknown/repeated IDs, permits at most two requested items per round, and caps accumulated source context at 16,000 characters. Context is redacted again for credentials, emails, and user-home paths; `.env` and key files never enter the snapshot.
+The context broker exposes a finding-specific catalog of opaque evidence, entry-point, symbol, fact, resolved-call, and search-result IDs. Models cannot name arbitrary repository paths. Standard and deep review may request at most two sanitized plain-text searches over bounded characters already present in the immutable captured snapshot. Delivery rejects unknown/repeated IDs and applies depth-specific item, round, and accumulated-context limits. Context is redacted again for credentials, emails, and user-home paths; `.env` and key files never enter the snapshot.
 
-Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, and context digest. Reports record provider, model, prompt version, delivered IDs/files, truncation, redaction result, tokens, cache use, and configured-price cost approximation. Model output includes controls found, missing evidence, impact, preconditions, remediation choices, and safe verification steps; it remains an assessment only.
+Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, rules, depth, and context digest. LangGraph owns context collection, structured assessment, bounded follow-up, checkpointing, and termination. LangChain supplies the structured local-model adapter; the OpenAI adapter preserves the same reviewer contract while retaining direct request, storage, retry, and token controls. Reports record provider, model, prompt version, delivered IDs/files, search requests, truncation, redaction result, tokens, cache use, and configured-price cost approximation. Model output includes controls found, missing evidence, impact, preconditions, remediation choices, and safe verification steps; it remains an assessment only.
+
+Static report packages also include `agent-report.json`, `agent-rules.json`, their schemas, and a
+bundled Codex skill installer. This external-agent path may inspect an authorized working tree, but
+it must validate artifact hashes and keep conclusions or newly discovered hypotheses separate from
+deterministic scanner evidence.
 
 ## Evidence, assessment, disposition, and coverage
 

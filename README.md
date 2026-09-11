@@ -35,6 +35,16 @@ npx codebasescan doctor
 npx codebasescan audit .
 ```
 
+To let Codex investigate the generated evidence with the bundled review rules:
+
+```bash
+npx codebasescan agent install codex .
+```
+
+This writes `.codex/skills/codebasescan-review` in the target project. The skill verifies the
+report package, inspects relevant repository context, challenges false positives, and keeps any
+new AI hypothesis separate from deterministic findings.
+
 pnpm and Yarn installations are also tested. Package dependencies install with CodebaseScan; the
 target project's dependencies, scripts, configuration modules, tests, and application code are
 never installed or executed by an audit. The persistent review application and local Ollama adapter
@@ -78,6 +88,8 @@ Each immutable audit directory contains:
 - `index.html` — human-readable report;
 - `audit-report.json` — complete machine-readable result;
 - `agent-plan.json` — grouped work queue for an authorized coding agent;
+- `agent-report.json` — complete review workflow, depths, tasks, and rule references for AI;
+- `agent-rules.json` — versioned evidence questions and false-positive checks;
 - `run-manifest.json` — scanner status, coverage, versions, limits, and artifact hashes;
 - `policy-result.json` — optional CI policy result;
 - SARIF, Markdown, CycloneDX, schemas, and a hash manifest.
@@ -143,7 +155,25 @@ CODEBASESCAN_OSV=true
 
 The scanner binaries must already be installed and trusted. OSV receives package names and exact resolved versions only.
 
-An optional model investigation layer also exists, but it is off by default and is not needed for the mechanical audit. There is no automatic local-to-cloud fallback.
+An optional model investigation layer also exists, but it is off by default and is not needed for
+the mechanical audit. There is no automatic local-to-cloud fallback.
+
+```dotenv
+CODEBASESCAN_AI=openai
+OPENAI_MODEL=<model>
+OPENAI_API_KEY=<key>
+CODEBASESCAN_AI_DEPTH=standard
+```
+
+Use `quick` for report-focused triage, `standard` for related source and bounded snapshot
+search, or `deep` for broader cross-file investigation. Deep review has higher explicit context,
+call, and token limits. Local Ollama uses the same structured reviewer contract with
+`CODEBASESCAN_AI=ollama` and `OLLAMA_MODEL=<downloaded-model>`.
+
+LangGraph owns the repeatable collect, assess, challenge, and stop decisions, including checkpoint
+compatibility. LangChain provides the structured model interface for the optional local adapter.
+The built-in workflow searches only the captured immutable snapshot; the installed Codex skill can
+inspect the authorized repository directly while following the same rules and evidence contract.
 
 For browser accessibility evidence, generate a standard Axe JSON result outside CodebaseScan and
 place it at the project root as `codebasescan.axe.json`, `axe-results.json`, or

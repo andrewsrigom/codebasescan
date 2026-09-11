@@ -359,3 +359,15 @@ present in declared benchmark ground truth. A repository test reconstructs the e
 from every `ground-truth.json` file and fails on missing or stale entries. Dynamic execution now has
 its own inert positive fixture paired with the existing comment-only negative fixture. Synthetic
 metrics remain separate from independent real-project calibration.
+
+## 2026-09-11 — agent review contract and bounded repository investigation
+
+Agent review is an optional layer over deterministic evidence, not a replacement scanner.
+`agent-report.json` combines the remediation plan with a versioned generic rule pack and explicit
+quick, standard, and deep workflows. Standard and deep LangGraph review may search only bounded
+plain text from the immutable captured snapshot; search matches receive opaque IDs and remain
+untrusted evidence. LangChain supplies the structured local-model adapter, while the controlled
+OpenAI adapter keeps direct storage, timeout, retry, cache, and token-budget enforcement. A bundled
+Codex skill may inspect an authorized working tree outside the built-in snapshot loop, but it must
+verify report hashes, apply the same rules, and keep new hypotheses separate from detector output.
+Workflow v33 and report schema v17 identify the changed persisted behavior.
