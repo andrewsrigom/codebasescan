@@ -48,7 +48,7 @@ const schema = z.object({
     projectName: shortText,
     createdAt: z.iso.datetime(),
     snapshotDigest: digest,
-    reportSchemaVersion: z.number().int().min(1).max(16),
+    reportSchemaVersion: z.number().int().min(1).max(17),
     aiMode: z.enum(['disabled', 'ollama', 'openai']),
     publication: z.enum(['draft', 'reviewed']),
   }),
