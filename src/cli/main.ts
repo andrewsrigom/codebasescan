@@ -46,12 +46,20 @@ import {
 import { parseSuppressionLedger } from '../domain/suppression-ledger-schema.ts';
 import type { VerificationLedger } from '../domain/verification-ledger.ts';
 import { parseVerificationLedger } from '../domain/verification-ledger-schema.ts';
+import { renderCliHelp } from './help.ts';
+import { initializeProjectConfig } from './init.ts';
+import { createCliProgress } from './progress.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
 const config = configuration();
 const arguments_ = process.argv.slice(2);
 const [command, target] = arguments_;
+const quiet = arguments_.includes('--quiet');
+const verbose = arguments_.includes('--verbose');
+const nonInteractive =
+  arguments_.includes('--non-interactive') || ['1', 'true'].includes(process.env.CI ?? '');
+const progress = createCliProgress(quiet, verbose);
 const option = (name: string) => {
   const index = arguments_.indexOf(name);
   const value = index >= 0 ? arguments_[index + 1] : undefined;
@@ -246,6 +254,7 @@ async function defaultSuppressionLedgerDestination(location: string): Promise<st
 }
 
 async function preflight(root: string, requireApproval: boolean) {
+  progress.phase('Inspecting project scope');
   const estimate = await estimateProjectScope(root);
   const truncationApproved = arguments_.includes('--allow-partial-snapshot');
   const size = (estimate.supportedBytes / (1024 * 1024)).toFixed(2);
@@ -261,9 +270,19 @@ async function preflight(root: string, requireApproval: boolean) {
 
 let store: AuditStore | null = null;
 try {
-  if (command === 'open') {
+  if (!command || command === 'help' || command === '--help' || arguments_.includes('--help')) {
+    console.log(renderCliHelp(command === 'help' ? target : command));
+  } else if (command === 'init') {
+    progress.phase('Creating declarative project configuration');
+    const project = target && !target.startsWith('--') ? target : '.';
+    const destination = await initializeProjectConfig(project, arguments_.includes('--force'));
+    console.log(`Created ${destination}`);
+  } else if (command === 'open') {
+    if (nonInteractive)
+      throw new Error('The report server is interactive. Remove --non-interactive and CI=true.');
     await openReport(target && !target.startsWith('--') ? target : 'codebasescan-report');
   } else if (command === 'doctor') {
+    progress.phase('Checking local capabilities');
     const checks = await runDoctor(config);
     console.log(renderDoctor(checks));
     if (checks.some((check) => check.status === 'fail')) process.exitCode = 1;
@@ -374,6 +393,8 @@ try {
     process.exitCode = policyResult.exitCode;
     if (arguments_.includes('--open')) await openReport(path.dirname(staticReport.rootEntrypoint));
   } else if (command === 'audit') {
+    if (nonInteractive && arguments_.includes('--open'))
+      throw new Error('--open cannot be used with --non-interactive or CI=true.');
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-ci-'));
     const ciStore = new AuditStore(':memory:');
     try {
@@ -391,6 +412,7 @@ try {
       const project = ciStore.registerProject(path.basename(root), root);
       const audit = ciStore.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
       ciStore.claim(audit.id);
+      progress.phase('Running deterministic scanners');
       await executeAudit(ciStore, audit.id, ciConfig, undefined, { humanReview: false });
       const completed = ciStore.audit(audit.id);
       if (completed.status !== 'completed' || !completed.report)
@@ -403,6 +425,7 @@ try {
       const report = suppressionsPath
         ? applySuppressionLedger(reviewedReport, await loadSuppressionLedger(suppressionsPath))
         : reviewedReport;
+      progress.scanners(report.scanners);
       const threshold = option('--fail-on');
       if (threshold && !severities.includes(threshold as Severity))
         throw new Error('Use critical, high, medium, low, or info for --fail-on.');
@@ -432,6 +455,7 @@ try {
         throw new Error('--open requires the default static report output.');
       let staticReportDirectory: string | undefined;
       if (!requestedFormat && !destination) {
+        progress.phase('Writing immutable report package');
         const staticReport = await writeStaticReport(
           report,
           option('--report-dir') ?? path.resolve('codebasescan-report'),
@@ -535,13 +559,26 @@ try {
       });
       console.log(JSON.stringify(evaluateReports(reports), null, 2));
     } else {
-      console.log(
-        'CodebaseScan\n\n  npm run cli -- audit [project] [--report-dir codebasescan-report] [--open] [--port 4173] [--modes security,saas,accessibility-static,privacy,reliability,next-react,maintainability,release-readiness] [--secret-history] [--allow-partial-snapshot] [--baseline previous.json] [--reviews review-ledger.json] [--suppressions suppression-ledger.json] [--policy advisory|balanced|strict]\n  npm run cli -- open [report-directory|report-root] [--port 4173]\n  npm run cli -- finalize <after-report> --baseline <before-report> --verification verification-ledger.json [--report-dir codebasescan-final-report] [--policy advisory|balanced|strict] [--open]\n  npm run cli -- audit [project] [--fail-on high] # compatibility severity gate\n  npm run cli -- audit [project] --format json|sarif|sbom|md|html|bundle|agent-plan|rule-quality [--output report.json]\n  npm run cli -- review <report-directory|audit-report.json> <finding-id> confirmed|false_positive|accepted_risk --note "evidence" [--output review-ledger.json]\n  npm run cli -- suppress <report-directory|audit-report.json> <finding-id> --owner "name" --justification "reason" --evidence "record" [--expires-at ISO] [--output suppression-ledger.json]\n  npm run cli -- task <report-directory|audit-report.json> <task-id> [--output task.json]\n  npm run cli -- doctor\n  npm run cli -- advisories update /path/to/project\n  npm run cli -- register /path/to/project\n  npm run cli -- scan /path/to/project [--modes security,privacy] [--secret-history] [--allow-partial-snapshot] [--probe-url http://127.0.0.1:3000/] [--allow-private-network]\n  npm run cli -- list\n  npm run cli -- compare <base-audit-id> <current-audit-id>\n  npm run cli -- evaluate <audit-id> [more-audit-ids...]\n  npm run cli -- export <audit-id> json|md|html|sarif|sbom|bundle|agent-plan|rule-quality',
-      );
+      const known = new Set([
+        'register',
+        'scan',
+        'list',
+        'export',
+        'compare',
+        'evaluate',
+        'advisories',
+        'task',
+        'review',
+        'suppress',
+        'finalize',
+      ]);
+      if (known.has(command))
+        throw new Error(`Missing or invalid arguments. Run codebasescan ${command} --help.`);
+      throw new Error(`Unknown command "${command}". Run codebasescan --help.`);
     }
   }
 } catch (error) {
-  console.error(error instanceof Error ? error.message : 'Command failed.');
+  console.error(`Error: ${error instanceof Error ? error.message : 'Command failed.'}`);
   process.exitCode = command === 'audit' || command === 'finalize' ? 2 : 1;
 } finally {
   store?.close();

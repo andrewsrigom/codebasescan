@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/andrewsrigom/codebasescan/main/configs/codebasescan.config.schema.json",
+  "title": "CodebaseScan project configuration",
+  "description": "Safe declarative context for CodebaseScan. It cannot load code, plugins, or regular expressions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "vocabulary": { "$ref": "#/$defs/vocabulary" },
+    "helpers": { "$ref": "#/$defs/helpers" },
+    "expectedUnauthenticatedRoutes": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/routePattern" }
+    },
+    "context": { "$ref": "#/$defs/context" },
+    "verification": { "$ref": "#/$defs/verification" }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+    },
+    "identifiers": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "pathPattern": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "not": { "pattern": "(^/|^[A-Za-z]:|\\.\\.)" }
+    },
+    "pathPatterns": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/pathPattern" }
+    },
+    "routePattern": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "^/[A-Za-z0-9_./:\\[\\]-]*(?:/\\*)?$"
+    },
+    "labels": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80,
+        "pattern": "^[A-Za-z0-9@._ /-]+$"
+      }
+    },
+    "vocabulary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tenantKeys": { "$ref": "#/$defs/identifiers" },
+        "ownerKeys": { "$ref": "#/$defs/identifiers" },
+        "roleKeys": { "$ref": "#/$defs/identifiers" },
+        "billingKeys": { "$ref": "#/$defs/identifiers" },
+        "tokenKeys": { "$ref": "#/$defs/identifiers" }
+      }
+    },
+    "helpers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authentication": { "$ref": "#/$defs/identifiers" },
+        "authorization": { "$ref": "#/$defs/identifiers" },
+        "validation": { "$ref": "#/$defs/identifiers" },
+        "resourceScope": { "$ref": "#/$defs/identifiers" },
+        "rateLimit": { "$ref": "#/$defs/identifiers" },
+        "idempotency": { "$ref": "#/$defs/identifiers" },
+        "csrf": { "$ref": "#/$defs/identifiers" },
+        "auditLog": { "$ref": "#/$defs/identifiers" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "features": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "authentication",
+              "tenancy",
+              "billing",
+              "webhooks",
+              "administration",
+              "uploads"
+            ]
+          }
+        },
+        "roles": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/identifier" }
+        },
+        "sensitiveData": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "credentials",
+              "personal",
+              "financial",
+              "health",
+              "location",
+              "communications",
+              "files",
+              "analytics"
+            ]
+          }
+        },
+        "storageBoundaries": { "$ref": "#/$defs/labels" },
+        "externalServices": { "$ref": "#/$defs/labels" },
+        "priorityPaths": { "$ref": "#/$defs/pathPatterns" },
+        "outOfScopePaths": { "$ref": "#/$defs/pathPatterns" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packageManager", "testScripts", "buildScripts"],
+      "properties": {
+        "packageManager": { "enum": ["npm", "pnpm", "yarn"] },
+        "testScripts": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9:_-]{1,80}$" }
+        },
+        "buildScripts": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9:_-]{1,80}$" }
+        }
+      }
+    }
+  }
+}
