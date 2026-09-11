@@ -4,6 +4,11 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Removed built-in model orchestration and its LangChain/LangGraph dependencies. CodebaseScan now
+  keeps its audit engine deterministic and exports versioned contracts for separately authorized
+  coding agents.
+- Changed the default static output to one current coverage-style report that is safely updated in
+  place. Legacy history roots remain readable, but new runs no longer accumulate audit directories.
 - Added versioned real-project calibration ledgers, manual miss tracking, anonymized aggregate
   metrics, JSON Schemas, and CLI review/evaluation commands.
 - Added human review guidance for every finding in the static report and React workspace, with
@@ -14,8 +19,6 @@ Notable changes are recorded here.
   or submitting them.
 - Expanded the bounded snapshot to 4,000 files, 32 MiB total, and 2 MiB per source file; excluded
   conventional generated/Pagefind output and kept complete immutable reports readable up to 64 MiB.
-- Added a compact report-index entry so large audit packages retain stable latest/history navigation
-  without loading the complete report into the root index.
 - Reduced source-only noise by parsing comments reliably after template literals, recognizing
   payload-scoped and Server Action validation, distinguishing visual design tokens, and trusting
   navigation derived from the current pathname.

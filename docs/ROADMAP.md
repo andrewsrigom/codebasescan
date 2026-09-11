@@ -1,79 +1,81 @@
 # Roadmap
 
-The detailed engineering sequence lives in
-[Autonomous audit roadmap](AUTONOMOUS_ROADMAP.md). This page tracks the product boundary and the
-remaining gates.
+CodebaseScan is moving toward one clear product: a deterministic CLI that audits a JavaScript
+codebase and updates a portable coverage-style report. The report is useful to people, CI, and a
+coding agent chosen by the user.
 
-## Current source — 0.3.0 candidate
+## Ready now
 
-CodebaseScan now has the intended local CLI workflow:
+- project-local npm CLI with `init`, `doctor`, `audit`, `open`, policy, baseline, review,
+  suppression, calibration, and agent-bundle commands;
+- bounded snapshots that never execute target code or executable configuration;
+- nine audit modes for Node.js, TypeScript, JavaScript, React, Next.js, and common SaaS mechanics;
+- TypeScript/AST, framework, supply-chain, accessibility, privacy, reliability, release, web, and
+  maintainability analysis;
+- optional trusted Semgrep/Gitleaks, offline OSV evidence, imported Axe output, and an explicitly
+  approved one-URL posture probe;
+- one current script-free report with JSON, SARIF, CycloneDX, schemas, policy, provenance, and
+  artifact hashes;
+- versioned external-agent rules, plans, report contracts, and a bundled Codex review skill;
+- benchmark fixtures, real-project portability runs, npm/pnpm/Yarn package smoke tests, and guarded
+  public releases.
 
-1. install it as a project development dependency;
-2. run `codebasescan init` and `codebasescan doctor`;
-3. run one command against an authorized repository;
-4. receive a stable `codebasescan-report/index.html` with newest result and immutable history;
-5. use the same directory as a static hosted report when its contents are safe to expose.
+## Phase 1 — release stabilization
 
-The default offline audit has nine selectable modes for Node.js, JavaScript, TypeScript, React, and
-Next.js projects. It emits a human report plus versioned JSON, agent plan, run manifest, policy,
-SARIF, CycloneDX, Markdown, contract, comparison, and integrity artifacts. Missing or partial
-coverage is explicit and there is no global security score.
+1. finish the 0.3 release gate after the deterministic engine and report migration;
+2. verify upgrade behavior from legacy report-history roots;
+3. validate the packed package on npm, pnpm, Yarn, Node 22.16, and Node 24;
+4. regenerate the public demo and fixture exports from the current engine;
+5. publish only after README, changelog, schemas, package contents, tag, and provenance agree.
 
-Implemented release work:
+## Phase 2 — trustworthy results
 
-- bounded source snapshots that never load target code or executable configuration;
-- deterministic security, SaaS, Next.js, React, accessibility, privacy, reliability,
-  maintainability, supply-chain, release, and web-posture checks;
-- npm, pnpm, Yarn Classic/Berry lockfile parsing and clean package-install smoke tests;
-- optional trusted Semgrep/Gitleaks, offline OSV cache, and explicitly approved single-URL probe;
-- optional import of externally generated Axe results without running a target browser;
-- safe JSON/JSONC project vocabulary and editor schema;
-- CLI help, non-interactive CI behavior, phase/timing output, simple errors, and report reopening;
-- baseline lifecycle, suppressions, human dispositions, policy exit codes, and focused agent bundles;
-- LangGraph orchestration with in-memory CLI checkpoints and optional persistent SQLite review;
-- versioned agent report and review-rule contracts with quick, standard, and deep investigation;
-- bounded snapshot search, structured LangChain local review, direct controlled OpenAI review, and
-  a packaged Codex review skill;
-- script-free static report root, latest pointer, immutable bounded history, and artifact hashes;
-- Node 22.16/24 CI plus npm, pnpm, and Yarn clean-install coverage;
-- dependency split that keeps Next.js/shadcn UI, SQLite, and Ollama out of the default CLI install;
-- MIT license, English public documentation, contribution/security policies, public repository,
-  private vulnerability reporting, and guarded provenance metadata.
+1. independently label candidates in at least five structurally different authorized repositories;
+2. record manual misses and false-negative review scope rather than inferring recall;
+3. turn repeated false positives and misses into paired vulnerable/benign regression fixtures;
+4. publish per-rule evidence, location, and explanation quality without inventing a global score;
+5. add provider, ORM, auth, queue, upload, WebSocket, and monorepo shapes only from reproducible
+   evidence.
 
-Version 0.2.1 is published on npm and the matching public GitHub release is available. Publication
-remains manual and is not triggered by ordinary pushes.
+The existing multi-project corpus proves bounded execution and portability, not generic accuracy.
+`accuracyClaimReady` must remain false until independent review is complete.
 
-## Next release — confidence and calibration
+## Phase 3 — complete CLI cycle
 
-- finish independent candidate labels for five structurally different repositories;
-- record manual misses and false-negative review scope instead of inferring recall;
-- use repeated false positives to narrow generic detectors and add paired regression fixtures;
-- publish evidence, location, and explanation-quality counts per rule;
-- keep `accuracyClaimReady` false until the declared review is actually complete.
+1. add documented CI examples for advisory, balanced, and strict policies;
+2. make changed-files and baseline workflows easy for pull requests without hiding existing debt;
+3. improve report navigation from summary to root cause, exact evidence, coverage, and next check;
+4. add machine-readable version negotiation and migration notes for every public artifact;
+5. support opt-in retention outside the default report, such as CI artifacts or a user-owned
+   directory, without rebuilding product-managed history.
 
-## Evidence still needed after 0.2
+## Phase 4 — broader deterministic coverage
 
-These are product maturity items, not reasons to hide current coverage:
+Priority order:
 
-- independent owner-confirmed review of findings, false positives, and manually found false
-  negatives across structurally different SaaS projects;
-- optional sharding for repositories beyond the current 4,000-file / 32 MiB bounded snapshot;
-- native Windows and macOS gates before claiming those platforms; 0.2 supports Linux/WSL;
-- externally supplied authenticated browser/API evidence for runtime accessibility and deployed
-  controls, with its own authorization and provenance contract;
-- signed release artifacts and stronger reviewer/executor identity;
-- dependency license policy and broader npm/Yarn transitive parent-path fidelity;
-- new framework/provider/ORM shapes only when real projects expose a reproducible miss.
+1. richer static accessibility semantics and stronger imported Axe provenance;
+2. API, database, environment, webhook, feature-flag, and test-evidence correlation;
+3. authentication/session libraries, authorization wrappers, tenant boundaries, billing, jobs,
+   queues, uploads, and outbound integrations seen in real SaaS repositories;
+4. passive deployment evidence imports such as headers, route inventories, and platform manifests;
+5. optional repository sharding beyond the current bounded snapshot.
 
-The latest calibration corpus is `seusaas-platform`, `robs-web`, `capta-core`,
-`aster-streaming-platform`, and `severyn`. The workflow-v32 calibration pass captured all 5,980
-supported files without snapshot truncation and produced 156 candidates. The versioned aggregate
-tests portability and detector behavior; reviewer labels and false-negative review remain
-incomplete, so it is not an accuracy claim.
+Robots, sitemap, metadata, and optional `llms.txt` stay inside web posture; they are useful coverage,
+not separate products.
+
+## Phase 5 — external agent interoperability
+
+1. stabilize the generic agent report/rule/plan schemas;
+2. keep the Codex skill as the reference implementation and document equivalent Claude usage;
+3. require manifest validation, evidence citations, explicit uncertainty, and separate hypotheses;
+4. let agents propose reviews or patches only under their own authorization;
+5. compare a fresh deterministic scan against a preserved baseline after corrections.
+
+CodebaseScan will not add a built-in model provider merely to claim AI support. An agent integration
+must reduce review work while preserving deterministic evidence and user control.
 
 ## Deliberately later
 
-Autonomous fixes, Docker/CI target execution, Kubernetes, Terraform, cloud IAM, broader DAST,
-exploitation, hosted teams, RBAC, billing, and compliance certification remain separate projects
-with separate threat models. AI investigation is available, but provider comparison and
-owner-confirmed usefulness still belong to the calibration gate.
+Native platform claims, signed reviewer identity, authenticated runtime browser/API collection,
+Docker execution, Kubernetes, Terraform, cloud IAM, DAST, exploitation, hosted teams, RBAC,
+billing, and compliance certification require separate validation or threat models.

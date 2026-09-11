@@ -1,5 +1,8 @@
 # Structured AI review standard
 
+> Historical document. Built-in model orchestration was removed on 2026-09-11. The current
+> contract is [External agent review standard](AGENT_REVIEW_STANDARD.md).
+
 AI in CodebaseScan is a bounded reviewer of deterministic evidence. It is not an autonomous scanner,
 security authority, or source of verified findings. Repository text, filenames, comments, and
 scanner output are untrusted data and never instructions.

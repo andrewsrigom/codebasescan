@@ -1,12 +1,25 @@
 # CodebaseScan
 
-CodebaseScan audits Node.js, React, and Next.js repositories from the command line. One command turns source code, package metadata, lockfiles, and inert configuration into a static human report plus structured evidence for automation and AI-assisted investigation.
+**Audit coverage for JavaScript codebases.**
 
-[View demo](https://andrewsrigom.github.io/codebasescan/). The page shows the evidence, coverage, and prioritized review work produced by a real audit. Findings remain review candidates, not a certification.
+[Demo](https://andrewsrigom.github.io/codebasescan/) ·
+[npm](https://www.npmjs.com/package/codebasescan) ·
+[Documentation](docs/README.md)
 
-I built it for a common situation: the repository is available, but production logs and telemetry are not. The tool starts with source code, package metadata, lockfiles, and inert configuration. It does not run the project being audited, and AI is not required.
+CodebaseScan turns an authorized Node.js, React, or Next.js repository into a coverage-style audit
+report. It inspects source, manifests, lockfiles, and declarative configuration without running the
+target application or sending source code to a model.
 
-> CodebaseScan is under active development. WSL2/Linux and Node.js 22.16+ are the tested environment today.
+The result is useful in three places:
+
+- a human-readable static dashboard for triage and sharing;
+- versioned JSON, SARIF, CycloneDX, and policy artifacts for automation and CI;
+- bounded rules and work plans that a separately authorized coding agent can consume.
+
+The report records what ran, what failed, what was unsupported, and what still requires manual
+evidence. Zero findings never means “proven safe.”
+
+> Active development. Linux/WSL and Node.js 22.16+ are the currently tested environment.
 
 ## What it checks
 
@@ -14,94 +27,91 @@ A default audit runs nine offline modes:
 
 - application and framework security;
 - SaaS controls such as tenant scope, billing input, tokens, webhooks, and error exposure;
-- Next.js and React boundaries;
-- dependencies, lockfiles, package integrity, and supply-chain posture;
-- maintainability, duplicate code, dependency structure, and dead code;
-- static accessibility checks;
-- privacy-related source patterns;
-- reliability and release-readiness gaps;
-- web discovery and SEO posture, including robots, sitemap, Next.js metadata, and optional llms.txt presence.
+- Next.js routes, caching, responses, and React server/client boundaries;
+- dependency advisories, lockfiles, package integrity, and supply-chain posture;
+- dependency structure, duplicate code, dead code, complexity, and imported test coverage;
+- static accessibility checks and optional imported Axe results;
+- privacy and reliability patterns;
+- release-readiness and environment-contract gaps;
+- web discovery and SEO posture, including robots, sitemap, metadata, and optional `llms.txt`.
 
-Findings are review candidates, not proof that a vulnerability is exploitable. Coverage is part of the result, so a scanner failure or unsupported area cannot look like a clean audit.
+Rules combine TypeScript parsing, bounded call relationships, framework semantics, and conservative
+heuristics. Findings are candidates for review—not proof of exploitability.
 
-## Install
+## Quick start
 
-The intended installation is a project-local development dependency:
+Install it as a project-local development dependency so the audit version is reproducible:
 
 ```bash
 npm install --save-dev codebasescan
 npx codebasescan init
 npx codebasescan doctor
-npx codebasescan audit .
+npx codebasescan audit . --open
 ```
 
-To let Codex investigate the generated evidence with the bundled review rules:
+The command updates `codebasescan-report/` with the current result. Open
+`codebasescan-report/index.html` directly, use the loopback report server, or host the complete
+directory as static files after reviewing it for sensitive source evidence.
+
+Global installation also works, but a local development dependency is recommended for teams and CI.
+
+## Review with your own coding agent
+
+CodebaseScan does not embed a model runtime. Scan deterministically first, then let the coding agent
+the user already trusts inspect the evidence and repository under separate authorization.
+
+For Codex:
 
 ```bash
 npx codebasescan agent install codex .
 ```
 
-This writes `.codex/skills/codebasescan-review` in the target project. The skill verifies the
-report package, inspects relevant repository context, challenges false positives, and keeps any
-new AI hypothesis separate from deterministic findings.
+This writes `.codex/skills/codebasescan-review` in the target project. The skill verifies report
+hashes, reads the generated rules and work plan, inspects relevant repository context, challenges
+likely false positives, and keeps new hypotheses separate from deterministic findings.
 
-pnpm and Yarn installations are also tested. Package dependencies install with CodebaseScan; the
-target project's dependencies, scripts, configuration modules, tests, and application code are
-never installed or executed by an audit. The persistent review application and local Ollama adapter
-use optional peer dependencies and are not required for the terminal report.
+Other agents can consume the same versioned JSON and schemas. They should never silently rewrite,
+downgrade, suppress, or confirm scanner evidence.
 
-The public package is [available on npm](https://www.npmjs.com/package/codebasescan). To develop or
-test the repository build directly:
+pnpm and Yarn installations are also tested. CodebaseScan installs its own dependencies; an audit
+never installs the target project's dependencies or runs its scripts, configuration modules, tests,
+build, or application code.
 
-```bash
-git clone https://github.com/andrewsrigom/codebasescan.git
-cd codebasescan
-npm ci
-npm run build:cli
-npm link
-```
-
-Then run `codebasescan init`, `codebasescan doctor`, and `codebasescan audit .` inside the
-repository you want to inspect. The audit stays local. Add `--open` to start a loopback-only
-server for the generated report; stop it with Ctrl+C.
-
-To reopen the report history later:
+To reopen the current report later:
 
 ```bash
 codebasescan open codebasescan-report
 ```
 
 You can also open `codebasescan-report/index.html` directly or host the complete
-`codebasescan-report/` directory as a static site. The stable root always points to the newest
-audit and lists immutable earlier audit directories. Review the files before hosting them because
+`codebasescan-report/` directory as a static site. Review the files before hosting them because
 paths, excerpts, and project metadata may be sensitive.
 
-## Report files
+## One current report
 
-Each run creates one immutable directory under `codebasescan-report/`. The root contains:
+Each run safely updates one portable report directory instead of accumulating product-managed
+history. It contains:
 
-- `index.html` — stable latest-and-history view;
-- `report-index.json` — versioned machine-readable history.
-
-Each immutable audit directory contains:
-
-- `index.html` — human-readable report;
+- `index.html` — script-free human dashboard;
 - `audit-report.json` — complete machine-readable result;
-- `agent-plan.json` — grouped work queue for an authorized coding agent;
-- `agent-report.json` — complete review workflow, depths, tasks, and rule references for AI;
-- `agent-rules.json` — versioned evidence questions and false-positive checks;
-- `run-manifest.json` — scanner status, coverage, versions, limits, and artifact hashes;
-- `policy-result.json` — optional CI policy result;
-- SARIF, Markdown, CycloneDX, schemas, and a hash manifest.
+- `run-manifest.json` and `manifest.json` — coverage, versions, limits, hashes, and integrity;
+- `policy-result.json` — CI decision and exit-code evidence;
+- `agent-report.json`, `agent-rules.json`, and `agent-plan.json` — external-agent contracts;
+- `report.sarif`, `report.md`, and `sbom.cdx.json` — portable integration formats;
+- JSON Schemas for generated workflow artifacts.
+
+CodebaseScan removes stale managed artifacts when the current audit no longer produces them and
+refuses to overwrite a nonempty directory it does not recognize. If history is required, preserve
+the directory as a CI artifact or copy `audit-report.json` before the next run.
 
 Detector quality is reviewed through a separate calibration ledger, so scanner output never
 becomes its own ground truth. See [real-project calibration](docs/CALIBRATION.md).
 
-A new audit gets a new ID. Use an earlier JSON report as a baseline when you want a before/after view:
+Preserve a report before remediation when you want a before/after view:
 
 ```bash
-codebasescan audit . \
-  --baseline codebasescan-report/<previous-audit-id>/audit-report.json
+cp codebasescan-report/audit-report.json codebasescan-baseline.json
+npx codebasescan audit . --baseline codebasescan-baseline.json
 ```
 
 ## Focused audits
@@ -153,27 +163,8 @@ CODEBASESCAN_GITLEAKS=true
 CODEBASESCAN_OSV=true
 ```
 
-The scanner binaries must already be installed and trusted. OSV receives package names and exact resolved versions only.
-
-An optional model investigation layer also exists, but it is off by default and is not needed for
-the mechanical audit. There is no automatic local-to-cloud fallback.
-
-```dotenv
-CODEBASESCAN_AI=openai
-OPENAI_MODEL=<model>
-OPENAI_API_KEY=<key>
-CODEBASESCAN_AI_DEPTH=standard
-```
-
-Use `quick` for report-focused triage, `standard` for related source and bounded snapshot
-search, or `deep` for broader cross-file investigation. Deep review has higher explicit context,
-call, and token limits. Local Ollama uses the same structured reviewer contract with
-`CODEBASESCAN_AI=ollama` and `OLLAMA_MODEL=<downloaded-model>`.
-
-LangGraph owns the repeatable collect, assess, challenge, and stop decisions, including checkpoint
-compatibility. LangChain provides the structured model interface for the optional local adapter.
-The built-in workflow searches only the captured immutable snapshot; the installed Codex skill can
-inspect the authorized repository directly while following the same rules and evidence contract.
+The scanner binaries must already be installed and trusted. OSV receives package names and exact
+resolved versions only. A normal audit does not call a model or require an API key.
 
 For browser accessibility evidence, generate a standard Axe JSON result outside CodebaseScan and
 place it at the project root as `codebasescan.axe.json`, `axe-results.json`, or
@@ -195,9 +186,10 @@ Exit codes:
 
 A passing policy is not a security certification.
 
-## Local application
+## Repository development UI
 
-The repository also contains the persistent Next.js review application:
+The source repository also contains a local Next.js review application used to develop and inspect
+the same domain contracts:
 
 ```bash
 cp .env.example .env.local
@@ -226,11 +218,14 @@ See the [security policy](SECURITY.md) and [threat model](docs/THREAT_MODEL.md) 
 ## Development
 
 ```bash
+git clone https://github.com/andrewsrigom/codebasescan.git
+cd codebasescan
+npm ci
 npm run format:check
 npm run typecheck
 npm run lint
 npm test
-npm run test:graph
+npm run test:integration
 npm run benchmark
 npm run build
 npm run test:e2e
@@ -251,4 +246,4 @@ Useful references:
 
 ## License
 
-MIT. External scanners, APIs, models, rules, and dependencies retain their own licenses and terms.
+MIT. External scanners, rules, and dependencies retain their own licenses and terms.

@@ -302,3 +302,5 @@ outside this roadmap until local package and evidence-quality gates are complete
 
 Every phase ends with formatting, typecheck, lint, unit tests, graph tests, benchmark, build, package
 test, and relevant browser tests. Commit each independently reviewable behavior change.
+
+> Historical implementation plan. See the current [Roadmap](ROADMAP.md).

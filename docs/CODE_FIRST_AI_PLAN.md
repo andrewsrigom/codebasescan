@@ -292,3 +292,7 @@ Continue without asking while changes are local, read-only toward audited reposi
 - a public push, release, deployment, or external message;
 - destructive migration of existing audit data;
 - expansion beyond authorized source/config auditing.
+
+> Historical plan. CodebaseScan now has a deterministic product core and a separately authorized
+> external-agent boundary. See [Roadmap](ROADMAP.md) and
+> [External agent review standard](AGENT_REVIEW_STANDARD.md).

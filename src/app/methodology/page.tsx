@@ -16,23 +16,23 @@ export default function MethodologyPage() {
         {[
           [
             '01',
-            'Detect',
-            'Bounded pattern checks and optional installed scanners produce review candidates. Original source severity and provenance are retained.',
+            'Capture',
+            'CodebaseScan creates a bounded, read-only snapshot. Target scripts, dependencies, configuration modules, and application code are never executed.',
           ],
           [
             '02',
-            'Investigate',
-            'LangGraph coordinates a bounded review. Optional Ollama or explicitly enabled OpenAI inference can request limited source context, but cannot run tools or change files.',
+            'Analyze',
+            'Deterministic TypeScript rules and optional trusted scanners produce review candidates with evidence, provenance, and explicit coverage.',
           ],
           [
             '03',
             'Review',
-            'An analyst inspects evidence and records a disposition with a rationale. A model cannot silently dismiss, confirm or downgrade a finding.',
+            'A human or separately authorized coding agent can inspect the report and relevant source. Conclusions remain separate from scanner evidence.',
           ],
           [
             '04',
-            'Publish',
-            'A persistent human-in-the-loop checkpoint gates report publication. Unresolved findings, excluded scope and scanner failures remain visible.',
+            'Share',
+            'The current static report can be opened locally, attached to CI, or hosted as files after sensitive content is reviewed.',
           ],
         ].map(([number, title, description]) => (
           <section className="panel method-card" key={number}>
@@ -52,21 +52,19 @@ export default function MethodologyPage() {
         </p>
         <p>
           OSV matching shows known advisories for resolved lockfile versions; it does not establish
-          reachability. Secret patterns do not establish whether a credential is active. Model
-          confidence is not a calibrated probability. A missing finding is not proof that a
-          vulnerability was fixed.
+          reachability. Secret patterns do not establish whether a credential is active. A missing
+          finding is not proof that a vulnerability was fixed.
         </p>
         <h2>Privacy boundaries</h2>
         <p>
-          AI is disabled by default. Ollama stays local; OpenAI and OSV are separate, explicit
-          opt-ins. OpenAI receives only bounded, redacted context and requests store=false. Strict
-          offline operation still requires OS-level egress controls. Scanner binaries and local
-          model weights must be provisioned beforehand.
+          The audit has no built-in model or cloud-model call. OSV refresh and the bounded HTTP
+          probe are separate, explicit network actions. Strict offline operation still requires
+          OS-level egress controls. Optional scanner binaries must be provisioned beforehand.
         </p>
         <p>
           Source snippets and human notes may still contain sensitive data after best-effort
-          redaction. Local files and checkpoints are protected by filesystem permissions, not
-          encryption. Do not publish real audit artifacts or run this unauthenticated local service
+          redaction. Local files are protected by filesystem permissions, not encryption. Review
+          every report before publishing it, and never expose the unauthenticated review application
           on a public interface.
         </p>
         <h2>Read-only is not a sandbox</h2>

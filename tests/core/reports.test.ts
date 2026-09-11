@@ -388,7 +388,7 @@ test('standard HTML metacharacters are escaped', () => {
   assert.equal(escapeHtml('<>&"'), '&lt;&gt;&amp;&quot;');
   assert.equal(escapeMarkdown('<tag> [label](target)'), '&lt;tag&gt; \\[label\\]\\(target\\)');
 });
-test('investigation bundle is bounded, evidence-led, and ready for manual AI review', () => {
+test('investigation bundle is bounded, evidence-led, and ready for external agent review', () => {
   const report = sampleReport();
   report.projectProfile = profileProject(
     snapshotOf('export function handler() { return Response.json({ ok: true }); }'),

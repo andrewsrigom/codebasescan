@@ -32,15 +32,15 @@ Existing files are preserved unless --force is explicit.`,
   agent: `Usage: codebasescan agent install codex [project] [--force]
 
 Install the bundled CodebaseScan review skill into .codex/skills/codebasescan-review.`,
-  open: `Usage: codebasescan open [report-directory|report-root] [--port 4173]
+  open: `Usage: codebasescan open [report-directory] [--port 4173]
 
-Serve a verified report package or stable report history on 127.0.0.1.`,
+Serve a verified report package on 127.0.0.1.`,
   doctor: `Usage: codebasescan doctor
 
 Check the local runtime and optional scanner availability.`,
   finalize: `Usage: codebasescan finalize <after-report> --baseline <before-report> --verification <ledger.json> [options]
 
-Build an immutable before/after report using explicit external verification evidence.`,
+Build a before/after report using explicit external verification evidence.`,
   task: `Usage: codebasescan task <report> <task-id> [--output task.json]
 
 Export one bounded remediation task for an agent or another tool.`,
@@ -93,7 +93,7 @@ Usage: codebasescan <command> [options]
 Start here:
   codebasescan init [project]      Create the safe declarative project config
   codebasescan audit [project]     Audit a project and update one stable report
-  codebasescan open [report-root]  View the latest audit and immutable history
+  codebasescan open [report-root]  View the current audit
   codebasescan doctor              Check this installation
   codebasescan agent install codex Install the optional Codex review skill
   codebasescan --version           Print the installed version

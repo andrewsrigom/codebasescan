@@ -112,8 +112,8 @@ export function FindingDetails({
         <div className="notice">
           <Icon name="info" />
           <span>
-            Scanner detection and model assessment are not proof of exploitability. A human decision
-            is tracked separately.
+            Static detection is not proof of exploitability. Human review and external-agent
+            hypotheses are tracked separately.
           </span>
         </div>
         <section>

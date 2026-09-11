@@ -1,5 +1,22 @@
 # Initial engineering decisions
 
+## 2026-09-11 — deterministic product core and external agent boundary
+
+CodebaseScan no longer embeds a model runtime, LangChain, or LangGraph. The product's primary
+contract is a deterministic CLI that captures authorized source as data, runs bounded scanners, and
+updates one portable static report. This keeps installation, offline operation, CI behavior, cost,
+and scanner evidence predictable.
+
+Deeper investigation belongs to the user's separately authorized coding agent. Static packages
+export versioned agent reports, rules, plans, schemas, and artifact hashes; the bundled Codex skill
+teaches one compatible workflow. An external agent may inspect the working tree only under its own
+authorization and must keep hypotheses, review decisions, and corrections separate from
+deterministic findings.
+
+The default report root now represents current state instead of product-managed history. Users who
+need retention can version the directory, preserve a baseline JSON, or store CI artifacts. Legacy
+report indexes remain readable during migration.
+
 | Decision                                             | Rationale / consequence                                                                                                                                                                                                                                                                                                         |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Local-first, single user                             | Avoid uploading proprietary repositories and avoid premature SaaS infrastructure. No public hosting mode.                                                                                                                                                                                                                       |

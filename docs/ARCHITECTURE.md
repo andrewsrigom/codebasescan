@@ -3,97 +3,66 @@
 ## Process and trust boundaries
 
 ```text
-Browser on loopback
-        |
-guarded Next.js UI/API <---------- local CLI / CI runner
-        |
-application SQLite (jobs, reports, budgets, AI cache)
-        |
-single long-running worker
-        |
-LangGraph audit workflow <-------- persistent UI: SQLite / CLI: memory
-        |
-        +-- bounded read-only source snapshot
-        +-- deterministic project profile + AST security rules
-        +-- generic SaaS semantics + focused SaaS rules
-        +-- Node.js supply-chain integrity checks
-        +-- isolated dead-code + source quality reports
-        +-- dependency structure + duplicate-code reports
-        +-- built-in source patterns
-        +-- application posture scanner
-        +-- web discovery and SEO posture
-        +-- optional imported Axe result
-        +-- optional Semgrep / Gitleaks processes
-        +-- lockfile inventory + optional fixed-host OSV API
-        +-- optional approved HTTP response probe
-        +-- bounded contextual review subgraph
-                    |
-                    +-- snapshot-only opaque-ID context broker
-                    +-- disabled / loopback Ollama / opt-in OpenAI Responses API
+CLI / CI ------------------------+
+                                 |
+loopback Next.js UI -> SQLite -> worker
+                                 |
+                    deterministic audit pipeline
+                                 |
+                    bounded read-only snapshot
+                                 |
+        +------------------------+------------------------+
+        |                        |                        |
+ built-in TypeScript rules   bundled mechanics   optional trusted tools
+ AST / SaaS / Next / React   deps / duplication  Semgrep / Gitleaks
+ accessibility / privacy     dead code / quality offline OSV / HTTP probe
+        +------------------------+------------------------+
+                                 |
+                    normalize + correlate evidence
+                                 |
+                    current static report package
+                                 |
+           human review or separately authorized agent
 ```
 
-Next.js never owns a long-running audit. The worker claims persisted jobs and handles cancellation independently of the browser. CI uses the same graph with an ephemeral store and skips only the human publication interrupt.
+The installable CLI is the primary product path. It runs the same deterministic pipeline with an
+ephemeral store and writes one portable, script-free report directory. The optional repository UI
+uses Node `node:sqlite`; Next.js never owns a long-running audit, and a separate worker claims
+persisted jobs and handles cancellation independently of the browser.
 
-Application state uses Node `node:sqlite`. Persistent UI/worker graphs can use
-`@langchain/langgraph-checkpoint-sqlite` in a separate file; the installable one-shot CLI uses
-LangGraph's in-memory checkpointer. SQLite and Ollama adapters are optional peers, so a terminal
-audit does not install the Next.js review application or native SQLite bindings. Schema migration
-adds per-audit options, AI usage, content-addressed AI cache, and append-only report-revision tables
-without rewriting old reports. Reports and stored options are runtime-schema validated on
-write/read.
+Target source is always untrusted input. CodebaseScan reads it as bounded data, never imports target
+configuration modules, and never runs target packages, lifecycle scripts, builds, tests, or
+application code. Reports and stored options are runtime-schema validated on write and read.
 
 ## Audit graph
 
 ```text
 START -> snapshot
-              +-> patterns ----+
-              +-> project map -+
-              +-> AST security +
-              +-> SaaS security+
-              +-> Next security+
-              +-> React security+
-              +-> accessibility+
-              +-> web posture --+
-              +-> privacy ------+
-              +-> reliability --+
-              +-> dependencies -+
-              +-> duplication --+
-              +-> supply chain -+
-              +-> code quality --+
-              +-> posture -----+
-              +-> semgrep -----+
-              +-> gitleaks ----+-> normalize/reconcile
-              +-> OSV inventory+          |
-              +-> HTTP probe --+     investigate (bounded, AI enabled)
-                                            |         offline skips
-                                      prepare_report
-                                            |
-                         interactive: human_review [interrupt]
-                                            |
-                                         publish -> END
-                         CI: draft report ----------> END
+              +-> project profile +
+              +-> AST security -----+
+              +-> SaaS security ----+
+              +-> Next / React -----+
+              +-> accessibility ----+
+              +-> privacy / reliability
+              +-> release / web ----+-> normalize + reconcile
+              +-> dependencies -----+          |
+              +-> supply chain -----+     build contracts
+              +-> quality / dead code          |
+              +-> structure / duplication      |
+              +-> optional scanners -----------+-> report -> END
 ```
 
-The twenty-seven scanner/profile results publish through reducers. Fan-in waits for completed,
-partial, skipped, or failed status from every capability. When no reviewer is configured, the graph
-moves directly from normalization to report preparation. Plain TypeScript performs parsing,
-process execution, URL validation, normalization, and report transforms; LangGraph is reserved for
-lifecycle, parallelism, bounded context loops, persistence, branching, and human review.
+The pipeline is a small TypeScript dependency graph. It validates node dependencies, executes ready
+scanner nodes concurrently, and waits for every capability to report completed, partial, skipped, or
+failed status before normalization. A failed or missing capability cannot become a clean result.
 
 All nine offline modes are enabled when an audit has no explicit selection. A focused selection
-keeps the same graph topology but short-circuits unrelated nodes before scanner execution. Those
-nodes emit explicit mode-disabled runs, preserving fan-in and preventing omitted analysis from
-appearing clean. The selected mode list participates in the checkpoint execution fingerprint.
+keeps the same topology but short-circuits unrelated nodes before scanner execution. Those nodes
+emit explicit mode-disabled runs, preventing omitted analysis from appearing clean. Scanner cache
+keys include the snapshot, scanner version, and selected variant.
 
-The nested review graph remains:
-
-```text
-collect_context -> assess
-       ^             |
-       +-- allowed evidence/profile ID request (at most 2 rounds)
-```
-
-Repository text is untrusted. It cannot select tools, endpoints, headers, request bodies, or local paths. An AI assessment cannot delete a finding, change its source severity, confirm exploitability, or set the human disposition.
+Repository text cannot select tools, endpoints, headers, request bodies, commands, or local paths.
+External agent review is downstream of the completed report and cannot alter scanner truth.
 
 The UI receives a compact project-map projection instead of the full symbol/import/call graph. An
 optional exact `CODEBASESCAN_INTERNAL_HOST` supports a local OS relay; browser-facing Host and Origin
@@ -136,41 +105,54 @@ The HTTP probe is per audit and requires an approved URL. It accepts only HTTP(S
 
 Lockfile inventory supports npm, pnpm, Yarn Classic, and Yarn Berry without running package-manager code and excludes recognized local npm/Yarn workspace packages from advisory queries. pnpm importer/snapshot relationships, npm package graphs, and Yarn dependency stanzas produce at most three parent paths with a fixed depth for direct and transitive remediation. npm hoisting/nesting and repeated workspace declarations are preserved; unresolved Yarn selectors omit a path instead of guessing. Exact-version records in the compact local advisory database are used without network access. Manual refresh is separately opt-in, uses the fixed OSV API host, and sends only package name/version pairs. Pagination and advisory fetches have fixed request/result limits. Full responses are compacted, aliases are consolidated, withdrawn records are ignored, package-level severity is retained, CVSS v3 vectors are scored when labels are absent, and cache/report data distinguish source-reference hints from runtime reachability or exploitability.
 
-The terminal-first audit uses the same graph with an ephemeral local store and writes a static,
-script-free report directory. Every audit directory is immutable. A versioned root
-`report-index.json` and script-free `index.html` are replaced atomically, providing one stable
-URL for the newest result and retained history. The whole root can be hosted as static files
-without a database or application server. The remediation plan is a versioned plan-only contract. A baseline
-audit adds a deterministic before/after result, while the `task` command reduces that contract to
-one task and its referenced report evidence for bounded agent input. The `finalize` command reads
-existing before/after audit artifacts and a strict external verification ledger. It matches exact
-declared test/build commands and records their bounded provenance, but never executes a project
-command or authenticates the executor.
+The terminal-first audit writes one current static, script-free report directory. Managed files are
+replaced atomically, stale optional artifacts are removed from the previous manifest, and the final
+manifest is written last. CodebaseScan refuses to overwrite a nonempty directory without a valid
+CodebaseScan marker. The complete directory can be opened directly or hosted as static files
+without a database or application server.
 
-## AI boundary
+The remediation plan is a versioned plan-only contract. A preserved baseline audit adds a
+deterministic before/after result, while the `task` command reduces that contract to one task and
+its referenced evidence for bounded agent input. The `finalize` command reads existing
+before/after artifacts and a strict external verification ledger. It matches exact declared
+test/build commands and records bounded provenance, but never executes a project command or
+authenticates the executor.
 
-`CODEBASESCAN_AI` selects exactly one of `disabled`, `ollama`, or `openai`; there is no fallback. Ollama stays fixed to loopback. OpenAI uses the Responses API with JSON Schema structured output and `store: false`. `CODEBASESCAN_AI_DEPTH` selects `quick`, `standard`, or `deep`; each depth has fixed context, search, round, finding, and token-budget defaults.
+## External agent boundary
 
-The context broker exposes a finding-specific catalog of opaque evidence, entry-point, symbol, fact, resolved-call, and search-result IDs. Models cannot name arbitrary repository paths. Standard and deep review may request at most two sanitized plain-text searches over bounded characters already present in the immutable captured snapshot. Delivery rejects unknown/repeated IDs and applies depth-specific item, round, and accumulated-context limits. Context is redacted again for credentials, emails, and user-home paths; `.env` and key files never enter the snapshot.
+CodebaseScan has no built-in model provider or agent runtime. Static packages include
+`agent-report.json`, `agent-rules.json`, `agent-plan.json`, their schemas, and a bundled Codex
+skill installer. This makes deterministic output useful to the coding agent a user already trusts
+without forcing a second model account, cost layer, or repository upload path.
 
-Calls are protected by persisted per-audit call/input/output budgets, a per-finding limit, bounded retry/timeout policy, and a seven-day cache keyed by prompt version, model, finding fingerprint, evidence digests, rules, depth, and context digest. LangGraph owns context collection, structured assessment, bounded follow-up, checkpointing, and termination. LangChain supplies the structured local-model adapter; the OpenAI adapter preserves the same reviewer contract while retaining direct request, storage, retry, and token controls. Reports record provider, model, prompt version, delivered IDs/files, search requests, truncation, redaction result, tokens, cache use, and configured-price cost approximation. Model output includes controls found, missing evidence, impact, preconditions, remediation choices, and safe verification steps; it remains an assessment only.
-
-Static report packages also include `agent-report.json`, `agent-rules.json`, their schemas, and a
-bundled Codex skill installer. This external-agent path may inspect an authorized working tree, but
-it must validate artifact hashes and keep conclusions or newly discovered hypotheses separate from
-deterministic scanner evidence.
+An external agent operates under separate authorization. It must validate the report manifest,
+treat repository content as untrusted data, preserve incomplete coverage, cite finding/evidence
+identifiers, and keep new hypotheses or review decisions separate from deterministic findings. Code
+changes and command execution require their own authorization and a fresh scan for comparison.
 
 ## Evidence, assessment, disposition, and coverage
 
-A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind, detection time, confidence, probable exposure, review priority, optional runtime/advisory metadata, optional AI assessment/provenance, and optional human review. Human dispositions include confirmed, fixed, false positive, accepted risk, and needs review. Expiring project exceptions keep the original finding and exact fingerprint visible. Checklist controls separately retain their deterministic status and an optional human assessment for verified external evidence, accepted gaps, non-applicability, or follow-up. These states are not collapsed into “verified.”
+A finding keeps detector, scanner/rule/version, original severity, file/line evidence, evidence kind,
+detection time, confidence, probable exposure, review priority, optional runtime/advisory metadata,
+and optional human review. Legacy report schemas can still parse earlier assessment provenance, but
+new audits do not create model assessments. Human dispositions include confirmed, fixed, false
+positive, accepted risk, and needs review. Expiring project exceptions keep the original finding
+and exact fingerprint visible. Checklist controls separately retain deterministic status and
+optional external review evidence. These states are not collapsed into “verified.”
 
 Coverage uses explicit capability states: `COMPLETE`, `PARTIAL`, `FAILED`, `DISABLED`, `NOT RUN`, `NOT SUPPORTED`, and `NOT PERFORMED`. Zero findings and a failed scanner are therefore different results. CodebaseScan does not compute a global security score.
 
-## Persistence and replay
+## Persistence
 
-The in-process snapshot is bounded and raw content is not stored wholesale in the application report. Findings contain small redacted excerpts and digests, which are still sensitive. A resumed graph recaptures source and rejects a changed digest instead of mixing snapshots.
+The in-process snapshot is bounded and raw content is not stored wholesale in the application
+report. Findings contain small redacted excerpts and digests, which are still sensitive. Scanner
+cache reuse requires an exact snapshot, scanner version, and variant.
 
-Nodes are safe to repeat but execution is not a universal exactly-once guarantee. Event keys and finding fingerprints are deterministic. AI budgets are persisted before requests. Checkpoints carry workflow/config compatibility data and incompatible resumes fail closed. Workflow and human-review report states are appended to immutable revision rows while the audit points to the latest validated report. Publication merges current human dispositions. Actual worker `SIGKILL` recovery is tested; parser processes still require OS-level containment for hostile repositories.
+The optional application store persists projects, audit jobs, events, validated reports, review
+notes, and scanner cache data in local SQLite. A worker can recover a job abandoned by a dead local
+process. Execution is not a universal exactly-once guarantee; event keys and finding fingerprints
+are deterministic, and incompatible workflow versions fail closed. External parser processes still
+require OS-level containment for hostile repositories.
 
 ## Local HTTP service
 
@@ -181,6 +163,6 @@ The CodebaseScan UI binds to `127.0.0.1`. Its own API enforces loopback Host/URL
 1. `src/domain/types.ts`, `checklist.ts`, `report-schema.ts`, `coverage.ts`, and `provenance.ts`
 2. `src/security/paths.ts`, `url-policy.ts`, and `redact.ts`
 3. `src/scanners/project-profile.ts`, `ast-security.ts`, `next-security.ts`, `react-security.ts`, `supply-chain.ts`, `quality.ts`, `mechanical.ts`, `posture.ts`, `http-probe.ts`, `inventory.ts`, and `osv.ts`
-4. `src/engine/context-broker.ts`, `review-graph.ts`, `openai.ts`, and `audit-graph.ts`
-5. `src/server/store.ts`, `src/worker/main.ts`, `src/cli/main.ts`, and `src/cli/doctor.ts`
-6. `src/components/audit-workspace.tsx` and `finding-details.tsx`
+4. `src/engine/deterministic-pipeline.ts`, `audit-pipeline.ts`, and `run.ts`
+5. `src/reporting/static-report.ts`, `report-server.ts`, and `src/cli/main.ts`
+6. `src/server/store.ts`, `src/worker/main.ts`, and `src/components/audit-workspace.tsx`
