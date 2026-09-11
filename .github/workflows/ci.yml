@@ -10,9 +10,6 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      LANGSMITH_TRACING: 'false'
-      LANGCHAIN_TRACING_V2: 'false'
-      CODEBASESCAN_AI: disabled
       CODEBASESCAN_SEMGREP: 'false'
       CODEBASESCAN_GITLEAKS: 'false'
     steps:
@@ -29,7 +26,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run benchmark
-      - run: npm run test:graph
+      - run: npm run test:integration
       - name: Generate local audit artifacts and exercise baseline gate
         run: |
           npm run cli -- audit fixtures/hardened-saas --format json --output codebasescan-ci-base.json
@@ -62,9 +59,6 @@ jobs:
             manager: yarn
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      LANGSMITH_TRACING: 'false'
-      LANGCHAIN_TRACING_V2: 'false'
-      CODEBASESCAN_AI: disabled
       CODEBASESCAN_SEMGREP: 'false'
       CODEBASESCAN_GITLEAKS: 'false'
     steps:
