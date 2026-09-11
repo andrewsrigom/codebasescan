@@ -72,6 +72,7 @@ import {
 import { parseCalibrationLedger, parseCalibrationReport } from '../domain/calibration-schema.ts';
 import { buildAgentReport } from '../domain/agent-report.ts';
 import { agentReviewRulePack } from '../domain/agent-rules.ts';
+import { installCodexSkill } from './agent-skill.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -394,6 +395,10 @@ try {
     const project = target && !target.startsWith('--') ? target : '.';
     const destination = await initializeProjectConfig(project, arguments_.includes('--force'));
     console.log(`Created ${destination}`);
+  } else if (command === 'agent' && target === 'install' && arguments_[2] === 'codex') {
+    const project = arguments_[3] && !arguments_[3].startsWith('--') ? arguments_[3] : '.';
+    const destination = await installCodexSkill(project, arguments_.includes('--force'));
+    console.log(`Installed CodebaseScan review skill at ${destination}`);
   } else if (command === 'open') {
     if (nonInteractive)
       throw new Error('The report server is interactive. Remove --non-interactive and CI=true.');

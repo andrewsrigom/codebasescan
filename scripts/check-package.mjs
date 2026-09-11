@@ -22,6 +22,9 @@ const required = [
   'configs/semgrep.yml',
   'dist/cli/main.js',
   'dist/server/config.js',
+  'skills/codebasescan-review/SKILL.md',
+  'skills/codebasescan-review/agents/openai.yaml',
+  'skills/codebasescan-review/references/contract.md',
   'package.json',
 ];
 for (const file of required)

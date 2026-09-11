@@ -1,0 +1,4 @@
+interface:
+  display_name: 'CodebaseScan Review'
+  short_description: 'Investigate static audit evidence safely'
+  default_prompt: 'Use $codebasescan-review to investigate the latest CodebaseScan report and return an evidence-backed review.'

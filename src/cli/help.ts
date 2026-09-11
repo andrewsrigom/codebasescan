@@ -29,6 +29,9 @@ Options:
 
 Create codebasescan.config.json with a bundled JSON Schema for editor autocomplete.
 Existing files are preserved unless --force is explicit.`,
+  agent: `Usage: codebasescan agent install codex [project] [--force]
+
+Install the bundled CodebaseScan review skill into .codex/skills/codebasescan-review.`,
   open: `Usage: codebasescan open [report-directory|report-root] [--port 4173]
 
 Serve a verified report package or stable report history on 127.0.0.1.`,
@@ -92,9 +95,11 @@ Start here:
   codebasescan audit [project]     Audit a project and update one stable report
   codebasescan open [report-root]  View the latest audit and immutable history
   codebasescan doctor              Check this installation
+  codebasescan agent install codex Install the optional Codex review skill
   codebasescan --version           Print the installed version
 
 Evidence workflow:
+  agent      Install agent integrations
   finalize   Build a verified before/after report
   task       Export one remediation task for an agent
   review     Record a portable human decision
