@@ -18,6 +18,7 @@ const ignoredDirectories = new Set([
   'output',
   'coverage',
   'storybook-static',
+  '_pagefind',
   'test-results',
   'codebasescan-report',
   '.codebasescan',

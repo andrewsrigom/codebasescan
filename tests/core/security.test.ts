@@ -262,6 +262,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await mkdir(path.join(root, 'out'));
   await mkdir(path.join(root, 'output'));
   await mkdir(path.join(root, 'storybook-static'));
+  await mkdir(path.join(root, '_pagefind'));
   await mkdir(path.join(root, 'test-results'));
   await writeFile(path.join(root, 'source.ts'), 'export const ok = true;');
   await writeFile(path.join(root, 'schema.prisma'), 'model User { id String @id }');
@@ -278,6 +279,7 @@ test('snapshot skips sensitive files, symlinks and generated trees', async (cont
   await writeFile(path.join(root, 'out', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'output', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'storybook-static', 'generated.js'), 'eval(input)');
+  await writeFile(path.join(root, '_pagefind', 'generated.js'), 'eval(input)');
   await writeFile(path.join(root, 'test-results', 'generated.js'), 'eval(input)');
   if (process.platform !== 'win32') await symlink('/etc/passwd', path.join(root, 'outside.ts'));
   const snapshot = await captureSnapshot(root);
