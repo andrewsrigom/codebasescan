@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { format as formatDocument, resolveConfig as resolvePrettierConfig } from 'prettier';
 import { parseAuditReport } from '../src/domain/report-schema.ts';
 import { parseCalibrationLedger } from '../src/domain/calibration-schema.ts';
 import { buildPublicDemo, type PublicDemoReplacement } from '../src/reporting/public-demo.ts';
@@ -68,8 +69,12 @@ for (const value of forbidden) {
 }
 
 const output = path.resolve(input.output);
+const outputFile = path.join(output, 'index.html');
+const prettierConfig = (await resolvePrettierConfig(outputFile)) ?? {};
 await mkdir(output, { recursive: true });
-await writeFile(path.join(output, 'index.html'), demo.html, { mode: 0o644 });
-console.log(
-  `Wrote ${demo.retainedFindings} retained findings to ${path.join(output, 'index.html')}`,
+await writeFile(
+  outputFile,
+  await formatDocument(demo.html, { ...prettierConfig, filepath: outputFile }),
+  { mode: 0o644 },
 );
+console.log(`Wrote ${demo.retainedFindings} retained findings to ${outputFile}`);
