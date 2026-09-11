@@ -4,7 +4,7 @@ import type { Finding } from '../domain/types.ts';
 import { redact, redactForCloud } from '../security/redact.ts';
 import { safeRelative } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
-import type { AuditStore } from '../server/store.ts';
+import type { AuditExecutionStore } from './audit-store.ts';
 import { assessmentSchema, type Assessment, type Reviewer } from './model.ts';
 
 export const openAiPromptVersion = 'codebasescan-review-v3';
@@ -158,7 +158,7 @@ function approximateCost(
 
 export function createOpenAiReviewer(
   config: Configuration,
-  store: AuditStore,
+  store: AuditExecutionStore,
   auditId: string,
   fetcher: typeof fetch = fetch,
 ): Reviewer {

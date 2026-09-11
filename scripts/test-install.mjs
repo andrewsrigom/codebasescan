@@ -47,6 +47,11 @@ async function runCodebaseScan(directory, arguments_, options = {}) {
   return run(command, commandArguments, { cwd: directory, ...options });
 }
 
+function rejectRuntimeWarnings(label, result) {
+  if (/ExperimentalWarning: SQLite/i.test(result.stderr))
+    throw new Error(`${label} unexpectedly loaded SQLite in the one-shot CLI path.`);
+}
+
 async function installedBytes(directory) {
   let bytes = 0;
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -137,16 +142,16 @@ try {
     await run('yarn', ['config', 'set', 'nodeLinker', 'node-modules'], { cwd: fixture });
   }
   const install = await run(manager, installArguments(tarball), { cwd: fixture });
-  await runCodebaseScan(fixture, ['doctor', '--quiet']);
-  await runCodebaseScan(fixture, ['init', '.', '--quiet']);
-  const audit = await runCodebaseScan(fixture, [
-    'audit',
-    '.',
-    '--report-dir',
-    reportDirectory,
-    '--non-interactive',
-    '--quiet',
-  ]);
+  const doctor = await runCodebaseScan(fixture, ['doctor', '--quiet'], { capture: true });
+  const init = await runCodebaseScan(fixture, ['init', '.', '--quiet'], { capture: true });
+  const audit = await runCodebaseScan(
+    fixture,
+    ['audit', '.', '--report-dir', reportDirectory, '--non-interactive', '--quiet'],
+    { capture: true },
+  );
+  rejectRuntimeWarnings('doctor', doctor);
+  rejectRuntimeWarnings('init', init);
+  rejectRuntimeWarnings('audit', audit);
   const reportIndex = JSON.parse(
     await readFile(path.join(reportDirectory, 'report-index.json'), 'utf8'),
   );

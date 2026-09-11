@@ -54,8 +54,8 @@ import { scanWebhookContract } from '../scanners/webhook-contract.ts';
 import { scanFeatureFlags } from '../scanners/feature-flags.ts';
 import { captureSnapshot, redactedSnapshot } from '../security/paths.ts';
 import type { Configuration } from '../server/config.ts';
-import type { AuditStore } from '../server/store.ts';
 import type { Reviewer } from './model.ts';
+import type { AuditExecutionStore } from './audit-store.ts';
 import { buildReviewGraph } from './review-graph.ts';
 import { runCachedScan } from './scanner-cache.ts';
 const mergeRuns = (left: ScannerRun[], right: ScannerRun[]) => [
@@ -153,7 +153,7 @@ export function buildAuditGraph(options: {
   root: string;
   projectName: string;
   config: Configuration;
-  store: AuditStore;
+  store: AuditExecutionStore;
   checkpointer: BaseCheckpointSaver;
   reviewer: Reviewer | null;
   httpProbe?: HttpProbeOptions;

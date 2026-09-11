@@ -2,7 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
-import { AuditStore } from '../server/store.ts';
+import type { AuditStore } from '../server/store.ts';
 import { captureSnapshot, estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
 import { disableRemoteTracing } from '../security/privacy.ts';
 import {
@@ -49,6 +49,7 @@ import { parseVerificationLedger } from '../domain/verification-ledger-schema.ts
 import { renderCliHelp } from './help.ts';
 import { initializeProjectConfig } from './init.ts';
 import { createCliProgress } from './progress.ts';
+import { EphemeralAuditStore } from '../engine/ephemeral-audit-store.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -396,7 +397,7 @@ try {
     if (nonInteractive && arguments_.includes('--open'))
       throw new Error('--open cannot be used with --non-interactive or CI=true.');
     const temporary = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-ci-'));
-    const ciStore = new AuditStore(':memory:');
+    const ciStore = new EphemeralAuditStore();
     try {
       const ciConfig = {
         ...config,
@@ -499,6 +500,7 @@ try {
       await rm(temporary, { recursive: true, force: true });
     }
   } else {
+    const { AuditStore } = await import('../server/store.ts');
     store = new AuditStore(config.databasePath);
     if ((command === 'register' || command === 'scan') && target) {
       const root = await validateProjectRoot(target, config.dataDirectory);

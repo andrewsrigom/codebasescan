@@ -4,13 +4,13 @@ import { AuditState, buildAuditGraph } from './audit-graph.ts';
 import { createLocalReviewer } from './model.ts';
 import { createOpenAiReviewer } from './openai.ts';
 import type { Configuration } from '../server/config.ts';
-import type { AuditStore } from '../server/store.ts';
 import { digest } from '../domain/findings.ts';
 import { auditWorkflowVersion, checkpointAdapterVersion } from '../domain/versions.ts';
+import type { AuditExecutionStore } from './audit-store.ts';
 
 function executionFingerprint(
   config: Configuration,
-  options: ReturnType<AuditStore['audit']>['options'],
+  options: ReturnType<AuditExecutionStore['audit']>['options'],
 ) {
   return digest(
     JSON.stringify({
@@ -38,7 +38,7 @@ function executionFingerprint(
   );
 }
 export async function executeAudit(
-  store: AuditStore,
+  store: AuditExecutionStore,
   auditId: string,
   config: Configuration,
   signal?: AbortSignal,
