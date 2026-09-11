@@ -47,6 +47,15 @@ Record confirmed, false_positive, or accepted_risk as portable human review evid
   suppress: `Usage: codebasescan suppress <report> <finding-id> --owner <name> --justification <reason> --evidence <record> [options]
 
 Create or update a portable, expiring suppression ledger.`,
+  calibration: `Usage:
+  codebasescan calibration review <report> <finding-id> <outcome> --reviewer <name> --note <evidence> --evidence <rating> --location <rating> --explanation <rating>
+  codebasescan calibration miss <report> --file <relative-path> --reviewer <name> --note <evidence> [--line <number>] [--expected-rule <id>]
+  codebasescan calibration scope <report> --candidates <partial|complete> --false-negatives <not_performed|sampled|complete> --reviewer <name> --note <scope>
+
+Record independent real-project ground truth without changing scanner findings.
+Outcomes: true_positive, false_positive, not_applicable, inconclusive.
+Evidence/location ratings: correct, incorrect, uncertain.
+Explanation ratings: clear, unclear, uncertain.`,
   advisories: `Usage: codebasescan advisories update <project>
 
 Explicitly refresh the local OSV advisory snapshot for resolved dependencies.`,
@@ -65,9 +74,11 @@ Export json, md, html, sarif, sbom, bundle, agent-plan, or rule-quality.`,
   compare: `Usage: codebasescan compare <base-audit-id> <current-audit-id>
 
 Compare two stored audits without changing scanner evidence.`,
-  evaluate: `Usage: codebasescan evaluate <audit-id> [more-audit-ids...]
+  evaluate: `Usage:
+  codebasescan evaluate <audit-id> [more-audit-ids...]
+  codebasescan evaluate <report> [more-reports...] --artifacts [--output calibration.json]
 
-Aggregate owner-reviewed rule precision evidence across stored audits.`,
+Aggregate reviewer-labelled outcomes, evidence quality, location quality, explanation clarity, and manual misses.`,
 };
 
 export function renderCliHelp(command?: string): string {
@@ -88,6 +99,7 @@ Evidence workflow:
   task       Export one remediation task for an agent
   review     Record a portable human decision
   suppress   Record an evidence-backed suppression
+  calibration Record independent detector-quality ground truth
 
 Persistent local workflow:
   register, scan, list, export, compare, evaluate, advisories update

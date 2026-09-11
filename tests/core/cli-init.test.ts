@@ -38,5 +38,7 @@ test('CLI help separates the common workflow from command details', () => {
   assert.match(renderCliHelp(), /codebasescan --version/);
   assert.match(renderCliHelp(), /No target project code is executed/);
   assert.match(renderCliHelp('audit'), /--non-interactive/);
+  assert.match(renderCliHelp('calibration'), /true_positive/);
+  assert.match(renderCliHelp('evaluate'), /--artifacts/);
   assert.doesNotMatch(renderCliHelp('doctor'), /--fail-on/);
 });

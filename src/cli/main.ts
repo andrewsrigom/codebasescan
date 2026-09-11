@@ -51,6 +51,24 @@ import { initializeProjectConfig } from './init.ts';
 import { createCliProgress } from './progress.ts';
 import { EphemeralAuditStore } from '../engine/ephemeral-audit-store.ts';
 import { codebasescanVersion } from '../domain/versions.ts';
+import {
+  addCalibrationMiss,
+  buildCalibrationReport,
+  calibrationOutcomes,
+  calibrationRatings,
+  candidateReviewStates,
+  explanationRatings,
+  falseNegativeReviewStates,
+  updateCalibrationScope,
+  upsertCalibrationEntry,
+  type CalibrationLedger,
+  type CalibrationOutcome,
+  type CalibrationRating,
+  type CandidateReviewState,
+  type ExplanationRating,
+  type FalseNegativeReviewState,
+} from '../domain/calibration.ts';
+import { parseCalibrationLedger, parseCalibrationReport } from '../domain/calibration-schema.ts';
 
 disableRemoteTracing();
 process.umask(0o077);
@@ -205,6 +223,18 @@ async function loadVerificationLedger(file: string): Promise<VerificationLedger>
   }
 }
 
+async function loadCalibrationLedger(file: string): Promise<CalibrationLedger> {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 4 * 1024 * 1024)
+    throw new Error('Calibration ledger must be a regular JSON file no larger than 4 MB.');
+  try {
+    return parseCalibrationLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Calibration ledger is not valid CodebaseScan JSON.');
+  }
+}
+
 async function existingReviewLedger(file: string) {
   try {
     return await loadReviewLedger(file);
@@ -222,6 +252,20 @@ async function existingReviewLedger(file: string) {
 async function existingSuppressionLedger(file: string) {
   try {
     return await loadSuppressionLedger(file);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    )
+      return undefined;
+    throw error;
+  }
+}
+
+async function existingCalibrationLedger(file: string) {
+  try {
+    return await loadCalibrationLedger(file);
   } catch (error) {
     if (
       error instanceof Error &&
@@ -253,6 +297,55 @@ async function defaultSuppressionLedgerDestination(location: string): Promise<st
   return metadata.isDirectory()
     ? path.join(resolved, 'suppression-ledger.json')
     : path.join(path.dirname(resolved), 'suppression-ledger.json');
+}
+
+async function defaultCalibrationLedgerDestination(location: string): Promise<string> {
+  const resolved = path.resolve(location);
+  const metadata = await stat(resolved);
+  const reportDirectory = metadata.isDirectory() ? resolved : path.dirname(resolved);
+  return path.join(
+    path.dirname(reportDirectory),
+    `${path.basename(reportDirectory)}.calibration.json`,
+  );
+}
+
+function enumValue<T extends string>(
+  label: string,
+  value: string | undefined,
+  values: readonly T[],
+): T {
+  if (value && values.includes(value as T)) return value as T;
+  throw new Error(`Use ${label} with: ${values.join(', ')}.`);
+}
+
+function enumOption<T extends string>(name: string, values: readonly T[]): T {
+  return enumValue(name, option(name), values);
+}
+
+function positiveIntegerOption(name: string): number | undefined {
+  const value = option(name);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1)
+    throw new Error(`Use ${name} with a positive integer.`);
+  return parsed;
+}
+
+async function saveCalibrationLedger(location: string, ledger: CalibrationLedger): Promise<string> {
+  const destination = path.resolve(
+    option('--output') ?? (await defaultCalibrationLedgerDestination(location)),
+  );
+  await writeFile(destination, `${JSON.stringify(parseCalibrationLedger(ledger), null, 2)}\n`, {
+    mode: 0o600,
+  });
+  return destination;
+}
+
+function evaluationReportLocations(): string[] {
+  const firstOption = arguments_.findIndex(
+    (argument, index) => index > 0 && argument.startsWith('--'),
+  );
+  return arguments_.slice(1, firstOption === -1 ? undefined : firstOption);
 }
 
 async function preflight(root: string, requireApproval: boolean) {
@@ -368,6 +461,98 @@ try {
     );
     await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
     console.log(`Saved suppression ledger ${destination}`);
+  } else if (
+    command === 'calibration' &&
+    target === 'review' &&
+    arguments_[2] &&
+    arguments_[3] &&
+    arguments_[4]
+  ) {
+    const location = arguments_[2];
+    const report = await loadReportArtifact(location);
+    const destination = path.resolve(
+      option('--output') ?? (await defaultCalibrationLedgerDestination(location)),
+    );
+    const current = await existingCalibrationLedger(destination);
+    const note = option('--note');
+    const reviewer = option('--reviewer');
+    if (!note || !reviewer) throw new Error('Calibration review requires --reviewer and --note.');
+    const ledger = upsertCalibrationEntry(current, report, {
+      findingId: arguments_[3],
+      outcome: enumValue(
+        'the calibration outcome',
+        arguments_[4],
+        calibrationOutcomes,
+      ) as CalibrationOutcome,
+      evidenceAccuracy: enumOption('--evidence', calibrationRatings) as CalibrationRating,
+      locationAccuracy: enumOption('--location', calibrationRatings) as CalibrationRating,
+      explanationQuality: enumOption('--explanation', explanationRatings) as ExplanationRating,
+      note,
+      reviewer,
+    });
+    await saveCalibrationLedger(location, ledger);
+    console.log(`Saved calibration ledger ${destination}`);
+  } else if (command === 'calibration' && target === 'miss' && arguments_[2]) {
+    const location = arguments_[2];
+    const report = await loadReportArtifact(location);
+    const destination = path.resolve(
+      option('--output') ?? (await defaultCalibrationLedgerDestination(location)),
+    );
+    const current = await existingCalibrationLedger(destination);
+    const file = option('--file');
+    const note = option('--note');
+    const reviewer = option('--reviewer');
+    if (!file || !note || !reviewer)
+      throw new Error('Manual miss requires --file, --reviewer, and --note.');
+    const ledger = addCalibrationMiss(current, report, {
+      file,
+      line: positiveIntegerOption('--line'),
+      expectedRuleId: option('--expected-rule'),
+      note,
+      reviewer,
+    });
+    await saveCalibrationLedger(location, ledger);
+    console.log(`Saved calibration ledger ${destination}`);
+  } else if (command === 'calibration' && target === 'scope' && arguments_[2]) {
+    const location = arguments_[2];
+    const report = await loadReportArtifact(location);
+    const destination = path.resolve(
+      option('--output') ?? (await defaultCalibrationLedgerDestination(location)),
+    );
+    const current = await existingCalibrationLedger(destination);
+    const note = option('--note');
+    const reviewer = option('--reviewer');
+    if (!note || !reviewer) throw new Error('Calibration scope requires --reviewer and --note.');
+    const ledger = updateCalibrationScope(current, report, {
+      candidateReview: enumOption('--candidates', candidateReviewStates) as CandidateReviewState,
+      falseNegativeReview: enumOption(
+        '--false-negatives',
+        falseNegativeReviewStates,
+      ) as FalseNegativeReviewState,
+      note,
+      reviewer,
+    });
+    await saveCalibrationLedger(location, ledger);
+    console.log(`Saved calibration ledger ${destination}`);
+  } else if (command === 'evaluate' && target && arguments_.includes('--artifacts')) {
+    const locations = evaluationReportLocations();
+    if (!locations.length) throw new Error('Evaluate requires at least one report artifact.');
+    const inputs = await Promise.all(
+      locations.map(async (location) => ({
+        report: await loadReportArtifact(location),
+        ledger: await existingCalibrationLedger(
+          await defaultCalibrationLedgerDestination(location),
+        ),
+      })),
+    );
+    const evaluation = parseCalibrationReport(buildCalibrationReport(inputs));
+    const output = `${JSON.stringify(evaluation, null, 2)}\n`;
+    const destination = option('--output');
+    if (destination) {
+      const resolved = path.resolve(destination);
+      await writeFile(resolved, output, { mode: 0o600 });
+      console.log(`Saved calibration report ${resolved}`);
+    } else console.log(output);
   } else if (command === 'finalize' && target) {
     const baselinePath = option('--baseline');
     const verificationPath = option('--verification');
@@ -583,6 +768,7 @@ try {
         'task',
         'review',
         'suppress',
+        'calibration',
         'finalize',
       ]);
       if (known.has(command))
