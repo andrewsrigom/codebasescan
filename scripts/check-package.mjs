@@ -18,6 +18,7 @@ const required = [
   'README.md',
   'bin/codebasescan.mjs',
   'configs/gitleaks.toml',
+  'configs/codebasescan.config.schema.json',
   'configs/semgrep.yml',
   'dist/cli/main.js',
   'dist/server/config.js',

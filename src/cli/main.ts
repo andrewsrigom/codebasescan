@@ -413,7 +413,10 @@ try {
       const audit = ciStore.enqueue(project.id, { ...commandAuditOptions(), scopePreflight });
       ciStore.claim(audit.id);
       progress.phase('Running deterministic scanners');
-      await executeAudit(ciStore, audit.id, ciConfig, undefined, { humanReview: false });
+      await executeAudit(ciStore, audit.id, ciConfig, undefined, {
+        humanReview: false,
+        checkpointMode: 'memory',
+      });
       const completed = ciStore.audit(audit.id);
       if (completed.status !== 'completed' || !completed.report)
         throw new Error('Non-interactive audit did not produce a complete draft report.');

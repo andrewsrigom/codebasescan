@@ -1,5 +1,5 @@
-import { Command } from '@langchain/langgraph';
-import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite';
+import { Command, MemorySaver } from '@langchain/langgraph';
+import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint';
 import { AuditState, buildAuditGraph } from './audit-graph.ts';
 import { createLocalReviewer } from './model.ts';
 import { createOpenAiReviewer } from './openai.ts';
@@ -42,7 +42,7 @@ export async function executeAudit(
   auditId: string,
   config: Configuration,
   signal?: AbortSignal,
-  options: { humanReview?: boolean } = {},
+  options: { humanReview?: boolean; checkpointMode?: 'memory' | 'sqlite' } = {},
 ): Promise<void> {
   const audit = store.audit(auditId);
   if (audit.workflowVersion !== auditWorkflowVersion)
@@ -50,20 +50,36 @@ export async function executeAudit(
       `Audit workflow ${audit.workflowVersion} is incompatible with ${auditWorkflowVersion}. Start a new audit.`,
     );
   const project = store.project(audit.projectId);
-  const checkpointer = SqliteSaver.fromConnString(config.checkpointPath);
+  let checkpointer: BaseCheckpointSaver;
+  let closeCheckpointer = () => {};
+  if (options.checkpointMode === 'memory') checkpointer = new MemorySaver();
+  else {
+    let SqliteSaver: typeof import('@langchain/langgraph-checkpoint-sqlite').SqliteSaver;
+    try {
+      ({ SqliteSaver } = await import('@langchain/langgraph-checkpoint-sqlite'));
+    } catch {
+      throw new Error(
+        'Persistent checkpoints require the optional @langchain/langgraph-checkpoint-sqlite package.',
+      );
+    }
+    const sqlite = SqliteSaver.fromConnString(config.checkpointPath);
+    checkpointer = sqlite;
+    closeCheckpointer = () => sqlite.db.close();
+  }
   try {
+    const reviewer =
+      config.aiMode === 'ollama'
+        ? await createLocalReviewer(config.model)
+        : config.aiMode === 'openai'
+          ? createOpenAiReviewer(config, store, audit.id)
+          : null;
     const graph = buildAuditGraph({
       root: project.root,
       projectName: project.name,
       config,
       store,
       checkpointer,
-      reviewer:
-        config.aiMode === 'ollama'
-          ? createLocalReviewer(config.model)
-          : config.aiMode === 'openai'
-            ? createOpenAiReviewer(config, store, audit.id)
-            : null,
+      reviewer,
       httpProbe: audit.options.httpProbe,
       gitHistorySecrets: audit.options.gitHistorySecrets,
       modes: audit.options.modes,
@@ -136,7 +152,6 @@ export async function executeAudit(
     if (store.audit(audit.id).status === 'cancelled') return;
     store.transition(audit.id, graph.isInterrupted(result) ? 'awaiting_review' : 'completed');
   } finally {
-    // The official saver owns its SQLite connection.
-    checkpointer.db.close();
+    closeCheckpointer();
   }
 }

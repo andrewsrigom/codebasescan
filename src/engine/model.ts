@@ -1,4 +1,3 @@
-import { ChatOllama } from '@langchain/ollama';
 import { z } from 'zod';
 import type { Analysis, Finding } from '../domain/types.ts';
 import { redact } from '../security/redact.ts';
@@ -30,11 +29,17 @@ export interface Reviewer {
     signal?: AbortSignal,
   ): Promise<Assessment>;
 }
-export function createLocalReviewer(modelName: string): Reviewer {
+export async function createLocalReviewer(modelName: string): Promise<Reviewer> {
   if (!modelName || /cloud|https?:|\/\//i.test(modelName))
     throw new Error(
       'A downloaded local Ollama model is required; cloud model names are not allowed.',
     );
+  let ChatOllama: typeof import('@langchain/ollama').ChatOllama;
+  try {
+    ({ ChatOllama } = await import('@langchain/ollama'));
+  } catch {
+    throw new Error('Local AI review requires the optional @langchain/ollama package.');
+  }
   const model = new ChatOllama({
     baseUrl: 'http://127.0.0.1:11434',
     model: modelName,

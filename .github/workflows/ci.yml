@@ -44,3 +44,43 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - run: npm audit --audit-level=low
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: '22.16.0'
+            manager: npm
+          - node: '24'
+            manager: npm
+          - node: '22.16.0'
+            manager: pnpm
+          - node: '22.16.0'
+            manager: yarn
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      LANGSMITH_TRACING: 'false'
+      LANGCHAIN_TRACING_V2: 'false'
+      CODEBASESCAN_AI: disabled
+      CODEBASESCAN_SEMGREP: 'false'
+      CODEBASESCAN_GITLEAKS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install project dependencies
+        run: npm ci
+      - name: Enable pnpm
+        if: matrix.manager == 'pnpm'
+        run: corepack enable && corepack prepare pnpm@10.32.0 --activate
+      - name: Enable Yarn Classic
+        if: matrix.manager == 'yarn'
+        run: corepack enable && corepack prepare yarn@1.22.22 --activate
+      - name: Build packed CLI
+        run: npm run build:cli
+      - name: Test clean ${{ matrix.manager }} install
+        run: node scripts/test-install.mjs ${{ matrix.manager }}
