@@ -61,10 +61,19 @@ test('generic ID lookups remain medium-severity review hotspots', () => {
   assert.equal(finding?.severity, 'medium');
   assert.match(finding?.description ?? '', /review hotspot, not evidence/i);
 });
-test('documents a deliberate comment false positive', () => {
+test('comment examples do not become source findings', () => {
   const findings = scanPatterns(snapshotOf('// Do not use eval(input) anymore.'));
-  assert.equal(findings.length, 1);
-  assert.equal(findings[0]?.disposition, 'needs_review');
+  assert.equal(findings.length, 0);
+});
+test('Redis Lua evaluation is not treated as JavaScript dynamic execution', () => {
+  const findings = scanPatterns(
+    snapshotOf('client.withCommandOptions({ abortSignal }).eval(SCRIPT, { keys, arguments });'),
+  );
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-003'));
+});
+test('explicit global JavaScript evaluation remains a review candidate', () => {
+  const findings = scanPatterns(snapshotOf('globalThis.eval(input); window.eval(other);'));
+  assert.equal(findings.filter((finding) => finding.ruleId === 'TW-003').length, 2);
 });
 test('caps findings to prevent unbounded output', () => {
   assert.equal(scanPatterns(snapshotOf('eval(input);\n'.repeat(500))).length, 300);

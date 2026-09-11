@@ -1,3 +1,4 @@
+import ts from 'typescript';
 import type { Category, Finding, Severity, Snapshot } from '../domain/types.ts';
 import { makeFinding, sourceEvidence } from '../domain/findings.ts';
 import { isRuntimeSource } from '../security/paths.ts';
@@ -39,7 +40,7 @@ export const rules: Rule[] = [
   {
     id: 'TW-003',
     title: 'Dynamic code execution needs trust-boundary review',
-    pattern: /\b(?:eval\s*\(|new\s+Function\s*\()/g,
+    pattern: /(?:(?<![\w$.])eval\s*\(|\b(?:globalThis|window)\.eval\s*\(|\bnew\s+Function\s*\()/g,
     severity: 'high',
     category: 'code',
     cwe: ['CWE-95'],
@@ -97,13 +98,33 @@ export const rules: Rule[] = [
       'Apply authorization inside each tool, restrict its capability, and require explicit approval where the operation warrants it.',
   },
 ];
+
+function commentRanges(content: string): { start: number; end: number }[] {
+  const scanner = ts.createScanner(ts.ScriptTarget.Latest, false, ts.LanguageVariant.JSX, content);
+  const ranges: { start: number; end: number }[] = [];
+  for (let token = scanner.scan(); token !== ts.SyntaxKind.EndOfFileToken; token = scanner.scan()) {
+    if (
+      token === ts.SyntaxKind.SingleLineCommentTrivia ||
+      token === ts.SyntaxKind.MultiLineCommentTrivia
+    )
+      ranges.push({ start: scanner.getTokenPos(), end: scanner.getTextPos() });
+  }
+  return ranges;
+}
+
+function insideComment(index: number, ranges: { start: number; end: number }[]): boolean {
+  return ranges.some((range) => index >= range.start && index < range.end);
+}
+
 export function scanPatterns(snapshot: Snapshot): Finding[] {
   const findings: Finding[] = [];
   for (const file of snapshot.files) {
     if (!isRuntimeSource(file) || !/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
+    const comments = commentRanges(file.content);
     for (const rule of rules) {
       const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
       for (const match of file.content.matchAll(expression)) {
+        if (insideComment(match.index, comments)) continue;
         if (findings.length >= 300) return findings;
         const line = file.content.slice(0, match.index).split('\n').length;
         findings.push(

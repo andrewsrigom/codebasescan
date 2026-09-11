@@ -234,7 +234,7 @@ export function buildAuditGraph(options: {
           scanners: [skippedByMode('builtin', 'Built-in patterns', 'security')],
         };
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'builtin', '0.2.0', ['builtin'], () => {
+      const result = await cachedScan(source, 'builtin', '0.4.0', ['builtin'], () => {
         const started = performance.now();
         const findings = scanPatterns(source);
         return {
@@ -248,7 +248,7 @@ export function buildAuditGraph(options: {
               findings: findings.length,
               detail:
                 'Seven bounded regex heuristics. Not a complete SAST engine or interprocedural analysis.',
-              version: '0.2.0',
+              version: '0.4.0',
             } satisfies ScannerRun,
           ],
         };
