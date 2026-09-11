@@ -1,6 +1,6 @@
 import type { AuditReport, Finding } from './types.ts';
 
-export const ruleQualityVersion = 2 as const;
+export const ruleQualityVersion = 3 as const;
 
 export interface RuleQualityEntry {
   id: string;
@@ -40,17 +40,16 @@ export interface RuleQualityReport {
   limitations: string[];
 }
 
-const benchmarked = new Set([
+export const declaredFixtureRuleKeys = [
   ...Array.from({ length: 10 }, (_, index) => `ast:TW-AST${String(index + 1).padStart(3, '0')}`),
   'ast:TW-AST018',
   ...Array.from({ length: 7 }, (_, index) => `next:TW-NEXT${String(index + 1).padStart(3, '0')}`),
   ...Array.from({ length: 9 }, (_, index) => `react:TW-REACT${String(index + 1).padStart(3, '0')}`),
   ...Array.from({ length: 9 }, (_, index) => `saas:TW-SAAS${String(index + 1).padStart(3, '0')}`),
   ...Array.from(
-    { length: 6 },
+    { length: 4 },
     (_, index) => `accessibility:TW-A11Y${String(index + 1).padStart(3, '0')}`,
   ),
-  ...Array.from({ length: 5 }, (_, index) => `web:TW-WEB${String(index + 1).padStart(3, '0')}`),
   ...Array.from(
     { length: 3 },
     (_, index) => `privacy:TW-PRIV${String(index + 1).padStart(3, '0')}`,
@@ -61,6 +60,7 @@ const benchmarked = new Set([
   ),
   'environment:TW-ENV001',
   'builtin:TW-001',
+  'builtin:TW-003',
   'builtin:TW-005',
   'builtin:TW-006',
   'builtin:TW-007',
@@ -68,7 +68,9 @@ const benchmarked = new Set([
   'posture:TW-P003',
   'posture:TW-P004',
   'posture:TW-P006',
-]);
+] as const;
+
+const benchmarked = new Set<string>(declaredFixtureRuleKeys);
 
 const frameworks: Partial<Record<Finding['source'], string[]>> = {
   ast: ['Node.js', 'TypeScript', 'Next.js'],
@@ -138,14 +140,6 @@ function fixtureMetrics(
   ruleId: string,
 ): RuleQualityEntry['declaredFixtureMetrics'] {
   const key = `${source}:${ruleId}`;
-  if (key === 'builtin:TW-003')
-    return {
-      status: 'known_false_positive',
-      truePositives: 0,
-      falsePositives: 1,
-      falseNegatives: 0,
-      scope: 'Declared inert fixtures only.',
-    };
   return benchmarked.has(key)
     ? {
         status: 'measured',

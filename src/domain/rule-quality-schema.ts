@@ -58,7 +58,7 @@ const rule = z.object({
 });
 
 const schema = z.object({
-  schemaVersion: z.literal(2),
+  schemaVersion: z.literal(3),
   kind: z.literal('codebasescan-rule-quality'),
   generatedAt: shortText,
   auditId: shortText,

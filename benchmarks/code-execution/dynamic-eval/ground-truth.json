@@ -1,0 +1,6 @@
+{
+  "id": "code-execution-dynamic-eval",
+  "category": "code-execution",
+  "scanners": ["builtin"],
+  "expectedRuleIds": ["TW-003"]
+}
