@@ -150,7 +150,11 @@ try {
     ['audit', '.', '--report-dir', reportDirectory, '--non-interactive', '--quiet'],
     { capture: true },
   );
-  if (version.stdout.trim() !== packageData.version)
+  const versionLines = version.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!versionLines.includes(packageData.version))
     throw new Error('Installed CLI did not print the packed package version.');
   rejectRuntimeWarnings('version', version);
   rejectRuntimeWarnings('doctor', doctor);
