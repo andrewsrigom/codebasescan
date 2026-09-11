@@ -34,6 +34,7 @@ const maximumFiles = 2000;
 const maximumNodesPerFile = 200_000;
 const maximumSymbols = 20_000;
 const maximumEdges = 50_000;
+const maximumCallCandidates = 200_000;
 const maximumFacts = 50_000;
 const maximumImports = 20_000;
 const maximumEntrypoints = 10_000;
@@ -1025,7 +1026,7 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       if (ts.isCallExpression(node)) {
         const callee = callName(node.expression);
         const line = lineOf(item.ast, node);
-        if (!cap(calls.length, maximumEdges, 'Call edge'))
+        if (!cap(calls.length, maximumCallCandidates, 'Call candidate'))
           calls.push({
             id: stableId('call', item.source.path, line, callee, ownerSymbolId),
             file: item.source.path,
@@ -1202,7 +1203,14 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
     });
   const ownedSymbols = own(symbols);
   const ownedImports = own(imports);
-  const ownedCalls = own(resolveCallTargets(calls, symbols, imports));
+  const resolvedCalls = resolveCallTargets(calls, symbols, imports).filter(
+    (call) => call.targetSymbolId,
+  );
+  if (resolvedCalls.length > maximumEdges) {
+    truncated = true;
+    issues.push(`Call edge limit of ${maximumEdges} was reached.`);
+  }
+  const ownedCalls = own(resolvedCalls.slice(0, maximumEdges));
   const ownedFacts = own(facts);
   const ownedEntrypoints = own(entrypoints.slice(0, maximumEntrypoints));
   const frameworks = own(frameworkFacts(snapshot, parsed));
@@ -1254,9 +1262,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: 0,
       detail: parsed.length
-        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${calls.length} call edge(s), ${facts.length} security-relevant fact(s), ${componentResult.components.length} declared component(s), ${componentEdgeResult.edges.length} cross-component import edge(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
+        ? `Parsed ${parsed.length} captured TypeScript/JavaScript file(s) as data; mapped ${entrypoints.length} entry point(s), ${symbols.length} symbol(s), ${ownedCalls.length} resolved call edge(s), ${facts.length} security-relevant fact(s), ${componentResult.components.length} declared component(s), ${componentEdgeResult.edges.length} cross-component import edge(s), ${aliasConfiguration.aliases.length} declarative TypeScript path alias(es), ${workspacePackageConfiguration.entries.length} captured workspace package entry point(s), and ${saasConfiguration.sources.length} declarative SaaS semantics file(s).${issues.length ? ` ${issues.length} profile issue(s) keep coverage partial.` : ''}`
         : 'No supported TypeScript or JavaScript source was available for structural profiling.',
-      version: '0.9.0',
+      version: '0.10.0',
     },
   };
 }

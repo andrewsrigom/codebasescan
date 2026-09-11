@@ -262,8 +262,12 @@ export function buildAuditGraph(options: {
     })
     .addNode('project_profile', async (state) => {
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'project-profile', '0.9.0', ['project-profile'], () =>
-        profileProject(source),
+      const result = await cachedScan(
+        source,
+        'project-profile',
+        '0.10.0',
+        ['project-profile'],
+        () => profileProject(source),
       );
       event(state, 'project_profile', `Project structure profile: ${result.profile.status}.`);
       return { projectProfile: result.profile, scanners: [result.run] };

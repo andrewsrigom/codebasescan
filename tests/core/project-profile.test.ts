@@ -248,6 +248,25 @@ test('profiling parses target code as data without executing it', () => {
   assert.ok(result.profile.symbols.some((symbol) => symbol.name === 'safe'));
 });
 
+test('project profile keeps resolved local edges and omits unrelated call noise', () => {
+  const result = profileProject(
+    snapshotOf(`
+      function localHelper() { return true; }
+      export function handler() {
+        console.log('diagnostic');
+        localHelper();
+      }
+    `),
+  );
+
+  assert.equal(result.profile.status, 'complete');
+  assert.deepEqual(
+    result.profile.calls.map((call) => call.callee),
+    ['localHelper'],
+  );
+  assert.ok(result.profile.calls[0]?.targetSymbolId);
+});
+
 test('nested functions with use server directives become server-action entrypoints', () => {
   const result = profileProject(
     snapshotOf(

@@ -56,7 +56,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     }
   }
   assert.ok(interruptedCheckpointId);
-  assert.equal(store.audit(audit.id).report?.findings.length, 9);
+  assert.equal(store.audit(audit.id).report?.findings.length, 8);
   assert.equal(store.audit(audit.id).report?.scanners.length, 27);
   assert.ok(
     store.audit(audit.id).report?.scanners.some((scanner) => scanner.id === 'react-security'),
