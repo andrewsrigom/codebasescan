@@ -1,6 +1,7 @@
 import type { AuditReport, Disposition } from './types.ts';
 import { digest } from './findings.ts';
 import { redact } from '../security/redact.ts';
+import { auditReportSchemaVersion } from './versions.ts';
 
 export const reviewLedgerVersion = 1 as const;
 export type PortableReviewDecision = Extract<
@@ -112,7 +113,7 @@ export function applyReviewLedger(
   ].sort();
   return {
     ...report,
-    schemaVersion: 15,
+    schemaVersion: auditReportSchemaVersion,
     findings: report.findings.map((finding) => {
       const entry = applicable.get(finding.fingerprint);
       return entry

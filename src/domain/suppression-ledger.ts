@@ -2,6 +2,7 @@ import type { AuditReport, Finding } from './types.ts';
 import { digest } from './findings.ts';
 import { redact } from '../security/redact.ts';
 import { safeRelative } from '../security/paths.ts';
+import { auditReportSchemaVersion } from './versions.ts';
 
 export const suppressionLedgerVersion = 1 as const;
 
@@ -141,7 +142,7 @@ export function applySuppressionLedger(
   ].sort();
   return {
     ...report,
-    schemaVersion: 15,
+    schemaVersion: auditReportSchemaVersion,
     findings: report.findings.map((finding) => {
       const entry = applicable.get(finding.fingerprint);
       return entry

@@ -29,6 +29,7 @@ import { buildSecurityChecklist } from '../domain/checklist.ts';
 import { auditModeSelections, modeEnabled, resolveAuditModes } from '../domain/audit-modes.ts';
 import { enrichFindingQuality } from '../domain/finding-quality.ts';
 import { buildRiskCorrelation } from '../domain/risk-paths.ts';
+import { auditReportSchemaVersion } from '../domain/versions.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
 import { scanExternal } from '../scanners/external.ts';
@@ -856,7 +857,7 @@ export function buildAuditGraph(options: {
             }
           : undefined;
       const report: AuditReport = {
-        schemaVersion: 16,
+        schemaVersion: auditReportSchemaVersion,
         auditId: state.auditId,
         projectName,
         createdAt,

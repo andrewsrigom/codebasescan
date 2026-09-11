@@ -73,7 +73,7 @@ test('LangGraph fans in scanner results and pauses for publication review', asyn
     store.audit(audit.id).report?.scanners.some((run) => run.id === 'environment-contract'),
   );
   assert.equal(store.audit(audit.id).report?.projectProfile?.status, 'complete');
-  assert.equal(store.audit(audit.id).report?.schemaVersion, 15);
+  assert.equal(store.audit(audit.id).report?.schemaVersion, 16);
   assert.ok(store.audit(audit.id).report?.environmentContract);
   assert.ok(store.audit(audit.id).report?.testEvidence);
   assert.ok(store.audit(audit.id).report?.webhookContract);
