@@ -28,6 +28,10 @@ import { parsePolicyResult, policyResultJsonSchema } from '../domain/policy-sche
 import { suppressionLedgerJsonSchema } from '../domain/suppression-ledger-schema.ts';
 import type { VerificationLedger } from '../domain/verification-ledger.ts';
 import { verificationLedgerJsonSchema } from '../domain/verification-ledger-schema.ts';
+import {
+  calibrationLedgerJsonSchema,
+  calibrationReportJsonSchema,
+} from '../domain/calibration-schema.ts';
 
 export const staticReportVersion = 1 as const;
 
@@ -455,6 +459,16 @@ export async function writeStaticReport(
       path: 'review-ledger.schema.json',
       mediaType: 'application/schema+json',
       content: json(reviewLedgerJsonSchema()),
+    },
+    {
+      path: 'calibration-ledger.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(calibrationLedgerJsonSchema()),
+    },
+    {
+      path: 'calibration-report.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(calibrationReportJsonSchema()),
     },
     {
       path: 'suppression-ledger.schema.json',

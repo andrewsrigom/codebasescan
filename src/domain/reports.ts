@@ -1,4 +1,4 @@
-import type { AuditReport, ProjectFramework } from './types.ts';
+import type { AuditReport, Finding, ProjectFramework } from './types.ts';
 import { digest } from './findings.ts';
 import { groupDependencyAdvisories } from './dependency-advisories.ts';
 import type { RemediationPlan, RemediationResult, RemediationTask } from './remediation.ts';
@@ -777,6 +777,56 @@ function humanFindingSource(source: AuditReport['findings'][number]['source']): 
   return labels[source];
 }
 
+function humanFindingImpact(finding: Finding): string {
+  if (finding.analysis?.impact) return finding.analysis.impact;
+  const impacts: Record<Finding['category'], string> = {
+    authentication: 'authentication boundaries and who can enter a protected flow',
+    authorization: 'which users or tenants can read data or perform privileged actions',
+    injection: 'whether untrusted input can influence a privileged interpreter or operation',
+    secrets: 'credential exposure, unintended access, or the need to rotate a real secret',
+    configuration: 'the effective protection provided by application or deployment settings',
+    'ai-security': 'the trust boundary between untrusted content, model output, and tools',
+    dependencies: 'the security and integrity of code included through the dependency graph',
+    accessibility: 'whether people using keyboards or assistive technology can use the interface',
+    privacy: 'how personal or sensitive data is collected, exposed, retained, or transferred',
+    reliability: 'timeouts, retries, duplicate work, cleanup, and predictable failure behavior',
+    code: 'maintainability and the chance that concentrated complexity hides future defects',
+  };
+  return `If confirmed, this could affect ${impacts[finding.category]}. The ${finding.severity} label comes from the detector; this report does not establish runtime exploitability.`;
+}
+
+function humanVerificationSteps(finding: Finding): string[] {
+  if (finding.vulnerability)
+    return [
+      `Confirm that ${finding.vulnerability.package}@${finding.vulnerability.version} is installed through the listed dependency path.`,
+      'Check whether the affected feature is referenced and compare the installed version with the advisory fix range.',
+    ];
+  if (finding.secret)
+    return [
+      'Determine whether the redacted match is a real credential, a test fixture, or generated sample data.',
+      'If it is real, verify exposure and rotation outside this report before closing the candidate.',
+    ];
+  if (finding.category === 'accessibility')
+    return [
+      'Render the affected state in an authorized browser and inspect the named control.',
+      'Repeat the interaction with keyboard navigation and the relevant assistive-technology check.',
+    ];
+  if (finding.source === 'http-probe' || finding.runtimeVerification)
+    return [
+      'Repeat the observation against the intended authorized environment and affected route.',
+      'Confirm that redirects, caches, proxies, and authenticated states do not change the result.',
+    ];
+  if (finding.category === 'configuration')
+    return [
+      'Trace the captured declaration to the effective environment or framework configuration.',
+      'Verify the resulting runtime behavior separately; source declarations alone are not proof.',
+    ];
+  return [
+    'Start at the cited line and trace the value or operation through the local guards shown in source.',
+    'Confirm the input, caller, authorization context, and final operation before accepting or rejecting the candidate.',
+  ];
+}
+
 export function toHtml(
   report: AuditReport,
   options: {
@@ -966,6 +1016,9 @@ export function toHtml(
   );
   const findings = report.findings
     .map((finding, index) => {
+      const quality = options.ruleQuality?.rules.find(
+        (rule) => rule.source === finding.source && rule.ruleId === finding.ruleId,
+      );
       const evidence = finding.evidence
         .map(
           (item) =>
@@ -975,12 +1028,23 @@ export function toHtml(
             item.startLine +
             '–' +
             item.endLine +
-            '</h3><pre>' +
-            e(item.excerpt) +
-            '</pre><p>' +
+            '</h3><p>' +
             e(item.observation) +
-            '</p></div>',
+            '</p><details class="source-details"><summary>Show captured source</summary><pre>' +
+            e(item.excerpt) +
+            '</pre></details></div>',
         )
+        .join('');
+      const verification = humanVerificationSteps(finding)
+        .map((step) => '<li>' + e(step) + '</li>')
+        .join('');
+      const qualityLimitations = quality?.limitations ?? [
+        'Review the exact evidence and relevant scanner coverage before deciding.',
+      ];
+      const limitations = [
+        ...new Set([...qualityLimitations, ...(finding.analysis?.limitations ?? [])]),
+      ]
+        .map((limitation) => '<li>' + e(limitation) + '</li>')
         .join('');
       const analysis = finding.analysis
         ? '<section class="finding-section"><h3>Contextual assessment</h3><p>' +
@@ -1042,9 +1106,21 @@ export function toHtml(
         e(finding.evidence[0]?.file ?? 'Location not identified') +
         '</span></summary><div class="finding-body"><section class="finding-section finding-overview"><h3>What CodebaseScan found</h3><p>' +
         e(finding.description) +
+        '</p></section><section class="finding-section"><h3>Why it matters</h3><p>' +
+        e(humanFindingImpact(finding)) +
         '</p></section><section class="finding-section"><h3>Where to look</h3>' +
         evidence +
-        '</section><section class="finding-section remediation"><h3>What to do next</h3><p>' +
+        '</section><section class="finding-section"><h3>How to verify manually</h3><ol>' +
+        verification +
+        '</ol></section><section class="finding-section"><h3>Confidence and limitations</h3><p><strong>Confidence:</strong> ' +
+        e(finding.confidence ?? 'not rated') +
+        ' · <strong>Detector:</strong> ' +
+        e(humanFindingSource(finding.source)) +
+        ' · <strong>Rule:</strong> ' +
+        e(finding.ruleId) +
+        '</p><ul>' +
+        limitations +
+        '</ul></section><section class="finding-section remediation"><h3>What to do next</h3><p>' +
         e(finding.remediation) +
         '</p></section>' +
         analysis +
@@ -1857,7 +1933,7 @@ export function toHtml(
       '. Passing does not certify security or compliance.</p></section>'
     : '';
   const artifactLinks = options.artifactLinks
-    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li><li><a href="suppression-ledger.schema.json">Portable suppression ledger JSON Schema</a></li><li><a href="verification-ledger.schema.json">External verification ledger JSON Schema</a></li>' +
+    ? '<section class="report-section"><span class="kicker">PORTABLE OUTPUT</span><h2>Report artifacts</h2><p>Use the human report for review and the JSON artifacts for deterministic automation or bounded AI analysis.</p><ul class="artifact-links"><li><a href="audit-report.json">Audit report JSON</a></li><li><a href="run-manifest.json">Run and coverage manifest</a></li><li><a href="run-manifest.schema.json">Run manifest JSON Schema</a></li><li><a href="policy-result.json">Policy result JSON</a></li><li><a href="policy-result.schema.json">Policy result JSON Schema</a></li><li><a href="agent-plan.json">Agent work plan JSON</a></li><li><a href="agent-plan.schema.json">Agent plan JSON Schema</a></li><li><a href="remediation-plan.json">Compatibility remediation plan</a></li><li><a href="rule-quality.json">Applied rule quality</a></li><li><a href="rule-quality.schema.json">Rule quality JSON Schema</a></li><li><a href="review-ledger.schema.json">Portable review ledger JSON Schema</a></li><li><a href="calibration-ledger.schema.json">Calibration ledger JSON Schema</a></li><li><a href="calibration-report.schema.json">Calibration report JSON Schema</a></li><li><a href="suppression-ledger.schema.json">Portable suppression ledger JSON Schema</a></li><li><a href="verification-ledger.schema.json">External verification ledger JSON Schema</a></li>' +
       (options.remediationResult
         ? '<li><a href="remediation-result.json">Remediation result JSON</a></li><li><a href="remediation-result.schema.json">Remediation result JSON Schema</a></li>' +
           (options.remediationResult.externalVerification
@@ -1916,7 +1992,7 @@ export function toHtml(
     'body{background:var(--canvas)}.report-sidebar{border-right:1px solid #222a3d}.brand-mark{border-color:#4a5571}.brand strong{color:#fff}.nav-label{color:#5f6980}.report-nav a{color:#c3cad9}.report-nav a:hover,.report-nav a:focus-visible{background:#171d30}.report-nav a.current{background:#2364f5;color:#fff}.report-nav a.current .nav-icon{color:#fff}.side-meta{border-color:#293047}.side-meta strong{color:#fff}.topbar{background:rgba(8,11,20,.94);backdrop-filter:blur(12px)}.button{background:#0e1322;color:var(--ink)}.button.primary{background:#2364f5;border-color:#2364f5}.button:hover,.button:focus-visible{border-color:#4b7fff;outline-color:#152a52}.review-note{border-color:#574317;background:#19170e}.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group,.finding{background:var(--paper)}.machine-banner{background:#0d1322;border-color:#39435d;color:var(--muted)}.risk-table li+li,.queue-card ul,.detail-group[open]>summary,.detail-group-body>.report-section,.task-body,.finding-body,.finding-section{border-color:#252d43}.risk-table a:hover,.risk-table a:focus-visible{background:#171e32}.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#b0b8ca}.task-list li,.control,.dependency-plan,.artifact-links li{border-color:#293047}.facts span{background:#171d30;border-color:#293047}.callout{background:#17150d}.evidence pre{background:#070a12;color:#dfe7ff}.severity.critical,.severity.high{background:#35171c;color:#ff8c85}.severity.medium{background:#382b10;color:#ffc85b}.severity.low,.severity.info{background:#20283a;color:#aeb8ce}.status.complete{background:#0d3229;color:#57d9a3}.status.gap{background:#3a2b10;color:#ffd075}.artifact-links a{color:#78a4ff}' +
     '@media print{:root{color-scheme:light;--ink:#111827;--muted:#667085;--line:#dfe3ea;--paper:#fff;--canvas:#fff;--accent:#245fe5}.report-section,.finding,.executive-metric,.risk-table,.queue-card,.coverage-panel,.detail-group{background:#fff}.review-note{background:#fffaf0;color:#111827}.risk-table a,.queue-card li a,.finding-body>p:first-child,.task-list p,.control p{color:#111827}}';
   const humanReportCss =
-    '.reading-guide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:14px}.reading-guide>div{background:var(--paper);padding:13px 15px}.reading-guide span{float:left;display:grid;place-items:center;width:22px;height:22px;margin-right:9px;border-radius:50%;background:#2364f5;color:#fff;font-size:10px;font-weight:800}.reading-guide strong{display:block;font-size:11px}.reading-guide p{margin:3px 0 0 31px;color:var(--muted);font-size:10px}.queue-summary{color:var(--muted);font-size:11px}.task-detail>summary{grid-template-columns:auto minmax(220px,1fr) auto 18px}.action-pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;background:#183b67;color:#8fbaff;font-size:10px;font-weight:750;white-space:nowrap}.task-count{font-size:10px;color:var(--muted);white-space:nowrap}.task-body{padding:18px}.task-explanation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.task-explanation section{border:1px solid var(--line);border-radius:9px;padding:14px}.task-explanation h4{margin:0 0 7px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#aeb8ca}.task-explanation p{margin:0;font-size:12px;color:#c5ccda}.task-explanation ol,.task-explanation ul{margin:0;padding-left:18px}.task-explanation li{border:0;border-radius:0;padding:3px 0;color:#c5ccda;font-size:11px}.task-explanation .file-list{list-style:none;padding:0}.task-explanation .file-list li{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:#9eb8f2}.task-note{margin-top:12px;border-left:3px solid #755b1a;background:#17150d;padding:10px 12px}.task-note strong{font-size:11px}.task-note p{margin:3px 0 0;color:var(--muted);font-size:11px}.evidence-link{margin:13px 0 0}.evidence-link a{font-size:11px;font-weight:750}.finding-overview{border-top:0;margin-top:0}' +
+    '.reading-guide{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:14px}.reading-guide>div{background:var(--paper);padding:13px 15px}.reading-guide span{float:left;display:grid;place-items:center;width:22px;height:22px;margin-right:9px;border-radius:50%;background:#2364f5;color:#fff;font-size:10px;font-weight:800}.reading-guide strong{display:block;font-size:11px}.reading-guide p{margin:3px 0 0 31px;color:var(--muted);font-size:10px}.queue-summary{color:var(--muted);font-size:11px}.task-detail>summary{grid-template-columns:auto minmax(220px,1fr) auto 18px}.action-pill{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;background:#183b67;color:#8fbaff;font-size:10px;font-weight:750;white-space:nowrap}.task-count{font-size:10px;color:var(--muted);white-space:nowrap}.task-body{padding:18px}.task-explanation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.task-explanation section{border:1px solid var(--line);border-radius:9px;padding:14px}.task-explanation h4{margin:0 0 7px;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#aeb8ca}.task-explanation p{margin:0;font-size:12px;color:#c5ccda}.task-explanation ol,.task-explanation ul{margin:0;padding-left:18px}.task-explanation li{border:0;border-radius:0;padding:3px 0;color:#c5ccda;font-size:11px}.task-explanation .file-list{list-style:none;padding:0}.task-explanation .file-list li{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;color:#9eb8f2}.task-note{margin-top:12px;border-left:3px solid #755b1a;background:#17150d;padding:10px 12px}.task-note strong{font-size:11px}.task-note p{margin:3px 0 0;color:var(--muted);font-size:11px}.evidence-link{margin:13px 0 0}.evidence-link a{font-size:11px;font-weight:750}.finding-overview{border-top:0;margin-top:0}.source-details{margin-top:10px}.source-details summary{cursor:pointer;color:#8fbaff;font-size:11px;font-weight:700}.source-details pre{margin-top:8px}' +
     '@media(max-width:720px){.reading-guide,.task-explanation{grid-template-columns:1fr}.task-detail>summary{grid-template-columns:minmax(0,1fr) 18px}.task-detail>summary>span,.task-count{display:none}}' +
     '@media print{.reading-guide>div,.task-explanation section{background:#fff}.task-explanation p,.task-explanation li{color:#111827}.action-pill{background:#eaf0ff;color:#245fe5}}';
   return (

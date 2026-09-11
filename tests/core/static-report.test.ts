@@ -57,6 +57,8 @@ test('static report writes a self-contained versioned artifact directory', async
       'rule-quality.json',
       'rule-quality.schema.json',
       'review-ledger.schema.json',
+      'calibration-ledger.schema.json',
+      'calibration-report.schema.json',
       'suppression-ledger.schema.json',
       'verification-ledger.schema.json',
       'codex-bundle.json',
@@ -86,11 +88,17 @@ test('static report writes a self-contained versioned artifact directory', async
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
   assert.ok(html.includes('href="review-ledger.schema.json"'));
+  assert.ok(html.includes('href="calibration-ledger.schema.json"'));
+  assert.ok(html.includes('href="calibration-report.schema.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
   assert.ok(html.includes('Prioritized work items'));
   assert.ok(html.includes('How to read this report'));
   assert.ok(html.includes('What we found'));
+  assert.ok(html.includes('Why it matters'));
   assert.ok(html.includes('Where to look'));
+  assert.ok(html.includes('How to verify manually'));
+  assert.ok(html.includes('Confidence and limitations'));
+  assert.ok(html.includes('Show captured source'));
   assert.ok(html.includes('What to do next'));
   assert.ok(html.includes('Consider it resolved when'));
   assert.ok(!html.includes('<code>rem-'));
@@ -194,6 +202,14 @@ test('static report writes a self-contained versioned artifact directory', async
     await readFile(path.join(result.directory, 'rule-quality.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
   assert.equal(ruleQualitySchema.properties?.schemaVersion?.const, 2);
+  const calibrationLedgerSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'calibration-ledger.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(calibrationLedgerSchema.properties?.schemaVersion?.const, 1);
+  const calibrationReportSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'calibration-report.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(calibrationReportSchema.properties?.schemaVersion?.const, 1);
   const manifest = JSON.parse(
     await readFile(path.join(result.directory, 'manifest.json'), 'utf8'),
   ) as { kind: string; files: { sha256: string }[] };
