@@ -49,6 +49,7 @@
     "prepack": "npm run build:cli",
     "demo": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/seed.ts",
     "demo:review": "node --experimental-strip-types --env-file-if-exists=.env.local scripts/seed.ts --review",
+    "demo:public": "node --experimental-strip-types scripts/export-public-demo.ts",
     "test": "node --experimental-strip-types --test tests/core/*.test.ts",
     "test:graph": "node --experimental-strip-types --test tests/integration/*.test.ts",
     "test:e2e": "playwright test",
