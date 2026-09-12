@@ -6,6 +6,7 @@ Start here:
 - [Threat model](THREAT_MODEL.md) — supported deployment and security assumptions.
 - [Validation](VALIDATION.md) — current checks, environment, and known gaps.
 - [Real-project calibration](CALIBRATION.md) — independent labels, manual misses, and honest metrics.
+- [Continuous integration](CI.md) — GitHub Action, baseline policy, SARIF, and report artifacts.
 - [Current handoff](CODEX_HANDOFF.md) — verified repository state and continuation notes.
 - [Roadmap](ROADMAP.md) — release, calibration, CLI, coverage, and agent priorities.
 - [External agent review standard](AGENT_REVIEW_STANDARD.md) — safe use of the generated agent

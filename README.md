@@ -174,6 +174,24 @@ application or a browser. Without that artifact, runtime accessibility is explic
 
 ## CI
 
+Use the bundled GitHub Action to keep full repository context while blocking only findings added by
+a pull request:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- uses: andrewsrigom/codebasescan@v0.3.0
+  with:
+    policy: balanced
+    baseline-ref: ${{ github.event.pull_request.base.sha }}
+```
+
+The action uploads the static report and SARIF before applying the policy exit code. See the
+[complete CI setup](docs/CI.md), including required permissions and fork behavior.
+
+The direct CLI gate is:
+
 ```bash
 codebasescan audit . --policy balanced
 ```
@@ -236,6 +254,7 @@ Useful references:
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Validation](docs/VALIDATION.md)
+- [Continuous integration](docs/CI.md)
 - [Real-project calibration](docs/CALIBRATION.md)
 - [Engineering decisions](docs/DECISIONS.md)
 - [Roadmap](docs/ROADMAP.md)

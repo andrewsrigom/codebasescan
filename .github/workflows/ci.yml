@@ -5,6 +5,20 @@ on:
 permissions:
   contents: read
 jobs:
+  action-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Run the repository action
+        uses: ./
+        with:
+          path: fixtures/hardened-saas
+          policy: advisory
+          report-directory: codebasescan-action-report
+          upload-artifact: 'false'
+          upload-sarif: 'false'
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 20

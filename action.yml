@@ -1,0 +1,165 @@
+name: CodebaseScan
+description: Run a deterministic CodebaseScan audit and publish its portable report artifacts.
+author: andrewsrigom
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: Repository-relative project path to audit.
+    required: false
+    default: .
+  policy:
+    description: 'Policy profile: advisory, balanced, or strict.'
+    required: false
+    default: balanced
+  report-directory:
+    description: Repository-relative directory for the current static report.
+    required: false
+    default: codebasescan-report
+  baseline-ref:
+    description: Optional Git commit to scan as the baseline before auditing the current checkout.
+    required: false
+    default: ''
+  semgrep:
+    description: Enable a trusted Semgrep binary already available on PATH.
+    required: false
+    default: 'false'
+  gitleaks:
+    description: Enable a trusted Gitleaks binary already available on PATH.
+    required: false
+    default: 'false'
+  secret-history:
+    description: Allow Gitleaks to inspect bounded Git history.
+    required: false
+    default: 'false'
+  upload-artifact:
+    description: Upload the complete HTML and machine-readable report package.
+    required: false
+    default: 'true'
+  upload-sarif:
+    description: Upload SARIF to GitHub code scanning. Requires security-events write permission.
+    required: false
+    default: 'true'
+
+outputs:
+  exit-code:
+    description: 'CodebaseScan policy exit code: 0 passed, 1 findings, 2 incomplete analysis.'
+    value: ${{ steps.audit.outputs.exit-code }}
+  report-directory:
+    description: Directory containing the portable report package.
+    value: ${{ inputs.report-directory }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      with:
+        node-version: '22.16.0'
+
+    - name: Install this CodebaseScan release
+      shell: bash
+      run: npm install --global "$GITHUB_ACTION_PATH"
+
+    - name: Build baseline evidence
+      id: baseline
+      if: inputs.baseline-ref != ''
+      shell: bash
+      env:
+        INPUT_BASELINE_REF: ${{ inputs.baseline-ref }}
+        INPUT_PROJECT_PATH: ${{ inputs.path }}
+        CODEBASESCAN_SEMGREP: ${{ inputs.semgrep }}
+        CODEBASESCAN_GITLEAKS: ${{ inputs.gitleaks }}
+      run: |
+        set -euo pipefail
+        project_path="${INPUT_PROJECT_PATH#./}"
+        if [[ "$project_path" = /* || "/$project_path/" = *"/../"* ]]; then
+          echo "::error::The action path must stay inside the checked-out repository."
+          exit 2
+        fi
+        if ! git cat-file -e "${INPUT_BASELINE_REF}^{commit}"; then
+          echo "::error::Baseline ref is unavailable. Use actions/checkout with fetch-depth: 0."
+          exit 2
+        fi
+        baseline_root="${RUNNER_TEMP}/codebasescan-base-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+        baseline_report="${RUNNER_TEMP}/codebasescan-baseline-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+        cleanup() {
+          git worktree remove --force "$baseline_root" >/dev/null 2>&1 || true
+        }
+        trap cleanup EXIT
+        git worktree add --detach "$baseline_root" "$INPUT_BASELINE_REF"
+        codebasescan audit "$baseline_root/$project_path" \
+          --policy advisory \
+          --format json \
+          --output "$baseline_report" \
+          --non-interactive \
+          --quiet
+        echo "report=$baseline_report" >> "$GITHUB_OUTPUT"
+
+    - name: Audit current checkout
+      id: audit
+      shell: bash
+      env:
+        INPUT_PROJECT_PATH: ${{ inputs.path }}
+        INPUT_POLICY: ${{ inputs.policy }}
+        INPUT_REPORT_DIRECTORY: ${{ inputs.report-directory }}
+        INPUT_BASELINE_REPORT: ${{ steps.baseline.outputs.report }}
+        INPUT_SECRET_HISTORY: ${{ inputs.secret-history }}
+        CODEBASESCAN_SEMGREP: ${{ inputs.semgrep }}
+        CODEBASESCAN_GITLEAKS: ${{ inputs.gitleaks }}
+        CI: 'true'
+      run: |
+        set -uo pipefail
+        project_path="${INPUT_PROJECT_PATH#./}"
+        report_directory="${INPUT_REPORT_DIRECTORY#./}"
+        if [[ "$project_path" = /* || "/$project_path/" = *"/../"* ]]; then
+          echo "::error::The action path must stay inside the checked-out repository."
+          echo "exit-code=2" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        if [[ "$report_directory" = /* || "/$report_directory/" = *"/../"* ]]; then
+          echo "::error::The report directory must stay inside the checked-out repository."
+          echo "exit-code=2" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        args=(
+          audit "$GITHUB_WORKSPACE/$project_path"
+          --policy "$INPUT_POLICY"
+          --report-dir "$GITHUB_WORKSPACE/$report_directory"
+          --non-interactive
+        )
+        if [[ -n "$INPUT_BASELINE_REPORT" ]]; then
+          args+=(--baseline "$INPUT_BASELINE_REPORT")
+        fi
+        if [[ "$INPUT_SECRET_HISTORY" = 'true' ]]; then
+          args+=(--secret-history)
+        fi
+        codebasescan "${args[@]}"
+        status=$?
+        echo "exit-code=$status" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Upload report package
+      if: always() && inputs.upload-artifact == 'true'
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: codebasescan-report
+        path: ${{ inputs.report-directory }}
+        if-no-files-found: error
+
+    - name: Upload SARIF
+      if: always() && inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+      with:
+        sarif_file: ${{ inputs.report-directory }}
+        category: codebasescan
+
+    - name: Apply policy result
+      if: always() && steps.audit.outputs.exit-code != ''
+      shell: bash
+      env:
+        CODEBASESCAN_EXIT_CODE: ${{ steps.audit.outputs.exit-code }}
+      run: exit "$CODEBASESCAN_EXIT_CODE"
