@@ -87,11 +87,7 @@ function credentialFieldName(name: string): boolean {
   ].some((suffix) => normalized === suffix || normalized.endsWith(suffix));
 }
 
-function namedTypeIsMetadata(
-  name: string,
-  index: TypeIndex,
-  visited: Set<string>,
-): boolean {
+function namedTypeIsMetadata(name: string, index: TypeIndex, visited: Set<string>): boolean {
   const localName = name.split('.').at(-1) ?? name;
   if (['Date', 'URL', 'URLSearchParams'].includes(localName)) return true;
   if (visited.has(localName)) return true;
@@ -101,10 +97,7 @@ function namedTypeIsMetadata(
   return declarations.every((declaration) => {
     if (ts.isTypeAliasDeclaration(declaration))
       return typeIsMetadata(declaration.type, index, nextVisited);
-    if (
-      !membersAreMetadata(declaration.members, index, nextVisited)
-    )
-      return false;
+    if (!membersAreMetadata(declaration.members, index, nextVisited)) return false;
     return (declaration.heritageClauses ?? []).every((clause) =>
       clause.types.every((type) =>
         namedTypeIsMetadata(type.expression.getText(), index, nextVisited),
@@ -122,7 +115,9 @@ function membersAreMetadata(
     if (ts.isMethodSignature(member) || ts.isCallSignatureDeclaration(member)) return true;
     if (!ts.isPropertySignature(member) || !member.type) return false;
     const name = propertyName(member.name);
-    return Boolean(name && !credentialFieldName(name) && typeIsMetadata(member.type, index, visited));
+    return Boolean(
+      name && !credentialFieldName(name) && typeIsMetadata(member.type, index, visited),
+    );
   });
 }
 
@@ -156,32 +151,23 @@ function typeIsMetadata(node: ts.TypeNode, index: TypeIndex, visited: Set<string
   if (['Array', 'ReadonlyArray', 'Promise'].includes(name))
     return Boolean(
       node.typeArguments?.length &&
-        node.typeArguments.every((type) => typeIsMetadata(type, index, visited)),
+      node.typeArguments.every((type) => typeIsMetadata(type, index, visited)),
     );
   return namedTypeIsMetadata(name, index, visited);
 }
 
-function isProvablyMetadataProp(
-  clientFile: string,
-  propName: string,
-  index: TypeIndex,
-): boolean {
+function isProvablyMetadataProp(clientFile: string, propName: string, index: TypeIndex): boolean {
   const source = index.sources.get(clientFile);
   if (!source) return false;
   const candidates: ts.TypeNode[] = [];
   const visit = (node: ts.Node): void => {
-    if (
-      ts.isPropertySignature(node) &&
-      node.type &&
-      propertyName(node.name) === propName
-    )
+    if (ts.isPropertySignature(node) && node.type && propertyName(node.name) === propName)
       candidates.push(node.type);
     ts.forEachChild(node, visit);
   };
   visit(source);
   return (
-    candidates.length > 0 &&
-    candidates.every((type) => typeIsMetadata(type, index, new Set()))
+    candidates.length > 0 && candidates.every((type) => typeIsMetadata(type, index, new Set()))
   );
 }
 
@@ -250,9 +236,7 @@ function functionTaint(
   serverOwnedUrls: Set<string>;
 } {
   const parameterNames = node.parameters.flatMap((parameter) => bindingNames(parameter.name));
-  const tainted = new Set(
-    parameterNames.filter((name) => explicitBrowserInputName.test(name)),
-  );
+  const tainted = new Set(parameterNames.filter((name) => explicitBrowserInputName.test(name)));
   const serverOwnedUrls = new Set(inheritedServerOwnedUrls);
   for (const name of parameterNames) serverOwnedUrls.delete(name);
   for (let pass = 0; pass < 4; pass++) {
@@ -732,13 +716,7 @@ function sensitiveServerProps(
               !sensitiveBoundaryName(property.name.getText(source))
             )
               continue;
-            if (
-              isProvablyMetadataProp(
-                clientFile,
-                property.name.getText(source),
-                typeIndex,
-              )
-            )
+            if (isProvablyMetadataProp(clientFile, property.name.getText(source), typeIndex))
               continue;
             findings.push(
               reactFinding({

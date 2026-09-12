@@ -87,11 +87,10 @@ function isEnvironmentWrite(node: ts.Node): boolean {
   );
 }
 
-function isExecutableFunction(node: ts.Node): node is
-  | ts.FunctionDeclaration
-  | ts.FunctionExpression
-  | ts.ArrowFunction
-  | ts.MethodDeclaration {
+function isExecutableFunction(
+  node: ts.Node,
+): node is
+  ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration {
   return (
     ts.isFunctionDeclaration(node) ||
     ts.isFunctionExpression(node) ||
@@ -199,11 +198,7 @@ function isGuardedFallbackReturn(node: ts.Node, source: ts.SourceFile): boolean 
   if (!returned || !ts.isReturnStatement(returned)) return false;
 
   let branch: ts.Node = returned;
-  while (
-    branch.parent &&
-    !ts.isIfStatement(branch.parent) &&
-    !isExecutableFunction(branch.parent)
-  )
+  while (branch.parent && !ts.isIfStatement(branch.parent) && !isExecutableFunction(branch.parent))
     branch = branch.parent;
   const conditional = branch.parent;
   if (!conditional || !ts.isIfStatement(conditional) || conditional.thenStatement !== branch)
@@ -231,8 +226,7 @@ function isRequiredContractRead(node: ts.Node, source: ts.SourceFile): boolean {
     isGuardedFallbackReturn(node, source)
   )
     return false;
-  if (node.parent && ts.isIfStatement(node.parent) && node.parent.expression === node)
-    return false;
+  if (node.parent && ts.isIfStatement(node.parent) && node.parent.expression === node) return false;
   let current = node;
   while (current.parent && !ts.isStatement(current.parent)) {
     const parent = current.parent;

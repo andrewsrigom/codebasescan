@@ -54,11 +54,10 @@ function hasDocumentedRationale(source: ts.SourceFile, node: ts.CatchClause): bo
   return /\/\/[^\r\n]*\S|\/\*[\s\S]*?\S[\s\S]*?\*\//.test(blockText);
 }
 
-function isExecutableFunction(node: ts.Node): node is
-  | ts.FunctionDeclaration
-  | ts.FunctionExpression
-  | ts.ArrowFunction
-  | ts.MethodDeclaration {
+function isExecutableFunction(
+  node: ts.Node,
+): node is
+  ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction | ts.MethodDeclaration {
   return (
     ts.isFunctionDeclaration(node) ||
     ts.isFunctionExpression(node) ||
@@ -67,7 +66,9 @@ function isExecutableFunction(node: ts.Node): node is
   );
 }
 
-function enclosingFunction(node: ts.Node):
+function enclosingFunction(
+  node: ts.Node,
+):
   | ts.FunctionDeclaration
   | ts.FunctionExpression
   | ts.ArrowFunction

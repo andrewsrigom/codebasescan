@@ -88,5 +88,8 @@ test('fallback-looking loops still report discarded failures without an explicit
     }
   `);
   const result = scanReliabilityStatic(snapshot, profileProject(snapshot).profile);
-  assert.deepEqual(result.findings.map((finding) => finding.ruleId), ['TW-REL002']);
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-REL002'],
+  );
 });
