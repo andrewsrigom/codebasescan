@@ -383,6 +383,18 @@ function unwrapExpression(node: ts.Expression): ts.Expression {
   return value;
 }
 
+function isRegularExpressionExec(node: ts.CallExpression): boolean {
+  if (!ts.isPropertyAccessExpression(node.expression) || node.expression.name.text !== 'exec')
+    return false;
+  const receiver = unwrapExpression(node.expression.expression);
+  return (
+    ts.isRegularExpressionLiteral(receiver) ||
+    (ts.isNewExpression(receiver) &&
+      ts.isIdentifier(receiver.expression) &&
+      receiver.expression.text === 'RegExp')
+  );
+}
+
 function isUrlPortReference(node: ts.Expression, urlName: string): boolean {
   const value = unwrapExpression(node);
   return (
@@ -877,7 +889,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           const shellEnabled =
             propertyValue(commandOptions ?? ts.factory.createObjectLiteralExpression(), 'shell')
               ?.kind === ts.SyntaxKind.TrueKeyword;
-          const commandSink = /(?:^|\.)(?:exec|execSync)$/i.test(callee);
+          const commandSink =
+            /(?:^|\.)(?:exec|execSync)$/i.test(callee) && !isRegularExpressionExec(call);
           const processSink = /(?:^|\.)(?:spawn|spawnSync|execFile|execFileSync)$/i.test(callee);
           if (
             taintedArgument &&
@@ -1407,6 +1420,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
             destination &&
             isTaintedValue(destination, tainted) &&
             /(?:^|\.)(?:exec|execSync|spawn|spawnSync|execFile|execFileSync)$/i.test(callee) &&
+            !isRegularExpressionExec(call) &&
             !hasPriorGuard(
               calls,
               call,
@@ -1635,7 +1649,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.9.2',
+        version: '0.9.3',
       },
     };
 
@@ -1722,7 +1736,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.9.2',
+      version: '0.9.3',
     },
   };
 }

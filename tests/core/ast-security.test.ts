@@ -758,6 +758,18 @@ test('fixed process arguments, contained paths, and literal regexes avoid flow c
   assert.ok(!ids.includes('TW-AST013'));
 });
 
+test('RegExp exec is not treated as operating-system process execution', () => {
+  const ids = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const literal = /^(localhost|127\\.0\\.0\\.1)$/.exec(body.host);
+      const constructed = new RegExp('^[a-z]+$').exec(body.name);
+      return Response.json({ literal, constructed });
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST011'));
+});
+
 test('AST identifies weak digests, dynamic property writes, and whole-object mutations', () => {
   const ids = astRuleIds(`
     export async function PATCH(request: Request) {
