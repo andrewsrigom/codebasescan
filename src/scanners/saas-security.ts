@@ -99,8 +99,26 @@ function isServerOwnedLookup(node: ts.Node): boolean {
   );
 }
 
+function isTrustedIdentityResolver(node: ts.Node): boolean {
+  let value = node;
+  while (
+    ts.isAwaitExpression(value) ||
+    ts.isParenthesizedExpression(value) ||
+    ts.isAsExpression(value) ||
+    ts.isTypeAssertionExpression(value) ||
+    ts.isNonNullExpression(value)
+  )
+    value = value.expression;
+  if (!ts.isCallExpression(value)) return false;
+  const name = callName(value).split('.').at(-1) ?? '';
+  return /^(?:auth|currentUser|(?:get|resolve)[A-Za-z0-9]*(?:Access|Identity|Session|Viewer)|require[A-Za-z0-9]*(?:Access|Identity|Permission|Role|Session|User))$/i.test(
+    name,
+  );
+}
+
 function expressionIsTainted(node: ts.Node, tainted: Set<string>): boolean {
   if (isServerOwnedLookup(node)) return false;
+  if (isTrustedIdentityResolver(node)) return false;
   if (isDirectRequestSource(node)) return true;
   let found = false;
   let inspected = 0;
@@ -257,6 +275,19 @@ function objectProperties(
   };
   visit(node);
   return results;
+}
+
+function databaseMutationPayloads(call: ts.CallExpression, name: string): ts.Expression[] {
+  const first = call.arguments[0];
+  if (!first) return [];
+  if (!ts.isObjectLiteralExpression(first)) return [first];
+  const keys = /\.upsert$/i.test(name) ? new Set(['create', 'update']) : new Set(['data']);
+  const payloads = first.properties.flatMap((property) => {
+    if (!ts.isPropertyAssignment(property)) return [];
+    const key = propertyName(property.name)?.toLowerCase();
+    return key && keys.has(key) ? [property.initializer] : [];
+  });
+  return payloads.length ? payloads : [first];
 }
 
 function propertyInitializer(
@@ -475,11 +506,30 @@ function caughtErrorExposure(
   );
   const callTargets = resolvedCallTargets(parsed, profile);
   const exposed: ts.CallExpression[] = [];
+  const caughtNames = [...caught];
+  const isValidationBranch = (node: ts.Node): boolean => {
+    let current: ts.Node | undefined = node;
+    while (current && current !== catchClause.block) {
+      const parent: ts.Node | undefined = current.parent;
+      if (parent && ts.isIfStatement(parent) && parent.thenStatement === current) {
+        const condition = parent.expression.getText(parsed.source).replace(/\s+/g, ' ');
+        if (
+          caughtNames.some((name) =>
+            new RegExp(`\\b${name}\\s+instanceof\\s+(?:z\\.)?ZodError\\b`).test(condition),
+          )
+        )
+          return true;
+      }
+      current = parent;
+    }
+    return false;
+  };
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const name = callName(node);
       if (
         /(?:^|\.)(?:json|send)$/i.test(name) &&
+        !isValidationBranch(node) &&
         node.arguments.some((argument) =>
           containsCaughtErrorValue(argument, caught, parsed, callTargets, staticPublicSymbols),
         )
@@ -564,7 +614,10 @@ function scanFile(
         }
       }
       if (tainted && isDatabaseMutation(name)) {
-        for (const property of sensitiveProperties(node, assignmentKeys, tainted))
+        const mutationPayloads = databaseMutationPayloads(node, name);
+        for (const property of mutationPayloads.flatMap((payload) =>
+          sensitiveProperties(payload, assignmentKeys, tainted),
+        ))
           add(
             finding({
               parsed,
@@ -583,7 +636,7 @@ function scanFile(
           );
 
         if (isRecoveryTokenSink(name)) {
-          const properties = objectProperties(node);
+          const properties = mutationPayloads.flatMap((payload) => objectProperties(payload));
           const storedTokens = properties.filter((property) => {
             const propertyKey = propertyName(property.name);
             return propertyKey ? tokenKeys.has(propertyKey.toLowerCase()) : false;
@@ -777,7 +830,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.4.0',
+        version: '0.5.0',
       },
     };
 
@@ -813,7 +866,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.4.0',
+      version: '0.5.0',
     },
   };
 }

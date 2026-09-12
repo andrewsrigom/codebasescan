@@ -67,6 +67,30 @@ test('SaaS assignment rule distinguishes request ownership from session ownershi
     }
   `);
   assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS002'));
+
+  const trustedAccess = findingsFor(`
+    export async function PATCH(request: Request) {
+      const trace = resolveRequestTrace(request);
+      const access = await resolveNotificationsViewerAccess(trace);
+      return prisma.notification.update({
+        where: { id: 'notification-1' },
+        data: { userId: access.userId, readAt: new Date() },
+        include: { organization: { select: { id: true } } }
+      });
+    }
+  `);
+  assert.ok(!trustedAccess.some((finding) => finding.ruleId === 'TW-SAAS002'));
+
+  const includedRelation = findingsFor(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      return prisma.website.create({
+        data: { organizationId: body.organizationId },
+        include: { organization: { select: { id: true } } }
+      });
+    }
+  `).filter((finding) => finding.ruleId === 'TW-SAAS002');
+  assert.equal(includedRelation.length, 1);
 });
 
 test('SaaS token rule reports predictable entropy but accepts crypto randomness', () => {
@@ -115,6 +139,21 @@ test('SaaS error rule reports caught internals but accepts a stable public error
     }
   `);
   assert.ok(!stableErrorField.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const validationDetails = findingsFor(`
+    export async function POST(request: Request) {
+      try {
+        const body = await request.json();
+        return Response.json(await database.invoice.create({ data: body }));
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return Response.json({ error: 'VALIDATION_FAILED', details: error.errors }, { status: 400 });
+        }
+        return Response.json({ error: error.message }, { status: 500 });
+      }
+    }
+  `).filter((finding) => finding.ruleId === 'TW-SAAS004');
+  assert.equal(validationDetails.length, 1);
 });
 
 test('SaaS error rule proves imported normalizers return only fixed public codes', () => {
