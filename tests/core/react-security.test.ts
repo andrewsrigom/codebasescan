@@ -76,6 +76,66 @@ test('Server Components do not pass sensitive-shaped props to Client Components'
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
 });
 
+test('typed credential metadata may cross the server-client boundary', () => {
+  const snapshot = snapshotFromFiles({
+    'src/app/page.tsx': `
+      import { ClientPanel } from '../components/client-panel';
+      export default function Page() {
+        const sessions = readSessions();
+        const apiKeys = readApiKeys();
+        return <ClientPanel sessions={sessions} apiKeys={apiKeys} />;
+      }
+    `,
+    'src/components/client-panel.tsx': `
+      'use client';
+      import type { SessionMetadata, ApiKeyMetadata } from '../records';
+      type ClientPanelProps = {
+        sessions: SessionMetadata[];
+        apiKeys: ApiKeyMetadata[];
+      };
+      export function ClientPanel({ sessions, apiKeys }: ClientPanelProps) {
+        return <div>{sessions.length + apiKeys.length}</div>;
+      }
+    `,
+    'src/records.ts': `
+      type BaseSessionMetadata = { id: string; expiresAt: string; };
+      export type SessionMetadata = BaseSessionMetadata & { active: boolean; };
+      export type ApiKeyStatus = 'active' | 'revoked';
+      export type ApiKeyMetadata = {
+        id: string;
+        prefix: string;
+        status: ApiKeyStatus;
+      };
+    `,
+  });
+  const result = scanReactSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
+});
+
+test('typed secret-bearing records still trigger the client-boundary candidate', () => {
+  const snapshot = snapshotFromFiles({
+    'src/app/page.tsx': `
+      import { ClientPanel } from '../components/client-panel';
+      export default function Page() {
+        return <ClientPanel sessions={readSessions()} />;
+      }
+    `,
+    'src/components/client-panel.tsx': `
+      'use client';
+      import type { SessionRecord } from '../records';
+      type ClientPanelProps = { sessions: SessionRecord[]; };
+      export function ClientPanel({ sessions }: ClientPanelProps) {
+        return <div>{sessions.length}</div>;
+      }
+    `,
+    'src/records.ts': `
+      export type SessionRecord = { id: string; sessionToken: string; };
+    `,
+  });
+  const result = scanReactSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-REACT007'));
+});
+
 test('Client Components may pass sensitive-shaped props to nested Client Components', () => {
   const snapshot = snapshotFromFiles({
     'src/components/account-panel.tsx': `

@@ -25,6 +25,166 @@ function sensitiveBoundaryName(name: string): boolean {
   return sensitiveName.test(name) && !visualTokenName.test(name);
 }
 
+type TypeDeclaration = ts.TypeAliasDeclaration | ts.InterfaceDeclaration;
+
+interface TypeIndex {
+  declarations: Map<string, TypeDeclaration[]>;
+  sources: Map<string, ts.SourceFile>;
+}
+
+function sourceKind(file: string): ts.ScriptKind {
+  if (/\.tsx$/i.test(file)) return ts.ScriptKind.TSX;
+  if (/\.jsx$/i.test(file)) return ts.ScriptKind.JSX;
+  if (/\.[cm]?js$/i.test(file)) return ts.ScriptKind.JS;
+  return ts.ScriptKind.TS;
+}
+
+function buildTypeIndex(snapshot: Snapshot): TypeIndex {
+  const declarations = new Map<string, TypeDeclaration[]>();
+  const sources = new Map<string, ts.SourceFile>();
+  for (const file of snapshot.files) {
+    if (!/\.[cm]?[jt]sx?$/i.test(file.path)) continue;
+    const source = ts.createSourceFile(
+      file.path,
+      file.content,
+      ts.ScriptTarget.Latest,
+      true,
+      sourceKind(file.path),
+    );
+    sources.set(file.path, source);
+    const visit = (node: ts.Node): void => {
+      if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) {
+        const current = declarations.get(node.name.text) ?? [];
+        current.push(node);
+        declarations.set(node.name.text, current);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+  }
+  return { declarations, sources };
+}
+
+function propertyName(node: ts.PropertyName): string | undefined {
+  if (ts.isIdentifier(node) || ts.isStringLiteralLike(node)) return node.text;
+  return undefined;
+}
+
+function credentialFieldName(name: string): boolean {
+  const normalized = name.replace(/[_-]/g, '').toLowerCase();
+  return [
+    'apikey',
+    'authorization',
+    'cookie',
+    'jwt',
+    'password',
+    'privatekey',
+    'refreshtoken',
+    'secret',
+    'sessiontoken',
+    'accesstoken',
+    'token',
+  ].some((suffix) => normalized === suffix || normalized.endsWith(suffix));
+}
+
+function namedTypeIsMetadata(
+  name: string,
+  index: TypeIndex,
+  visited: Set<string>,
+): boolean {
+  const localName = name.split('.').at(-1) ?? name;
+  if (['Date', 'URL', 'URLSearchParams'].includes(localName)) return true;
+  if (visited.has(localName)) return true;
+  const declarations = index.declarations.get(localName);
+  if (!declarations?.length) return false;
+  const nextVisited = new Set([...visited, localName]);
+  return declarations.every((declaration) => {
+    if (ts.isTypeAliasDeclaration(declaration))
+      return typeIsMetadata(declaration.type, index, nextVisited);
+    if (
+      !membersAreMetadata(declaration.members, index, nextVisited)
+    )
+      return false;
+    return (declaration.heritageClauses ?? []).every((clause) =>
+      clause.types.every((type) =>
+        namedTypeIsMetadata(type.expression.getText(), index, nextVisited),
+      ),
+    );
+  });
+}
+
+function membersAreMetadata(
+  members: ts.NodeArray<ts.TypeElement>,
+  index: TypeIndex,
+  visited: Set<string>,
+): boolean {
+  return members.every((member) => {
+    if (ts.isMethodSignature(member) || ts.isCallSignatureDeclaration(member)) return true;
+    if (!ts.isPropertySignature(member) || !member.type) return false;
+    const name = propertyName(member.name);
+    return Boolean(name && !credentialFieldName(name) && typeIsMetadata(member.type, index, visited));
+  });
+}
+
+function typeIsMetadata(node: ts.TypeNode, index: TypeIndex, visited: Set<string>): boolean {
+  if (
+    [
+      ts.SyntaxKind.StringKeyword,
+      ts.SyntaxKind.NumberKeyword,
+      ts.SyntaxKind.BooleanKeyword,
+      ts.SyntaxKind.BigIntKeyword,
+      ts.SyntaxKind.NullKeyword,
+      ts.SyntaxKind.UndefinedKeyword,
+      ts.SyntaxKind.VoidKeyword,
+      ts.SyntaxKind.NeverKeyword,
+    ].includes(node.kind)
+  )
+    return true;
+  if (ts.isLiteralTypeNode(node) || ts.isTypeQueryNode(node) || ts.isIndexedAccessTypeNode(node))
+    return true;
+  if (ts.isParenthesizedTypeNode(node) || ts.isTypeOperatorNode(node))
+    return typeIsMetadata(node.type, index, visited);
+  if (ts.isArrayTypeNode(node)) return typeIsMetadata(node.elementType, index, visited);
+  if (ts.isTupleTypeNode(node))
+    return node.elements.every((element) => typeIsMetadata(element, index, visited));
+  if (ts.isUnionTypeNode(node) || ts.isIntersectionTypeNode(node))
+    return node.types.every((type) => typeIsMetadata(type, index, visited));
+  if (ts.isTypeLiteralNode(node)) return membersAreMetadata(node.members, index, visited);
+  if (ts.isFunctionTypeNode(node)) return true;
+  if (!ts.isTypeReferenceNode(node)) return false;
+  const name = node.typeName.getText();
+  if (['Array', 'ReadonlyArray', 'Promise'].includes(name))
+    return Boolean(
+      node.typeArguments?.length &&
+        node.typeArguments.every((type) => typeIsMetadata(type, index, visited)),
+    );
+  return namedTypeIsMetadata(name, index, visited);
+}
+
+function isProvablyMetadataProp(
+  clientFile: string,
+  propName: string,
+  index: TypeIndex,
+): boolean {
+  const source = index.sources.get(clientFile);
+  if (!source) return false;
+  const candidates: ts.TypeNode[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertySignature(node) &&
+      node.type &&
+      propertyName(node.name) === propName
+    )
+      candidates.push(node.type);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return (
+    candidates.length > 0 &&
+    candidates.every((type) => typeIsMetadata(type, index, new Set()))
+  );
+}
+
 export interface ReactSecurityResult {
   findings: Finding[];
   run: ScannerRun;
@@ -546,8 +706,10 @@ function sensitiveServerProps(
 ): Finding[] {
   const findings: Finding[] = [];
   const files = new Map(snapshot.files.map((file) => [file.path, file]));
+  const typeIndex = buildTypeIndex(snapshot);
   for (const item of profile.imports) {
     if (!item.resolvedFile || !clientFiles.has(item.resolvedFile)) continue;
+    const clientFile = item.resolvedFile;
     if (clientFiles.has(item.file)) continue;
     const file = files.get(item.file);
     if (!file || !reactSource.test(file.path)) continue;
@@ -568,6 +730,14 @@ function sensitiveServerProps(
             if (
               !ts.isJsxAttribute(property) ||
               !sensitiveBoundaryName(property.name.getText(source))
+            )
+              continue;
+            if (
+              isProvablyMetadataProp(
+                clientFile,
+                property.name.getText(source),
+                typeIndex,
+              )
             )
               continue;
             findings.push(
@@ -623,7 +793,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.4.3',
+        version: '0.5.0',
       },
     };
 
@@ -645,7 +815,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.4.3',
+      version: '0.5.0',
     },
   };
 }
