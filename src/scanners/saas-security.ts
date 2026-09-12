@@ -395,17 +395,6 @@ function weakEntropy(node: ts.Node): boolean {
   );
 }
 
-function identifierIsPropertyName(node: ts.Identifier): boolean {
-  const parent = node.parent;
-  return (
-    (ts.isPropertyAssignment(parent) && parent.name === node) ||
-    (ts.isPropertyAccessExpression(parent) && parent.name === node) ||
-    (ts.isMethodDeclaration(parent) && parent.name === node) ||
-    (ts.isGetAccessorDeclaration(parent) && parent.name === node) ||
-    (ts.isSetAccessorDeclaration(parent) && parent.name === node)
-  );
-}
-
 function staticPublicErrorValue(node: ts.Expression): boolean {
   if (ts.isStringLiteralLike(node)) return true;
   if (ts.isConditionalExpression(node))
