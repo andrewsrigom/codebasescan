@@ -2,7 +2,7 @@
 
 Notable changes are recorded here.
 
-## Unreleased
+## 0.3.0 — 2026-09-12
 
 - Added a reusable GitHub Action that scans full repository context, builds an optional baseline
   from a Git ref, uploads the portable HTML report and SARIF, then propagates deterministic policy
