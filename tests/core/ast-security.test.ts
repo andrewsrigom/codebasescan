@@ -845,6 +845,51 @@ test('AST follows request URLs into Node HTTP clients across files', () => {
   assert.ok(outbound?.evidence.some((item) => item.file === 'src/routes/video.ts'));
 });
 
+test('AST retains nested option taint through Object.assign across files', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { processVideo } from '../services/video-processing';
+      app.post('/video', async (req, res) => {
+        await processVideo(req.body.options);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/video-processing.ts': `
+      import { downloadAudioIfNeeded } from './audio';
+      export async function processVideo(options: unknown) {
+        const customOptions = Object.assign({
+          audio: { customUrl: 'https://media.example.test/default.mp3' },
+        }, options);
+        await downloadAudioIfNeeded(customOptions.audio);
+      }
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudioIfNeeded(audio: { customUrl: string }) {
+        return https.get(audio.customUrl);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  const outbound = findings.find((finding) => finding.ruleId === 'TW-AST005');
+  assert.equal(outbound?.evidence[0]?.file, 'src/services/audio.ts');
+  assert.ok(outbound?.evidence.some((item) => item.file === 'src/routes/video.ts'));
+});
+
+test('server-owned Object.assign options avoid outbound flow candidates', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      await request.json();
+      const customOptions = Object.assign({}, {
+        audio: { customUrl: 'https://media.example.test/default.mp3' },
+      });
+      return https.get(customOptions.audio.customUrl);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+});
+
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {

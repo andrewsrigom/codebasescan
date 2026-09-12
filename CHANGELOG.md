@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Retained request-derived taint through `Object.assign` option composition so nested outbound URLs
+  remain visible across mapped call boundaries.
 - Added API Gateway Lambda entry-point profiling and DynamoDB document-command facts so
   unauthenticated serverless mutations participate in structural review.
 - Added direct and bounded cross-file SSRF detection for Node `http`/`https` `.get()` and
