@@ -95,6 +95,7 @@ export function middlewareFacts(
   const middleware = profile.entrypoints.filter(
     (candidate) =>
       candidate.kind === 'middleware' &&
+      (candidate.file !== entrypoint.file || candidate.line < entrypoint.line) &&
       (!candidate.matchers?.length ||
         candidate.matchers.some((matcher) => matcherCoversRoute(matcher, entrypoint.route!))),
   );

@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Mapped ordered Express/Hono path middleware and explicit request-token guards into structural
+  authentication evidence without applying late middleware to earlier routes.
 - Recognized constant-time shared-secret and explicit token checks as webhook verification evidence
   when they occur before structured body parsing.
 - Treated explicit error-code mapper results as diagnostic metadata while still inspecting their

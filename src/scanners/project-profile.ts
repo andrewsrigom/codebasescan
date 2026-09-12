@@ -42,7 +42,7 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
-export const projectProfileScannerVersion = '0.10.1';
+export const projectProfileScannerVersion = '0.11.0';
 
 interface ParsedFile {
   source: SourceFile;
@@ -259,6 +259,36 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
   )
     return 'logging';
   return null;
+}
+
+function isRequestCredentialGuard(node: ts.BinaryExpression, source: ts.SourceFile): boolean {
+  if (
+    ![
+      ts.SyntaxKind.EqualsEqualsToken,
+      ts.SyntaxKind.EqualsEqualsEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsEqualsToken,
+    ].includes(node.operatorToken.kind)
+  )
+    return false;
+  const parent = node.parent;
+  if (!ts.isIfStatement(parent) || parent.expression !== node) return false;
+  let exits = false;
+  const inspect = (child: ts.Node): void => {
+    if (ts.isReturnStatement(child) || ts.isThrowStatement(child)) exits = true;
+    if (!exits) ts.forEachChild(child, inspect);
+  };
+  inspect(parent.thenStatement);
+  if (!exits) return false;
+  const left = node.left.getText(source).replace(/\s+/g, '').toLowerCase();
+  const right = node.right.getText(source).replace(/\s+/g, '').toLowerCase();
+  const requestCredential =
+    /(?:req|request|c\.req).*(?:header|cookie).*(?:authorization|token|api[-_]?key)/;
+  const trustedCredential = /(?:token|secret|credential|api[-_]?key)/;
+  return (
+    (requestCredential.test(left) && trustedCredential.test(right)) ||
+    (requestCredential.test(right) && trustedCredential.test(left))
+  );
 }
 
 function packageDependencies(snapshot: Snapshot): Map<string, DependencyDeclaration> {
@@ -1090,14 +1120,22 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           const handlerSymbol = handler
             ? functionSymbol(item.source.path, item.ast, handler)
             : null;
+          const middleware = route[1]!.toLowerCase() === 'use';
           entrypoints.push({
-            id: stableId('entrypoint', 'express-route', item.source.path, line, callee),
-            kind: 'express-route',
+            id: stableId(
+              'entrypoint',
+              middleware ? 'middleware' : 'express-route',
+              item.source.path,
+              line,
+              callee,
+            ),
+            kind: middleware ? 'middleware' : 'express-route',
             file: item.source.path,
             line,
             name: callee,
             route: routeArgument.text.slice(0, 300),
-            methods: [route[1]!.toUpperCase()],
+            ...(middleware ? { matchers: [routeArgument.text.slice(0, 300)] } : {}),
+            methods: middleware ? [] : [route[1]!.toUpperCase()],
             dynamicParameters: [...routeArgument.text.matchAll(/:([A-Za-z0-9_]+)/g)].map(
               (match) => match[1]!,
             ),
@@ -1144,6 +1182,29 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
               ownerSymbolId: callbackSymbol.id,
             });
         }
+      }
+      if (
+        ts.isBinaryExpression(node) &&
+        ownerSymbolId &&
+        isRequestCredentialGuard(node, item.ast) &&
+        !cap(facts.length, maximumFacts, 'Security fact')
+      ) {
+        const line = lineOf(item.ast, node);
+        facts.push({
+          id: stableId(
+            'fact',
+            'authentication',
+            item.source.path,
+            line,
+            'request credential guard',
+            ownerSymbolId,
+          ),
+          kind: 'authentication',
+          file: item.source.path,
+          line,
+          signal: 'request credential guard',
+          ownerSymbolId,
+        });
       }
       if (
         ts.isPropertyAccessExpression(node) &&

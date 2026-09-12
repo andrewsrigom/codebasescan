@@ -133,6 +133,33 @@ test('middleware data access is not attributed to a mutating route', () => {
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST003'));
 });
 
+test('ordered Express-style middleware can provide a request credential guard', () => {
+  const protectedSnapshot = snapshotOf(`
+    app.use('/api/*', async (c, next) => {
+      if (c.req.header('X-App-Token') !== writeToken) {
+        return c.json({ error: 'denied' }, 403);
+      }
+      return next();
+    });
+    app.post('/api/items', async (c) => context.db.update(items).set({ active: true }));
+  `);
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const lateSnapshot = snapshotOf(`
+    app.post('/api/items', async (c) => context.db.update(items).set({ active: true }));
+    app.use('/api/*', async (c, next) => {
+      if (c.req.header('X-App-Token') !== writeToken) return c.json({ error: 'denied' }, 403);
+      return next();
+    });
+  `);
+  const lateFindings = scanAstSecurity(lateSnapshot, profileProject(lateSnapshot).profile).findings;
+  assert.ok(lateFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('authentication wrappers protect mapped Next route callbacks', () => {
   const snapshot = snapshotOf(
     `
