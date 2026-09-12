@@ -25,6 +25,8 @@ test('non-sensitive keys and protected log values avoid privacy candidates', () 
       console.log(config.sourceAuthors.emails.length);
       logger.info({ emailCount: emails.length, sessionCount: sessions.size });
       logger.error(pluggyCredentialErrorCode(error));
+      logger.info({ cardsPreserved: before.cardCount === after.cardCount });
+      console.log(\`Listening at http://${'${info.address}'}:${'${info.port}'}\`);
       localStorage.setItem('theme', theme);
     `),
   );
@@ -37,11 +39,13 @@ test('raw sensitive values remain candidates beside safe aggregate counts', () =
       logger.info({ emailCount: emails.length });
       logger.info({ email: user.email });
       logger.info(credentialErrorCode(accessToken));
+      console.log(\`Customer address: ${'${user.address}'}\`);
+      console.log(\`Listening at http://${'${info.address}'}:${'${info.port}'} for ${'${user.address}'}\`);
     `),
   );
   assert.deepEqual(
     result.findings.map((finding) => finding.ruleId),
-    ['TW-PRIV002', 'TW-PRIV002'],
+    ['TW-PRIV002', 'TW-PRIV002', 'TW-PRIV002', 'TW-PRIV002'],
   );
 });
 

@@ -23,16 +23,50 @@ function stringValue(expression: ts.Expression | undefined): string | undefined 
   return expression && ts.isStringLiteralLike(expression) ? expression.text : undefined;
 }
 
+function networkEndpointTemplate(expression: ts.TemplateExpression): boolean {
+  const staticText = [
+    expression.head.text,
+    ...expression.templateSpans.map((span) => span.literal.text),
+  ].join('');
+  if (!/https?:\/\//i.test(staticText) || expression.templateSpans.length !== 2) return false;
+  let owner: string | undefined;
+  const properties = new Set<string>();
+  for (const span of expression.templateSpans) {
+    if (!ts.isPropertyAccessExpression(span.expression)) return false;
+    const currentOwner = span.expression.expression.getText(span.expression.getSourceFile());
+    if (owner && owner !== currentOwner) return false;
+    owner = currentOwner;
+    properties.add(span.expression.name.text);
+  }
+  return properties.has('address') && properties.has('port');
+}
+
 function containsSensitiveUnprotectedValue(expression: ts.Expression): boolean {
   const source = expression.getSourceFile();
   if (ts.isStringLiteralLike(expression) || ts.isNoSubstitutionTemplateLiteral(expression))
     return false;
   if (ts.isIdentifier(expression))
     return sensitive.test(expression.text) && !protectedIdentifier.test(expression.text);
-  if (ts.isTemplateExpression(expression))
+  if (ts.isTemplateExpression(expression)) {
+    if (networkEndpointTemplate(expression)) return false;
     return expression.templateSpans.some((span) =>
       containsSensitiveUnprotectedValue(span.expression),
     );
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    [
+      ts.SyntaxKind.EqualsEqualsToken,
+      ts.SyntaxKind.EqualsEqualsEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsToken,
+      ts.SyntaxKind.ExclamationEqualsEqualsToken,
+      ts.SyntaxKind.LessThanToken,
+      ts.SyntaxKind.LessThanEqualsToken,
+      ts.SyntaxKind.GreaterThanToken,
+      ts.SyntaxKind.GreaterThanEqualsToken,
+    ].includes(expression.operatorToken.kind)
+  )
+    return false;
   if (ts.isCallExpression(expression)) {
     if (protectedValue.test(expression.getText(source))) return false;
     const name = callName(expression.expression);
@@ -195,7 +229,7 @@ export function scanPrivacyStatic(snapshot: Snapshot): { findings: Finding[]; ru
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded URL, logging, and browser-storage privacy candidates; ${parseFailures} parse failure(s). Data purpose, retention, consent, and runtime transfers remain unverified.`
         : 'No supported runtime source was available for static privacy review.',
-      version: '0.4.1',
+      version: '0.4.2',
     },
   };
 }
