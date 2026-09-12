@@ -39,6 +39,39 @@ test('AST authorization covers nested inline server actions', () => {
   assert.equal(finding?.evidence[0]?.file, 'src/app/posts/[id]/page.tsx');
 });
 
+test('API Gateway Lambda mutations require mapped authentication', () => {
+  const vulnerableSnapshot = snapshotOf(
+    `
+      import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+      export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+        return client.send(new UpdateCommand({ Item: event.body }));
+      };
+    `,
+    'src/functions/record-usage-handler.ts',
+  );
+  const vulnerable = scanAstSecurity(
+    vulnerableSnapshot,
+    profileProject(vulnerableSnapshot).profile,
+  ).findings;
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const protectedSnapshot = snapshotOf(
+    `
+      import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+      export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+        verifyToken(event.headers.authorization);
+        return client.send(new UpdateCommand({ Item: event.body }));
+      };
+    `,
+    'src/functions/record-usage-handler.ts',
+  );
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('read-only server action candidates do not carry high mutation severity', () => {
   const snapshot = snapshotOf(
     `'use server'; export async function checkTable() { return prisma.post.findFirst(); }`,

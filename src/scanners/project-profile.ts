@@ -42,7 +42,7 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
-export const projectProfileScannerVersion = '0.11.1';
+export const projectProfileScannerVersion = '0.12.0';
 
 interface ParsedFile {
   source: SourceFile;
@@ -263,6 +263,21 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
   )
     return 'logging';
   return null;
+}
+
+function awsSdkDatabaseCommand(node: ts.CallExpression): string | null {
+  if (!/(?:^|\.)send$/i.test(callName(node.expression))) return null;
+  const command = node.arguments[0];
+  if (
+    !command ||
+    !ts.isNewExpression(command) ||
+    !ts.isIdentifier(command.expression) ||
+    !/^(?:BatchGet|BatchWrite|Delete|Get|Put|Query|Scan|TransactGet|TransactWrite|Update)Command$/.test(
+      command.expression.text,
+    )
+  )
+    return null;
+  return `DynamoDB.${command.expression.text}`;
 }
 
 function isRequestCredentialGuard(node: ts.BinaryExpression, source: ts.SourceFile): boolean {
@@ -881,6 +896,30 @@ function addFileEntrypoints(
         dynamicParameters: [],
         symbolIds: [symbol.id],
       });
+  const lambdaHandler = fileSymbols.find((symbol) => symbol.name === 'handler');
+  if (
+    lambdaHandler &&
+    /\bAPIGatewayProxyHandler(?:V2)?\b/.test(item.ast.text) &&
+    !entrypoints.some(
+      (entrypoint) =>
+        entrypoint.file === file &&
+        entrypoint.kind === 'aws-lambda' &&
+        entrypoint.symbolIds.includes(lambdaHandler.id),
+    )
+  ) {
+    const name = path.posix.basename(file).replace(/\.[cm]?[jt]sx?$/, '');
+    const readOnly = /(?:^|[-_.])(?:get|list|read|search|query)(?:[-_.]|$)/i.test(name);
+    entrypoints.push({
+      id: stableId('entrypoint', 'aws-lambda', file, lambdaHandler.line),
+      kind: 'aws-lambda',
+      file,
+      line: lambdaHandler.line,
+      name: 'handler',
+      methods: [readOnly ? 'GET' : 'POST'],
+      dynamicParameters: [],
+      symbolIds: [lambdaHandler.id],
+    });
+  }
   const inlineActionIds = new Set<string>();
   const visitInlineActions = (node: ts.Node): void => {
     if (isInlineServerAction(node)) {
@@ -1070,7 +1109,9 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             callee,
             ...(ownerSymbolId ? { callerSymbolId: ownerSymbolId } : {}),
           });
-        const kind = factKind(callee, saasConfiguration.config);
+        const databaseCommand = awsSdkDatabaseCommand(node);
+        const kind = databaseCommand ? 'database' : factKind(callee, saasConfiguration.config);
+        const factSignal = databaseCommand ?? callee;
         const callback = node.arguments.find(
           (argument) => ts.isArrowFunction(argument) || ts.isFunctionExpression(argument),
         );
@@ -1089,11 +1130,11 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           (kind === 'authentication' || kind === 'authorization' ? callbackSymbol?.id : undefined);
         if (kind && !cap(facts.length, maximumFacts, 'Security fact'))
           facts.push({
-            id: stableId('fact', kind, item.source.path, line, callee, factOwnerSymbolId),
+            id: stableId('fact', kind, item.source.path, line, factSignal, factOwnerSymbolId),
             kind,
             file: item.source.path,
             line,
-            signal: callee,
+            signal: factSignal,
             ...(factOwnerSymbolId ? { ownerSymbolId: factOwnerSymbolId } : {}),
           });
         const scope =

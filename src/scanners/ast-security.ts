@@ -133,7 +133,9 @@ function scriptKind(file: string): ts.ScriptKind {
 function sensitiveOperationSeverity(fact: ProjectFact): 'high' | 'medium' {
   if (
     fact.kind === 'database' &&
-    /\.(?:findUnique|findFirst|findMany|count|aggregate|groupBy)$/i.test(fact.signal)
+    /\.(?:findUnique|findFirst|findMany|count|aggregate|groupBy|GetCommand|QueryCommand|ScanCommand|BatchGetCommand|TransactGetCommand)$/i.test(
+      fact.signal,
+    )
   )
     return 'medium';
   return 'high';
@@ -1656,7 +1658,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.10.0',
+        version: '0.11.0',
       },
     };
 
@@ -1743,7 +1745,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.10.0',
+      version: '0.11.0',
     },
   };
 }

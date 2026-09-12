@@ -511,3 +511,29 @@ test('descriptive security wrapper names become structural facts', () => {
   assert.ok(kinds.has('authorization'));
   assert.ok(kinds.has('validation'));
 });
+
+test('API Gateway Lambda handlers and DynamoDB commands become structural facts', () => {
+  const profile = profileProject(
+    snapshotFromFiles({
+      'src/functions/create-tenant-handler.ts': `
+        import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+        import { PutCommand } from '@aws-sdk/lib-dynamodb';
+        export const handler: APIGatewayProxyHandlerV2 = async (event) => {
+          return client.send(new PutCommand({ Item: event.body }));
+        };
+      `,
+      'src/functions/get-tenant-handler.ts': `
+        import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+        export const handler: APIGatewayProxyHandlerV2 = async () => ({ statusCode: 200 });
+      `,
+    }),
+  ).profile;
+  const handlers = profile.entrypoints.filter((entrypoint) => entrypoint.kind === 'aws-lambda');
+  assert.deepEqual(
+    handlers.map((entrypoint) => entrypoint.methods),
+    [['POST'], ['GET']],
+  );
+  assert.ok(
+    profile.facts.some((fact) => fact.kind === 'database' && fact.signal === 'DynamoDB.PutCommand'),
+  );
+});

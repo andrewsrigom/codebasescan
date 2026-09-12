@@ -486,7 +486,9 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
 
   const uploadGaps = findingsByRule(findings, ['TW-AST007']);
   const httpEntrypoints = contexts.filter((context) =>
-    ['next-route', 'next-pages-api', 'express-route'].includes(context.entrypoint.kind),
+    ['next-route', 'next-pages-api', 'express-route', 'aws-lambda'].includes(
+      context.entrypoint.kind,
+    ),
   );
   controls.push(
     control({
@@ -955,7 +957,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
     'TW-H007',
   ]);
   const apiApplicable = contexts.some((context) =>
-    ['next-route', 'next-pages-api', 'express-route', 'trpc-procedure'].includes(
+    ['next-route', 'next-pages-api', 'express-route', 'aws-lambda', 'trpc-procedure'].includes(
       context.entrypoint.kind,
     ),
   );

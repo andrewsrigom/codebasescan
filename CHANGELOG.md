@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added API Gateway Lambda entry-point profiling and DynamoDB document-command facts so
+  unauthenticated serverless mutations participate in structural review.
 - Added direct and bounded cross-file SSRF detection for Node `http`/`https` `.get()` and
   `.request()` clients.
 - Mapped ordered Express/Hono path middleware and explicit request-token guards into structural

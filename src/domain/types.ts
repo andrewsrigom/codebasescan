@@ -304,6 +304,7 @@ export type ProjectEntrypointKind =
   | 'server-action'
   | 'middleware'
   | 'express-route'
+  | 'aws-lambda'
   | 'trpc-procedure';
 export type ProjectFactKind =
   | 'authentication'
