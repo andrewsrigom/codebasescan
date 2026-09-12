@@ -348,6 +348,42 @@ test('snapshot excludes conventional generated output directories', async (conte
   assert.equal(estimate.supportedFiles, 1);
   assert.equal(estimate.predictedTruncated, false);
 });
+test('snapshot excludes generated Drizzle migration metadata', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-drizzle-meta-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'drizzle', 'meta'), { recursive: true });
+  await mkdir(path.join(root, 'src'));
+  await writeFile(path.join(root, 'drizzle', '0000_initial.sql'), 'CREATE TABLE users (id text);');
+  await writeFile(path.join(root, 'drizzle', 'meta', '_journal.json'), '{"entries":[]}');
+  await writeFile(path.join(root, 'drizzle', 'meta', '0000_snapshot.json'), '{"generated":true}');
+  await writeFile(path.join(root, 'src', 'server.ts'), 'export const server = true;');
+
+  const snapshot = await captureSnapshot(root);
+  const estimate = await estimateProjectScope(root);
+  assert.deepEqual(
+    snapshot.files.map((file) => file.path),
+    ['src/server.ts', 'drizzle/0000_initial.sql'],
+  );
+  assert.equal(snapshot.skipped['generated-metadata'], 2);
+  assert.equal(estimate.supportedFiles, 2);
+  assert.equal(estimate.predictedTruncated, false);
+});
+test('snapshot prioritizes runtime source before large documentation trees', async (context) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-source-priority-'));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, 'docs'));
+  await mkdir(path.join(root, 'src'));
+  const document = JSON.stringify({ content: 'a'.repeat(1_975_000) });
+  for (let index = 0; index < 17; index += 1)
+    await writeFile(path.join(root, 'docs', `${String(index).padStart(2, '0')}.json`), document);
+  await writeFile(path.join(root, 'src', 'server.ts'), 'export const server = true;');
+
+  const snapshot = await captureSnapshot(root);
+  assert.equal(snapshot.files[0]?.path, 'src/server.ts');
+  assert.ok(snapshot.files.some((file) => file.path === 'src/server.ts'));
+  assert.equal(snapshot.truncated, true);
+  assert.ok((snapshot.skipped['total-byte-limit'] ?? 0) > 0);
+});
 test('large files are excluded and coverage is marked truncated', async (context) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-large-'));
   context.after(() => rm(root, { recursive: true, force: true }));

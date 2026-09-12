@@ -4,6 +4,9 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Prioritized application source ahead of documentation and generated metadata in bounded snapshots,
+  and excluded generated Drizzle metadata while retaining authored migrations.
+- Made terminal policy output distinguish all detected candidates from the findings that gate CI.
 - Updated the public demo, fixture provenance, and reusable Action smoke test to the published 0.3.0
   release.
 

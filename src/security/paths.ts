@@ -73,6 +73,38 @@ const testSegments = new Set([
   'benchmarks',
 ]);
 const exampleSegments = new Set(['example', 'examples', 'storybook', '.storybook', 'stories']);
+const sourceDirectories = new Set([
+  'api',
+  'app',
+  'apps',
+  'backend',
+  'client',
+  'frontend',
+  'functions',
+  'lambda',
+  'lambdas',
+  'lib',
+  'packages',
+  'pages',
+  'server',
+  'services',
+  'src',
+  'worker',
+  'workers',
+]);
+const lowPriorityDirectories = new Set([
+  '.agents',
+  '.codex',
+  '.evidence',
+  '.github',
+  '.work',
+  'assets',
+  'data',
+  'docs',
+  'documentation',
+  'evidence',
+  'references',
+]);
 export const snapshotLimits = {
   files: 4000,
   bytesPerFile: 2 * 1024 * 1024,
@@ -156,10 +188,32 @@ export function classifySourceScope(relativePath: string): SourceScope {
 export function isRuntimeSource(file: { scope?: SourceScope }): boolean {
   return !file.scope || file.scope === 'runtime';
 }
-function scopeOrder(directory: string, entryName: string, root: string): number {
-  return classifySourceScope(path.relative(root, path.join(directory, entryName))) === 'runtime'
-    ? 0
-    : 1;
+function captureOrder(
+  directory: string,
+  entryName: string,
+  root: string,
+  isDirectory: boolean,
+): number {
+  const relative = path.relative(root, path.join(directory, entryName));
+  if (classifySourceScope(relative) !== 'runtime') return 3;
+  const segments = relative.toLowerCase().split(path.sep);
+  const directorySegments = isDirectory ? segments : segments.slice(0, -1);
+  if (directorySegments.some((segment) => lowPriorityDirectories.has(segment))) return 2;
+  if (!isDirectory || directorySegments.some((segment) => sourceDirectories.has(segment))) return 0;
+  return 1;
+}
+function isGeneratedMigrationMetadata(relativePath: string): boolean {
+  const segments = relativePath.replaceAll('\\', '/').toLowerCase().split('/');
+  const file = segments.at(-1) ?? '';
+  const parent = segments.at(-2) ?? '';
+  const hasDrizzleRoot = segments
+    .slice(0, -2)
+    .some((segment) => segment === 'drizzle' || segment.startsWith('drizzle-'));
+  return (
+    parent === 'meta' &&
+    hasDrizzleRoot &&
+    (file === '_journal.json' || /^\d+_snapshot\.json$/.test(file))
+  );
 }
 export function isWithin(root: string, target: string): boolean {
   const relative = path.relative(root, target);
@@ -220,8 +274,9 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
     }
     entries.sort(
       (a, b) =>
-        scopeOrder(directory, a.name, canonicalRoot) -
-          scopeOrder(directory, b.name, canonicalRoot) || a.name.localeCompare(b.name),
+        captureOrder(directory, a.name, canonicalRoot, a.isDirectory()) -
+          captureOrder(directory, b.name, canonicalRoot, b.isDirectory()) ||
+        a.name.localeCompare(b.name),
     );
     for (const entry of entries) {
       if (++visitedEntries > 12_000) {
@@ -251,6 +306,7 @@ export async function estimateProjectScope(root: string): Promise<ProjectScopeEs
         ignoredByProject(ignoreRules, canonicalRoot, absolute, false)
       )
         continue;
+      if (isGeneratedMigrationMetadata(path.relative(canonicalRoot, absolute))) continue;
       try {
         const resolved = await realpath(absolute);
         const metadata = await lstat(absolute);
@@ -314,8 +370,8 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
     const entries = await readdir(directory, { withFileTypes: true });
     entries.sort(
       (a, b) =>
-        scopeOrder(directory, a.name, root) - scopeOrder(directory, b.name, root) ||
-        a.name.localeCompare(b.name),
+        captureOrder(directory, a.name, root, a.isDirectory()) -
+          captureOrder(directory, b.name, root, b.isDirectory()) || a.name.localeCompare(b.name),
     );
     for (const entry of entries) {
       if (
@@ -362,6 +418,11 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         skip(exclusion);
         continue;
       }
+      const relative = path.relative(root, absolute);
+      if (isGeneratedMigrationMetadata(relative)) {
+        skip('generated-metadata');
+        continue;
+      }
       try {
         const resolved = await realpath(absolute);
         if (!isWithin(root, resolved)) {
@@ -372,12 +433,13 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
         try {
           const stat = await handle.stat();
           const byteLimit = fileByteLimit(entry.name);
-          if (
-            !stat.isFile() ||
-            stat.size > byteLimit ||
-            totalBytes + stat.size > snapshotLimits.totalBytes
-          ) {
+          if (!stat.isFile() || stat.size > byteLimit) {
             skip('file-size-limit');
+            truncated = true;
+            continue;
+          }
+          if (totalBytes + stat.size > snapshotLimits.totalBytes) {
+            skip('total-byte-limit');
             truncated = true;
             continue;
           }
@@ -397,8 +459,8 @@ export async function captureSnapshot(root: string): Promise<Snapshot> {
             ? sanitizeEnvironmentTemplate(rawContent)
             : rawContent;
           files.push({
-            path: safeRelative(path.relative(root, absolute)),
-            scope: classifySourceScope(path.relative(root, absolute)),
+            path: safeRelative(relative),
+            scope: classifySourceScope(relative),
             content,
             digest: digest(content),
             bytes: Buffer.byteLength(content),
