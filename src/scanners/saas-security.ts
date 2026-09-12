@@ -81,6 +81,10 @@ function callName(call: ts.CallExpression): string {
   return call.expression.getText(call.getSourceFile()).replace(/\s+/g, '').slice(-220);
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function isDirectRequestSource(node: ts.Node): boolean {
   const text = node.getText(node.getSourceFile()).replace(/\s+/g, '');
   return (
@@ -396,18 +400,115 @@ function weakEntropy(node: ts.Node): boolean {
 }
 
 function staticPublicErrorValue(node: ts.Expression): boolean {
-  if (ts.isStringLiteralLike(node)) return true;
-  if (ts.isConditionalExpression(node))
-    return staticPublicErrorValue(node.whenTrue) && staticPublicErrorValue(node.whenFalse);
-  if (
+  while (
     ts.isParenthesizedExpression(node) ||
     ts.isAsExpression(node) ||
     ts.isTypeAssertionExpression(node) ||
     ts.isNonNullExpression(node) ||
     ts.isSatisfiesExpression(node)
   )
-    return staticPublicErrorValue(node.expression);
+    node = node.expression;
+  if (ts.isStringLiteralLike(node) || node.kind === ts.SyntaxKind.NullKeyword) return true;
+  if (ts.isConditionalExpression(node))
+    return staticPublicErrorValue(node.whenTrue) && staticPublicErrorValue(node.whenFalse);
   return false;
+}
+
+interface AllowlistNormalizer {
+  symbolId: string;
+  payloadIndex: number;
+  messagesIndex: number;
+  fallbackIndex: number;
+}
+
+function payloadMessage(node: ts.Expression, payloadName: string): boolean {
+  while (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node)
+  )
+    node = node.expression;
+  return (
+    ts.isPropertyAccessExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === payloadName &&
+    node.name.text === 'message'
+  );
+}
+
+function allowlistNormalizer(
+  node: ts.FunctionLikeDeclaration,
+  symbolId: string,
+): AllowlistNormalizer | undefined {
+  if (!node.body || !ts.isBlock(node.body)) return undefined;
+  const parameters = node.parameters.map((parameter) =>
+    ts.isIdentifier(parameter.name) ? parameter.name.text : undefined,
+  );
+  if (parameters.some((parameter) => !parameter)) return undefined;
+  const returns: ts.Expression[] = [];
+  const collect = (child: ts.Node): void => {
+    if (child !== node.body && executableFunction(child)) return;
+    if (ts.isReturnStatement(child) && child.expression) returns.push(child.expression);
+    ts.forEachChild(child, collect);
+  };
+  collect(node.body);
+
+  let indexes: Omit<AllowlistNormalizer, 'symbolId'> | undefined;
+  const matchesConditional = (expression: ts.Expression): boolean => {
+    if (!ts.isConditionalExpression(expression)) return false;
+    const condition = expression.condition;
+    if (
+      !ts.isCallExpression(condition) ||
+      !ts.isPropertyAccessExpression(condition.expression) ||
+      condition.expression.name.text !== 'includes' ||
+      !ts.isIdentifier(condition.expression.expression) ||
+      condition.arguments.length !== 1
+    )
+      return false;
+    const messagesIndex = parameters.indexOf(condition.expression.expression.text);
+    const payloadIndex = parameters.findIndex(
+      (parameter) => parameter !== undefined && payloadMessage(condition.arguments[0]!, parameter),
+    );
+    const fallbackIndex = ts.isIdentifier(expression.whenFalse)
+      ? parameters.indexOf(expression.whenFalse.text)
+      : -1;
+    if (
+      messagesIndex < 0 ||
+      payloadIndex < 0 ||
+      fallbackIndex < 0 ||
+      !payloadMessage(expression.whenTrue, parameters[payloadIndex]!)
+    )
+      return false;
+    indexes = { payloadIndex, messagesIndex, fallbackIndex };
+    return true;
+  };
+  if (!returns.some(matchesConditional) || !indexes) return undefined;
+  const fallbackName = parameters[indexes.fallbackIndex];
+  if (
+    !returns.every(
+      (expression) =>
+        (ts.isIdentifier(expression) && expression.text === fallbackName) ||
+        matchesConditional(expression),
+    )
+  )
+    return undefined;
+  return { symbolId, ...indexes };
+}
+
+function staticStringArray(node: ts.Expression): boolean {
+  while (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isSatisfiesExpression(node)
+  )
+    node = node.expression;
+  return (
+    ts.isArrayLiteralExpression(node) &&
+    node.elements.length > 0 &&
+    node.elements.every((element) => ts.isStringLiteralLike(element))
+  );
 }
 
 function returnsOnlyStaticPublicErrors(node: ts.FunctionLikeDeclaration): boolean {
@@ -563,23 +664,163 @@ function staticPublicErrorSymbols(parsed: ParsedSource[], profile: ProjectProfil
     profile.symbols.map((symbol) => [`${symbol.file}:${symbol.line}:${symbol.name}`, symbol.id]),
   );
   const safe = new Set<string>();
+  const normalizers = new Map<string, AllowlistNormalizer>();
   for (const item of parsed) {
     const visit = (node: ts.Node): void => {
-      if (
-        executableFunction(node) &&
-        (returnsOnlyStaticPublicErrors(node) || returnsNoParameterPayload(node))
-      ) {
+      if (executableFunction(node)) {
         const name = functionName(node);
         if (name) {
           const symbol = symbolsByLocation.get(
             `${item.file.path}:${lineOf(item.source, node)}:${name}`,
           );
-          if (symbol) safe.add(symbol);
+          if (symbol) {
+            if (returnsOnlyStaticPublicErrors(node) || returnsNoParameterPayload(node))
+              safe.add(symbol);
+            const normalizer = allowlistNormalizer(node, symbol);
+            if (normalizer) normalizers.set(symbol, normalizer);
+          }
         }
       }
       ts.forEachChild(node, visit);
     };
     visit(item.source);
+  }
+  const calls = new Map<string, ts.CallExpression[]>();
+  for (const item of parsed) {
+    const targets = resolvedCallTargets(item, profile);
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        const target = targets.get(`${lineOf(item.source, node)}:${callName(node)}`);
+        if (target && normalizers.has(target))
+          calls.set(target, [...(calls.get(target) ?? []), node]);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(item.source);
+  }
+  for (const [symbolId, normalizer] of normalizers) {
+    const usages = calls.get(symbolId) ?? [];
+    if (
+      usages.length > 0 &&
+      usages.every((call) => {
+        const messages = call.arguments[normalizer.messagesIndex];
+        const fallback = call.arguments[normalizer.fallbackIndex];
+        return Boolean(
+          messages && fallback && staticStringArray(messages) && staticPublicErrorValue(fallback),
+        );
+      })
+    )
+      safe.add(symbolId);
+  }
+  return safe;
+}
+
+function staticErrorMessageExpression(
+  node: ts.Expression,
+  parsed: ParsedSource,
+  profile: ProjectProfile,
+  staticPublicSymbols: Set<string>,
+  seen = new Set<string>(),
+): boolean {
+  if (staticPublicErrorValue(node)) return true;
+  if (ts.isCallExpression(node)) {
+    const target = resolvedCallTargets(parsed, profile).get(
+      `${lineOf(parsed.source, node)}:${callName(node)}`,
+    );
+    return Boolean(target && staticPublicSymbols.has(target));
+  }
+  if (!ts.isIdentifier(node) || seen.has(node.text)) return false;
+  seen.add(node.text);
+  let owner: ts.Node | undefined = node.parent;
+  while (owner && !executableFunction(owner)) owner = owner.parent;
+  if (!owner || !owner.body) return false;
+  const initializers: ts.Expression[] = [];
+  const visit = (child: ts.Node): void => {
+    if (child !== owner!.body && executableFunction(child)) return;
+    if (
+      ts.isVariableDeclaration(child) &&
+      ts.isIdentifier(child.name) &&
+      child.name.text === node.text &&
+      child.initializer &&
+      ts.isVariableDeclarationList(child.parent) &&
+      Boolean(child.parent.flags & ts.NodeFlags.Const) &&
+      child.getStart(parsed.source) < node.getStart(parsed.source)
+    )
+      initializers.push(child.initializer);
+    ts.forEachChild(child, visit);
+  };
+  visit(owner.body);
+  if (initializers.length !== 1) return false;
+  return Boolean(
+    staticErrorMessageExpression(initializers[0]!, parsed, profile, staticPublicSymbols, seen),
+  );
+}
+
+function literalMessageErrorClasses(
+  parsed: ParsedSource[],
+  profile: ProjectProfile,
+  staticPublicSymbols: Set<string>,
+): Set<string> {
+  const declarations = new Map<string, ts.ClassDeclaration[]>();
+  const constructions = new Map<string, Array<{ node: ts.NewExpression; parsed: ParsedSource }>>();
+  for (const item of parsed) {
+    const visit = (node: ts.Node): void => {
+      if (ts.isClassDeclaration(node) && node.name)
+        declarations.set(node.name.text, [...(declarations.get(node.name.text) ?? []), node]);
+      if (ts.isNewExpression(node) && ts.isIdentifier(node.expression))
+        constructions.set(node.expression.text, [
+          ...(constructions.get(node.expression.text) ?? []),
+          { node, parsed: item },
+        ]);
+      ts.forEachChild(node, visit);
+    };
+    visit(item.source);
+  }
+  const safe = new Set<string>();
+  for (const [name, classes] of declarations) {
+    if (classes.length !== 1) continue;
+    const declaration = classes[0]!;
+    const extendsError = declaration.heritageClauses?.some(
+      (clause) =>
+        clause.token === ts.SyntaxKind.ExtendsKeyword &&
+        clause.types.some((type) => type.expression.getText() === 'Error'),
+    );
+    const constructor = declaration.members.find(ts.isConstructorDeclaration);
+    const messageParameter = constructor?.parameters[0];
+    if (
+      !extendsError ||
+      !constructor?.body ||
+      !messageParameter ||
+      !ts.isIdentifier(messageParameter.name)
+    )
+      continue;
+    const messageName = messageParameter.name.text;
+    const superArguments: Array<ts.Expression | undefined> = [];
+    const inspectConstructor = (node: ts.Node): void => {
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.SuperKeyword)
+        superArguments.push(node.arguments[0]);
+      ts.forEachChild(node, inspectConstructor);
+    };
+    inspectConstructor(constructor.body);
+    const usages = constructions.get(name) ?? [];
+    if (
+      superArguments.length > 0 &&
+      superArguments.every(
+        (argument) => argument && ts.isIdentifier(argument) && argument.text === messageName,
+      ) &&
+      usages.length > 0 &&
+      usages.every(
+        (usage) =>
+          usage.node.arguments?.[0] &&
+          staticErrorMessageExpression(
+            usage.node.arguments[0],
+            usage.parsed,
+            profile,
+            staticPublicSymbols,
+          ),
+      )
+    )
+      safe.add(name);
   }
   return safe;
 }
@@ -757,6 +998,7 @@ function caughtErrorExposure(
   parsed: ParsedSource,
   profile: ProjectProfile,
   staticPublicSymbols: Set<string>,
+  literalErrorClasses: Set<string>,
 ): ts.CallExpression[] {
   const caught = new Set(
     catchClause.variableDeclaration ? bindingNames(catchClause.variableDeclaration.name) : [],
@@ -765,6 +1007,87 @@ function caughtErrorExposure(
   collectCaughtErrorAliases(catchClause, caught, parsed, callTargets, staticPublicSymbols);
   const exposed: ts.CallExpression[] = [];
   const caughtNames = [...caught];
+  const safeClassPredicates = new Map<string, string>();
+  const collectPredicates = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer &&
+      ts.isBinaryExpression(node.initializer) &&
+      node.initializer.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
+      ts.isIdentifier(node.initializer.left) &&
+      caught.has(node.initializer.left.text) &&
+      ts.isIdentifier(node.initializer.right) &&
+      literalErrorClasses.has(node.initializer.right.text)
+    )
+      safeClassPredicates.set(node.name.text, node.initializer.left.text);
+    ts.forEachChild(node, collectPredicates);
+  };
+  collectPredicates(catchClause.block);
+  const guardedCaughtName = (condition: ts.Expression): string | undefined => {
+    const text = condition.getText(parsed.source).replace(/\s+/g, ' ');
+    if (ts.isIdentifier(condition)) {
+      const guarded = safeClassPredicates.get(condition.text);
+      if (guarded) return guarded;
+    }
+    return caughtNames.find((name) =>
+      [...literalErrorClasses].some((className) =>
+        new RegExp(`\\b${escapeRegExp(name)}\\s+instanceof\\s+${escapeRegExp(className)}\\b`).test(
+          text,
+        ),
+      ),
+    );
+  };
+  const enclosingLiteralGuard = (node: ts.Node): string | undefined => {
+    let current: ts.Node | undefined = node;
+    while (current && current !== catchClause.block) {
+      const parent: ts.Node | undefined = current.parent;
+      if (parent && ts.isIfStatement(parent) && parent.thenStatement === current)
+        return guardedCaughtName(parent.expression);
+      current = parent;
+    }
+    return undefined;
+  };
+  const directCaughtMessage = (node: ts.Expression, name: string): boolean => {
+    while (
+      ts.isParenthesizedExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isTypeAssertionExpression(node) ||
+      ts.isNonNullExpression(node)
+    )
+      node = node.expression;
+    return payloadMessage(node, name);
+  };
+  const containsCaught = (node: ts.Expression): boolean =>
+    containsCaughtErrorPayload(node, caught, parsed, callTargets, staticPublicSymbols);
+  const onlySafeLiteralPayload = (node: ts.Expression): boolean => {
+    if (!containsCaught(node)) return true;
+    const enclosingGuard = enclosingLiteralGuard(node);
+    if (enclosingGuard && directCaughtMessage(node, enclosingGuard)) return true;
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node))
+      return onlySafeLiteralPayload(node.expression);
+    if (ts.isConditionalExpression(node)) {
+      const guarded = guardedCaughtName(node.condition);
+      if (guarded)
+        return (
+          directCaughtMessage(node.whenTrue, guarded) && onlySafeLiteralPayload(node.whenFalse)
+        );
+      return onlySafeLiteralPayload(node.whenTrue) && onlySafeLiteralPayload(node.whenFalse);
+    }
+    if (ts.isObjectLiteralExpression(node))
+      return node.properties.every((property) => {
+        if (ts.isPropertyAssignment(property)) return onlySafeLiteralPayload(property.initializer);
+        if (ts.isSpreadAssignment(property)) return onlySafeLiteralPayload(property.expression);
+        return !ts.isShorthandPropertyAssignment(property) || !caught.has(property.name.text);
+      });
+    if (ts.isArrayLiteralExpression(node))
+      return node.elements.every((element) =>
+        ts.isSpreadElement(element)
+          ? onlySafeLiteralPayload(element.expression)
+          : onlySafeLiteralPayload(element),
+      );
+    return false;
+  };
   const isValidationBranch = (node: ts.Node): boolean => {
     let current: ts.Node | undefined = node;
     while (current && current !== catchClause.block) {
@@ -788,8 +1111,8 @@ function caughtErrorExposure(
       if (
         /(?:^|\.)(?:json|send|api(?:Legacy)?Error)$/i.test(name) &&
         !isValidationBranch(node) &&
-        node.arguments.some((argument) =>
-          containsCaughtErrorPayload(argument, caught, parsed, callTargets, staticPublicSymbols),
+        node.arguments.some(
+          (argument) => containsCaught(argument) && !onlySafeLiteralPayload(argument),
         )
       )
         exposed.push(node);
@@ -804,6 +1127,7 @@ function scanFile(
   parsed: ParsedSource,
   profile: ProjectProfile,
   staticPublicSymbols: Set<string>,
+  literalErrorClasses: Set<string>,
 ): Finding[] {
   const findings: Finding[] = [];
   const taints = boundaryTaints(parsed, profile);
@@ -1051,7 +1375,13 @@ function scanFile(
     }
 
     if (tainted && ts.isCatchClause(node))
-      for (const call of caughtErrorExposure(node, parsed, profile, staticPublicSymbols))
+      for (const call of caughtErrorExposure(
+        node,
+        parsed,
+        profile,
+        staticPublicSymbols,
+        literalErrorClasses,
+      ))
         add(
           finding({
             parsed,
@@ -1088,7 +1418,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.3',
+        version: '0.5.6',
       },
     };
 
@@ -1106,8 +1436,9 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       ),
     }));
   const safeErrorSymbols = staticPublicErrorSymbols(parsed, profile);
+  const safeErrorClasses = literalMessageErrorClasses(parsed, profile, safeErrorSymbols);
   const findings = parsed
-    .flatMap((file) => scanFile(file, profile, safeErrorSymbols))
+    .flatMap((file) => scanFile(file, profile, safeErrorSymbols, safeErrorClasses))
     .slice(0, maximumFindings);
   const partial =
     profile.status === 'partial' ||
@@ -1124,7 +1455,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.3',
+      version: '0.5.6',
     },
   };
 }

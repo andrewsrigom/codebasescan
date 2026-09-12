@@ -278,6 +278,138 @@ test('SaaS error rule proves imported normalizers return only fixed public codes
   assert.ok(!structured.some((finding) => finding.ruleId === 'TW-SAAS004'));
 });
 
+test('SaaS error rule proves static call-site message allowlists', () => {
+  const safeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { publicMessage } from '../../../lib/errors';
+      export async function POST() {
+        try { return Response.json(await database.invoice.create({ data: {} })); }
+        catch (error) {
+          return Response.json({
+            error: publicMessage(error, ['NOT_FOUND', 'CONFLICT'], 'INTERNAL_ERROR'),
+          });
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export function publicMessage(error: unknown, allowed: readonly string[], fallback: string) {
+        if (!(error instanceof Error)) return fallback;
+        return allowed.includes(error.message) ? error.message : fallback;
+      }
+    `,
+  });
+  const safe = scanSaasSecurity(safeSnapshot, profileProject(safeSnapshot).profile).findings;
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const unsafeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { publicMessage } from '../../../lib/errors';
+      export async function POST(request: Request) {
+        const body = await request.json();
+        try { return Response.json(await database.invoice.create({ data: {} })); }
+        catch (error) {
+          return Response.json({ error: publicMessage(error, body.allowed, 'INTERNAL_ERROR') });
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export function publicMessage(error: unknown, allowed: readonly string[], fallback: string) {
+        if (!(error instanceof Error)) return fallback;
+        return allowed.includes(error.message) ? error.message : fallback;
+      }
+    `,
+  });
+  const unsafe = scanSaasSecurity(unsafeSnapshot, profileProject(unsafeSnapshot).profile).findings;
+  assert.ok(unsafe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const stackSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { DomainError, fail } from '../../../lib/errors';
+      export async function POST() {
+        try { fail(); return Response.json({ ok: true }); }
+        catch (error) {
+          if (error instanceof DomainError) return Response.json({ stack: error.stack });
+          throw error;
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export class DomainError extends Error {
+        constructor(message: string) { super(message); this.name = 'DomainError'; }
+      }
+      export function fail() { throw new DomainError('INVALID_OPERATION'); }
+    `,
+  });
+  const stack = scanSaasSecurity(stackSnapshot, profileProject(stackSnapshot).profile).findings;
+  assert.ok(stack.some((finding) => finding.ruleId === 'TW-SAAS004'));
+});
+
+test('SaaS error rule proves custom classes are constructed with fixed messages', () => {
+  const safeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { DomainError, fail } from '../../../lib/errors';
+      export async function POST() {
+        try { fail(); return Response.json({ ok: true }); }
+        catch (error) {
+          if (error instanceof DomainError) return Response.json({ error: error.message });
+          throw error;
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export class DomainError extends Error {
+        constructor(message: string) { super(message); this.name = 'DomainError'; }
+      }
+      export function fail() { throw new DomainError('INVALID_OPERATION'); }
+    `,
+  });
+  const safe = scanSaasSecurity(safeSnapshot, profileProject(safeSnapshot).profile).findings;
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const unsafeSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { DomainError, fail } from '../../../lib/errors';
+      export async function POST(request: Request) {
+        try { fail((await request.json()).message); return Response.json({ ok: true }); }
+        catch (error) {
+          if (error instanceof DomainError) return Response.json({ error: error.message });
+          throw error;
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export class DomainError extends Error {
+        constructor(message: string) { super(message); this.name = 'DomainError'; }
+      }
+      export function fail(message: string) { throw new DomainError(message); }
+    `,
+  });
+  const unsafe = scanSaasSecurity(unsafeSnapshot, profileProject(unsafeSnapshot).profile).findings;
+  assert.ok(unsafe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const mixedConstructorSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      class DomainError extends Error {
+        constructor(message: string, unsafeMessage: string, unsafe: boolean) {
+          if (unsafe) super(unsafeMessage); else super(message);
+        }
+      }
+      export async function POST(request: Request) {
+        try { throw new DomainError('INVALID_OPERATION', request.url, true); }
+        catch (error) {
+          if (error instanceof DomainError) return Response.json({ error: error.message });
+          throw error;
+        }
+      }
+    `,
+  });
+  const mixedConstructor = scanSaasSecurity(
+    mixedConstructorSnapshot,
+    profileProject(mixedConstructorSnapshot).profile,
+  ).findings;
+  assert.ok(mixedConstructor.some((finding) => finding.ruleId === 'TW-SAAS004'));
+});
+
 test('custom SaaS vocabulary is applied without executable configuration', () => {
   const snapshot = snapshotFromFiles({
     'codebasescan.config.json': JSON.stringify({
