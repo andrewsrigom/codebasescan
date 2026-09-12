@@ -121,6 +121,39 @@ test('SaaS error rule reports caught internals but accepts a stable public error
   `);
   assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-SAAS004'));
 
+  const aliased = findingsFor(`
+    export async function POST(request: Request) {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return Response.json({ status: 500, message });
+      }
+    }
+  `);
+  assert.ok(aliased.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const aliasedResponseWrapper = findingsFor(`
+    export async function POST(request: Request) {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return apiLegacyError({ status: 500, message });
+      }
+    }
+  `);
+  assert.ok(aliasedResponseWrapper.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const derivedStatus = findingsFor(`
+    export async function POST(request: Request) {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        const status = error instanceof KnownPublicError ? 400 : 500;
+        return Response.json({ code: 'INVOICE_FAILED' }, { status });
+      }
+    }
+  `);
+  assert.ok(!derivedStatus.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
   const safe = findingsFor(`
     export async function POST() {
       try { return Response.json(await database.invoice.create({ data: {} })); }

@@ -495,6 +495,214 @@ function containsCaughtErrorValue(
   return found;
 }
 
+function containsCaughtErrorPayload(
+  node: ts.Expression,
+  caught: Set<string>,
+  parsed: ParsedSource,
+  callTargets: Map<string, string>,
+  staticPublicSymbols: Set<string>,
+): boolean {
+  if (ts.isIdentifier(node)) return caught.has(node.text);
+  if (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isAwaitExpression(node)
+  )
+    return containsCaughtErrorPayload(
+      node.expression,
+      caught,
+      parsed,
+      callTargets,
+      staticPublicSymbols,
+    );
+  if (ts.isConditionalExpression(node))
+    return (
+      containsCaughtErrorPayload(
+        node.whenTrue,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      ) ||
+      containsCaughtErrorPayload(
+        node.whenFalse,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      )
+    );
+  if (ts.isBinaryExpression(node)) {
+    const carriesOperand = [
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      ts.SyntaxKind.BarBarToken,
+      ts.SyntaxKind.QuestionQuestionToken,
+      ts.SyntaxKind.PlusToken,
+    ].includes(node.operatorToken.kind);
+    return (
+      carriesOperand &&
+      (containsCaughtErrorPayload(
+        node.left,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      ) ||
+        containsCaughtErrorPayload(
+          node.right,
+          caught,
+          parsed,
+          callTargets,
+          staticPublicSymbols,
+        ))
+    );
+  }
+  if (ts.isPropertyAccessExpression(node))
+    return containsCaughtErrorPayload(
+      node.expression,
+      caught,
+      parsed,
+      callTargets,
+      staticPublicSymbols,
+    );
+  if (ts.isElementAccessExpression(node))
+    return containsCaughtErrorPayload(
+      node.expression,
+      caught,
+      parsed,
+      callTargets,
+      staticPublicSymbols,
+    );
+  if (ts.isCallExpression(node)) {
+    const target = callTargets.get(`${lineOf(parsed.source, node)}:${callName(node)}`);
+    if (target && staticPublicSymbols.has(target)) return false;
+    if (
+      ts.isPropertyAccessExpression(node.expression) &&
+      containsCaughtErrorPayload(
+        node.expression.expression,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      )
+    )
+      return true;
+    return node.arguments.some((argument) =>
+      containsCaughtErrorPayload(
+        argument,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      ),
+    );
+  }
+  if (ts.isTemplateExpression(node))
+    return node.templateSpans.some((span) =>
+      containsCaughtErrorPayload(
+        span.expression,
+        caught,
+        parsed,
+        callTargets,
+        staticPublicSymbols,
+      ),
+    );
+  if (ts.isArrayLiteralExpression(node))
+    return node.elements.some((element) =>
+      ts.isSpreadElement(element)
+        ? containsCaughtErrorPayload(
+            element.expression,
+            caught,
+            parsed,
+            callTargets,
+            staticPublicSymbols,
+          )
+        : containsCaughtErrorPayload(
+            element,
+            caught,
+            parsed,
+            callTargets,
+            staticPublicSymbols,
+          ),
+    );
+  if (ts.isObjectLiteralExpression(node))
+    return node.properties.some((property) => {
+      if (ts.isPropertyAssignment(property))
+        return containsCaughtErrorPayload(
+          property.initializer,
+          caught,
+          parsed,
+          callTargets,
+          staticPublicSymbols,
+        );
+      if (ts.isShorthandPropertyAssignment(property)) return caught.has(property.name.text);
+      if (ts.isSpreadAssignment(property))
+        return containsCaughtErrorPayload(
+          property.expression,
+          caught,
+          parsed,
+          callTargets,
+          staticPublicSymbols,
+        );
+      return false;
+    });
+  return false;
+}
+
+function collectCaughtErrorAliases(
+  catchClause: ts.CatchClause,
+  caught: Set<string>,
+  parsed: ParsedSource,
+  callTargets: Map<string, string>,
+  staticPublicSymbols: Set<string>,
+): void {
+  for (let pass = 0; pass < 8; pass++) {
+    let changed = false;
+    const visit = (node: ts.Node): void => {
+      if (node !== catchClause.block && executableFunction(node)) return;
+      if (
+        ts.isVariableDeclaration(node) &&
+        node.initializer &&
+        containsCaughtErrorPayload(
+          node.initializer,
+          caught,
+          parsed,
+          callTargets,
+          staticPublicSymbols,
+        )
+      ) {
+        for (const name of bindingNames(node.name)) {
+          if (!caught.has(name)) {
+            caught.add(name);
+            changed = true;
+          }
+        }
+      } else if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isIdentifier(node.left) &&
+        containsCaughtErrorPayload(
+          node.right,
+          caught,
+          parsed,
+          callTargets,
+          staticPublicSymbols,
+        ) &&
+        !caught.has(node.left.text)
+      ) {
+        caught.add(node.left.text);
+        changed = true;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(catchClause.block);
+    if (!changed) break;
+  }
+}
+
 function caughtErrorExposure(
   catchClause: ts.CatchClause,
   parsed: ParsedSource,
@@ -505,6 +713,7 @@ function caughtErrorExposure(
     catchClause.variableDeclaration ? bindingNames(catchClause.variableDeclaration.name) : [],
   );
   const callTargets = resolvedCallTargets(parsed, profile);
+  collectCaughtErrorAliases(catchClause, caught, parsed, callTargets, staticPublicSymbols);
   const exposed: ts.CallExpression[] = [];
   const caughtNames = [...caught];
   const isValidationBranch = (node: ts.Node): boolean => {
@@ -528,7 +737,7 @@ function caughtErrorExposure(
     if (ts.isCallExpression(node)) {
       const name = callName(node);
       if (
-        /(?:^|\.)(?:json|send)$/i.test(name) &&
+        /(?:^|\.)(?:json|send|api(?:Legacy)?Error)$/i.test(name) &&
         !isValidationBranch(node) &&
         node.arguments.some((argument) =>
           containsCaughtErrorValue(argument, caught, parsed, callTargets, staticPublicSymbols),
@@ -830,7 +1039,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.0',
+        version: '0.5.1',
       },
     };
 
@@ -866,7 +1075,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.0',
+      version: '0.5.1',
     },
   };
 }
