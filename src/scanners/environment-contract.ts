@@ -87,7 +87,152 @@ function isEnvironmentWrite(node: ts.Node): boolean {
   );
 }
 
+function isExecutableFunction(node: ts.Node): node is
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node)
+  );
+}
+
+function isOptionalCandidateList(node: ts.Node, source: ts.SourceFile): boolean {
+  let current: ts.Node | undefined = node;
+  while (current && !ts.isStatement(current)) {
+    if (ts.isArrayLiteralExpression(current)) {
+      const text = current.getText(source);
+      const environmentAccesses =
+        text.match(/(?:process\.env|import\.meta\.env)(?:\.|\[)/g)?.length ?? 0;
+      if (environmentAccesses < 2) {
+        current = current.parent;
+        continue;
+      }
+      let expression: ts.Node = current;
+      while (expression.parent && !ts.isStatement(expression.parent))
+        expression = expression.parent;
+      if (/\.filter\s*\(\s*Boolean\s*\)/.test(expression.getText(source))) return true;
+      let owner: ts.Node | undefined = current.parent;
+      while (owner && !ts.isVariableDeclaration(owner) && !ts.isStatement(owner))
+        owner = owner.parent;
+      if (
+        owner &&
+        ts.isVariableDeclaration(owner) &&
+        ts.isIdentifier(owner.name) &&
+        /(?:alternatives|candidates|fallbacks|origins)$/i.test(owner.name.text)
+      )
+        return true;
+      if (
+        expression.parent &&
+        ts.isForOfStatement(expression.parent) &&
+        expression.parent.expression === expression
+      )
+        return true;
+    }
+    current = current.parent;
+  }
+  return false;
+}
+
+function isOptionalAliasVariable(node: ts.Node, source: ts.SourceFile): boolean {
+  let current: ts.Node | undefined = node;
+  while (current && !ts.isVariableDeclaration(current) && !ts.isStatement(current))
+    current = current.parent;
+  if (!current || !ts.isVariableDeclaration(current) || !ts.isIdentifier(current.name))
+    return false;
+  const declaration = current;
+  const declarationName = current.name.text;
+  let scope: ts.Node | undefined = declaration.parent;
+  while (scope && !ts.isSourceFile(scope) && !ts.isFunctionLike(scope)) scope = scope.parent;
+  if (!scope) return false;
+
+  let optionalUse = false;
+  let requiredUse = false;
+  const visit = (child: ts.Node): void => {
+    if (requiredUse) return;
+    if (child !== scope && ts.isFunctionLike(child)) return;
+    if (ts.isIdentifier(child) && child !== declaration.name && child.text === declarationName) {
+      let use: ts.Node = child;
+      while (
+        use.parent &&
+        (ts.isParenthesizedExpression(use.parent) || ts.isNonNullExpression(use.parent))
+      )
+        use = use.parent;
+      const parent = use.parent;
+      if (parent && ts.isConditionalExpression(parent) && parent.condition === use)
+        optionalUse = true;
+      if (
+        parent &&
+        ts.isBinaryExpression(parent) &&
+        logicalFallbackOperators.has(parent.operatorToken.kind)
+      )
+        optionalUse = true;
+      if (
+        parent &&
+        ts.isPrefixUnaryExpression(parent) &&
+        parent.operator === ts.SyntaxKind.ExclamationToken
+      ) {
+        const guard = parent.parent;
+        if (
+          guard &&
+          ts.isIfStatement(guard) &&
+          guard.expression === parent &&
+          requiredFallbackPattern.test(guard.thenStatement.getText(source))
+        )
+          requiredUse = true;
+      }
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(scope);
+  return optionalUse && !requiredUse;
+}
+
+function isGuardedFallbackReturn(node: ts.Node, source: ts.SourceFile): boolean {
+  const access = node.getText(source).replaceAll(' ', '');
+  let returned: ts.Node | undefined = node;
+  while (returned && !ts.isReturnStatement(returned) && !isExecutableFunction(returned))
+    returned = returned.parent;
+  if (!returned || !ts.isReturnStatement(returned)) return false;
+
+  let branch: ts.Node = returned;
+  while (
+    branch.parent &&
+    !ts.isIfStatement(branch.parent) &&
+    !isExecutableFunction(branch.parent)
+  )
+    branch = branch.parent;
+  const conditional = branch.parent;
+  if (!conditional || !ts.isIfStatement(conditional) || conditional.thenStatement !== branch)
+    return false;
+  if (!conditional.expression.getText(source).replaceAll(' ', '').includes(access)) return false;
+
+  let scope: ts.Node | undefined = conditional.parent;
+  while (scope && !isExecutableFunction(scope)) scope = scope.parent;
+  if (!scope?.body) return false;
+  let laterFallback = false;
+  const visit = (child: ts.Node): void => {
+    if (laterFallback || (child !== scope && isExecutableFunction(child))) return;
+    if (ts.isReturnStatement(child) && child.getStart(source) > conditional.end)
+      laterFallback = true;
+    ts.forEachChild(child, visit);
+  };
+  visit(scope.body);
+  return laterFallback;
+}
+
 function isRequiredContractRead(node: ts.Node, source: ts.SourceFile): boolean {
+  if (
+    isOptionalCandidateList(node, source) ||
+    isOptionalAliasVariable(node, source) ||
+    isGuardedFallbackReturn(node, source)
+  )
+    return false;
+  if (node.parent && ts.isIfStatement(node.parent) && node.parent.expression === node)
+    return false;
   let current = node;
   while (current.parent && !ts.isStatement(current.parent)) {
     const parent = current.parent;
@@ -105,6 +250,7 @@ function isRequiredContractRead(node: ts.Node, source: ts.SourceFile): boolean {
       }
     }
     if (ts.isConditionalExpression(parent) && parent.condition === current) return false;
+    if (ts.isIfStatement(parent) && parent.expression === current) return false;
     if (ts.isCallExpression(parent)) {
       const argumentIndex = parent.arguments.findIndex((argument) => argument === current);
       const callee = parent.expression.getText(source).replaceAll(' ', '');
@@ -376,7 +522,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
     sourceFiles.length || templates.length ? (truncated ? 'partial' : 'complete') : 'unsupported';
   const analysis: EnvironmentContractAnalysis = {
     schemaVersion: 1,
-    version: '1.3.0',
+    version: '1.4.2',
     status,
     templates: templateSummaries,
     variables,
@@ -433,7 +579,7 @@ export function scanEnvironmentContract(snapshot: Snapshot): {
         status === 'unsupported'
           ? 'No supported runtime source or sanitized environment template was available.'
           : `Compared ${variables.length} named environment use(s) with ${templates.length} sanitized template(s); ${undocumented.length} undocumented (${findingNames.length} high-signal review candidates), ${unverified.length} unverified, ${unusedDeclarations.length} declared but not observed, and ${dynamicAccesses.length} dynamic access(es). Values were not retained.`,
-      version: '1.3.0',
+      version: '1.4.2',
     },
   };
 }

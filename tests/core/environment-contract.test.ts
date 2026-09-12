@@ -72,6 +72,27 @@ test('environment contract keeps optional defaults and writes out of the finding
         const flag = process.env.AUTH_DISABLE_RATE_LIMIT === 'true';
         const retries = readPositiveInt(process.env.AUTH_RETRIES, 3);
         const optionalRedisUrl = process.env.OPTIONAL_REDIS_URL?.trim();
+        const legacySecret = trimToUndefined(process.env.LEGACY_AUTH_SECRET);
+        const selectedSecret = documentedSecret ? documentedSecret : legacySecret ? legacySecret : null;
+        const trustedOrigins = [
+          process.env.AUTH_TRUSTED_ORIGINS,
+          process.env.LEGACY_AUTH_TRUSTED_ORIGINS,
+        ].filter(Boolean);
+        for (const candidate of [
+          process.env.AUTH_BASE_URL,
+          process.env.NEXT_PUBLIC_SITE_URL,
+        ]) normalizeUrl(candidate);
+        const siteUrlCandidates = [
+          process.env.AUTH_SITE_URL,
+          process.env.LEGACY_AUTH_SITE_URL,
+          'http://localhost:3000',
+        ];
+        for (const candidate of siteUrlCandidates) normalizeUrl(candidate);
+        function resolveSiteUrl() {
+          if (process.env.AUTH_FALLBACK_URL) return process.env.AUTH_FALLBACK_URL;
+          if (process.env.LEGACY_AUTH_FALLBACK_URL) return process.env.LEGACY_AUTH_FALLBACK_URL;
+          return 'http://localhost:3000';
+        }
         const requiredSecret = process.env.REQUIRED_SECRET;
       `,
     }),
@@ -87,6 +108,32 @@ test('environment contract keeps optional defaults and writes out of the finding
   assert.ok(result.analysis.undocumented.includes('OPTIONAL_SECRET'));
   assert.ok(result.analysis.undocumented.includes('AUTH_RETRIES'));
   assert.ok(result.analysis.undocumented.includes('OPTIONAL_REDIS_URL'));
+  assert.ok(result.analysis.undocumented.includes('LEGACY_AUTH_SECRET'));
+  assert.ok(result.analysis.undocumented.includes('AUTH_TRUSTED_ORIGINS'));
+  assert.ok(result.analysis.undocumented.includes('AUTH_BASE_URL'));
+  assert.ok(result.analysis.undocumented.includes('AUTH_SITE_URL'));
+  assert.ok(result.analysis.undocumented.includes('AUTH_FALLBACK_URL'));
   assert.ok(!result.analysis.undocumented.includes('OPTIONAL_DOCUMENTED_SECRET'));
   assert.ok(result.analysis.unusedDeclarations.includes('OPTIONAL_DOCUMENTED_SECRET'));
+});
+
+test('a guarded environment read remains required when failure is explicit', () => {
+  const result = scanEnvironmentContract(
+    snapshotFromFiles({
+      '.env.example': 'DOCUMENTED=\n',
+      'src/config.ts': `
+        export function requireSecret() {
+          if (process.env.REQUIRED_GUARDED_SECRET) {
+            return process.env.REQUIRED_GUARDED_SECRET;
+          }
+          throw new Error('Missing required secret');
+        }
+      `,
+    }),
+  );
+  assert.ok(
+    result.findings.some((finding) =>
+      finding.evidence[0]?.observation.includes('REQUIRED_GUARDED_SECRET'),
+    ),
+  );
 });
