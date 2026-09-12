@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Recognized constant-time shared-secret and explicit token checks as webhook verification evidence
+  when they occur before structured body parsing.
 - Treated explicit error-code mapper results as diagnostic metadata while still inspecting their
   arguments for raw sensitive values.
 - Prevented regular-expression `.exec()` calls from being classified as operating-system process

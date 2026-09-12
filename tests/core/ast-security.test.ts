@@ -628,6 +628,21 @@ test('safe webhook bytes, validated upload, and complete cookies avoid gap candi
   );
   assert.ok(!webhookIds.includes('TW-AST008'));
 
+  const tokenWebhookIds = astRuleIds(
+    `
+      export async function POST(request: Request) {
+        const received = request.headers.get('authorization');
+        if (!safeSecretEquals(received, process.env.WEBHOOK_TOKEN)) {
+          return Response.json({ error: 'invalid' }, { status: 401 });
+        }
+        const body = await request.json();
+        return db.event.create({ data: body });
+      }
+    `,
+    'src/app/api/webhooks/provider/route.ts',
+  );
+  assert.ok(!tokenWebhookIds.includes('TW-AST008'));
+
   const hardenedIds = astRuleIds(`
     export async function POST(request: Request) {
       const form = await request.formData();
