@@ -22,10 +22,25 @@ test('non-sensitive keys and protected log values avoid privacy candidates', () 
     snapshotOf(`
       params.set('theme', theme);
       logger.info({ email: redact(email) });
+      console.log(config.sourceAuthors.emails.length);
+      logger.info({ emailCount: emails.length, sessionCount: sessions.size });
       localStorage.setItem('theme', theme);
     `),
   );
   assert.deepEqual(result.findings, []);
+});
+
+test('raw sensitive values remain candidates beside safe aggregate counts', () => {
+  const result = scanPrivacyStatic(
+    snapshotOf(`
+      logger.info({ emailCount: emails.length });
+      logger.info({ email: user.email });
+    `),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-PRIV002'],
+  );
 });
 
 test('sensitive words in a static log message are not treated as logged data', () => {

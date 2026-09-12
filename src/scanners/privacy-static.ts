@@ -9,6 +9,7 @@ const sensitive =
   /(?:access[_-]?token|address|authorization|card|cookie|credential|date[_-]?of[_-]?birth|dob|email|jwt|password|phone|refresh[_-]?token|secret|session|ssn|tax[_-]?id)/i;
 const protectedValue = /(?:hash|mask|redact|sanitize|tokenize)\w*\s*\(/i;
 const protectedIdentifier = /(?:hashed|masked|redacted|sanitized|tokenized)/i;
+const safeAggregateProperty = /^(?:length|size)$/i;
 
 function lineOf(source: ts.SourceFile, node: ts.Node): number {
   return source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
@@ -39,11 +40,13 @@ function containsSensitiveUnprotectedValue(expression: ts.Expression): boolean {
       expression.arguments.some(containsSensitiveUnprotectedValue)
     );
   }
-  if (ts.isPropertyAccessExpression(expression))
+  if (ts.isPropertyAccessExpression(expression)) {
+    if (safeAggregateProperty.test(expression.name.text)) return false;
     return (
       sensitive.test(expression.name.text) ||
       containsSensitiveUnprotectedValue(expression.expression)
     );
+  }
   if (ts.isElementAccessExpression(expression))
     return (
       containsSensitiveUnprotectedValue(expression.expression) ||
@@ -192,7 +195,7 @@ export function scanPrivacyStatic(snapshot: Snapshot): { findings: Finding[]; ru
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded URL, logging, and browser-storage privacy candidates; ${parseFailures} parse failure(s). Data purpose, retention, consent, and runtime transfers remain unverified.`
         : 'No supported runtime source was available for static privacy review.',
-      version: '0.3.0',
+      version: '0.4.0',
     },
   };
 }

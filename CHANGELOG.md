@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Reduced sensitive-logging noise by treating aggregate collection counts as metadata while retaining
+  candidates for raw credential and personal-data values.
 - Prioritized application source ahead of documentation and generated metadata in bounded snapshots,
   and excluded generated Drizzle metadata while retaining authored migrations.
 - Made terminal policy output distinguish all detected candidates from the findings that gate CI.
