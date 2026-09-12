@@ -231,6 +231,38 @@ test('SaaS error rule proves imported normalizers return only fixed public codes
   });
   const unsafe = scanSaasSecurity(unsafeSnapshot, profileProject(unsafeSnapshot).profile).findings;
   assert.ok(unsafe.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const structuredSnapshot = snapshotFromFiles({
+    'src/app/api/example/route.ts': `
+      import { reportFailure, resolveFailure } from '../../../lib/errors';
+      export async function POST() {
+        try { return Response.json(await database.invoice.create({ data: {} })); }
+        catch (error) {
+          const failure = reportFailure('invoice', error);
+          const { code, status } = resolveFailure(error);
+          return Response.json({ error: code, ...failure }, { status });
+        }
+      }
+    `,
+    'src/lib/errors.ts': `
+      export function reportFailure(operation: string, error: unknown) {
+        const failureId = randomUUID();
+        const errorName = error instanceof Error ? error.name : 'UnknownError';
+        logger.error({ operation, errorName, failureId });
+        return { failureId };
+      }
+      export function resolveFailure(error: unknown) {
+        const message = normalizeError(error);
+        const status = message.includes('not configured') ? 503 : 500;
+        return { code: status === 503 ? 'NOT_CONFIGURED' : 'UNAVAILABLE', status };
+      }
+    `,
+  });
+  const structured = scanSaasSecurity(
+    structuredSnapshot,
+    profileProject(structuredSnapshot).profile,
+  ).findings;
+  assert.ok(!structured.some((finding) => finding.ruleId === 'TW-SAAS004'));
 });
 
 test('custom SaaS vocabulary is applied without executable configuration', () => {

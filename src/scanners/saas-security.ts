@@ -440,6 +440,135 @@ function returnsOnlyStaticPublicErrors(node: ts.FunctionLikeDeclaration): boolea
   return returns > 0 && !unsafe;
 }
 
+function expressionCarriesParameterPayload(
+  node: ts.Expression,
+  payloadNames: Set<string>,
+): boolean {
+  if (ts.isIdentifier(node)) return payloadNames.has(node.text);
+  if (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isAwaitExpression(node)
+  )
+    return expressionCarriesParameterPayload(node.expression, payloadNames);
+  if (ts.isConditionalExpression(node))
+    return (
+      expressionCarriesParameterPayload(node.whenTrue, payloadNames) ||
+      expressionCarriesParameterPayload(node.whenFalse, payloadNames)
+    );
+  if (ts.isBinaryExpression(node)) {
+    const carriesOperand = [
+      ts.SyntaxKind.AmpersandAmpersandToken,
+      ts.SyntaxKind.BarBarToken,
+      ts.SyntaxKind.QuestionQuestionToken,
+      ts.SyntaxKind.PlusToken,
+    ].includes(node.operatorToken.kind);
+    return (
+      carriesOperand &&
+      (expressionCarriesParameterPayload(node.left, payloadNames) ||
+        expressionCarriesParameterPayload(node.right, payloadNames))
+    );
+  }
+  if (ts.isPropertyAccessExpression(node))
+    return expressionCarriesParameterPayload(node.expression, payloadNames);
+  if (ts.isElementAccessExpression(node))
+    return expressionCarriesParameterPayload(node.expression, payloadNames);
+  if (ts.isCallExpression(node)) {
+    if (ts.isPropertyAccessExpression(node.expression)) {
+      const receiverCarriesPayload = expressionCarriesParameterPayload(
+        node.expression.expression,
+        payloadNames,
+      );
+      if (
+        receiverCarriesPayload &&
+        /^(?:endsWith|includes|startsWith|test)$/i.test(node.expression.name.text)
+      )
+        return false;
+      if (receiverCarriesPayload) return true;
+    }
+    return node.arguments.some((argument) =>
+      expressionCarriesParameterPayload(argument, payloadNames),
+    );
+  }
+  if (ts.isTemplateExpression(node))
+    return node.templateSpans.some((span) =>
+      expressionCarriesParameterPayload(span.expression, payloadNames),
+    );
+  if (ts.isArrayLiteralExpression(node))
+    return node.elements.some((element) =>
+      ts.isSpreadElement(element)
+        ? expressionCarriesParameterPayload(element.expression, payloadNames)
+        : expressionCarriesParameterPayload(element, payloadNames),
+    );
+  if (ts.isObjectLiteralExpression(node))
+    return node.properties.some((property) => {
+      if (ts.isPropertyAssignment(property))
+        return expressionCarriesParameterPayload(property.initializer, payloadNames);
+      if (ts.isShorthandPropertyAssignment(property)) return payloadNames.has(property.name.text);
+      if (ts.isSpreadAssignment(property))
+        return expressionCarriesParameterPayload(property.expression, payloadNames);
+      return false;
+    });
+  return false;
+}
+
+function returnsNoParameterPayload(node: ts.FunctionLikeDeclaration): boolean {
+  if (!node.body) return false;
+  const payloadNames = new Set(
+    node.parameters.flatMap((parameter) => bindingNames(parameter.name)),
+  );
+  if (!ts.isBlock(node.body)) return !expressionCarriesParameterPayload(node.body, payloadNames);
+
+  for (let pass = 0; pass < 8; pass++) {
+    let changed = false;
+    const collect = (child: ts.Node): void => {
+      if (child !== node.body && executableFunction(child)) return;
+      if (
+        ts.isVariableDeclaration(child) &&
+        child.initializer &&
+        expressionCarriesParameterPayload(child.initializer, payloadNames)
+      ) {
+        for (const name of bindingNames(child.name)) {
+          if (!payloadNames.has(name)) {
+            payloadNames.add(name);
+            changed = true;
+          }
+        }
+      } else if (
+        ts.isBinaryExpression(child) &&
+        child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isIdentifier(child.left) &&
+        expressionCarriesParameterPayload(child.right, payloadNames) &&
+        !payloadNames.has(child.left.text)
+      ) {
+        payloadNames.add(child.left.text);
+        changed = true;
+      }
+      ts.forEachChild(child, collect);
+    };
+    collect(node.body);
+    if (!changed) break;
+  }
+
+  let returns = 0;
+  let carriesPayload = false;
+  const inspectReturn = (child: ts.Node): void => {
+    if (carriesPayload || (child !== node.body && executableFunction(child))) return;
+    if (ts.isReturnStatement(child)) {
+      returns++;
+      if (!child.expression || expressionCarriesParameterPayload(child.expression, payloadNames))
+        carriesPayload = true;
+      return;
+    }
+    ts.forEachChild(child, inspectReturn);
+  };
+  inspectReturn(node.body);
+  return returns > 0 && !carriesPayload;
+}
+
 function staticPublicErrorSymbols(parsed: ParsedSource[], profile: ProjectProfile): Set<string> {
   const symbolsByLocation = new Map(
     profile.symbols.map((symbol) => [`${symbol.file}:${symbol.line}:${symbol.name}`, symbol.id]),
@@ -447,7 +576,10 @@ function staticPublicErrorSymbols(parsed: ParsedSource[], profile: ProjectProfil
   const safe = new Set<string>();
   for (const item of parsed) {
     const visit = (node: ts.Node): void => {
-      if (executableFunction(node) && returnsOnlyStaticPublicErrors(node)) {
+      if (
+        executableFunction(node) &&
+        (returnsOnlyStaticPublicErrors(node) || returnsNoParameterPayload(node))
+      ) {
         const name = functionName(node);
         if (name) {
           const symbol = symbolsByLocation.get(
@@ -520,20 +652,8 @@ function containsCaughtErrorPayload(
     );
   if (ts.isConditionalExpression(node))
     return (
-      containsCaughtErrorPayload(
-        node.whenTrue,
-        caught,
-        parsed,
-        callTargets,
-        staticPublicSymbols,
-      ) ||
-      containsCaughtErrorPayload(
-        node.whenFalse,
-        caught,
-        parsed,
-        callTargets,
-        staticPublicSymbols,
-      )
+      containsCaughtErrorPayload(node.whenTrue, caught, parsed, callTargets, staticPublicSymbols) ||
+      containsCaughtErrorPayload(node.whenFalse, caught, parsed, callTargets, staticPublicSymbols)
     );
   if (ts.isBinaryExpression(node)) {
     const carriesOperand = [
@@ -544,20 +664,8 @@ function containsCaughtErrorPayload(
     ].includes(node.operatorToken.kind);
     return (
       carriesOperand &&
-      (containsCaughtErrorPayload(
-        node.left,
-        caught,
-        parsed,
-        callTargets,
-        staticPublicSymbols,
-      ) ||
-        containsCaughtErrorPayload(
-          node.right,
-          caught,
-          parsed,
-          callTargets,
-          staticPublicSymbols,
-        ))
+      (containsCaughtErrorPayload(node.left, caught, parsed, callTargets, staticPublicSymbols) ||
+        containsCaughtErrorPayload(node.right, caught, parsed, callTargets, staticPublicSymbols))
     );
   }
   if (ts.isPropertyAccessExpression(node))
@@ -591,24 +699,12 @@ function containsCaughtErrorPayload(
     )
       return true;
     return node.arguments.some((argument) =>
-      containsCaughtErrorPayload(
-        argument,
-        caught,
-        parsed,
-        callTargets,
-        staticPublicSymbols,
-      ),
+      containsCaughtErrorPayload(argument, caught, parsed, callTargets, staticPublicSymbols),
     );
   }
   if (ts.isTemplateExpression(node))
     return node.templateSpans.some((span) =>
-      containsCaughtErrorPayload(
-        span.expression,
-        caught,
-        parsed,
-        callTargets,
-        staticPublicSymbols,
-      ),
+      containsCaughtErrorPayload(span.expression, caught, parsed, callTargets, staticPublicSymbols),
     );
   if (ts.isArrayLiteralExpression(node))
     return node.elements.some((element) =>
@@ -620,13 +716,7 @@ function containsCaughtErrorPayload(
             callTargets,
             staticPublicSymbols,
           )
-        : containsCaughtErrorPayload(
-            element,
-            caught,
-            parsed,
-            callTargets,
-            staticPublicSymbols,
-          ),
+        : containsCaughtErrorPayload(element, caught, parsed, callTargets, staticPublicSymbols),
     );
   if (ts.isObjectLiteralExpression(node))
     return node.properties.some((property) => {
@@ -684,13 +774,7 @@ function collectCaughtErrorAliases(
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
         ts.isIdentifier(node.left) &&
-        containsCaughtErrorPayload(
-          node.right,
-          caught,
-          parsed,
-          callTargets,
-          staticPublicSymbols,
-        ) &&
+        containsCaughtErrorPayload(node.right, caught, parsed, callTargets, staticPublicSymbols) &&
         !caught.has(node.left.text)
       ) {
         caught.add(node.left.text);
@@ -1039,7 +1123,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.1',
+        version: '0.5.2',
       },
     };
 
@@ -1075,7 +1159,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.1',
+      version: '0.5.2',
     },
   };
 }
