@@ -138,3 +138,28 @@ The versioned calibration aggregate still has zero independent candidate labels 
 false-negative reviews, so `accuracyClaimReady` remains false. The fixture benchmark is a separate
 regression gate: 56 true positives, zero false positives, and zero false negatives on declared
 synthetic ground truth.
+
+## 2026-09-12 reviewer-labelled calibration refresh
+
+Workflow v54 reran four authorized repositories after fixes derived from the prior bounded review.
+Stored webhook destinations now receive source-backed SSRF review when private-network, DNS, and
+redirect controls are incomplete. Error-response analysis now follows caught-error aliases and
+recognizes helpers that return only fixed public codes or opaque incident identifiers.
+
+| Project | Files | Findings |  TP |  FP | Not applicable | Candidate scope | False-negative scope |
+| ------- | ----: | -------: | --: | --: | -------------: | --------------- | -------------------- |
+| P01     | 1,200 |        9 |   6 |   1 |              2 | complete        | sampled              |
+| P02     | 2,555 |       45 |  33 |   1 |             11 | complete        | sampled              |
+| P03     |   415 |        0 |   0 |   0 |              0 | complete        | sampled              |
+| P04     |   326 |        0 |   0 |   0 |              0 | complete        | not performed        |
+
+Across the 54 candidates, sample precision is 39 / 41, or 95.1%; not-applicable entries are not
+counted as either true or false positives. The two false positives remain useful calibration
+evidence for intentionally broad raw-HTML and dynamic-execution rules. Narrowing either rule from
+these single examples could hide attacker-controlled variants, so they were retained rather than
+special-cased.
+
+All eight misses recorded in the prior bounded source sample are emitted by workflow v54. That does
+not establish recall: only three projects have a sampled false-negative review and the fourth has
+none. The aggregate therefore correctly keeps `falseNegativeReviewComplete` and
+`accuracyClaimReady` false.

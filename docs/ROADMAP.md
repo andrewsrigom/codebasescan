@@ -16,6 +16,8 @@ coding agent chosen by the user.
   approved one-URL posture probe;
 - one current script-free report with JSON, SARIF, CycloneDX, schemas, policy, provenance, and
   artifact hashes;
+- reusable GitHub Action with full-context baseline comparison, HTML artifacts, SARIF, and policy
+  exit codes;
 - versioned external-agent rules, plans, report contracts, and a bundled Codex review skill;
 - benchmark fixtures, real-project portability runs, npm/pnpm/Yarn package smoke tests, and guarded
   public releases.
@@ -40,6 +42,10 @@ coding agent chosen by the user.
 The existing multi-project corpus proves bounded execution and portability, not generic accuracy.
 `accuracyClaimReady` must remain false until independent review is complete.
 
+Current calibration has 54 completely reviewed candidates across four authorized snapshots: 39 true
+positives, 2 false positives, and 13 not applicable. Three snapshots have bounded false-negative
+samples, but the corpus review remains incomplete and no recall claim is made.
+
 ## Phase 3 — complete CLI cycle
 
 1. add documented CI examples for advisory, balanced, and strict policies;
@@ -48,6 +54,10 @@ The existing multi-project corpus proves bounded execution and portability, not 
 4. add machine-readable version negotiation and migration notes for every public artifact;
 5. support opt-in retention outside the default report, such as CI artifacts or a user-owned
    directory, without rebuilding product-managed history.
+
+The GitHub Action, baseline-only PR gate, report artifact upload, and SARIF upload are implemented.
+Changed files are not parsed in isolation: the scanner retains full repository context and the
+baseline policy limits blocking to newly introduced findings.
 
 ## Phase 4 — broader deterministic coverage
 

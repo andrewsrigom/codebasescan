@@ -1,6 +1,6 @@
 # Validation
 
-Last full local release gate: **2026-09-11 BRT**.
+Last full local release gate: **2026-09-12 BRT**.
 
 ## Environment
 
@@ -22,7 +22,7 @@ Linux/WSL is the supported 0.3 candidate environment. Native Windows and macOS a
 | npm run format:check        | Passed                                                                                  |
 | npm run typecheck           | Passed                                                                                  |
 | npm run lint                | Passed, zero warnings                                                                   |
-| npm test                    | 368 passed                                                                              |
+| npm test                    | 384 passed                                                                              |
 | npm run benchmark           | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
 | Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
@@ -44,9 +44,9 @@ The actual tarball was installed into an empty generated project. Each smoke ran
 
 | Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
 | ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
-| Node 24 / npm     | 260,547 B | 1,155,365 B      | 51,748,920 B           | 5.53 s  | 1.83 s |
-| Node 24 / pnpm    | 260,547 B | 1,155,365 B      | 51,833,120 B           | 1.80 s  | 1.99 s |
-| Node 24 / Yarn    | 260,547 B | 1,155,365 B      | 61,246,765 B           | 2.96 s  | 1.80 s |
+| Node 24 / npm     | 268,998 B | 1,201,886 B      | 51,795,441 B           | 5.00 s  | 1.77 s |
+| Node 24 / pnpm    | 268,998 B | 1,201,886 B      | 51,879,641 B           | 1.65 s  | 1.89 s |
+| Node 24 / Yarn    | 268,998 B | 1,201,886 B      | 61,293,286 B           | 3.86 s  | 1.76 s |
 
 The tarball contains 100 files. Next.js, React, SQLite, LangChain, LangGraph, and model-provider
 packages are not installed for the CLI.
@@ -56,20 +56,23 @@ packages are not installed for the CLI.
 These audits parsed captured source and manifests only. No target configuration module,
 dependency installation, lifecycle script, test, build, or application code ran.
 
-| Project                  | Snapshot                | Findings                             | Tasks | Coverage               | Important interpretation                                                    |
-| ------------------------ | ----------------------- | ------------------------------------ | ----: | ---------------------- | --------------------------------------------------------------------------- |
-| seusaas-platform         | 1,200 / 1,200, complete | 29: 2 high, 2 medium, 23 low, 2 info |    39 | 14 complete, 2 partial | Three web app roots; two informational crawler/sitemap candidates           |
-| robs-web                 | 1,072 / 1,072, complete | 15: 11 medium, 1 low, 3 info         |    23 | 15 complete, 1 partial | Next.js root route group recognized as one app                              |
-| capta-core               | 2,555 / 2,555, complete | 109: 15 high, 28 medium, 66 low      |   100 | 12 complete, 4 partial | Largest corpus member; remaining partial states are bounded mechanical data |
-| aster-streaming-platform | 839 / 839, complete     | 3: 1 low, 2 info                     |     9 | 14 complete, 2 partial | Workspace build entrypoints map back to captured TypeScript source          |
-| severyn                  | 314 / 314, complete     | 0                                    |     3 | 14 complete, 0 partial | Zero source candidates while missing runtime evidence remains explicit      |
+| Project | Snapshot complete | Findings                           | Candidate review | False-negative review | Core coverage          |
+| ------- | ----------------- | ---------------------------------- | ---------------- | --------------------- | ---------------------- |
+| P01     | 1,200 files       | 9: 1 high, 2 medium, 4 low, 2 info | 9 / 9 complete   | sampled               | 14 complete, 2 partial |
+| P02     | 2,555 files       | 45: 6 high, 29 medium, 10 low      | 45 / 45 complete | sampled               | 12 complete, 4 partial |
+| P03     | 415 files         | 0                                  | complete         | sampled               | 12 complete, 0 partial |
+| P04     | 326 files         | 0                                  | complete         | not performed         | 14 complete, 0 partial |
 
-For all five projects, imported Axe evidence was `NOT PERFORMED`, the authorized HTTP probe was
-not run, and infrastructure/cloud behavior was not inferred. Optional external scanners and OSV
-coverage depend on the selected local configuration. These runs prove portability, bounded
-failure, and report honesty; they are not independent owner-confirmed security ground truth. The
-anonymized calibration aggregate contains 156 candidates, zero reviewer labels, and correctly
-reports `accuracyClaimReady: false`.
+The workflow-v54 aggregate contains 54 reviewer-labelled candidates: 39 true positives, 2 false
+positives, and 13 not applicable. Sample precision is 95.1%; 53 of 54 evidence assessments were
+correct, all 54 locations were correct, and 53 of 54 explanations were clear. The two remaining
+false positives are documented broad generic-rule boundaries rather than silently removed.
+
+The refreshed snapshots emitted all eight misses from the preceding bounded manual sample, so the
+current ledgers record no outstanding miss. False-negative review is still incomplete for the
+corpus, no recall is reported, and `accuracyClaimReady` remains false. Semgrep, Gitleaks, OSV, Axe,
+and the HTTP probe were disabled or not performed in these four runs to isolate built-in source
+rules. A separate trusted OSV refresh cached 805 exact package versions and passed `doctor`.
 
 ## What the gate covers
 
@@ -87,6 +90,8 @@ reports `accuracyClaimReady: false`.
 - versioned agent report/rule schemas and the packaged Codex review skill installer;
 - one current report package, stale-artifact cleanup, legacy-root reading, schemas, integrity
   manifest, comparison, and policy;
+- reusable GitHub Action with full-context baseline comparison, HTML artifact upload, SARIF upload,
+  and policy exit propagation;
 - CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
 - persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.
 

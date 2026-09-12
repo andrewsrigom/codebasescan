@@ -4,6 +4,14 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added a reusable GitHub Action that scans full repository context, builds an optional baseline
+  from a Git ref, uploads the portable HTML report and SARIF, then propagates deterministic policy
+  exit codes.
+- Completed reviewer labels for 54 candidates across four authorized snapshots, with 95.1% sample
+  precision and explicit incomplete false-negative scope rather than a recall claim.
+- Added configured-webhook SSRF review and refined caught-error alias propagation using paired real
+  examples, while retaining two documented broad-rule false positives instead of unsafe
+  project-specific exceptions.
 - Recognized common JSX `Label` components with matching `htmlFor`/`id` references as static
   accessible-name evidence.
 - Limited inbound webhook signature-order findings to POST or method-unknown handlers so webhook
