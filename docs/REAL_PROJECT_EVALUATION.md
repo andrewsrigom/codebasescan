@@ -163,3 +163,50 @@ All eight misses recorded in the prior bounded source sample are emitted by work
 not establish recall: only three projects have a sampled false-negative review and the fourth has
 none. The aggregate therefore correctly keeps `falseNegativeReviewComplete` and
 `accuracyClaimReady` false.
+
+## 2026-09-12 five-project expansion pass
+
+Workflow v64 added five different owner-authorized Node.js and TypeScript projects to the
+calibration corpus. The set covers API Gateway Lambda and DynamoDB, a small Git automation CLI, a
+large loopback desktop/web application, a Next.js file-transfer application, and an Express video
+service. Raw reports, source, and project names remain outside this repository; the aggregate uses
+anonymous labels.
+
+Every emitted candidate was reviewed against source. False-negative review sampled the relevant
+entry points, data stores, web controls, and sensitive sinks in each project, but was not exhaustive.
+
+| Project | Files | Findings |  TP |  FP | Manual misses | Candidate scope | False-negative scope |
+| ------- | ----: | -------: | --: | --: | ------------: | --------------- | -------------------- |
+| P01     |    37 |        2 |   2 |   0 |             0 | complete        | sampled              |
+| P02     |    22 |        2 |   2 |   0 |             0 | complete        | sampled              |
+| P03     | 1,411 |       22 |  14 |   8 |             0 | complete        | sampled              |
+| P04     |    49 |       29 |  29 |   0 |             0 | complete        | sampled              |
+| P05     |    13 |       12 |  12 |   0 |             1 | complete        | sampled              |
+
+Across 67 reviewed candidates, 59 were true positives and 8 were false positives, for observed
+sample precision of 88.1%. All evidence locations were rated correct and all explanations clear.
+The one manual miss is a request-controlled nested audio URL that reaches Node `https.get`; the
+sink is now supported, but taint through that project's nested option transformations is not yet
+retained. Because no project received a complete false-negative review, recall is not reported and
+`accuracyClaimReady` remains false.
+
+This pass found and fixed several general detector failures:
+
+- bounded traversal previously spent the source budget on generated Drizzle metadata and large
+  documentation before application source;
+- terminal policy output hid advisory candidates by displaying only the CI-gated count;
+- custom `FormField` wrappers with matching `label`, `htmlFor`, and control `id` produced
+  accessibility noise;
+- aggregate counts, diagnostic error-code mappers, and caught errors used only in response
+  predicates produced privacy or error-exposure noise;
+- regular-expression `.exec()` was confused with operating-system process execution;
+- constant-time webhook token checks and ordered Express/Hono middleware were not included in
+  structural protection evidence;
+- Node HTTP clients, API Gateway Lambda handlers, and DynamoDB document commands were missing from
+  supported structural sinks and entry points.
+
+The large project's preflight changed from a partial 60.36 MiB capture dominated by generated
+migration metadata to a full 1,411-file, 14.59 MiB application snapshot. Its candidate count fell
+from 54 to 22 after the source-backed false-positive fixes. A previously clean Lambda sample gained
+two source-backed unauthenticated mutation candidates after Lambda and DynamoDB profiling was
+added. These are calibration outcomes, not security certification or owner-confirmed exploitability.
