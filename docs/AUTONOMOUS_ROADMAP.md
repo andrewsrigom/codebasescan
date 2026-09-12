@@ -22,7 +22,11 @@ automation, a large loopback application, Next.js file transfer, and Express med
 separate versioned calibration ledger, anonymized aggregate, CLI review commands, and
 accuracy-claim gate are implemented. The workflow-v64 expansion contains 67 reviewed candidates:
 59 true positives and 8 false positives. Every project has a bounded false-negative sample; one
-nested outbound-URL miss remains, no sample is exhaustive, and no recall claim is made. Phase 10
+nested outbound-URL miss was recorded. Workflow v69 now covers that `Object.assign` pattern with
+paired regression fixtures and removes all eight reviewer-labelled P03 false positives while
+retaining its 14 labelled true positives. The original private source still needs a fresh scan
+before the historical miss ledger can be closed; no sample is exhaustive and no recall claim is
+made. Phase 10
 includes the installable CLI, stable static report root, npm/pnpm/Yarn clean install smoke tests,
 Node 22/24 CI, package dependency
 separation, guarded provenance metadata, and a public security-reporting route. Native
@@ -183,8 +187,11 @@ downgraded; no broad accuracy claim relies only on synthetic fixtures.
 The workflow-v64 expansion contains 67 fully reviewed candidates across five structurally different
 projects: 59 true positives and 8 false positives, for 88.1% observed sample precision. All
 snapshots and structural profiles are complete. Bounded false-negative sampling found one nested
-outbound-URL miss. The aggregate keeps `falseNegativeReviewComplete` and `accuracyClaimReady`
-false because the sampling is not exhaustive and no recall claim is supported.
+outbound-URL miss. Workflow v69 adds a paired regression fixture for that `Object.assign` pattern
+and removes the eight reviewer-labelled false positives from a fresh P03 scan without losing its
+14 labelled true positives. The source for the original missed case was not retained for a fresh
+scan, so the historical ledger remains open. The aggregate keeps `falseNegativeReviewComplete` and
+`accuracyClaimReady` false because the sampling is not exhaustive and no recall claim is supported.
 
 ## Phase 7 — bounded correction loop
 

@@ -4,6 +4,10 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Distinguished boolean comparisons and host/port listener endpoints from raw sensitive values in
+  static logging review.
+- Proved fixed-message custom error classes and static call-site error allowlists before suppressing
+  internal-error response candidates.
 - Retained request-derived taint through `Object.assign` option composition so nested outbound URLs
   remain visible across mapped call boundaries.
 - Added API Gateway Lambda entry-point profiling and DynamoDB document-command facts so

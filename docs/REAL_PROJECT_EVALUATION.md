@@ -210,3 +210,15 @@ migration metadata to a full 1,411-file, 14.59 MiB application snapshot. Its can
 from 54 to 22 after the source-backed false-positive fixes. A previously clean Lambda sample gained
 two source-backed unauthenticated mutation candidates after Lambda and DynamoDB profiling was
 added. These are calibration outcomes, not security certification or owner-confirmed exploitability.
+
+## 2026-09-12 workflow-v69 calibration follow-up
+
+The large P03 project was rerun after source-backed privacy and public-error-response refinements.
+Its candidate count fell from 22 to 14. All eight candidates previously labelled false positives
+are absent, while all 14 previously labelled true positives remain: 13 release-safety findings and
+one privacy finding for a preview token written to command output.
+
+The prior nested `Object.assign` to Node `https.get` miss now has paired vulnerable and benign
+regression fixtures. The original private source was not retained for a workflow-v69 rerun, so the
+historical miss ledger remains open until that source is available again. This follow-up does not
+change the false-negative review scope, establish recall, or certify either project as secure.

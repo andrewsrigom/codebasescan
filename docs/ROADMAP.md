@@ -44,8 +44,11 @@ The existing multi-project corpus proves bounded execution and portability, not 
 
 The latest expansion calibration has 67 completely reviewed candidates across five authorized
 snapshots: 59 true positives and 8 false positives, for 88.1% observed sample precision. Every
-project has a bounded false-negative sample, but none has a complete false-negative review. One
-nested outbound-URL miss remains recorded, so no recall claim is made.
+project has a bounded false-negative sample, but none has a complete false-negative review. A
+workflow-v69 follow-up reduced the large P03 sample from 22 to 14 candidates, removing all eight
+reviewer-labelled false positives while retaining its 14 labelled true positives. The historical
+nested outbound-URL miss now has a paired regression fixture, but its original private source still
+needs a fresh scan before the ledger can be closed. No recall claim is made.
 
 ## Phase 3 — complete CLI cycle
 
@@ -64,7 +67,8 @@ baseline policy limits blocking to newly introduced findings.
 
 Priority order:
 
-1. retain taint through nested option and object transformations, starting with outbound URLs;
+1. extend taint beyond the covered `Object.assign` pattern to additional nested option and object
+   transformations;
 2. richer static accessibility semantics and stronger imported Axe provenance;
 3. API, database, environment, webhook, feature-flag, and test-evidence correlation;
 4. authentication/session libraries, authorization wrappers, tenant boundaries, billing, jobs,
