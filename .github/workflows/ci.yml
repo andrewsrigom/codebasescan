@@ -14,6 +14,7 @@ jobs:
         uses: ./
         with:
           path: fixtures/hardened-saas
+          version: 0.2.1
           policy: advisory
           report-directory: codebasescan-action-report
           upload-artifact: 'false'

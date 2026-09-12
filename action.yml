@@ -11,6 +11,10 @@ inputs:
     description: Repository-relative project path to audit.
     required: false
     default: .
+  version:
+    description: Exact CodebaseScan npm version paired with this Action release.
+    required: false
+    default: 0.3.0
   policy:
     description: 'Policy profile: advisory, balanced, or strict.'
     required: false
@@ -62,7 +66,20 @@ runs:
 
     - name: Install this CodebaseScan release
       shell: bash
-      run: npm install --global "$GITHUB_ACTION_PATH"
+      env:
+        INPUT_CODEBASESCAN_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        if [[ ! "$INPUT_CODEBASESCAN_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+          echo "::error::CodebaseScan version must be an exact semantic version."
+          exit 2
+        fi
+        npm install --global "codebasescan@$INPUT_CODEBASESCAN_VERSION"
+        installed_version="$(codebasescan --version)"
+        if [[ "$installed_version" != "$INPUT_CODEBASESCAN_VERSION" ]]; then
+          echo "::error::Installed CodebaseScan version does not match the requested Action version."
+          exit 2
+        fi
 
     - name: Build baseline evidence
       id: baseline

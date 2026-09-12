@@ -41,4 +41,6 @@ Policies are deterministic:
 
 The action returns CodebaseScan's exit code after artifact upload: `0` passed, `1` policy findings,
 and `2` incomplete blocking coverage or execution. Semgrep and Gitleaks remain opt-in and must
-already exist on the runner's `PATH`.
+already exist on the runner's `PATH`. Each tagged Action installs and verifies the matching exact
+CodebaseScan npm version; the repository smoke test uses the latest already-published version until
+the release candidate itself is published.
