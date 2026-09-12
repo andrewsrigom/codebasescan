@@ -12,6 +12,7 @@ import { toHtml, toMarkdown, toSarif } from '../src/domain/reports.ts';
 import { buildCoverage } from '../src/domain/coverage.ts';
 import { attachProvenance } from '../src/domain/provenance.ts';
 import { buildSecurityChecklist } from '../src/domain/checklist.ts';
+import { codebasescanVersion } from '../src/domain/versions.ts';
 import { scanArchitecture, scanDuplication } from '../src/scanners/mechanical.ts';
 import { scanSupplyChain } from '../src/scanners/supply-chain.ts';
 import { scanCodeQuality } from '../src/scanners/quality.ts';
@@ -40,7 +41,7 @@ const scanners: ScannerRun[] = [
     findings: rawFindings.filter((finding) => finding.source === 'builtin').length,
     detail:
       'Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.',
-    version: '0.2.1',
+    version: codebasescanVersion,
   },
   {
     id: 'posture',
@@ -49,7 +50,7 @@ const scanners: ScannerRun[] = [
     durationMs: 0,
     findings: rawFindings.filter((finding) => finding.source === 'posture').length,
     detail: 'Conservative framework and configuration posture checks executed locally.',
-    version: '0.2.1',
+    version: codebasescanVersion,
   },
   {
     id: 'semgrep',

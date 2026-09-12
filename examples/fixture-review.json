@@ -40,7 +40,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-005",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -77,7 +77,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-007",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -114,7 +114,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-003",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -151,7 +151,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-001",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "high",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -188,7 +188,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-004",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -225,7 +225,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-002",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -262,7 +262,7 @@
         "detector": "codebasescan-heuristic",
         "scanner": "Built-in patterns",
         "ruleId": "TW-006",
-        "scannerVersion": "0.2.1",
+        "scannerVersion": "0.3.0",
         "originalSeverity": "medium",
         "detectedAt": "2026-09-08T12:00:00.000Z",
         "evidenceKinds": ["source"]
@@ -274,7 +274,7 @@
       "id": "project-profile",
       "name": "Project structure profile",
       "status": "completed",
-      "durationMs": 16,
+      "durationMs": 14,
       "findings": 0,
       "detail": "Parsed 7 captured TypeScript/JavaScript file(s) as data; mapped 2 entry point(s), 5 symbol(s), 0 resolved call edge(s), 6 security-relevant fact(s), 1 declared component(s), 0 cross-component import edge(s), 0 declarative TypeScript path alias(es), 0 captured workspace package entry point(s), and 0 declarative SaaS semantics file(s).",
       "version": "0.10.1"
@@ -286,7 +286,7 @@
       "durationMs": 0,
       "findings": 7,
       "detail": "Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.",
-      "version": "0.2.1"
+      "version": "0.3.0"
     },
     {
       "id": "posture",
@@ -295,7 +295,7 @@
       "durationMs": 0,
       "findings": 0,
       "detail": "Conservative framework and configuration posture checks executed locally.",
-      "version": "0.2.1"
+      "version": "0.3.0"
     },
     {
       "id": "semgrep",
@@ -1416,7 +1416,7 @@
       "status": "COMPLETE",
       "detail": "Seven bounded regex heuristics executed against inert fixtures. Duration not measured in this reproducible export.",
       "findings": 7,
-      "version": "0.2.1"
+      "version": "0.3.0"
     },
     {
       "id": "semgrep",
@@ -1445,7 +1445,7 @@
       "status": "COMPLETE",
       "detail": "Conservative framework and configuration posture checks executed locally.",
       "findings": 0,
-      "version": "0.2.1"
+      "version": "0.3.0"
     },
     {
       "id": "http-probe",

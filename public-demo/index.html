@@ -1559,22 +1559,22 @@
               <aside class="review-note">
                 <strong>Human review required</strong>
                 <p>
-                  24 of 24 grouped tasks require human input. Static evidence does not establish
+                  25 of 25 grouped tasks require human input. Static evidence does not establish
                   exploitability or certification.
                 </p>
               </aside>
             </div>
             <div class="executive-metrics">
               <article class="executive-metric">
-                <span>Finding candidates</span><strong>4</strong>
+                <span>Finding candidates</span><strong>6</strong>
                 <p>Unique findings linked to captured evidence</p>
               </article>
               <article class="executive-metric">
-                <span>Critical + high</span><strong>0</strong>
+                <span>Critical + high</span><strong>1</strong>
                 <p>Pending candidates requiring prioritization</p>
               </article>
               <article class="executive-metric">
-                <span>Grouped work</span><strong>24</strong>
+                <span>Grouped work</span><strong>25</strong>
                 <p>Root-cause tasks instead of repeated occurrences</p>
               </article>
               <article class="executive-metric">
@@ -1599,7 +1599,7 @@
             <aside class="public-demo-note">
               <strong>Public demo</strong>
               <p>
-                Sanitized from an authorized real repository. This curated view retains 4 selected
+                Sanitized from an authorized real repository. This curated view retains 6 selected
                 candidates. It is not a certification or a substitute for independent validation.
               </p>
             </aside>
@@ -1616,13 +1616,29 @@
             </div>
             <ol class="risk-table">
               <li>
-                <a href="#task-rem-066a45f00cb90d09"
+                <a href="#task-rem-d07ab49e4312153b"
                   ><span class="rank">01</span
                   ><span class="risk-copy"
-                    ><strong
-                      >Server and Client Component boundaries keep privileged data on the
-                      server</strong
-                    ><small>2 server/client boundary candidate(s) require review.</small></span
+                    ><strong>Configured webhook destination lacks complete SSRF controls</strong
+                    ><small
+                      >A webhook or destination delivery module sends a dynamic URL without
+                      mechanical evidence that private networks are rejected and automatic redirects
+                      are disabled. The value may come from stored configuration rather than the
+                      current request.</small
+                    ></span
+                  ><span class="risk-meta"
+                    ><span class="severity high">high</span><span>1 finding</span></span
+                  ><span class="arrow" aria-hidden="true">↘</span></a
+                >
+              </li>
+              <li>
+                <a href="#task-rem-08eadeeba87f7848"
+                  ><span class="rank">02</span
+                  ><span class="risk-copy"
+                    ><strong>Outbound destinations are server-owned or safely constrained</strong
+                    ><small
+                      >1 request-derived outbound destination candidate(s) require review.</small
+                    ></span
                   ><span class="risk-meta"
                     ><span class="severity medium">medium</span><span>1 control</span></span
                   ><span class="arrow" aria-hidden="true">↘</span></a
@@ -1630,7 +1646,7 @@
               </li>
               <li>
                 <a href="#task-rem-0f90ea537a7285f2"
-                  ><span class="rank">02</span
+                  ><span class="rank">03</span
                   ><span class="risk-copy"
                     ><strong>Browser security policies are declared and observed</strong
                     ><small>1 header policy candidate(s) require review.</small></span
@@ -1641,7 +1657,7 @@
               </li>
               <li>
                 <a href="#task-rem-17239982c01c92e2"
-                  ><span class="rank">03</span
+                  ><span class="rank">04</span
                   ><span class="risk-copy"
                     ><strong>Sensitive entry points validate caller-controlled input</strong
                     ><small
@@ -1655,7 +1671,7 @@
               </li>
               <li>
                 <a href="#task-rem-2f581a29ed4f33fd"
-                  ><span class="rank">04</span
+                  ><span class="rank">05</span
                   ><span class="risk-copy"
                     ><strong>Abuse-sensitive routes apply rate limits</strong
                     ><small
@@ -1670,26 +1686,12 @@
               </li>
               <li>
                 <a href="#task-rem-639674d41e0ba8d3"
-                  ><span class="rank">05</span
+                  ><span class="rank">06</span
                   ><span class="risk-copy"
                     ><strong>Webhook side effects resist duplicate delivery</strong
                     ><small
                       >0 of 1 mapped webhook/callback boundary(s) contain a recognized idempotency
                       claim or event-recording operation.</small
-                    ></span
-                  ><span class="risk-meta"
-                    ><span class="severity medium">medium</span><span>1 control</span></span
-                  ><span class="arrow" aria-hidden="true">↘</span></a
-                >
-              </li>
-              <li>
-                <a href="#task-rem-9b838374c7987aec"
-                  ><span class="rank">06</span
-                  ><span class="risk-copy"
-                    ><strong>Tenant-aware data operations enforce a server-side scope</strong
-                    ><small
-                      >57 of 77 mapped database boundary(s) in a tenant-aware project contain a
-                      recognized tenant scope or explicit authorization decision.</small
                     ></span
                   ><span class="risk-meta"
                     ><span class="severity medium">medium</span><span>1 control</span></span
@@ -1710,21 +1712,23 @@
             </div>
             <div class="queue-grid">
               <article class="queue-card">
-                <strong>4</strong>
+                <strong>6</strong>
                 <h3>Investigate findings</h3>
                 <p>Validate evidence, reachability, and source context before changing code.</p>
                 <ul>
+                  <li>
+                    <a href="#task-rem-d07ab49e4312153b"
+                      >Configured webhook destination lacks complete SSRF controls</a
+                    >
+                  </li>
                   <li>
                     <a href="#task-rem-b6040e26f2e36016"
                       >Sensitive-shaped value is placed in a URL parameter</a
                     >
                   </li>
                   <li>
-                    <a href="#task-rem-366885edd5fd75db">Caught failure is silently discarded</a>
-                  </li>
-                  <li>
-                    <a href="#task-rem-39a2b557e133d8f9"
-                      >Declared response security-header coverage is incomplete</a
+                    <a href="#task-rem-9ccc39729781e64b"
+                      >New-tab link lacks explicit referrer protection</a
                     >
                   </li>
                 </ul>
@@ -1736,13 +1740,13 @@
                 <ul></ul>
               </article>
               <article class="queue-card">
-                <strong>20</strong>
+                <strong>19</strong>
                 <h3>Verify controls</h3>
                 <p>Close evidence gaps with deterministic or authorized runtime checks.</p>
                 <ul>
                   <li>
-                    <a href="#task-rem-066a45f00cb90d09"
-                      >Server and Client Component boundaries keep privileged data on the server</a
+                    <a href="#task-rem-08eadeeba87f7848"
+                      >Outbound destinations are server-owned or safely constrained</a
                     >
                   </li>
                   <li>
@@ -1765,24 +1769,87 @@
                 Open a task to understand what was found, where to look, what to do next, and how to
                 verify the result.
               </p>
-              <p class="queue-summary">Showing 20 of 24 tasks, ordered by urgency.</p>
+              <p class="queue-summary">Showing 20 of 25 tasks, ordered by urgency.</p>
               <ol class="task-list">
-                <li id="task-rem-066a45f00cb90d09">
+                <li id="task-rem-d07ab49e4312153b">
+                  <details class="task-detail">
+                    <summary>
+                      <span
+                        ><span class="severity high">high</span
+                        ><span class="action-pill">Needs investigation</span></span
+                      ><strong>Configured webhook destination lacks complete SSRF controls</strong
+                      ><span class="task-count">1 finding</span>
+                    </summary>
+                    <div class="task-body">
+                      <div class="task-explanation">
+                        <section>
+                          <h4>What we found</h4>
+                          <p>
+                            A webhook or destination delivery module sends a dynamic URL without
+                            mechanical evidence that private networks are rejected and automatic
+                            redirects are disabled. The value may come from stored configuration
+                            rather than the current request.
+                          </p>
+                        </section>
+                        <section>
+                          <h4>Where to look</h4>
+                          <ul class="file-list">
+                            <li>apps/marketing/src/lib/analytics/webhook-destination.ts</li>
+                          </ul>
+                        </section>
+                        <section>
+                          <h4>What to do next</h4>
+                          <ol>
+                            <li>
+                              Validate the candidate against its evidence and surrounding source
+                              before proposing a change.
+                            </li>
+                            <li>
+                              Do not suppress, lower severity, or broaden the patch automatically.
+                            </li>
+                            <li>
+                              Add or update a focused regression test when the behavior can be
+                              exercised safely.
+                            </li>
+                          </ol>
+                        </section>
+                        <section>
+                          <h4>Consider it resolved when</h4>
+                          <ul>
+                            <li>A new CodebaseScan scan no longer reports the same issue.</li>
+                            <li>The relevant project tests pass.</li>
+                            <li>The production build passes.</li>
+                            <li>A fresh CodebaseScan audit completes after the change.</li>
+                          </ul>
+                        </section>
+                      </div>
+                      <aside class="task-note">
+                        <strong>What this does not prove</strong>
+                        <p>
+                          A static review candidate is not proof of exploitability. At least one
+                          linked observation is inferred.
+                        </p>
+                      </aside>
+                      <p class="evidence-link">
+                        <a href="#finding-1">Open supporting evidence →</a>
+                      </p>
+                    </div>
+                  </details>
+                </li>
+                <li id="task-rem-08eadeeba87f7848">
                   <details class="task-detail">
                     <summary>
                       <span
                         ><span class="severity medium">medium</span
                         ><span class="action-pill">Needs verification</span></span
-                      ><strong
-                        >Server and Client Component boundaries keep privileged data on the
-                        server</strong
+                      ><strong>Outbound destinations are server-owned or safely constrained</strong
                       ><span class="task-count">1 control</span>
                     </summary>
                     <div class="task-body">
                       <div class="task-explanation">
                         <section>
                           <h4>What we found</h4>
-                          <p>2 server/client boundary candidate(s) require review.</p>
+                          <p>1 request-derived outbound destination candidate(s) require review.</p>
                         </section>
                         <section>
                           <h4>Where to look</h4>
@@ -1794,8 +1861,8 @@
                           <h4>What to do next</h4>
                           <ol>
                             <li>
-                              Inspect serialized RSC payloads and production client bundles for
-                              credentials, privileged session objects, and server-only modules.
+                              Test untrusted public, private, loopback, metadata, DNS-rebinding, and
+                              redirect destinations against the effective egress policy.
                             </li>
                             <li>Preserve missing runtime evidence as unknown.</li>
                           </ol>
@@ -1810,6 +1877,12 @@
                           </ul>
                         </section>
                       </div>
+                      <aside class="task-note">
+                        <strong>What this does not prove</strong>
+                        <p>
+                          Network egress controls and DNS behavior are outside source-only evidence.
+                        </p>
+                      </aside>
                     </div>
                   </details>
                 </li>
@@ -2130,60 +2203,6 @@
                     </div>
                   </details>
                 </li>
-                <li id="task-rem-d38ac16fb467a595">
-                  <details class="task-detail">
-                    <summary>
-                      <span
-                        ><span class="severity medium">medium</span
-                        ><span class="action-pill">Needs verification</span></span
-                      ><strong
-                        >Captured current source has no detected secret exposure candidate</strong
-                      ><span class="task-count">1 control</span>
-                    </summary>
-                    <div class="task-body">
-                      <div class="task-explanation">
-                        <section>
-                          <h4>What we found</h4>
-                          <p>
-                            2 secret or client/server configuration candidate(s) require review.
-                          </p>
-                        </section>
-                        <section>
-                          <h4>Where to look</h4>
-                          <p>
-                            This check spans an application flow; no single file was identified yet.
-                          </p>
-                        </section>
-                        <section>
-                          <h4>What to do next</h4>
-                          <ol>
-                            <li>
-                              Review Git history, CI variables, deployment secrets, rotation, and
-                              provider-side secret scanning separately.
-                            </li>
-                            <li>Preserve missing runtime evidence as unknown.</li>
-                          </ol>
-                        </section>
-                        <section>
-                          <h4>Consider it resolved when</h4>
-                          <ul>
-                            <li>The expected control has direct evidence.</li>
-                            <li>The relevant project tests pass.</li>
-                            <li>The production build passes.</li>
-                            <li>A fresh CodebaseScan audit completes after the change.</li>
-                          </ul>
-                        </section>
-                      </div>
-                      <aside class="task-note">
-                        <strong>What this does not prove</strong>
-                        <p>
-                          Excluded credential files and Git history are not scanned. No finding does
-                          not prove that no secret exists.
-                        </p>
-                      </aside>
-                    </div>
-                  </details>
-                </li>
                 <li id="task-rem-f50b97f226b92e00">
                   <details class="task-detail">
                     <summary>
@@ -2467,7 +2486,7 @@
                         </p>
                       </aside>
                       <p class="evidence-link">
-                        <a href="#finding-1">Open supporting evidence →</a>
+                        <a href="#finding-2">Open supporting evidence →</a>
                       </p>
                     </div>
                   </details>
@@ -2516,59 +2535,6 @@
                           </ul>
                         </section>
                       </div>
-                    </div>
-                  </details>
-                </li>
-                <li id="task-rem-08eadeeba87f7848">
-                  <details class="task-detail">
-                    <summary>
-                      <span
-                        ><span class="severity medium">medium</span
-                        ><span class="action-pill">Needs verification</span></span
-                      ><strong>Outbound destinations are server-owned or safely constrained</strong
-                      ><span class="task-count">1 control</span>
-                    </summary>
-                    <div class="task-body">
-                      <div class="task-explanation">
-                        <section>
-                          <h4>What we found</h4>
-                          <p>
-                            7 outbound request boundary(s) were mapped without enough evidence to
-                            establish the effective network policy.
-                          </p>
-                        </section>
-                        <section>
-                          <h4>Where to look</h4>
-                          <p>
-                            This check spans an application flow; no single file was identified yet.
-                          </p>
-                        </section>
-                        <section>
-                          <h4>What to do next</h4>
-                          <ol>
-                            <li>
-                              Test untrusted public, private, loopback, metadata, DNS-rebinding, and
-                              redirect destinations against the effective egress policy.
-                            </li>
-                            <li>Preserve missing runtime evidence as unknown.</li>
-                          </ol>
-                        </section>
-                        <section>
-                          <h4>Consider it resolved when</h4>
-                          <ul>
-                            <li>The expected control has direct evidence.</li>
-                            <li>The relevant project tests pass.</li>
-                            <li>The production build passes.</li>
-                            <li>A fresh CodebaseScan audit completes after the change.</li>
-                          </ul>
-                        </section>
-                      </div>
-                      <aside class="task-note">
-                        <strong>What this does not prove</strong>
-                        <p>
-                          Network egress controls and DNS behavior are outside source-only evidence.
-                        </p>
-                      </aside>
                     </div>
                   </details>
                 </li>
@@ -2826,6 +2792,53 @@
                           Streaming parsers and framework upload middleware may not be recognized.
                         </p>
                       </aside>
+                    </div>
+                  </details>
+                </li>
+                <li id="task-rem-93beb809a7008637">
+                  <details class="task-detail">
+                    <summary>
+                      <span
+                        ><span class="severity medium">medium</span
+                        ><span class="action-pill">Needs verification</span></span
+                      ><strong>Redirect destinations are constrained</strong
+                      ><span class="task-count">1 control</span>
+                    </summary>
+                    <div class="task-body">
+                      <div class="task-explanation">
+                        <section>
+                          <h4>What we found</h4>
+                          <p>
+                            93 redirect boundary(s) were mapped without enough evidence to establish
+                            the effective destination policy.
+                          </p>
+                        </section>
+                        <section>
+                          <h4>Where to look</h4>
+                          <p>
+                            This check spans an application flow; no single file was identified yet.
+                          </p>
+                        </section>
+                        <section>
+                          <h4>What to do next</h4>
+                          <ol>
+                            <li>
+                              Test external, scheme-relative, encoded, mixed-case, and userinfo-form
+                              destinations against the effective redirect policy.
+                            </li>
+                            <li>Preserve missing runtime evidence as unknown.</li>
+                          </ol>
+                        </section>
+                        <section>
+                          <h4>Consider it resolved when</h4>
+                          <ul>
+                            <li>The expected control has direct evidence.</li>
+                            <li>The relevant project tests pass.</li>
+                            <li>The production build passes.</li>
+                            <li>A fresh CodebaseScan audit completes after the change.</li>
+                          </ul>
+                        </section>
+                      </div>
                     </div>
                   </details>
                 </li>
@@ -3189,60 +3202,58 @@
                   <h3>Declared package boundaries</h3>
                   <ul>
                     <li><strong>Example SaaS Application</strong> (.): 52 source file(s).</li>
+                    <li><strong>@sample/analytics</strong> (apps/analytics): 74 source file(s).</li>
+                    <li><strong>@example/docs</strong> (apps/docs): 28 source file(s).</li>
                     <li>
-                      <strong>@fengsoft/analytics</strong> (apps/analytics): 74 source file(s).
+                      <strong>@example/marketing</strong> (apps/marketing): 469 source file(s).
                     </li>
-                    <li><strong>@seusaas/docs</strong> (apps/docs): 28 source file(s).</li>
+                    <li><strong>@example/ai</strong> (packages/ai): 2 source file(s).</li>
                     <li>
-                      <strong>@seusaas/marketing</strong> (apps/marketing): 469 source file(s).
-                    </li>
-                    <li><strong>@seusaas/ai</strong> (packages/ai): 2 source file(s).</li>
-                    <li>
-                      <strong>@fengsoft/analytics-core</strong> (packages/analytics-core): 24 source
+                      <strong>@sample/analytics-core</strong> (packages/analytics-core): 24 source
                       file(s).
                     </li>
                     <li>
-                      <strong>@seusaas/analytics</strong> (packages/analytics): 3 source file(s).
+                      <strong>@example/analytics</strong> (packages/analytics): 3 source file(s).
                     </li>
-                    <li><strong>@seusaas/auth</strong> (packages/auth): 16 source file(s).</li>
-                    <li><strong>@seusaas/billing</strong> (packages/billing): 5 source file(s).</li>
+                    <li><strong>@example/auth</strong> (packages/auth): 16 source file(s).</li>
+                    <li><strong>@example/billing</strong> (packages/billing): 5 source file(s).</li>
                     <li>
-                      <strong>@fengsoft/booking-core</strong> (packages/booking-core): 20 source
+                      <strong>@sample/booking-core</strong> (packages/booking-core): 20 source
                       file(s).
                     </li>
                     <li>
-                      <strong>@seusaas/notification</strong> (packages/notification): 6 source
+                      <strong>@example/notification</strong> (packages/notification): 6 source
                       file(s).
                     </li>
                     <li>
-                      <strong>@seusaas/observability</strong> (packages/observability): 1 source
+                      <strong>@example/observability</strong> (packages/observability): 1 source
                       file(s).
                     </li>
                     <li>
-                      <strong>@fengsoft/referrals-core</strong> (packages/referrals-core): 19 source
+                      <strong>@sample/referrals-core</strong> (packages/referrals-core): 19 source
                       file(s).
                     </li>
-                    <li><strong>@seusaas/saas</strong> (packages/saas): 17 source file(s).</li>
-                    <li><strong>@seusaas/storage</strong> (packages/storage): 3 source file(s).</li>
+                    <li><strong>@example/saas</strong> (packages/saas): 17 source file(s).</li>
+                    <li><strong>@example/storage</strong> (packages/storage): 3 source file(s).</li>
                   </ul>
                   <h3>Cross-component imports</h3>
                   <ul>
-                    <li>@seusaas/marketing &rarr; @seusaas/saas: 136 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/auth: 53 import(s).</li>
-                    <li>@fengsoft/analytics &rarr; @fengsoft/analytics-core: 43 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/observability: 22 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/analytics: 17 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/billing: 10 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/notification: 9 import(s).</li>
-                    <li>@seusaas/auth &rarr; @seusaas/notification: 6 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/ai: 4 import(s).</li>
-                    <li>@seusaas/saas &rarr; @seusaas/notification: 2 import(s).</li>
-                    <li>@seusaas/marketing &rarr; @seusaas/storage: 2 import(s).</li>
-                    <li>@seusaas/auth &rarr; @seusaas/observability: 2 import(s).</li>
-                    <li>@seusaas/notification &rarr; @seusaas/observability: 1 import(s).</li>
-                    <li>@fengsoft/analytics &rarr; @seusaas/auth: 1 import(s).</li>
-                    <li>@seusaas/ai &rarr; @seusaas/observability: 1 import(s).</li>
-                    <li>@seusaas/auth &rarr; @seusaas/saas: 1 import(s).</li>
+                    <li>@example/marketing &rarr; @example/saas: 136 import(s).</li>
+                    <li>@example/marketing &rarr; @example/auth: 53 import(s).</li>
+                    <li>@sample/analytics &rarr; @sample/analytics-core: 43 import(s).</li>
+                    <li>@example/marketing &rarr; @example/observability: 22 import(s).</li>
+                    <li>@example/marketing &rarr; @example/analytics: 17 import(s).</li>
+                    <li>@example/marketing &rarr; @example/billing: 10 import(s).</li>
+                    <li>@example/marketing &rarr; @example/notification: 9 import(s).</li>
+                    <li>@example/auth &rarr; @example/notification: 6 import(s).</li>
+                    <li>@example/marketing &rarr; @example/ai: 4 import(s).</li>
+                    <li>@example/saas &rarr; @example/notification: 2 import(s).</li>
+                    <li>@example/marketing &rarr; @example/storage: 2 import(s).</li>
+                    <li>@example/auth &rarr; @example/observability: 2 import(s).</li>
+                    <li>@example/notification &rarr; @example/observability: 1 import(s).</li>
+                    <li>@sample/analytics &rarr; @example/auth: 1 import(s).</li>
+                    <li>@example/ai &rarr; @example/observability: 1 import(s).</li>
+                    <li>@example/auth &rarr; @example/saas: 1 import(s).</li>
                   </ul>
                 </section>
                 <section class="report-section">
@@ -3382,11 +3393,12 @@
                   </div>
                   <p>
                     Named source accesses are compared with sanitized environment templates. Values
-                    and comments are discarded before the snapshot.
+                    and free-form comments are discarded; uncommented and commented NAME=
+                    declarations are retained.
                   </p>
                   <div class="summary-grid">
-                    <div class="summary-card"><strong>165</strong><span>Named uses</span></div>
-                    <div class="summary-card"><strong>68</strong><span>Undocumented</span></div>
+                    <div class="summary-card"><strong>164</strong><span>Named uses</span></div>
+                    <div class="summary-card"><strong>67</strong><span>Undocumented</span></div>
                     <div class="summary-card"><strong>0</strong><span>Unverified</span></div>
                     <div class="summary-card"><strong>9</strong><span>Dynamic accesses</span></div>
                   </div>
@@ -3408,136 +3420,129 @@
                     <li>AUTH_SECRET — apps/analytics/src/lib/handoff.ts:247</li>
                     <li>AUTH_TRUSTED_ORIGINS — packages/auth/src/index.ts:325</li>
                     <li>BETTER_AUTH_TRUSTED_ORIGINS — packages/auth/src/index.ts:326</li>
-                    <li>BETTER_AUTH_URL — packages/auth/src/index.ts:735</li>
                     <li>DEPLOY_TARGET — scripts/deploy-check.mjs:7</li>
                     <li>
-                      FENGSOFT_ANALYTICS_ACCOUNT_LINK_STORE_MODE —
+                      sample_ANALYTICS_ACCOUNT_LINK_STORE_MODE —
                       apps/analytics/src/lib/account-link-store.ts:102
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_ACCOUNT_LINK_STORE_PATH —
+                      sample_ANALYTICS_ACCOUNT_LINK_STORE_PATH —
                       apps/analytics/src/lib/account-link-store.ts:117
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_ACCOUNT_LINK_TABLE —
+                      sample_ANALYTICS_ACCOUNT_LINK_TABLE —
                       apps/analytics/src/lib/account-link-store.ts:128
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_APP_URL —
+                      sample_ANALYTICS_APP_URL —
                       apps/marketing/src/lib/platform-auth/analytics-handoff.ts:117
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_BILLING_PLAN_CURRENCY —
+                      sample_ANALYTICS_BILLING_PLAN_CURRENCY —
                       apps/analytics/src/lib/commercial.ts:217
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_BILLING_PLAN_ID — apps/analytics/src/lib/commercial.ts:207
+                      sample_ANALYTICS_BILLING_PLAN_ID — apps/analytics/src/lib/commercial.ts:207
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_BILLING_PLAN_LABEL —
-                      apps/analytics/src/lib/commercial.ts:210
+                      sample_ANALYTICS_BILLING_PLAN_LABEL — apps/analytics/src/lib/commercial.ts:210
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_BILLING_PLAN_PRICE_LABEL —
+                      sample_ANALYTICS_BILLING_PLAN_PRICE_LABEL —
                       apps/analytics/src/lib/commercial.ts:213
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_CONNECTION_ENCRYPTION_KEY —
+                      sample_ANALYTICS_CONNECTION_ENCRYPTION_KEY —
                       apps/analytics/src/lib/connection-crypto.ts:16
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_CONNECTION_STORE_MODE —
+                      sample_ANALYTICS_CONNECTION_STORE_MODE —
                       apps/analytics/src/lib/connections-store.ts:135
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_CONNECTION_STORE_PATH —
+                      sample_ANALYTICS_CONNECTION_STORE_PATH —
                       apps/analytics/src/lib/connections-store.ts:150
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_CONNECTION_TABLE —
+                      sample_ANALYTICS_CONNECTION_TABLE —
                       apps/analytics/src/lib/connections-store.ts:161
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_DATA_HANDLING_URL —
-                      apps/analytics/src/lib/onboarding.ts:109
+                      sample_ANALYTICS_DATA_HANDLING_URL — apps/analytics/src/lib/onboarding.ts:109
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_ENCRYPTION_KEY —
+                      sample_ANALYTICS_ENCRYPTION_KEY —
                       apps/analytics/src/lib/connection-crypto.ts:17
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_MAX_ACTIVE_CONNECTIONS —
+                      sample_ANALYTICS_MAX_ACTIVE_CONNECTIONS —
                       apps/analytics/src/lib/operations.ts:270
                     </li>
+                    <li>sample_ANALYTICS_MAX_MEMBERS — apps/analytics/src/lib/membership.ts:74</li>
                     <li>
-                      FENGSOFT_ANALYTICS_MAX_MEMBERS — apps/analytics/src/lib/membership.ts:74
+                      sample_ANALYTICS_MAX_PROPERTIES — apps/analytics/src/lib/properties.ts:111
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_MAX_PROPERTIES — apps/analytics/src/lib/properties.ts:111
-                    </li>
-                    <li>
-                      FENGSOFT_ANALYTICS_MEMBERSHIP_STORE_MODE —
+                      sample_ANALYTICS_MEMBERSHIP_STORE_MODE —
                       apps/analytics/src/lib/membership-store.ts:81
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_MEMBERSHIP_STORE_PATH —
+                      sample_ANALYTICS_MEMBERSHIP_STORE_PATH —
                       apps/analytics/src/lib/membership-store.ts:96
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_MEMBERSHIP_TABLE —
+                      sample_ANALYTICS_MEMBERSHIP_TABLE —
                       apps/analytics/src/lib/membership-store.ts:103
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_OFFBOARDING_EXPORTS_DURING_GRACE —
+                      sample_ANALYTICS_OFFBOARDING_EXPORTS_DURING_GRACE —
                       apps/analytics/src/lib/launch-policy.ts:77
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_OFFBOARDING_GRACE_DAYS —
+                      sample_ANALYTICS_OFFBOARDING_GRACE_DAYS —
                       apps/analytics/src/lib/launch-policy.ts:64
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_OFFBOARDING_RETENTION_DAYS —
+                      sample_ANALYTICS_OFFBOARDING_RETENTION_DAYS —
                       apps/analytics/src/lib/launch-policy.ts:70
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_PLATFORM_AUTH_AUDIENCE —
+                      sample_ANALYTICS_PLATFORM_AUTH_AUDIENCE —
                       apps/analytics/src/lib/handoff.ts:261
                     </li>
+                    <li>sample_ANALYTICS_PRIVACY_URL — apps/analytics/src/lib/onboarding.ts:106</li>
                     <li>
-                      FENGSOFT_ANALYTICS_PRIVACY_URL — apps/analytics/src/lib/onboarding.ts:106
-                    </li>
-                    <li>
-                      FENGSOFT_ANALYTICS_PROPERTY_STORE_MODE —
+                      sample_ANALYTICS_PROPERTY_STORE_MODE —
                       apps/analytics/src/lib/property-store.ts:43
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_PROPERTY_STORE_PATH —
+                      sample_ANALYTICS_PROPERTY_STORE_PATH —
                       apps/analytics/src/lib/property-store.ts:58
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_PROPERTY_TABLE —
-                      apps/analytics/src/lib/property-store.ts:65
+                      sample_ANALYTICS_PROPERTY_TABLE — apps/analytics/src/lib/property-store.ts:65
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_SUPPORT_EMAIL — apps/analytics/src/lib/onboarding.ts:104
+                      sample_ANALYTICS_SUPPORT_EMAIL — apps/analytics/src/lib/onboarding.ts:104
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_SYNC_STORE_MODE — apps/analytics/src/lib/sync-store.ts:61
+                      sample_ANALYTICS_SYNC_STORE_MODE — apps/analytics/src/lib/sync-store.ts:61
                     </li>
                     <li>
-                      FENGSOFT_ANALYTICS_SYNC_STORE_PATH — apps/analytics/src/lib/sync-store.ts:76
+                      sample_ANALYTICS_SYNC_STORE_PATH — apps/analytics/src/lib/sync-store.ts:76
                     </li>
-                    <li>FENGSOFT_ANALYTICS_SYNC_TABLE — apps/analytics/src/lib/sync-store.ts:83</li>
-                    <li>FENGSOFT_ANALYTICS_TERMS_URL — apps/analytics/src/lib/onboarding.ts:107</li>
-                    <li>FENGSOFT_PLATFORM_AUTH_ISSUER — apps/analytics/src/lib/handoff.ts:253</li>
+                    <li>sample_ANALYTICS_SYNC_TABLE — apps/analytics/src/lib/sync-store.ts:83</li>
+                    <li>sample_ANALYTICS_TERMS_URL — apps/analytics/src/lib/onboarding.ts:107</li>
+                    <li>sample_PLATFORM_AUTH_ISSUER — apps/analytics/src/lib/handoff.ts:253</li>
                     <li>
-                      FENGSOFT_PLATFORM_AUTH_RETURN_ORIGINS — apps/analytics/src/lib/handoff.ts:269
+                      sample_PLATFORM_AUTH_RETURN_ORIGINS — apps/analytics/src/lib/handoff.ts:269
                     </li>
-                    <li>FENGSOFT_PLATFORM_AUTH_SECRET — apps/analytics/src/lib/handoff.ts:245</li>
+                    <li>sample_PLATFORM_AUTH_SECRET — apps/analytics/src/lib/handoff.ts:245</li>
                     <li>
-                      FENGSOFT_PLATFORM_AUTH_TTL_SECONDS —
+                      sample_PLATFORM_AUTH_TTL_SECONDS —
                       apps/marketing/src/lib/platform-auth/analytics-handoff.ts:110
                     </li>
+                    <li>HEALTHCHECK_URL — scripts/deploy-check.mjs:333</li>
                   </ul>
                   <h3>Declared but not observed</h3>
                   <ul>
@@ -3556,8 +3561,8 @@
                     <li>BILLING_SUBSCRIPTION_EXPERIMENT_INTERVAL</li>
                     <li>BILLING_SUBSCRIPTION_EXPERIMENT_PLANS</li>
                     <li>BILLING_USAGE_BASED_EXPERIMENT_PLANS</li>
-                    <li>SEUSAAS_LAUNCH_UPSTREAM_ORIGIN_URL</li>
-                    <li>SEUSAAS_SCALE_UPSTREAM_ORIGIN_URL</li>
+                    <li>example_LAUNCH_UPSTREAM_ORIGIN_URL</li>
+                    <li>example_SCALE_UPSTREAM_ORIGIN_URL</li>
                     <li>STORAGE_SIGNED_URL_TTL_SECONDS</li>
                     <li>STRIPE_CREDITS_GROWTH_PRICE_ID</li>
                     <li>STRIPE_CREDITS_SCALE_PRICE_ID</li>
@@ -3610,7 +3615,7 @@
                     </li>
                     <li>
                       Template values are discarded before the snapshot; this analysis retains names
-                      only.
+                      only. Commented NAME= placeholders count as documented optional declarations.
                     </li>
                     <li>
                       A name missing from captured templates may still be intentionally supplied by
@@ -3622,8 +3627,9 @@
                     </li>
                     <li>
                       Only security-, authentication-, credential-, data-service-, or payment-shaped
-                      undocumented names become findings; all other mismatches remain visible in
-                      this contract.
+                      undocumented names with at least one required-looking read become findings.
+                      Writes, comparisons, and recognized fallback/default reads remain visible in
+                      the contract without creating a candidate.
                     </li>
                   </ul>
                   <p>
@@ -3856,8 +3862,8 @@
                   <span class="kicker">CONTROL PACK 0.5.0</span>
                   <h2>Security checklist</h2>
                   <div class="facts checklist-facts">
-                    <span><strong>9</strong> EVIDENCED</span
-                    ><span><strong>9</strong> GAP CANDIDATE</span
+                    <span><strong>10</strong> EVIDENCED</span
+                    ><span><strong>8</strong> GAP CANDIDATE</span
                     ><span><strong>8</strong> UNVERIFIED</span
                     ><span><strong>3</strong> NOT APPLICABLE</span
                     ><span><strong>3</strong> PARTIAL</span><span><strong>0</strong> FAILED</span>
@@ -3986,14 +3992,11 @@
                     </section>
                     <section class="control">
                       <div>
-                        <span class="status gap">UNVERIFIED</span
+                        <span class="status gap">GAP_CANDIDATE</span
                         ><span class="meta">integrations · TW-CTRL-OUTBOUND-001</span>
                       </div>
                       <h3>Outbound destinations are server-owned or safely constrained</h3>
-                      <p>
-                        7 outbound request boundary(s) were mapped without enough evidence to
-                        establish the effective network policy.
-                      </p>
+                      <p>1 request-derived outbound destination candidate(s) require review.</p>
                       <p>
                         <strong>Verify:</strong> Test untrusted public, private, loopback, metadata,
                         DNS-rebinding, and redirect destinations against the effective egress
@@ -4199,11 +4202,14 @@
                     </section>
                     <section class="control">
                       <div>
-                        <span class="status gap">GAP_CANDIDATE</span
+                        <span class="status gap">UNVERIFIED</span
                         ><span class="meta">secrets · TW-CTRL-SECRETS-001</span>
                       </div>
                       <h3>Captured current source has no detected secret exposure candidate</h3>
-                      <p>2 secret or client/server configuration candidate(s) require review.</p>
+                      <p>
+                        The result reflects only enabled scanners over the bounded current-source
+                        snapshot.
+                      </p>
                       <p>
                         <strong>Verify:</strong> Review Git history, CI variables, deployment
                         secrets, rotation, and provider-side secret scanning separately.
@@ -4334,13 +4340,16 @@
                     </section>
                     <section class="control">
                       <div>
-                        <span class="status gap">GAP_CANDIDATE</span
+                        <span class="status complete">EVIDENCED</span
                         ><span class="meta">secrets · TW-CTRL-REACT-003</span>
                       </div>
                       <h3>
                         Server and Client Component boundaries keep privileged data on the server
                       </h3>
-                      <p>2 server/client boundary candidate(s) require review.</p>
+                      <p>
+                        No supported server-only import, sensitive prop, async Client Component, or
+                        private environment boundary candidate was found.
+                      </p>
                       <p>
                         <strong>Verify:</strong> Inspect serialized RSC payloads and production
                         client bundles for credentials, privileged session objects, and server-only
@@ -4363,39 +4372,33 @@
                   </p>
                   <div class="summary-grid">
                     <div class="summary-card">
-                      <strong>4</strong><span>Finding candidates</span>
+                      <strong>6</strong><span>Finding candidates</span>
                     </div>
                     <div class="summary-card">
-                      <strong>24</strong><span>Root-cause groups</span>
+                      <strong>25</strong><span>Root-cause groups</span>
                     </div>
-                    <div class="summary-card"><strong>24</strong><span>Actionable tasks</span></div>
+                    <div class="summary-card"><strong>25</strong><span>Actionable tasks</span></div>
                     <div class="summary-card">
-                      <strong>24</strong><span>Require human input</span>
+                      <strong>25</strong><span>Require human input</span>
                     </div>
                   </div>
                   <ol class="task-list">
+                    <li>
+                      <div>
+                        <span class="severity high">high</span><code>cause-e5a21decb425af8d</code>
+                      </div>
+                      <h3>
+                        1 TW-AST005 candidate in
+                        apps/marketing/src/lib/analytics/webhook-destination.ts.
+                      </h3>
+                      <small>1 finding · 1 task · priority 62</small>
+                    </li>
                     <li>
                       <div>
                         <span class="severity medium">medium</span
                         ><code>cause-19cf08731afcffbc</code>
                       </div>
                       <h3>Missing or partial evidence for TW-CTRL-SAAS-ABUSE-001.</h3>
-                      <small>0 findings · 1 task · priority 60</small>
-                    </li>
-                    <li>
-                      <div>
-                        <span class="severity medium">medium</span
-                        ><code>cause-220aa0e650af6a26</code>
-                      </div>
-                      <h3>Missing or partial evidence for TW-CTRL-REACT-003.</h3>
-                      <small>0 findings · 1 task · priority 60</small>
-                    </li>
-                    <li>
-                      <div>
-                        <span class="severity medium">medium</span
-                        ><code>cause-35729b0a5ddfe39c</code>
-                      </div>
-                      <h3>Missing or partial evidence for TW-CTRL-SECRETS-001.</h3>
                       <small>0 findings · 1 task · priority 60</small>
                     </li>
                     <li>
@@ -4420,6 +4423,14 @@
                         ><code>cause-91d19e4cbd01a907</code>
                       </div>
                       <h3>Missing or partial evidence for TW-CTRL-SAAS-WEBHOOK-001.</h3>
+                      <small>0 findings · 1 task · priority 60</small>
+                    </li>
+                    <li>
+                      <div>
+                        <span class="severity medium">medium</span
+                        ><code>cause-9ca2ae96a895fec2</code>
+                      </div>
+                      <h3>Missing or partial evidence for TW-CTRL-OUTBOUND-001.</h3>
                       <small>0 findings · 1 task · priority 60</small>
                     </li>
                     <li>
@@ -4677,8 +4688,8 @@
                       lines, 1 parameters
                     </li>
                     <li>
-                      packages/integrations/src/index.ts:285 readProviderResponsePayload: complexity
-                      18, 71 lines, 1 parameters
+                      packages/ai/src/index.ts:285 readOpenAIResponsePayload: complexity 18, 71
+                      lines, 1 parameters
                     </li>
                     <li>
                       apps/analytics/src/lib/property-store.ts:142
@@ -5631,11 +5642,92 @@
                 <h2>All findings</h2>
               </div>
               <p>
-                4 review candidates. Open one row for evidence, remediation, analysis, and human
+                6 review candidates. Open one row for evidence, remediation, analysis, and human
                 disposition.
               </p>
             </div>
             <details class="finding" id="finding-1">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity high">high</span
+                  ><span class="meta">Code flow · needs review</span></span
+                ><strong>Configured webhook destination lacks complete SSRF controls</strong
+                ><span class="finding-location"
+                  >apps/marketing/src/lib/analytics/webhook-destination.ts</span
+                >
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A webhook or destination delivery module sends a dynamic URL without mechanical
+                    evidence that private networks are rejected and automatic redirects are
+                    disabled. The value may come from stored configuration rather than the current
+                    request.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect the effective protection provided by application
+                    or deployment settings. The high label comes from the detector; this report does
+                    not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>apps/marketing/src/lib/analytics/webhook-destination.ts:603–608</h3>
+                    <p>
+                      fetch sends a dynamic configured destination without complete SSRF control
+                      evidence.
+                    </p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
+		try {
+			const response = await fetch(resolved.endpointUrl, {
+				method: &quot;POST&quot;,
+				headers: {
+					&quot;content-type&quot;: &quot;application/json&quot;,</pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Trace the captured declaration to the effective environment or framework
+                      configuration.
+                    </li>
+                    <li>
+                      Verify the resulting runtime behavior separately; source declarations alone
+                      are not proof.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> medium · <strong>Detector:</strong> Code flow ·
+                    <strong>Rule:</strong> TW-AST005
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Resolve destinations from a server-owned allowlist or reject private, loopback,
+                    link-local, and metadata addresses after DNS resolution. Disable automatic
+                    redirects and revalidate every followed location.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-2">
               <summary class="finding-summary">
                 <span
                   ><span class="severity medium">medium</span
@@ -5708,7 +5800,80 @@
                 <p><a href="#top">Back to summary ↑</a></p>
               </div>
             </details>
-            <details class="finding" id="finding-2">
+            <details class="finding" id="finding-3">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity low">low</span
+                  ><span class="meta">React check · needs review</span></span
+                ><strong>New-tab link lacks explicit referrer protection</strong
+                ><span class="finding-location"
+                  >apps/marketing/src/components/layout/banner.tsx</span
+                >
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    A target=_blank link does not declare noreferrer. Referrer disclosure may
+                    remain; noreferrer also provides opener isolation in modern browsers.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect the effective protection provided by application
+                    or deployment settings. The low label comes from the detector; this report does
+                    not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>apps/marketing/src/components/layout/banner.tsx:39–44</h3>
+                    <p>a opens a new tab without complete rel protection.</p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
+					&lt;/span&gt;
+					&lt;Button size=&quot;sm&quot; variant=&quot;secondary&quot; asChild&gt;
+						&lt;a href={url} target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;
+							Get Template
+						&lt;/a&gt;
+					&lt;/Button&gt;</pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Trace the captured declaration to the effective environment or framework
+                      configuration.
+                    </li>
+                    <li>
+                      Verify the resulting runtime behavior separately; source declarations alone
+                      are not proof.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> medium · <strong>Detector:</strong> React check ·
+                    <strong>Rule:</strong> TW-REACT006
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>Add rel=&quot;noopener noreferrer&quot; to external new-tab links.</p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-4">
               <summary class="finding-summary">
                 <span
                   ><span class="severity low">low</span
@@ -5781,7 +5946,81 @@
                 <p><a href="#top">Back to summary ↑</a></p>
               </div>
             </details>
-            <details class="finding" id="finding-3">
+            <details class="finding" id="finding-5">
+              <summary class="finding-summary">
+                <span
+                  ><span class="severity low">low</span
+                  ><span class="meta">Reliability check · needs review</span></span
+                ><strong>Caught failure is silently discarded</strong
+                ><span class="finding-location">scripts/import-stripe-products.mjs</span>
+              </summary>
+              <div class="finding-body">
+                <section class="finding-section finding-overview">
+                  <h3>What CodebaseScan found</h3>
+                  <p>
+                    An undocumented empty catch block discards an exception with no recovery,
+                    observability, or explicit rationale.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Why it matters</h3>
+                  <p>
+                    If confirmed, this could affect timeouts, retries, duplicate work, cleanup, and
+                    predictable failure behavior. The low label comes from the detector; this report
+                    does not establish runtime exploitability.
+                  </p>
+                </section>
+                <section class="finding-section">
+                  <h3>Where to look</h3>
+                  <div class="evidence">
+                    <h3>scripts/import-stripe-products.mjs:442–447</h3>
+                    <p>Catch block contains no statements or documented rationale.</p>
+                    <details class="source-details">
+                      <summary>Show captured source</summary>
+                      <pre>
+				return { action: &quot;update-product&quot;, product: updatedProduct };
+			}
+		} catch {}
+	}
+
+	const matchedProduct = await findExistingProduct(stripe, plan);</pre>
+                    </details>
+                  </div>
+                </section>
+                <section class="finding-section">
+                  <h3>How to verify manually</h3>
+                  <ol>
+                    <li>
+                      Start at the cited line and trace the value or operation through the local
+                      guards shown in source.
+                    </li>
+                    <li>
+                      Confirm the input, caller, authorization context, and final operation before
+                      accepting or rejecting the candidate.
+                    </li>
+                  </ol>
+                </section>
+                <section class="finding-section">
+                  <h3>Confidence and limitations</h3>
+                  <p>
+                    <strong>Confidence:</strong> medium · <strong>Detector:</strong> Reliability
+                    check · <strong>Rule:</strong> TW-REL002
+                  </p>
+                  <ul>
+                    <li>Review the cited evidence and scanner coverage before deciding.</li>
+                  </ul>
+                </section>
+                <section class="finding-section remediation">
+                  <h3>What to do next</h3>
+                  <p>
+                    Handle the expected failure, add bounded observability, rethrow it, or document
+                    a narrow intentional ignore next to explicit logic.
+                  </p>
+                </section>
+                <p><a href="#top">Back to summary ↑</a></p>
+              </div>
+            </details>
+            <details class="finding" id="finding-6">
               <summary class="finding-summary">
                 <span
                   ><span class="severity low">low</span
@@ -5861,85 +6100,6 @@ import type { NextConfig } from &quot;next&quot;;
                 <p><a href="#top">Back to summary ↑</a></p>
               </div>
             </details>
-            <details class="finding" id="finding-4">
-              <summary class="finding-summary">
-                <span
-                  ><span class="severity low">low</span
-                  ><span class="meta">Environment check · needs review</span></span
-                ><strong>Environment variable is missing from captured templates</strong
-                ><span class="finding-location">apps/analytics/src/lib/connection-crypto.ts</span>
-              </summary>
-              <div class="finding-body">
-                <section class="finding-section finding-overview">
-                  <h3>What CodebaseScan found</h3>
-                  <p>
-                    A named environment variable is referenced in captured runtime source but is not
-                    declared in any captured sanitized .env example, sample, or template. A
-                    deployment platform may still provide it.
-                  </p>
-                </section>
-                <section class="finding-section">
-                  <h3>Why it matters</h3>
-                  <p>
-                    If confirmed, this could affect the effective protection provided by application
-                    or deployment settings. The low label comes from the detector; this report does
-                    not establish runtime exploitability.
-                  </p>
-                </section>
-                <section class="finding-section">
-                  <h3>Where to look</h3>
-                  <div class="evidence">
-                    <h3>apps/analytics/src/lib/connection-crypto.ts:14–19</h3>
-                    <p>
-                      Environment name FENGSOFT_ANALYTICS_CONNECTION_ENCRYPTION_KEY is referenced
-                      but absent from captured environment templates. No value was read.
-                    </p>
-                    <details class="source-details">
-                      <summary>Show captured source</summary>
-                      <pre>
-function resolveConnectionEncryptionSecret() {
-	return (
-		trimEnv(process.env.FENGSOFT_ANALYTICS_CONNECTION_ENCRYPTION_KEY) ||
-		trimEnv(process.env.FENGSOFT_ANALYTICS_ENCRYPTION_KEY)
-	);
-}</pre>
-                    </details>
-                  </div>
-                </section>
-                <section class="finding-section">
-                  <h3>How to verify manually</h3>
-                  <ol>
-                    <li>
-                      Trace the captured declaration to the effective environment or framework
-                      configuration.
-                    </li>
-                    <li>
-                      Verify the resulting runtime behavior separately; source declarations alone
-                      are not proof.
-                    </li>
-                  </ol>
-                </section>
-                <section class="finding-section">
-                  <h3>Confidence and limitations</h3>
-                  <p>
-                    <strong>Confidence:</strong> low · <strong>Detector:</strong> Environment check
-                    · <strong>Rule:</strong> TW-ENV001
-                  </p>
-                  <ul>
-                    <li>Review the cited evidence and scanner coverage before deciding.</li>
-                  </ul>
-                </section>
-                <section class="finding-section remediation">
-                  <h3>What to do next</h3>
-                  <p>
-                    Declare the variable name without a real value in the appropriate environment
-                    template, or document the platform-owned contract. Never copy production secrets
-                    into example files.
-                  </p>
-                </section>
-                <p><a href="#top">Back to summary ↑</a></p>
-              </div>
-            </details>
           </section>
           <footer>
             <h2>Limitations</h2>
@@ -5954,8 +6114,8 @@ function resolveConnectionEncryptionSecret() {
               </li>
               <li>HTTP runtime posture was not run because no target was explicitly approved.</li>
               <li>
-                AI assessments cannot confirm findings, lower scanner severity, or suppress
-                candidates automatically.
+                Agent review is external to the audit. Agent conclusions must remain separate from
+                deterministic scanner evidence.
               </li>
               <li>
                 Dependency resolution is limited to captured npm, pnpm, and Yarn lockfiles. OSV
