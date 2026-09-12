@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added direct and bounded cross-file SSRF detection for Node `http`/`https` `.get()` and
+  `.request()` clients.
 - Mapped ordered Express/Hono path middleware and explicit request-token guards into structural
   authentication evidence without applying late middleware to earlier routes.
 - Recognized constant-time shared-secret and explicit token checks as webhook verification evidence

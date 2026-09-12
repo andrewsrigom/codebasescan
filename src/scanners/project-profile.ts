@@ -42,7 +42,7 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
-export const projectProfileScannerVersion = '0.11.0';
+export const projectProfileScannerVersion = '0.11.1';
 
 interface ParsedFile {
   source: SourceFile;
@@ -228,7 +228,11 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
     /(?:prisma|database|db|repository|model|client|supabase|drizzle)/.test(value)
   )
     return 'database';
-  if (/^(?:fetch|axios|got)(?:\.|$)|\.(?:fetch|request)$/.test(value)) return 'outbound-request';
+  if (
+    /^(?:fetch|axios|got)(?:\.|$)|\.(?:fetch|request)$/.test(value) ||
+    /^(?:https?|node:https|node:http)\.(?:get|request)$/.test(value)
+  )
+    return 'outbound-request';
   if (
     /^(?:exec|execfile|spawn|fork)$/.test(value) ||
     /(?:^|\.)(?:child_process|childprocess)\.(?:exec|execfile|spawn|fork)$/.test(value)

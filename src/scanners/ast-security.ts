@@ -167,6 +167,13 @@ function callName(node: ts.CallExpression): string {
   return node.expression.getText().replace(/\s+/g, '').slice(0, 180);
 }
 
+function isOutboundRequestSink(callee: string): boolean {
+  return (
+    /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) ||
+    /^(?:https?|node:https|node:http)\.(?:get|request)$/i.test(callee)
+  );
+}
+
 function bindingNames(name: ts.BindingName): string[] {
   if (ts.isIdentifier(name)) return [name.text];
   return name.elements.flatMap((element) =>
@@ -1058,7 +1065,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
             if (candidate) findings.push(candidate);
           }
           if (
-            /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
+            isOutboundRequestSink(callee) &&
             destination &&
             isTaintedValue(destination, tainted, serverOwnedUrls) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
@@ -1396,7 +1403,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
           if (
             destination &&
             isTaintedValue(destination, tainted) &&
-            /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
+            isOutboundRequestSink(callee) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorGuard(
               calls,
@@ -1602,7 +1609,7 @@ function configuredDestinationFindings(snapshot: Snapshot, existing: Finding[]):
         const destination = call.arguments[0];
         if (
           !destination ||
-          !/^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) ||
+          !isOutboundRequestSink(callee) ||
           !configuredOutboundDestination(destination, node, tainted, serverOwnedUrls) ||
           hasCompleteOutboundDestinationControl(call, node, calls)
         )
@@ -1649,7 +1656,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.9.5',
+        version: '0.10.0',
       },
     };
 
@@ -1736,7 +1743,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.9.5',
+      version: '0.10.0',
     },
   };
 }

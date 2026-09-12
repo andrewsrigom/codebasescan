@@ -778,6 +778,7 @@ test('AST traces request data into command, path, regex, and deserialization sin
       const body = await request.json();
       exec(body.command);
       await fs.readFile(body.path);
+      https.get(body.imageUrl);
       const matcher = new RegExp(body.pattern);
       const value = serializer.unserialize(body.payload);
       return Response.json({ matcher, value });
@@ -787,6 +788,28 @@ test('AST traces request data into command, path, regex, and deserialization sin
   assert.ok(ids.includes('TW-AST012'));
   assert.ok(ids.includes('TW-AST013'));
   assert.ok(ids.includes('TW-AST014'));
+});
+
+test('AST follows request URLs into Node HTTP clients across files', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { downloadAudio } from '../services/audio';
+      app.post('/video', async (req, res) => {
+        await downloadAudio(req.body.audioUrl);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudio(url: string) {
+        return https.get(url);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  const outbound = findings.find((finding) => finding.ruleId === 'TW-AST005');
+  assert.equal(outbound?.evidence[0]?.file, 'src/services/audio.ts');
+  assert.ok(outbound?.evidence.some((item) => item.file === 'src/routes/video.ts'));
 });
 
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
