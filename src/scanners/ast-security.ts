@@ -364,6 +364,168 @@ function isTaintedValue(
   return false;
 }
 
+function localInitializers(node: ts.FunctionLikeDeclarationBase): Map<string, ts.Expression> {
+  const initializers = new Map<string, ts.Expression>();
+  const visit = (child: ts.Node): void => {
+    if (child !== node && isExecutableFunction(child)) return;
+    if (
+      ts.isVariableDeclaration(child) &&
+      ts.isIdentifier(child.name) &&
+      child.initializer
+    )
+      initializers.set(child.name.text, child.initializer);
+    ts.forEachChild(child, visit);
+  };
+  if (node.body) visit(node.body);
+  return initializers;
+}
+
+function unwrapExpression(node: ts.Expression): ts.Expression {
+  let value = node;
+  while (
+    ts.isAwaitExpression(value) ||
+    ts.isParenthesizedExpression(value) ||
+    ts.isAsExpression(value) ||
+    ts.isTypeAssertionExpression(value) ||
+    ts.isNonNullExpression(value)
+  )
+    value = value.expression;
+  return value;
+}
+
+function isUrlPortReference(node: ts.Expression, urlName: string): boolean {
+  const value = unwrapExpression(node);
+  return (
+    ts.isPropertyAccessExpression(value) &&
+    ts.isIdentifier(value.expression) &&
+    value.expression.text === urlName &&
+    value.name.text === 'port'
+  );
+}
+
+function isEmptyString(node: ts.Expression): boolean {
+  const value = unwrapExpression(node);
+  return ts.isStringLiteralLike(value) && value.text === '';
+}
+
+function isSafePortSuffix(
+  node: ts.Expression,
+  urlName: string,
+  initializers: Map<string, ts.Expression>,
+  seen = new Set<string>(),
+): boolean {
+  const value = unwrapExpression(node);
+  if (ts.isIdentifier(value)) {
+    if (seen.has(value.text)) return false;
+    const initializer = initializers.get(value.text);
+    if (!initializer) return false;
+    return isSafePortSuffix(
+      initializer,
+      urlName,
+      initializers,
+      new Set([...seen, value.text]),
+    );
+  }
+  if (ts.isTemplateExpression(value))
+    return (
+      value.head.text === ':' &&
+      value.templateSpans.length === 1 &&
+      isUrlPortReference(value.templateSpans[0]!.expression, urlName) &&
+      value.templateSpans[0]!.literal.text === ''
+    );
+  if (ts.isConditionalExpression(value)) {
+    if (!isUrlPortReference(value.condition, urlName)) return false;
+    return (
+      (isSafePortSuffix(value.whenTrue, urlName, initializers, seen) &&
+        isEmptyString(value.whenFalse)) ||
+      (isEmptyString(value.whenTrue) &&
+        isSafePortSuffix(value.whenFalse, urlName, initializers, seen))
+    );
+  }
+  return false;
+}
+
+function isFixedHostExpression(
+  node: ts.Expression,
+  urlName: string,
+  initializers: Map<string, ts.Expression>,
+  seen = new Set<string>(),
+): boolean {
+  const value = unwrapExpression(node);
+  if (ts.isIdentifier(value)) {
+    if (seen.has(value.text)) return false;
+    const initializer = initializers.get(value.text);
+    if (!initializer) return false;
+    return isFixedHostExpression(
+      initializer,
+      urlName,
+      initializers,
+      new Set([...seen, value.text]),
+    );
+  }
+  const fixedHost = /^(?:localhost|[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?)(?::\d{1,5})?$/i;
+  if (ts.isStringLiteralLike(value)) return fixedHost.test(value.text);
+  return (
+    ts.isTemplateExpression(value) &&
+    fixedHost.test(value.head.text) &&
+    value.templateSpans.length === 1 &&
+    isSafePortSuffix(value.templateSpans[0]!.expression, urlName, initializers) &&
+    value.templateSpans[0]!.literal.text === ''
+  );
+}
+
+function hasPriorFixedUrlOrigin(
+  destination: ts.Expression,
+  sink: ts.CallExpression,
+  owner: ts.FunctionLikeDeclarationBase,
+): boolean {
+  const value = unwrapExpression(destination);
+  if (!ts.isIdentifier(value)) return false;
+  const urlName = value.text;
+  const initializers = localInitializers(owner);
+  const initializer = initializers.get(urlName);
+  const initialValue = initializer ? unwrapExpression(initializer) : undefined;
+  if (
+    !initialValue ||
+    !ts.isNewExpression(initialValue) ||
+    initialValue.expression.getText() !== 'URL'
+  )
+    return false;
+
+  const assignments: ts.BinaryExpression[] = [];
+  const visit = (child: ts.Node): void => {
+    if (child !== owner && isExecutableFunction(child)) return;
+    if (
+      ts.isBinaryExpression(child) &&
+      child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      child.getStart() < sink.getStart()
+    )
+      assignments.push(child);
+    ts.forEachChild(child, visit);
+  };
+  if (owner.body) visit(owner.body);
+  assignments.sort((left, right) => left.getStart() - right.getStart());
+
+  let fixedHost = false;
+  let fixedProtocol = false;
+  for (const assignment of assignments) {
+    if (
+      !ts.isPropertyAccessExpression(assignment.left) ||
+      !ts.isIdentifier(assignment.left.expression) ||
+      assignment.left.expression.text !== urlName
+    )
+      continue;
+    if (['host', 'hostname'].includes(assignment.left.name.text))
+      fixedHost = isFixedHostExpression(assignment.right, urlName, initializers);
+    if (assignment.left.name.text === 'protocol') {
+      const protocol = unwrapExpression(assignment.right);
+      fixedProtocol =
+        ts.isStringLiteralLike(protocol) && ['http:', 'https:'].includes(protocol.text);
+    }
+  }
+  return fixedHost && fixedProtocol;
+}
+
 function topLevelServerOwnedUrls(source: ts.SourceFile): Set<string> {
   const owned = new Set<string>();
   for (const statement of source.statements) {
@@ -876,6 +1038,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
             destination &&
             isTaintedValue(destination, tainted, serverOwnedUrls) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
+            !hasPriorFixedUrlOrigin(destination, call, node) &&
             !hasPriorGuard(
               calls,
               call,
@@ -905,6 +1068,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
             destination &&
             isTaintedValue(destination, tainted, serverOwnedUrls) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
+            !hasPriorFixedUrlOrigin(destination, call, node) &&
             !hasPriorGuard(
               calls,
               call,
@@ -1313,7 +1477,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.8.2',
+        version: '0.8.3',
       },
     };
 
@@ -1399,7 +1563,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.8.2',
+      version: '0.8.3',
     },
   };
 }

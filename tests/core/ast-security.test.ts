@@ -409,6 +409,32 @@ test('request paths stay on an explicit server-owned redirect origin', () => {
   assert.ok(unsafeIds.includes('TW-AST006'));
 });
 
+test('a request URL becomes an owned redirect after fixed host and protocol replacement', () => {
+  const safeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const current = new URL(request.url);
+      const port = current.port ? \`:${'${current.port}'}\` : '';
+      const targetHost = \`app.localhost${'${port}'}\`;
+      current.host = targetHost;
+      current.protocol = 'http:';
+      await fetch(current);
+      return redirect(current);
+    }
+  `);
+  assert.ok(!safeIds.includes('TW-AST005'));
+  assert.ok(!safeIds.includes('TW-AST006'));
+
+  const unsafeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const current = new URL(request.url);
+      current.host = request.headers.get('host') ?? current.host;
+      current.protocol = 'https:';
+      return redirect(current);
+    }
+  `);
+  assert.ok(unsafeIds.includes('TW-AST006'));
+});
+
 test('request data passed into an external client does not taint its response', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {
