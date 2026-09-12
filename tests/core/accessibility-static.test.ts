@@ -110,3 +110,24 @@ test('label components with matching htmlFor provide static naming evidence', ()
   );
   assert.deepEqual(result.findings, []);
 });
+
+test('named field wrappers must match the nested intrinsic control id', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `export function Form({ fieldId }) {
+        return <>
+          <FormField label="Country" htmlFor={fieldId}>
+            <select id={fieldId}><option>Brazil</option></select>
+          </FormField>
+          <FormField label="Account" htmlFor="account-id">
+            <input id="different-id" />
+          </FormField>
+        </>;
+      }`,
+    }),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-A11Y004'],
+  );
+});

@@ -89,6 +89,25 @@ function insideLabel(node: ts.Node): boolean {
   return false;
 }
 
+function insideNamedFieldWrapper(node: ts.Node, id: string | undefined): boolean {
+  if (!id) return false;
+  let parent = node.parent;
+  while (parent) {
+    if (ts.isJsxElement(parent)) {
+      const opening = parent.openingElement;
+      const name = tagName(opening);
+      if (
+        /^(?:[A-Z]|.+\.)/.test(name) &&
+        attribute(opening, 'label') &&
+        attributeReference(opening, 'htmlfor') === id
+      )
+        return true;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
 function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean } {
   const source = ts.createSourceFile(
     file.path,
@@ -207,6 +226,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
           Boolean(attribute(opening, 'aria-label')) ||
           Boolean(attribute(opening, 'aria-labelledby')) ||
           Boolean(id && labels.has(id)) ||
+          insideNamedFieldWrapper(opening, id) ||
           insideLabel(opening) ||
           hasSpreadAttributes(opening);
         if (!named)
@@ -373,7 +393,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
         detail: files.length
           ? `Inspected ${files.length} JSX file(s) for six bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior require imported external evidence.`
           : 'No runtime JSX source was available for static accessibility review.',
-        version: '0.5.0',
+        version: '0.6.0',
       },
       imported.run,
     ],

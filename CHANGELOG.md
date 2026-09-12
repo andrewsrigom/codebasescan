@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Recognized custom field wrappers with matching `label`, `htmlFor`, and nested control `id`
+  evidence to reduce accessibility false positives without trusting mismatched wrappers.
 - Reduced sensitive-logging noise by treating aggregate collection counts as metadata while retaining
   candidates for raw credential and personal-data values.
 - Prioritized application source ahead of documentation and generated metadata in bounded snapshots,
