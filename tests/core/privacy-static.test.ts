@@ -24,6 +24,7 @@ test('non-sensitive keys and protected log values avoid privacy candidates', () 
       logger.info({ email: redact(email) });
       console.log(config.sourceAuthors.emails.length);
       logger.info({ emailCount: emails.length, sessionCount: sessions.size });
+      logger.error(pluggyCredentialErrorCode(error));
       localStorage.setItem('theme', theme);
     `),
   );
@@ -35,11 +36,12 @@ test('raw sensitive values remain candidates beside safe aggregate counts', () =
     snapshotOf(`
       logger.info({ emailCount: emails.length });
       logger.info({ email: user.email });
+      logger.info(credentialErrorCode(accessToken));
     `),
   );
   assert.deepEqual(
     result.findings.map((finding) => finding.ruleId),
-    ['TW-PRIV002'],
+    ['TW-PRIV002', 'TW-PRIV002'],
   );
 });
 

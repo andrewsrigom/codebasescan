@@ -35,10 +35,10 @@ function containsSensitiveUnprotectedValue(expression: ts.Expression): boolean {
     );
   if (ts.isCallExpression(expression)) {
     if (protectedValue.test(expression.getText(source))) return false;
-    return (
-      sensitive.test(callName(expression.expression)) ||
-      expression.arguments.some(containsSensitiveUnprotectedValue)
-    );
+    const name = callName(expression.expression);
+    if (/errorCode$/i.test(name))
+      return expression.arguments.some(containsSensitiveUnprotectedValue);
+    return sensitive.test(name) || expression.arguments.some(containsSensitiveUnprotectedValue);
   }
   if (ts.isPropertyAccessExpression(expression)) {
     if (safeAggregateProperty.test(expression.name.text)) return false;
@@ -195,7 +195,7 @@ export function scanPrivacyStatic(snapshot: Snapshot): { findings: Finding[]; ru
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded URL, logging, and browser-storage privacy candidates; ${parseFailures} parse failure(s). Data purpose, retention, consent, and runtime transfers remain unverified.`
         : 'No supported runtime source was available for static privacy review.',
-      version: '0.4.0',
+      version: '0.4.1',
     },
   };
 }

@@ -10,7 +10,7 @@ project.
 
 Current contracts:
 
-- audit workflow `codebasescan-audit-v59`;
+- audit workflow `codebasescan-audit-v60`;
 - audit-mode pack `1.0.0`;
 - audit report schema v17;
 - rule-quality schema v3;

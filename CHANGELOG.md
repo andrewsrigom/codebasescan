@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Treated explicit error-code mapper results as diagnostic metadata while still inspecting their
+  arguments for raw sensitive values.
 - Prevented regular-expression `.exec()` calls from being classified as operating-system process
   execution sinks.
 - Stopped treating caught-error values used only in response predicates as exposed response data.
