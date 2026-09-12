@@ -89,6 +89,8 @@ const option = (name: string) => {
   const value = index >= 0 ? arguments_[index + 1] : undefined;
   return value && !value.startsWith('--') ? value : undefined;
 };
+const count = (value: number, singular: string, plural = `${singular}s`) =>
+  `${value} ${value === 1 ? singular : plural}`;
 const commandModes = (): AuditMode[] | undefined => {
   const value = option('--modes');
   if (!value) return undefined;
@@ -699,7 +701,7 @@ try {
         );
       if (policyName)
         console.error(
-          `Policy ${policyResult.profile}: ${policyResult.decision}; ${policyResult.summary.gatedFindings} finding(s), ${policyResult.summary.blockingCoverageIssues} blocking coverage issue(s).`,
+          `Policy ${policyResult.profile}: ${policyResult.decision}; ${count(report.findings.length, 'finding candidate')}; ${count(policyResult.summary.gatedFindings, 'gated finding')}; ${count(policyResult.summary.blockingCoverageIssues, 'blocking coverage issue')}.`,
         );
       process.exitCode = gate.exitCode;
       if (arguments_.includes('--open') && staticReportDirectory)
