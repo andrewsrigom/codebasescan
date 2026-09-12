@@ -141,16 +141,21 @@ test('ordered Express-style middleware can provide a request credential guard', 
       }
       return next();
     });
-    app.post('/api/items', async (c) => context.db.update(items).set({ active: true }));
+    app.patch('/api/items/:id', async (c) =>
+      context.db.update(items).set({ active: true }).where(eq(items.id, c.req.param('id')))
+    );
   `);
   const protectedFindings = scanAstSecurity(
     protectedSnapshot,
     profileProject(protectedSnapshot).profile,
   ).findings;
   assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+  assert.ok(protectedFindings.some((finding) => finding.ruleId === 'TW-AST003'));
 
   const lateSnapshot = snapshotOf(`
-    app.post('/api/items', async (c) => context.db.update(items).set({ active: true }));
+    app.patch('/api/items/:id', async (c) =>
+      context.db.update(items).set({ active: true }).where(eq(items.id, c.req.param('id')))
+    );
     app.use('/api/*', async (c, next) => {
       if (c.req.header('X-App-Token') !== writeToken) return c.json({ error: 'denied' }, 403);
       return next();
