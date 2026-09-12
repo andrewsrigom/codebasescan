@@ -433,6 +433,55 @@ test('replacing the request origin with a server-owned backend avoids SSRF noise
   assert.ok(unsafeIds.includes('TW-AST005'));
 });
 
+test('server-owned config origins keep request data confined to URL paths', () => {
+  const ids = astRuleIds(`
+    const GOOGLE_API_BASE = 'https://api.example.test/v1';
+
+    function getAnalyticsConfig() {
+      return { endpoint: process.env.ANALYTICS_ENDPOINT ?? 'https://analytics.example.test' };
+    }
+
+    async function fetchJson(url: string) {
+      return fetch(url);
+    }
+
+    export async function GET(request: Request) {
+      const itemId = new URL(request.url).searchParams.get('itemId') ?? '';
+      const { endpoint } = getAnalyticsConfig();
+      const analyticsUrl = new URL(\`${'${endpoint}'}/items/${'${encodeURIComponent(itemId)}'}\`);
+      await fetch(analyticsUrl.toString());
+      const providerUrl = new URL(\`${'${GOOGLE_API_BASE}'}/items/${'${encodeURIComponent(itemId)}'}\`);
+      return fetchJson(providerUrl.toString());
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+});
+
+test('server-owned application origins keep encoded job IDs out of SSRF findings', () => {
+  const ids = astRuleIds(`
+    function resolveAppOrigin() {
+      return process.env.APP_ORIGIN ?? 'https://app.example.test';
+    }
+
+    export async function GET(request: Request) {
+      const jobId = new URL(request.url).searchParams.get('jobId') ?? '';
+      const appOrigin = resolveAppOrigin();
+      const workerUrl = \`${'${appOrigin}'}/api/jobs?jobId=${'${encodeURIComponent(jobId)}'}\`;
+      return fetch(workerUrl);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+
+  const unsafeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const origin = new URL(request.url).searchParams.get('origin') ?? '';
+      const workerUrl = \`${'${origin}'}/api/jobs\`;
+      return fetch(workerUrl);
+    }
+  `);
+  assert.ok(unsafeIds.includes('TW-AST005'));
+});
+
 test('AST identifies webhook ordering, upload constraints, and cookie attributes', () => {
   assert.ok(
     astRuleIds(

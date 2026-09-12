@@ -202,12 +202,25 @@ function isTainted(node: ts.Node | undefined, tainted: Set<string>): boolean {
   return found;
 }
 
-function hasServerOwnedUrlPrefix(node: ts.Expression, tainted: Set<string>): boolean {
+function hasServerOwnedUrlPrefix(
+  node: ts.Expression,
+  tainted: Set<string>,
+  serverOwnedUrls = new Set<string>(),
+): boolean {
   const isOwnedPrefix = (value: string): boolean =>
     /^\/(?!\/)/.test(value) || /^https?:\/\/[^/]+(?:\/|$)/i.test(value);
+  if (ts.isIdentifier(node) && serverOwnedUrls.has(node.text)) return true;
   if (ts.isStringLiteralLike(node)) return isOwnedPrefix(node.text);
   if (!ts.isTemplateExpression(node)) return !isTainted(node, tainted);
   if (isOwnedPrefix(node.head.text)) return true;
+  const first = node.templateSpans[0];
+  if (
+    node.head.text === '' &&
+    first &&
+    isServerOwnedUrl(first.expression, tainted, serverOwnedUrls) &&
+    /^(?:\/|\?|#)/.test(first.literal.text)
+  )
+    return true;
   for (const span of node.templateSpans) {
     if (isTainted(span.expression, tainted)) return false;
     if (isOwnedPrefix(span.literal.text)) return true;
@@ -215,13 +228,12 @@ function hasServerOwnedUrlPrefix(node: ts.Expression, tainted: Set<string>): boo
   return false;
 }
 
-function isServerOwnedUrl(node: ts.Expression | undefined, tainted: Set<string>): boolean {
-  if (!node || !ts.isNewExpression(node) || node.expression.getText() !== 'URL') return false;
-  const [destination, base] = node.arguments ?? [];
-  return Boolean(destination && base && hasServerOwnedUrlPrefix(destination, tainted));
-}
-
-function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
+function isServerOwnedUrl(
+  node: ts.Expression | undefined,
+  tainted: Set<string>,
+  serverOwnedUrls = new Set<string>(),
+): boolean {
+  if (!node) return false;
   let value = node;
   while (
     ts.isAwaitExpression(value) ||
@@ -231,7 +243,51 @@ function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
     ts.isNonNullExpression(value)
   )
     value = value.expression;
-  if (isServerOwnedUrl(value, tainted)) return false;
+  if (ts.isIdentifier(value)) return serverOwnedUrls.has(value.text);
+  if (ts.isStringLiteralLike(value) || ts.isTemplateExpression(value))
+    return hasServerOwnedUrlPrefix(value, tainted, serverOwnedUrls);
+  if (ts.isConditionalExpression(value))
+    return (
+      isServerOwnedUrl(value.whenTrue, tainted, serverOwnedUrls) &&
+      isServerOwnedUrl(value.whenFalse, tainted, serverOwnedUrls)
+    );
+  if (ts.isCallExpression(value)) {
+    if (
+      ts.isPropertyAccessExpression(value.expression) &&
+      value.expression.name.text === 'toString' &&
+      isServerOwnedUrl(value.expression.expression, tainted, serverOwnedUrls)
+    )
+      return true;
+    const callee = callName(value).split('.').at(-1) ?? '';
+    if (
+      /^(?:get|load|read|resolve)[A-Za-z0-9]*(?:BaseUrl|Endpoint|Origin)$/i.test(callee) &&
+      !value.arguments.some((argument) => isTainted(argument, tainted))
+    )
+      return true;
+    return false;
+  }
+  if (!ts.isNewExpression(value) || value.expression.getText() !== 'URL') return false;
+  const [destination, base] = value.arguments ?? [];
+  if (!destination) return false;
+  if (base) return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
+  return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
+}
+
+function isTaintedValue(
+  node: ts.Expression,
+  tainted: Set<string>,
+  serverOwnedUrls = new Set<string>(),
+): boolean {
+  let value = node;
+  while (
+    ts.isAwaitExpression(value) ||
+    ts.isParenthesizedExpression(value) ||
+    ts.isAsExpression(value) ||
+    ts.isTypeAssertionExpression(value) ||
+    ts.isNonNullExpression(value)
+  )
+    value = value.expression;
+  if (isServerOwnedUrl(value, tainted, serverOwnedUrls)) return false;
   if (!ts.isCallExpression(value)) return isTainted(value, tainted);
 
   if (ts.isPropertyAccessExpression(value.expression)) {
@@ -269,10 +325,36 @@ function isTaintedValue(node: ts.Expression, tainted: Set<string>): boolean {
   return false;
 }
 
+function topLevelServerOwnedUrls(source: ts.SourceFile): Set<string> {
+  const owned = new Set<string>();
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (declaration.initializer && isServerOwnedUrl(declaration.initializer, new Set(), owned))
+        for (const name of bindingNames(declaration.name)) owned.add(name);
+    }
+  }
+  return owned;
+}
+
+function configUrlBindingNames(
+  declaration: ts.VariableDeclaration,
+  tainted: Set<string>,
+): string[] {
+  if (!declaration.initializer || !ts.isCallExpression(declaration.initializer)) return [];
+  const callee = callName(declaration.initializer).split('.').at(-1) ?? '';
+  if (!/^(?:get|load|read|resolve)[A-Za-z0-9]*(?:Config|Environment|Settings)$/i.test(callee))
+    return [];
+  if (declaration.initializer.arguments.some((argument) => isTainted(argument, tainted))) return [];
+  return bindingNames(declaration.name).filter((name) =>
+    /(?:base|endpoint|host|origin|uri|url)/i.test(name),
+  );
+}
+
 function functionTaint(
   node: ts.FunctionLikeDeclarationBase,
   taintedParameterIndexes?: Set<number>,
-): Set<string> {
+): { tainted: Set<string>; serverOwnedUrls: Set<string> } {
   const tainted = new Set(
     node.parameters.flatMap((parameter, index) =>
       !taintedParameterIndexes || taintedParameterIndexes.has(index)
@@ -280,26 +362,37 @@ function functionTaint(
         : [],
     ),
   );
+  const serverOwnedUrls = topLevelServerOwnedUrls(node.getSourceFile());
   // Bounded local propagation catches common request -> local -> sink flows without typechecking target code.
   for (let pass = 0; pass < 4; pass++) {
     let changed = false;
     const visit = (child: ts.Node): void => {
       if (child !== node && isExecutableFunction(child)) return;
-      if (
-        ts.isVariableDeclaration(child) &&
-        child.initializer &&
-        isTaintedValue(child.initializer, tainted)
-      )
-        for (const name of bindingNames(child.name))
-          if (!tainted.has(name)) {
-            tainted.add(name);
+      if (ts.isVariableDeclaration(child) && child.initializer) {
+        const names = bindingNames(child.name);
+        const ownedNames = new Set([
+          ...configUrlBindingNames(child, tainted),
+          ...(isServerOwnedUrl(child.initializer, tainted, serverOwnedUrls) ? names : []),
+        ]);
+        for (const name of ownedNames) {
+          if (!serverOwnedUrls.has(name)) {
+            serverOwnedUrls.add(name);
             changed = true;
           }
+          tainted.delete(name);
+        }
+        if (!ownedNames.size && isTaintedValue(child.initializer, tainted, serverOwnedUrls))
+          for (const name of names)
+            if (!tainted.has(name)) {
+              tainted.add(name);
+              changed = true;
+            }
+      }
       if (
         ts.isBinaryExpression(child) &&
         child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
         ts.isIdentifier(child.left) &&
-        isTaintedValue(child.right, tainted) &&
+        isTaintedValue(child.right, tainted, serverOwnedUrls) &&
         !tainted.has(child.left.text)
       ) {
         tainted.add(child.left.text);
@@ -310,7 +403,7 @@ function functionTaint(
     if (node.body) visit(node.body);
     if (!changed) break;
   }
-  return tainted;
+  return { tainted, serverOwnedUrls };
 }
 
 function callsIn(node: ts.FunctionLikeDeclarationBase): ts.CallExpression[] {
@@ -545,7 +638,7 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
         ts.forEachChild(node, visitFunction);
         return;
       }
-      const tainted = functionTaint(node);
+      const { tainted, serverOwnedUrls } = functionTaint(node);
       const calls = callsIn(node);
       for (const entrypoint of entrypoints) {
         for (const call of calls) {
@@ -742,8 +835,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
             destination &&
-            isTaintedValue(destination, tainted) &&
-            !isServerOwnedUrl(destination, tainted) &&
+            isTaintedValue(destination, tainted, serverOwnedUrls) &&
+            !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorGuard(
               calls,
               call,
@@ -771,8 +864,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             /(?:^|\.)(?:redirect|permanentRedirect)$/i.test(callee) &&
             destination &&
-            isTaintedValue(destination, tainted) &&
-            !isServerOwnedUrl(destination, tainted) &&
+            isTaintedValue(destination, tainted, serverOwnedUrls) &&
+            !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorGuard(
               calls,
               call,
@@ -1029,7 +1122,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
       visited.add(key);
       const parsed = functions.get(current.symbolId);
       if (!parsed) continue;
-      const tainted = functionTaint(parsed.node, current.taintedParameters);
+      const { tainted, serverOwnedUrls } = functionTaint(parsed.node, current.taintedParameters);
       const calls = callsIn(parsed.node);
 
       if (current.depth > 0)
@@ -1058,7 +1151,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
           };
           if (
             destination &&
-            isTaintedValue(destination, tainted) &&
+            isTaintedValue(destination, tainted, serverOwnedUrls) &&
             /(?:\$queryRawUnsafe|\$executeRawUnsafe|\.raw|\.queryRaw)$/i.test(callee)
           )
             add({
@@ -1077,7 +1170,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
             destination &&
             isTaintedValue(destination, tainted) &&
             /^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) &&
-            !isServerOwnedUrl(destination, tainted) &&
+            !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorGuard(
               calls,
               call,
@@ -1154,7 +1247,7 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
         if (!edge?.targetSymbolId) continue;
         const nextTaint = new Set<number>();
         call.arguments.forEach((argument, index) => {
-          if (isTaintedValue(argument, tainted)) nextTaint.add(index);
+          if (isTaintedValue(argument, tainted, serverOwnedUrls)) nextTaint.add(index);
         });
         if (nextTaint.size)
           queue.push({
@@ -1181,7 +1274,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.7.0',
+        version: '0.8.0',
       },
     };
 
@@ -1267,7 +1360,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.7.0',
+      version: '0.8.0',
     },
   };
 }
