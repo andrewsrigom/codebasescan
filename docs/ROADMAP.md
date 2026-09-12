@@ -42,9 +42,10 @@ coding agent chosen by the user.
 The existing multi-project corpus proves bounded execution and portability, not generic accuracy.
 `accuracyClaimReady` must remain false until independent review is complete.
 
-Current calibration has 54 completely reviewed candidates across four authorized snapshots: 39 true
-positives, 2 false positives, and 13 not applicable. Three snapshots have bounded false-negative
-samples, but the corpus review remains incomplete and no recall claim is made.
+The latest expansion calibration has 67 completely reviewed candidates across five authorized
+snapshots: 59 true positives and 8 false positives, for 88.1% observed sample precision. Every
+project has a bounded false-negative sample, but none has a complete false-negative review. One
+nested outbound-URL miss remains recorded, so no recall claim is made.
 
 ## Phase 3 — complete CLI cycle
 
@@ -63,12 +64,13 @@ baseline policy limits blocking to newly introduced findings.
 
 Priority order:
 
-1. richer static accessibility semantics and stronger imported Axe provenance;
-2. API, database, environment, webhook, feature-flag, and test-evidence correlation;
-3. authentication/session libraries, authorization wrappers, tenant boundaries, billing, jobs,
+1. retain taint through nested option and object transformations, starting with outbound URLs;
+2. richer static accessibility semantics and stronger imported Axe provenance;
+3. API, database, environment, webhook, feature-flag, and test-evidence correlation;
+4. authentication/session libraries, authorization wrappers, tenant boundaries, billing, jobs,
    queues, uploads, and outbound integrations seen in real SaaS repositories;
-4. passive deployment evidence imports such as headers, route inventories, and platform manifests;
-5. optional repository sharding beyond the current bounded snapshot.
+5. passive deployment evidence imports such as headers, route inventories, and platform manifests;
+6. optional repository sharding beyond the current bounded snapshot.
 
 Robots, sitemap, metadata, and optional `llms.txt` stay inside web posture; they are useful coverage,
 not separate products.

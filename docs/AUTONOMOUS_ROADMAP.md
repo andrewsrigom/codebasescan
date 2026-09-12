@@ -12,17 +12,19 @@ CodebaseScan must turn an authorized Node.js, TypeScript, React, or Next.js repo
 The deterministic audit stays useful with AI disabled. AI may investigate ambiguity and propose
 changes, but cannot overwrite scanner evidence, invent coverage, or verify its own work.
 
-## Implementation checkpoint — 2026-09-11
+## Implementation checkpoint — 2026-09-12
 
-Phases 1–5, 7, and 8 are implemented for the 0.2 release boundary. Correlated evidence includes
+Phases 1–5, 7, and 8 are implemented for the 0.3 release boundary. Correlated evidence includes
 source-risk paths, environment/OpenAPI/database/webhook/feature-flag contracts, framework-major
 coverage, monorepo ownership, test references, and component-aware lifecycle comparison. Phase 6
-has a reproducible five-project corpus covering `seusaas-platform`, `robs-web`, `capta-core`,
-`aster-streaming-platform`, and `severyn`; a separate versioned calibration ledger, anonymized
-aggregate, CLI review commands, and accuracy-claim gate are implemented. The workflow-v32 pass
-captured 5,980 supported files without snapshot truncation and produced 156 candidates. Independent
-dispositions and false-negative review remain. Phase 10 now includes the installable CLI, stable
-static report root, npm/pnpm/Yarn clean install smoke tests, Node 22/24 CI, package dependency
+has a reproducible initial corpus plus a five-project expansion covering API Gateway Lambda, Git
+automation, a large loopback application, Next.js file transfer, and Express media processing. A
+separate versioned calibration ledger, anonymized aggregate, CLI review commands, and
+accuracy-claim gate are implemented. The workflow-v64 expansion contains 67 reviewed candidates:
+59 true positives and 8 false positives. Every project has a bounded false-negative sample; one
+nested outbound-URL miss remains, no sample is exhaustive, and no recall claim is made. Phase 10
+includes the installable CLI, stable static report root, npm/pnpm/Yarn clean install smoke tests,
+Node 22/24 CI, package dependency
 separation, guarded provenance metadata, and a public security-reporting route. Native
 Windows/macOS claims, signed releases, and independent ground truth remain.
 
@@ -178,12 +180,11 @@ after removing project-specific identifiers and sensitive content.
 Gate: different projects produce useful, different results; repeated false positives are fixed or
 downgraded; no broad accuracy claim relies only on synthetic fixtures.
 
-Current workflow-v32 corpus pass produces 156 candidates across five projects after increasing the
-bounded snapshot to cover all 5,980 supported files. All five snapshots and structural profiles are
-complete. Detector tuning removed known generic ID-lookup, comment, design-token, current-path, and
-recognized-validation noise without weakening the 56-case synthetic benchmark. The aggregate
-truthfully reports zero reviewed candidates and keeps `accuracyClaimReady` false until the
-independent review ledgers are populated.
+The workflow-v64 expansion contains 67 fully reviewed candidates across five structurally different
+projects: 59 true positives and 8 false positives, for 88.1% observed sample precision. All
+snapshots and structural profiles are complete. Bounded false-negative sampling found one nested
+outbound-URL miss. The aggregate keeps `falseNegativeReviewComplete` and `accuracyClaimReady`
+false because the sampling is not exhaustive and no recall claim is supported.
 
 ## Phase 7 — bounded correction loop
 
