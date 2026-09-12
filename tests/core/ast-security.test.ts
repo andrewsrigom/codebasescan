@@ -382,6 +382,33 @@ test('server-owned URLs may use the request URL only as their same-origin base',
   );
 });
 
+test('request paths stay on an explicit server-owned redirect origin', () => {
+  const safeIds = astRuleIds(`
+    function normalizeAppOrigin(value: string | undefined) {
+      return value ?? 'https://app.example.test';
+    }
+    export async function GET(request: Request) {
+      const appOrigin = normalizeAppOrigin(process.env.NEXT_PUBLIC_APP_URL);
+      const coreAppUrl = appOrigin ?? 'http://localhost:3000';
+      const target = new URL(
+        request.nextUrl.pathname + request.nextUrl.search,
+        coreAppUrl,
+      );
+      return redirect(target);
+    }
+  `);
+  assert.ok(!safeIds.includes('TW-AST006'));
+
+  const unsafeIds = astRuleIds(`
+    export async function GET(request: Request) {
+      const next = request.nextUrl.searchParams.get('next');
+      const coreAppUrl = process.env.APP_URL ?? 'http://localhost:3000';
+      return redirect(new URL(next, coreAppUrl));
+    }
+  `);
+  assert.ok(unsafeIds.includes('TW-AST006'));
+});
+
 test('request data passed into an external client does not taint its response', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {

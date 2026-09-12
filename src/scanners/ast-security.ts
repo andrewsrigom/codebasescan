@@ -228,6 +228,26 @@ function hasServerOwnedUrlPrefix(
   return false;
 }
 
+function isPathOnlyUrlExpression(node: ts.Expression): boolean {
+  let value = node;
+  while (
+    ts.isParenthesizedExpression(value) ||
+    ts.isAsExpression(value) ||
+    ts.isTypeAssertionExpression(value) ||
+    ts.isNonNullExpression(value)
+  )
+    value = value.expression;
+  if (ts.isStringLiteralLike(value)) return /^\/(?!\/)/.test(value.text);
+  if (ts.isTemplateExpression(value)) return /^\/(?!\/)/.test(value.head.text);
+  if (ts.isPropertyAccessExpression(value)) return value.name.text === 'pathname';
+  if (
+    ts.isBinaryExpression(value) &&
+    value.operatorToken.kind === ts.SyntaxKind.PlusToken
+  )
+    return isPathOnlyUrlExpression(value.left);
+  return false;
+}
+
 function isServerOwnedUrl(
   node: ts.Expression | undefined,
   tainted: Set<string>,
@@ -251,6 +271,16 @@ function isServerOwnedUrl(
       isServerOwnedUrl(value.whenTrue, tainted, serverOwnedUrls) &&
       isServerOwnedUrl(value.whenFalse, tainted, serverOwnedUrls)
     );
+  if (
+    ts.isBinaryExpression(value) &&
+    [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken].includes(
+      value.operatorToken.kind,
+    )
+  )
+    return (
+      isServerOwnedUrl(value.left, tainted, serverOwnedUrls) &&
+      isServerOwnedUrl(value.right, tainted, serverOwnedUrls)
+    );
   if (ts.isCallExpression(value)) {
     if (
       ts.isPropertyAccessExpression(value.expression) &&
@@ -260,7 +290,9 @@ function isServerOwnedUrl(
       return true;
     const callee = callName(value).split('.').at(-1) ?? '';
     if (
-      /^(?:get|load|read|resolve)[A-Za-z0-9]*(?:BaseUrl|Endpoint|Origin)$/i.test(callee) &&
+      /^(?:get|load|read|resolve|normalize)[A-Za-z0-9]*(?:BaseUrl|Endpoint|Origin)$/i.test(
+        callee,
+      ) &&
       !value.arguments.some((argument) => isTainted(argument, tainted))
     )
       return true;
@@ -269,7 +301,14 @@ function isServerOwnedUrl(
   if (!ts.isNewExpression(value) || value.expression.getText() !== 'URL') return false;
   const [destination, base] = value.arguments ?? [];
   if (!destination) return false;
-  if (base) return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
+  if (base) {
+    if (
+      isServerOwnedUrl(base, tainted, serverOwnedUrls) &&
+      isPathOnlyUrlExpression(destination)
+    )
+      return true;
+    return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
+  }
   return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
 }
 
@@ -1274,7 +1313,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.8.0',
+        version: '0.8.2',
       },
     };
 
@@ -1360,7 +1399,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.8.0',
+      version: '0.8.2',
     },
   };
 }
