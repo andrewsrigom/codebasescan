@@ -82,16 +82,19 @@ function containsIdentifier(node: ts.Node | undefined, names: Set<string>): bool
   return found;
 }
 
-function functionTaint(node: ts.FunctionLikeDeclaration): {
+function functionTaint(
+  node: ts.FunctionLikeDeclaration,
+  inheritedServerOwnedUrls = new Set<string>(),
+): {
   tainted: Set<string>;
   serverOwnedUrls: Set<string>;
 } {
+  const parameterNames = node.parameters.flatMap((parameter) => bindingNames(parameter.name));
   const tainted = new Set(
-    node.parameters
-      .flatMap((parameter) => bindingNames(parameter.name))
-      .filter((name) => explicitBrowserInputName.test(name)),
+    parameterNames.filter((name) => explicitBrowserInputName.test(name)),
   );
-  const serverOwnedUrls = new Set<string>();
+  const serverOwnedUrls = new Set(inheritedServerOwnedUrls);
+  for (const name of parameterNames) serverOwnedUrls.delete(name);
   for (let pass = 0; pass < 4; pass++) {
     let changed = false;
     const visit = (child: ts.Node): void => {
@@ -336,7 +339,7 @@ function clientFileFindings(file: SourceFile, source: ts.SourceFile): Finding[] 
             observation: `Client Component ${name} is async.`,
           }),
         );
-      const nextFlow = functionTaint(node);
+      const nextFlow = functionTaint(node, serverOwnedUrls);
       if (node.body)
         ts.forEachChild(node.body, (child) =>
           visit(child, nextFlow.tainted, nextFlow.serverOwnedUrls),
@@ -620,7 +623,7 @@ export function scanReactSecurity(
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         findings: 0,
         detail: 'No runtime JSX or TSX source was available. No clean React result is implied.',
-        version: '0.4.2',
+        version: '0.4.3',
       },
     };
 
@@ -642,7 +645,7 @@ export function scanReactSecurity(
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Analyzed ${parsed.length} runtime JSX/TSX file(s), including ${clientFiles.size} explicit Client Component module(s), for rendering, navigation, browser storage, messaging, new-tab, and server/client boundary risks.${partial ? ' Coverage was bounded.' : ''}`,
-      version: '0.4.2',
+      version: '0.4.3',
     },
   };
 }

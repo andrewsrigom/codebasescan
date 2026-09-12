@@ -170,3 +170,21 @@ test('current pathname safely anchors browser-derived query navigation', () => {
   `);
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT002'));
 });
+
+test('nested callbacks retain the current pathname as a same-origin anchor', () => {
+  const result = scan(`
+    'use client';
+    export function Filters() {
+      const pathname = usePathname();
+      const searchParams = useSearchParams();
+      const open = useCallback((itemId: string) => {
+        const next = new URLSearchParams(searchParams.toString());
+        next.set('id', itemId);
+        const query = next.toString();
+        router.replace(query ? \`${'${pathname}'}?${'${query}'}\` : pathname);
+      }, [pathname, router, searchParams]);
+      return <button onClick={() => open('item-1')}>Open</button>;
+    }
+  `);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-REACT002'));
+});
