@@ -686,7 +686,11 @@ function hasPriorGuard(
   return calls.some((call) => call.getStart() < sink.getStart() && pattern.test(callName(call)));
 }
 
-function containsWholeTaintedObject(node: ts.Expression, tainted: Set<string>): boolean {
+function containsWholeTaintedObject(
+  node: ts.Expression,
+  tainted: Set<string>,
+  ignoreServerBoundScope = false,
+): boolean {
   let value = node;
   while (
     ts.isParenthesizedExpression(value) ||
@@ -701,7 +705,19 @@ function containsWholeTaintedObject(node: ts.Expression, tainted: Set<string>): 
     if (ts.isSpreadAssignment(property))
       return ts.isIdentifier(property.expression) && tainted.has(property.expression.text);
     if (!ts.isPropertyAssignment(property)) return false;
-    return containsWholeTaintedObject(property.initializer, tainted);
+    const propertyName =
+      ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)
+        ? property.name.text
+        : '';
+    if (
+      ignoreServerBoundScope &&
+      /^(?:account|business|organization|owner|project|serviceArea|tenant|user|website)Id$/i.test(
+        propertyName,
+      ) &&
+      ts.isIdentifier(unwrapExpression(property.initializer))
+    )
+      return false;
+    return containsWholeTaintedObject(property.initializer, tainted, ignoreServerBoundScope);
   });
 }
 
@@ -986,8 +1002,14 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             /(?:^|\.)(?:create|update|upsert|insert)$/i.test(callee) &&
             /(?:prisma|database|db|repository|model|client|supabase|drizzle)/i.test(callee) &&
-            call.arguments.some((argument) => containsWholeTaintedObject(argument, tainted)) &&
-            !hasPriorGuard(calls, call, /(?:parse|safeParse|validate|validateAsync|isValid)$/i)
+            call.arguments.some((argument) =>
+              containsWholeTaintedObject(argument, tainted, true),
+            ) &&
+            !hasPriorGuard(
+              calls,
+              call,
+              /(?:^|\.)(?:parse|safeParse|validate|validateAsync|isValid|validate[A-Za-z0-9_]*(?:Schema|Shape|Payload|Input|Data|Object|Body|Dto|CompositionQuality))$/i,
+            )
           ) {
             const candidate = directFinding({
               snapshot,
@@ -1013,7 +1035,11 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
             ) &&
             destination &&
             containsWholeTaintedObject(destination, tainted) &&
-            !hasPriorGuard(calls, call, /(?:parse|safeParse|validate|validateAsync|isValid)$/i)
+            !hasPriorGuard(
+              calls,
+              call,
+              /(?:^|\.)(?:parse|safeParse|validate|validateAsync|isValid|validate[A-Za-z0-9_]*(?:Schema|Shape|Payload|Input|Data|Object|Body|Dto|CompositionQuality))$/i,
+            )
           ) {
             const candidate = directFinding({
               snapshot,
@@ -1477,7 +1503,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.8.3',
+        version: '0.9.1',
       },
     };
 
@@ -1563,7 +1589,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.8.3',
+      version: '0.9.1',
     },
   };
 }

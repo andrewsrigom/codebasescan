@@ -756,6 +756,44 @@ test('strong digests, fixed keys, selected fields, and schema parsing avoid new 
   assert.ok(!ids.includes('TW-AST018'));
 });
 
+test('custom validation and server-bound scope avoid mass-assignment noise', () => {
+  const validatedIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      validateCompositionQuality(body);
+      await prisma.page.create({ data: body });
+      return Response.json({ ok: true });
+    }
+  `);
+  assert.ok(!validatedIds.includes('TW-AST018'));
+
+  const scopedIds = astRuleIds(`
+    export async function POST(
+      request: Request,
+      { params }: { params: Promise<{ id: string }> },
+    ) {
+      const { id } = await params;
+      const page = await buildStaticPage();
+      await prisma.page.create({
+        data: { websiteId: id, path: page.path, title: page.title },
+      });
+      return Response.json({ ok: true });
+    }
+  `);
+  assert.ok(!scopedIds.includes('TW-AST018'));
+
+  const unvalidatedIds = astRuleIds(`
+    export async function POST(request: Request) {
+      const body = await request.json();
+      await validateOnboardingAreaSelection({ payload: body });
+      revalidatePath(body.path);
+      await prisma.page.create({ data: body });
+      return Response.json({ ok: true });
+    }
+  `);
+  assert.ok(unvalidatedIds.includes('TW-AST018'));
+});
+
 test('AST distinguishes whole-object NoSQL queries from allowlisted filters', () => {
   const vulnerable = astRuleIds(`
     export async function POST(request: Request) {
