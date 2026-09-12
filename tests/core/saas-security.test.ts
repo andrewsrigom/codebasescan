@@ -173,6 +173,19 @@ test('SaaS error rule reports caught internals but accepts a stable public error
   `);
   assert.ok(!stableErrorField.some((finding) => finding.ruleId === 'TW-SAAS004'));
 
+  const predicateOnly = findingsFor(`
+    export async function POST() {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        return Response.json({
+          error: message.includes('UNIQUE') ? 'INVOICE_EXISTS' : 'INVOICE_FAILED',
+        });
+      }
+    }
+  `);
+  assert.ok(!predicateOnly.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
   const validationDetails = findingsFor(`
     export async function POST(request: Request) {
       try {

@@ -603,30 +603,6 @@ function resolvedCallTargets(parsed: ParsedSource, profile: ProjectProfile): Map
   );
 }
 
-function containsCaughtErrorValue(
-  node: ts.Node,
-  caught: Set<string>,
-  parsed: ParsedSource,
-  callTargets: Map<string, string>,
-  staticPublicSymbols: Set<string>,
-): boolean {
-  let found = false;
-  const visit = (child: ts.Node): void => {
-    if (found) return;
-    if (ts.isCallExpression(child)) {
-      const target = callTargets.get(`${lineOf(parsed.source, child)}:${callName(child)}`);
-      if (target && staticPublicSymbols.has(target)) return;
-    }
-    if (ts.isIdentifier(child) && caught.has(child.text) && !identifierIsPropertyName(child)) {
-      found = true;
-      return;
-    }
-    ts.forEachChild(child, visit);
-  };
-  visit(node);
-  return found;
-}
-
 function containsCaughtErrorPayload(
   node: ts.Expression,
   caught: Set<string>,
@@ -824,7 +800,7 @@ function caughtErrorExposure(
         /(?:^|\.)(?:json|send|api(?:Legacy)?Error)$/i.test(name) &&
         !isValidationBranch(node) &&
         node.arguments.some((argument) =>
-          containsCaughtErrorValue(argument, caught, parsed, callTargets, staticPublicSymbols),
+          containsCaughtErrorPayload(argument, caught, parsed, callTargets, staticPublicSymbols),
         )
       )
         exposed.push(node);
@@ -1123,7 +1099,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.2',
+        version: '0.5.3',
       },
     };
 
@@ -1159,7 +1135,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.2',
+      version: '0.5.3',
     },
   };
 }
