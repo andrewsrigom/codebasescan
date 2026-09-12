@@ -54,6 +54,125 @@ function hasDocumentedRationale(source: ts.SourceFile, node: ts.CatchClause): bo
   return /\/\/[^\r\n]*\S|\/\*[\s\S]*?\S[\s\S]*?\*\//.test(blockText);
 }
 
+function isExecutableFunction(node: ts.Node): node is
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration {
+  return (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node)
+  );
+}
+
+function enclosingFunction(node: ts.Node):
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration
+  | undefined {
+  let current = node.parent;
+  while (current) {
+    if (isExecutableFunction(current)) return current;
+    current = current.parent;
+  }
+  return undefined;
+}
+
+function hasLaterThrow(node: ts.Node): boolean {
+  const scope = enclosingFunction(node);
+  if (!scope?.body) return false;
+  let found = false;
+  const visit = (child: ts.Node): void => {
+    if (found || (child !== scope && isExecutableFunction(child))) return;
+    if (ts.isThrowStatement(child) && child.getStart() > node.end) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(scope.body);
+  return found;
+}
+
+function isInsideLoop(node: ts.Node): boolean {
+  let current = node.parent;
+  while (current) {
+    if (
+      ts.isForStatement(current) ||
+      ts.isForInStatement(current) ||
+      ts.isForOfStatement(current) ||
+      ts.isWhileStatement(current) ||
+      ts.isDoStatement(current)
+    )
+      return true;
+    if (isExecutableFunction(current)) return false;
+    current = current.parent;
+  }
+  return false;
+}
+
+function isNestedFailureHandler(node: ts.CatchClause): boolean {
+  let current: ts.Node | undefined = node.parent.parent;
+  while (current) {
+    if (ts.isCatchClause(current)) return true;
+    if (ts.isTryStatement(current) && current.finallyBlock) {
+      const start = current.finallyBlock.getStart();
+      if (node.getStart() >= start && node.end <= current.finallyBlock.end) return true;
+    }
+    if (isExecutableFunction(current)) return false;
+    current = current.parent;
+  }
+  return false;
+}
+
+function isParserProbe(node: ts.CatchClause, source: ts.SourceFile): boolean {
+  const tryStatement = node.parent;
+  if (!ts.isTryStatement(tryStatement)) return false;
+  const attempted = tryStatement.tryBlock.getText(source);
+  if (!/\b(?:JSON\.parse|new\s+URL)\s*\(/.test(attempted)) return false;
+  return /\breturn\b/.test(attempted) || isInsideLoop(node);
+}
+
+function hasExplicitDefaultAssignment(node: ts.CatchClause): boolean {
+  const tryStatement = node.parent;
+  const block = tryStatement.parent;
+  if (!ts.isTryStatement(tryStatement) || !ts.isBlock(block)) return false;
+  const assignments = tryStatement.tryBlock.statements.flatMap((statement) => {
+    if (!ts.isExpressionStatement(statement)) return [];
+    const expression = statement.expression;
+    if (
+      !ts.isBinaryExpression(expression) ||
+      expression.operatorToken.kind !== ts.SyntaxKind.EqualsToken ||
+      !ts.isIdentifier(expression.left)
+    )
+      return [];
+    return [expression.left.text];
+  });
+  if (assignments.length !== 1) return false;
+  const index = block.statements.indexOf(tryStatement);
+  return block.statements.slice(0, index).some((statement) => {
+    if (!ts.isVariableStatement(statement)) return false;
+    return statement.declarationList.declarations.some(
+      (declaration) =>
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === assignments[0] &&
+        declaration.initializer !== undefined,
+    );
+  });
+}
+
+function hasExplicitRecovery(node: ts.CatchClause, source: ts.SourceFile): boolean {
+  return (
+    isNestedFailureHandler(node) ||
+    isParserProbe(node, source) ||
+    hasExplicitDefaultAssignment(node) ||
+    (isInsideLoop(node) && hasLaterThrow(node))
+  );
+}
+
 function scanFile(
   file: SourceFile,
   requestBoundary: boolean,
@@ -82,7 +201,8 @@ function scanFile(
     if (
       ts.isCatchClause(node) &&
       node.block.statements.length === 0 &&
-      !hasDocumentedRationale(source, node)
+      !hasDocumentedRationale(source, node) &&
+      !hasExplicitRecovery(node, source)
     )
       findings.push(
         reliabilityFinding(
@@ -140,7 +260,7 @@ export function scanReliabilityStatic(
       detail: files.length
         ? `Inspected ${files.length} source file(s) for bounded request-timeout and swallowed-error candidates; ${parseFailures} parse failure(s). Platform timeouts, queues, retries, and runtime recovery remain unverified.`
         : 'No supported runtime source was available for static reliability review.',
-      version: '0.2.0',
+      version: '0.3.0',
     },
   };
 }
