@@ -240,10 +240,7 @@ function isPathOnlyUrlExpression(node: ts.Expression): boolean {
   if (ts.isStringLiteralLike(value)) return /^\/(?!\/)/.test(value.text);
   if (ts.isTemplateExpression(value)) return /^\/(?!\/)/.test(value.head.text);
   if (ts.isPropertyAccessExpression(value)) return value.name.text === 'pathname';
-  if (
-    ts.isBinaryExpression(value) &&
-    value.operatorToken.kind === ts.SyntaxKind.PlusToken
-  )
+  if (ts.isBinaryExpression(value) && value.operatorToken.kind === ts.SyntaxKind.PlusToken)
     return isPathOnlyUrlExpression(value.left);
   return false;
 }
@@ -302,10 +299,7 @@ function isServerOwnedUrl(
   const [destination, base] = value.arguments ?? [];
   if (!destination) return false;
   if (base) {
-    if (
-      isServerOwnedUrl(base, tainted, serverOwnedUrls) &&
-      isPathOnlyUrlExpression(destination)
-    )
+    if (isServerOwnedUrl(base, tainted, serverOwnedUrls) && isPathOnlyUrlExpression(destination))
       return true;
     return hasServerOwnedUrlPrefix(destination, tainted, serverOwnedUrls);
   }
@@ -368,11 +362,7 @@ function localInitializers(node: ts.FunctionLikeDeclarationBase): Map<string, ts
   const initializers = new Map<string, ts.Expression>();
   const visit = (child: ts.Node): void => {
     if (child !== node && isExecutableFunction(child)) return;
-    if (
-      ts.isVariableDeclaration(child) &&
-      ts.isIdentifier(child.name) &&
-      child.initializer
-    )
+    if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name) && child.initializer)
       initializers.set(child.name.text, child.initializer);
     ts.forEachChild(child, visit);
   };
@@ -419,12 +409,7 @@ function isSafePortSuffix(
     if (seen.has(value.text)) return false;
     const initializer = initializers.get(value.text);
     if (!initializer) return false;
-    return isSafePortSuffix(
-      initializer,
-      urlName,
-      initializers,
-      new Set([...seen, value.text]),
-    );
+    return isSafePortSuffix(initializer, urlName, initializers, new Set([...seen, value.text]));
   }
   if (ts.isTemplateExpression(value))
     return (
@@ -1490,6 +1475,153 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
   return findings.slice(0, 300);
 }
 
+function configuredOutboundDestination(
+  node: ts.Expression,
+  owner: ts.FunctionLikeDeclarationBase,
+  tainted: Set<string>,
+  serverOwnedUrls: Set<string>,
+  seen = new Set<string>(),
+): boolean {
+  const configuredProperty =
+    /^(?:callback|destination|endpoint|target)(?:Id|Url|Uri)?$|^(?:externalId|url|uri)$/i;
+  const value = unwrapExpression(node);
+  if (isServerOwnedUrl(value, tainted, serverOwnedUrls)) return false;
+  if (isTaintedValue(value, tainted, serverOwnedUrls)) return true;
+  if (ts.isIdentifier(value)) {
+    if (seen.has(value.text)) return false;
+    const initializer = localInitializers(owner).get(value.text);
+    return initializer
+      ? configuredOutboundDestination(
+          initializer,
+          owner,
+          tainted,
+          serverOwnedUrls,
+          new Set([...seen, value.text]),
+        )
+      : false;
+  }
+  if (ts.isPropertyAccessExpression(value) && configuredProperty.test(value.name.text)) return true;
+  let configured = false;
+  const visit = (child: ts.Node): void => {
+    if (configured || (child !== value && isExecutableFunction(child))) return;
+    if (
+      ts.isPropertyAccessExpression(child) &&
+      configuredProperty.test(child.name.text) &&
+      child.expression.getText() !== 'process.env'
+    ) {
+      configured = true;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(value);
+  return configured;
+}
+
+function blocksAutomaticRedirects(
+  call: ts.CallExpression,
+  owner: ts.FunctionLikeDeclarationBase,
+): boolean {
+  const options = localObject(owner, call.arguments[1]);
+  const redirect = options ? propertyValue(options, 'redirect') : undefined;
+  const value = redirect ? unwrapExpression(redirect) : undefined;
+  return !!value && ts.isStringLiteralLike(value) && /^(?:error|manual)$/i.test(value.text);
+}
+
+function hasCompleteOutboundDestinationControl(
+  call: ts.CallExpression,
+  owner: ts.FunctionLikeDeclarationBase,
+  calls: ts.CallExpression[],
+): boolean {
+  if (!blocksAutomaticRedirects(call, owner)) return false;
+  if (
+    hasPriorGuard(
+      calls,
+      call,
+      /(?:allowlisted|assertSafe(?:External|Webhook)?Url|assertPublicUrl|isAllowed(?:Webhook)?Destination|resolveAllowed(?:Webhook)?Destination|validateSsrfSafe)/i,
+    )
+  )
+    return true;
+  const source = owner.getSourceFile();
+  const prefix = source.text.slice(owner.getStart(source), call.getStart());
+  const resolvesAddresses = /(?:dns\s*\.|lookup|resolve4|resolve6|getaddrinfo)/i.test(prefix);
+  const rejectsInternalNetworks =
+    /(?:private|loopback|link[-_ ]?local|metadata|isPublicIp|isPrivateIp|internalNetwork)/i.test(
+      prefix,
+    );
+  const exactAllowlist =
+    /(?:allow(?:ed|list)|trusted)(?:Hosts?|Origins?|Destinations?).{0,160}(?:has|includes)\s*\(/is.test(
+      prefix,
+    );
+  return exactAllowlist || (resolvesAddresses && rejectsInternalNetworks);
+}
+
+function configuredDestinationFindings(snapshot: Snapshot, existing: Finding[]): Finding[] {
+  const findings: Finding[] = [];
+  const existingLocations = new Set(
+    existing
+      .filter((finding) => finding.ruleId === 'TW-AST005')
+      .flatMap((finding) => finding.evidence.map((item) => `${item.file}:${item.startLine}`)),
+  );
+  for (const file of snapshot.files.filter(
+    (item) =>
+      isRuntimeSource(item) &&
+      /\.[cm]?[jt]sx?$/.test(item.path) &&
+      /(?:^|\/)[^/]*(?:webhooks?|destination)[^/]*(?:\/|\.[cm]?[jt]sx?$)/i.test(item.path),
+  )) {
+    const source = ts.createSourceFile(
+      file.path,
+      file.content,
+      ts.ScriptTarget.Latest,
+      true,
+      scriptKind(file.path),
+    );
+    const visitFunction = (node: ts.Node): void => {
+      if (!isExecutableFunction(node) || !node.body) {
+        ts.forEachChild(node, visitFunction);
+        return;
+      }
+      const { tainted, serverOwnedUrls } = functionTaint(node);
+      const calls = callsIn(node);
+      for (const call of calls) {
+        const callee = callName(call);
+        const destination = call.arguments[0];
+        if (
+          !destination ||
+          !/^(?:fetch|axios(?:\.request|\.get|\.post)?|got(?:\.get|\.post)?)$/i.test(callee) ||
+          !configuredOutboundDestination(destination, node, tainted, serverOwnedUrls) ||
+          hasCompleteOutboundDestinationControl(call, node, calls)
+        )
+          continue;
+        const line = lineOf(source, call);
+        if (existingLocations.has(`${file.path}:${line}`)) continue;
+        const candidate = directFinding({
+          snapshot,
+          file: file.path,
+          line,
+          ruleId: 'TW-AST005',
+          title: 'Configured webhook destination lacks complete SSRF controls',
+          category: 'configuration',
+          severity: 'high',
+          description:
+            'A webhook or destination delivery module sends a dynamic URL without mechanical evidence that private networks are rejected and automatic redirects are disabled. The value may come from stored configuration rather than the current request.',
+          remediation:
+            'Resolve destinations from a server-owned allowlist or reject private, loopback, link-local, and metadata addresses after DNS resolution. Disable automatic redirects and revalidate every followed location.',
+          cwe: ['CWE-918'],
+          observation: `${callee} sends a dynamic configured destination without complete SSRF control evidence.`,
+        });
+        if (candidate) {
+          findings.push(candidate);
+          existingLocations.add(`${file.path}:${line}`);
+        }
+      }
+      ts.forEachChild(node, visitFunction);
+    };
+    visitFunction(source);
+  }
+  return findings;
+}
+
 export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): AstSecurityResult {
   const started = performance.now();
   if (profile.status === 'unsupported')
@@ -1503,7 +1635,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.9.1',
+        version: '0.9.2',
       },
     };
 
@@ -1579,6 +1711,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
   }
   findings.push(...directAstFindings(snapshot, profile));
   findings.push(...crossFileTaintFindings(snapshot, profile));
+  findings.push(...configuredDestinationFindings(snapshot, findings));
   const partial = profile.status === 'partial' || findings.length >= 300;
   return {
     findings: findings.slice(0, 300),
@@ -1589,7 +1722,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.9.1',
+      version: '0.9.2',
     },
   };
 }

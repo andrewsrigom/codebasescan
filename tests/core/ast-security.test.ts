@@ -345,6 +345,44 @@ test('AST traces direct request data into raw SQL, outbound requests, and redire
   );
 });
 
+test('configured webhook delivery requires complete SSRF controls', () => {
+  const unsafeSnapshot = snapshotOf(
+    `
+      export async function deliverWebhook(connection) {
+        const destination = connection.externalId;
+        return fetch(destination, { method: 'POST' });
+      }
+    `,
+    'src/lib/webhooks/delivery.ts',
+  );
+  const unsafe = scanAstSecurity(unsafeSnapshot, profileProject(unsafeSnapshot).profile).findings;
+  assert.ok(unsafe.some((finding) => finding.ruleId === 'TW-AST005'));
+
+  const storedSnapshot = snapshotOf(
+    `
+      export async function deliverWebhook(input) {
+        const resolved = await resolveConfiguredWebhookDestination(input.userId);
+        return fetch(resolved.endpointUrl, { method: 'POST' });
+      }
+    `,
+    'src/lib/webhook-destination.ts',
+  );
+  const stored = scanAstSecurity(storedSnapshot, profileProject(storedSnapshot).profile).findings;
+  assert.ok(stored.some((finding) => finding.ruleId === 'TW-AST005'));
+
+  const safeSnapshot = snapshotOf(
+    `
+      export async function deliverWebhook(destinationUrl) {
+        await assertSafeExternalUrl(destinationUrl);
+        return fetch(destinationUrl, { method: 'POST', redirect: 'manual' });
+      }
+    `,
+    'src/lib/webhooks/delivery.ts',
+  );
+  const safe = scanAstSecurity(safeSnapshot, profileProject(safeSnapshot).profile).findings;
+  assert.ok(!safe.some((finding) => finding.ruleId === 'TW-AST005'));
+});
+
 test('recognized destination guards and constant sinks avoid direct flow candidates', () => {
   const ids = astRuleIds(`
     export async function GET(request: Request) {
