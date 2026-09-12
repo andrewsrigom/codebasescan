@@ -97,10 +97,11 @@ rules. A separate trusted OSV refresh cached 805 exact package versions and pass
 
 ## Release status
 
-Version 0.2.1 is published on npm with a matching Git tag and public GitHub release. The current
-source is the validated 0.3.0 candidate and has not been published or tagged. Ordinary pushes cannot
-publish. Future releases still require the clean release gate, packed-artifact inspection, registry
-verification, provenance, and a matching tag/release.
+Version 0.3.0 is published on npm with verified provenance, a matching Git tag, and a public GitHub
+release. Its release gate passed locally and in GitHub Actions; clean registry installation reports
+the exact version with no npm audit findings. Ordinary pushes cannot publish. Future releases still
+require the clean release gate, packed-artifact inspection, registry verification, provenance, and
+a matching tag/release.
 
 Independent owner-confirmed ground truth, native platforms, signed reviewer/executor identity,
 sharding beyond the 4,000-file / 32 MiB snapshot, and formal trademark clearance remain later

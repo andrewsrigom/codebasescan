@@ -22,7 +22,7 @@ coding agent chosen by the user.
 - benchmark fixtures, real-project portability runs, npm/pnpm/Yarn package smoke tests, and guarded
   public releases.
 
-## Phase 1 — release stabilization
+## Phase 1 — release stabilization (completed for v0.3.0)
 
 1. finish the 0.3 release gate after the deterministic engine and report migration;
 2. verify upgrade behavior from legacy report-history roots;

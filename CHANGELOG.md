@@ -2,6 +2,11 @@
 
 Notable changes are recorded here.
 
+## Unreleased
+
+- Updated the public demo, fixture provenance, and reusable Action smoke test to the published 0.3.0
+  release.
+
 ## 0.3.0 — 2026-09-12
 
 - Added a reusable GitHub Action that scans full repository context, builds an optional baseline
