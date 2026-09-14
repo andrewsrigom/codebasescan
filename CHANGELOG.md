@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Defined a measurable v1 offline acceptance contract for result quality, report usefulness,
+  safety, portability, performance, and release integrity.
 - Distinguished boolean comparisons and host/port listener endpoints from raw sensitive values in
   static logging review.
 - Proved fixed-message custom error classes and static call-site error allowlists before suppressing

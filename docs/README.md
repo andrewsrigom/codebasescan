@@ -5,6 +5,7 @@ Start here:
 - [Architecture](ARCHITECTURE.md) — deterministic pipeline, data flow, and trust boundaries.
 - [Threat model](THREAT_MODEL.md) — supported deployment and security assumptions.
 - [Validation](VALIDATION.md) — current checks, environment, and known gaps.
+- [Version 1 acceptance](V1_ACCEPTANCE.md) — measurable completion boundary for the offline CLI.
 - [Real-project calibration](CALIBRATION.md) — independent labels, manual misses, and honest metrics.
 - [Continuous integration](CI.md) — GitHub Action, baseline policy, SARIF, and report artifacts.
 - [Current handoff](CODEX_HANDOFF.md) — verified repository state and continuation notes.

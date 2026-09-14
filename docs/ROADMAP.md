@@ -4,6 +4,9 @@ CodebaseScan is moving toward one clear product: a deterministic CLI that audits
 codebase and updates a portable coverage-style report. The report is useful to people, CI, and a
 coding agent chosen by the user.
 
+The measurable offline completion boundary is defined in [Version 1 acceptance](V1_ACCEPTANCE.md).
+Items outside that supported scope do not block v1.
+
 ## Ready now
 
 - project-local npm CLI with `init`, `doctor`, `audit`, `open`, policy, baseline, review,
