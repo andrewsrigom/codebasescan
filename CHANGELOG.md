@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Retained request-derived taint through native object, array, clone, encoding, and promise
+  transformations while recognizing fixed-output array mapping.
 - Defined a measurable v1 offline acceptance contract for result quality, report usefulness,
   safety, portability, performance, and release integrity.
 - Distinguished boolean comparisons and host/port listener endpoints from raw sensitive values in

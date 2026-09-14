@@ -332,12 +332,24 @@ function isTaintedValue(
   if (isServerOwnedUrl(value, tainted, serverOwnedUrls)) return false;
   if (!ts.isCallExpression(value)) return isTainted(value, tainted);
 
+  const transformedArgumentsAreTainted = (): boolean =>
+    value.arguments.some((argument) => isTaintedValue(argument, tainted, serverOwnedUrls));
+
   if (ts.isPropertyAccessExpression(value.expression)) {
     const method = value.expression.name.text;
     const [pattern, replacement] = value.arguments;
     const receiver = value.expression.expression;
     if (method === 'assign' && receiver.getText() === 'Object')
-      return value.arguments.some((argument) => isTaintedValue(argument, tainted, serverOwnedUrls));
+      return transformedArgumentsAreTainted();
+    if (
+      ['entries', 'fromEntries', 'keys', 'values'].includes(method) &&
+      receiver.getText() === 'Object'
+    )
+      return transformedArgumentsAreTainted();
+    if (method === 'from' && receiver.getText() === 'Array')
+      return transformedArgumentsAreTainted();
+    if (method === 'resolve' && receiver.getText() === 'Promise')
+      return transformedArgumentsAreTainted();
     if (
       method === 'replace' &&
       pattern &&
@@ -357,15 +369,38 @@ function isTaintedValue(
       replacement.text === ''
     )
       return false;
+    if (/^(?:map|flatMap)$/i.test(method)) {
+      const receiverTainted = isTaintedValue(receiver, tainted, serverOwnedUrls);
+      const callback = value.arguments[0];
+      if (!callback || (!ts.isArrowFunction(callback) && !ts.isFunctionExpression(callback)))
+        return receiverTainted;
+      const callbackTaint = new Set(tainted);
+      if (receiverTainted)
+        for (const parameter of callback.parameters)
+          for (const name of bindingNames(parameter.name)) callbackTaint.add(name);
+      return isTainted(callback.body, callbackTaint);
+    }
     if (
-      /^(?:get|json|formData|text|arrayBuffer|toString|toLowerCase|toUpperCase|trim|slice|substring|substr|replace|replaceAll|concat)$/i.test(
+      /^(?:at|filter|find|findLast|flat|join|pop|reverse|shift|slice|sort|splice|toReversed|toSorted|toSpliced|with)$/i.test(
         method,
       )
     )
-      return isTainted(value.expression.expression, tainted);
+      return isTaintedValue(receiver, tainted, serverOwnedUrls);
+    if (method === 'concat')
+      return isTaintedValue(receiver, tainted, serverOwnedUrls) || transformedArgumentsAreTainted();
+    if (
+      /^(?:get|json|formData|text|arrayBuffer|toString|toLowerCase|toUpperCase|trim|substring|substr|replace|replaceAll)$/i.test(
+        method,
+      )
+    )
+      return isTaintedValue(receiver, tainted, serverOwnedUrls);
   }
-  if (/^(?:String|decodeURIComponent|encodeURIComponent|JSON\.parse)$/i.test(callName(value)))
-    return value.arguments.some((argument) => isTainted(argument, tainted));
+  if (
+    /^(?:String|decodeURI|decodeURIComponent|encodeURI|encodeURIComponent|JSON\.parse|structuredClone)$/i.test(
+      callName(value),
+    )
+  )
+    return transformedArgumentsAreTainted();
   return false;
 }
 
@@ -1660,7 +1695,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.1',
+        version: '0.11.2',
       },
     };
 
@@ -1747,7 +1782,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.1',
+      version: '0.11.2',
     },
   };
 }

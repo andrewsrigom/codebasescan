@@ -890,6 +890,49 @@ test('server-owned Object.assign options avoid outbound flow candidates', () => 
   assert.ok(!ids.includes('TW-AST005'));
 });
 
+test('AST retains taint through native object and URL transformations', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const spread = { ...body.options };
+      const { destination } = spread;
+      const cloned = structuredClone({ destination });
+      const rebuilt = Object.fromEntries(Object.entries(cloned));
+      const target = new URL(rebuilt.destination);
+      return https.get(target.href);
+    }
+  `);
+  assert.ok(ids.includes('TW-AST005'));
+});
+
+test('AST retains taint through array transformations', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const urls = Array.from(body.urls)
+        .filter(Boolean)
+        .map((url) => url.trim());
+      return https.get(urls.at(0));
+    }
+  `);
+  assert.ok(ids.includes('TW-AST005'));
+});
+
+test('native transformations that replace input with fixed URLs remain safe', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const urls = body.urls.map(() => 'https://media.example.test/default.mp3');
+      const copied = Object.fromEntries([['url', urls.at(0)]]);
+      return https.get(copied.url);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+});
+
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {
