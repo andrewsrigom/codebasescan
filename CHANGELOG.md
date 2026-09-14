@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Proved local field wrappers that connect a visible label to a cloned child control with the same
+  generated identifier, while retaining candidates for mismatched clones.
 - Excluded inert stored code examples from dynamic-execution and weak-token findings while
   retaining executable template substitutions and real entropy calls.
 - Recognized explicit Next.js metadata re-exports from root layouts without trusting unrelated

@@ -159,18 +159,54 @@ function elementContainsIdentifier(element: ts.JsxElement, name: string): boolea
   return found;
 }
 
+function linkedLabelWrapper(
+  element: ts.JsxElement,
+  childrenBinding: string,
+  labelBinding: string,
+): boolean {
+  const labelTargets = new Set<string>();
+  const clonedControlTargets = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (ts.isJsxElement(node) && tagName(node.openingElement) === 'label') {
+      const target = attributeReference(node.openingElement, 'htmlfor');
+      if (target && elementContainsIdentifier(node, labelBinding)) labelTargets.add(target);
+    }
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'cloneElement' &&
+      node.arguments[0] &&
+      ts.isIdentifier(node.arguments[0]) &&
+      node.arguments[0].text === childrenBinding &&
+      node.arguments[1] &&
+      ts.isObjectLiteralExpression(node.arguments[1])
+    ) {
+      const id = node.arguments[1].properties.find(
+        (property): property is ts.PropertyAssignment =>
+          ts.isPropertyAssignment(property) &&
+          property.name.getText(property.getSourceFile()) === 'id',
+      );
+      if (id) clonedControlTargets.add(`expression:${id.initializer.getText(id.getSourceFile())}`);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(element);
+  return [...labelTargets].some((target) => clonedControlTargets.has(target));
+}
+
 function provenLocalLabelWrapper(node: ts.FunctionLikeDeclaration): boolean {
   const label = returnedElement(node);
-  if (!label || tagName(label.openingElement) !== 'label') return false;
+  if (!label) return false;
   const parameter = node.parameters[0];
   const childrenBinding = destructuredBinding(parameter, 'children');
   const labelBinding = destructuredBinding(parameter, 'label');
-  return Boolean(
-    childrenBinding &&
-    labelBinding &&
-    elementContainsIdentifier(label, childrenBinding) &&
-    elementContainsIdentifier(label, labelBinding),
-  );
+  if (!childrenBinding || !labelBinding) return false;
+  if (tagName(label.openingElement) === 'label')
+    return (
+      elementContainsIdentifier(label, childrenBinding) &&
+      elementContainsIdentifier(label, labelBinding)
+    );
+  return linkedLabelWrapper(label, childrenBinding, labelBinding);
 }
 
 function localLabelWrappers(source: ts.SourceFile): Set<string> {
@@ -501,7 +537,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
         detail: files.length
           ? `Inspected ${files.length} JSX file(s) for six bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior require imported external evidence.`
           : 'No runtime JSX source was available for static accessibility review.',
-        version: '0.7.0',
+        version: '0.8.0',
       },
       imported.run,
     ],

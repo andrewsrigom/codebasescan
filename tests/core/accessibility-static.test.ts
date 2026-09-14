@@ -152,3 +152,25 @@ test('proven local wrappers that render label text around children provide namin
     ['TW-A11Y004'],
   );
 });
+
+test('proven local wrappers may link a label to a cloned child id', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `function Field({ children, label }) {
+        const generatedId = useId();
+        const inputId = children.props.id ?? generatedId;
+        return <div><label htmlFor={inputId}>{label}</label>{cloneElement(children, { id: inputId })}</div>;
+      }
+      function BrokenField({ children, label }) {
+        return <div><label htmlFor="label-id">{label}</label>{cloneElement(children, { id: 'control-id' })}</div>;
+      }
+      export function Form() {
+        return <><Field label="Name"><input /></Field><BrokenField label="Country"><select /></BrokenField></>;
+      }`,
+    }),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-A11Y004'],
+  );
+});
