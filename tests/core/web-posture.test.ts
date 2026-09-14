@@ -36,6 +36,24 @@ test('valid static and Next metadata evidence avoids web posture noise', () => {
   assert.match(result.run.detail, /llms\.txt=1/);
 });
 
+test('explicit metadata re-exports count while unrelated exports do not', () => {
+  const result = scanWebPosture(
+    snapshotFromFiles({
+      'package.json': JSON.stringify({ dependencies: { next: '16.0.0' } }),
+      'apps/safe/src/app/page.tsx': `export default function Page() { return <main>Safe</main>; }`,
+      'apps/safe/src/app/layout.tsx': `export { metadata } from './layout-shared'; export default function Layout({ children }) { return <html lang="en"><body>{children}</body></html>; }`,
+      'apps/unsafe/src/app/page.tsx': `export default function Page() { return <main>Unsafe</main>; }`,
+      'apps/unsafe/src/app/layout.tsx': `const internalMetadata = { title: 'Hidden' }; export { internalMetadata }; export default function Layout({ children }) { return <html lang="en"><body>{children}</body></html>; }`,
+    }),
+  );
+  assert.deepEqual(
+    result.findings
+      .filter((finding) => finding.ruleId === 'TW-WEB005')
+      .map((finding) => finding.evidence[0]?.file),
+    ['apps/unsafe/src/app/layout.tsx'],
+  );
+});
+
 test('web posture associates discovery files with each monorepo app root', () => {
   const result = scanWebPosture(
     snapshotFromFiles({

@@ -72,6 +72,15 @@ function hasNextMetadata(file: SourceFile): boolean {
     ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
   return source.statements.some((statement) => {
     if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause) &&
+      statement.exportClause.elements.some(
+        (element) => element.name.text === 'metadata' || element.name.text === 'generateMetadata',
+      )
+    )
+      return true;
+    if (
       ts.isFunctionDeclaration(statement) &&
       statement.name?.text === 'generateMetadata' &&
       exported(statement)
@@ -360,7 +369,7 @@ export function scanWebPosture(snapshot: Snapshot): { findings: Finding[]; run: 
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: findings.length,
       detail: `Checked ${componentPrefixes.size} web app root(s) for robots policy, sitemap, Next.js metadata, and optional llms.txt presence. robots=${robotsPresent}; sitemap=${sitemapsPresent}; llms.txt=${llmsPresent}. Deployment behavior was not inferred from source.`,
-      version: '0.5.0',
+      version: '0.6.0',
     },
   };
 }

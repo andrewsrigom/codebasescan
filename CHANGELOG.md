@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Recognized explicit Next.js metadata re-exports from root layouts without trusting unrelated
+  exported identifiers.
 - Proved local React field components that render a visible label around forwarded children before
   suppressing intrinsic-control accessible-name candidates.
 - Added a machine-readable v1 calibration gate with explicit repository, review-volume, overall and
