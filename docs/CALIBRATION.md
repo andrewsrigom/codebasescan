@@ -62,6 +62,21 @@ codebasescan evaluate \
   --output calibration-report.json
 ```
 
+Check the measurable real-project subset of the v1 acceptance contract:
+
+```bash
+codebasescan evaluate \
+  project-a/codebasescan-report/<audit-id>/audit-report.json \
+  project-b/codebasescan-report/<audit-id>/audit-report.json \
+  --artifacts \
+  --gate v1 \
+  --output v1-calibration-gate.json
+```
+
+The gate exits non-zero until repository count, reviewed-candidate count, overall and high-severity
+sample precision, evidence and location accuracy, and false-negative review scope pass. It does not
+claim that report, safety, portability, performance, or release-integrity gates passed.
+
 Sidecar ledgers are discovered automatically. The aggregate replaces project names with `P01`,
 `P02`, and so on, and never copies raw source. It reports sample precision only for decided
 candidate reviews. Reviewed recall appears only when every project declares a complete

@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added a machine-readable v1 calibration gate with explicit repository, review-volume, overall and
+  high-severity precision, evidence, location, and false-negative-scope checks.
 - Tracked nested request-derived members copied by mutating `Object.assign` calls while preserving
   fixed outbound destinations beside unrelated tainted options.
 - Preserved exact nested member taint across mapped function calls without treating unrelated

@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import {
   parseCalibrationLedger,
   parseCalibrationReport,
+  parseV1CalibrationGate,
 } from '../../src/domain/calibration-schema.ts';
 import { sampleReport } from '../helpers.ts';
 
@@ -74,4 +75,25 @@ test('CLI records calibration beside an immutable report and evaluates artifacts
   assert.equal(evaluation.summary.accuracyClaimReady, true);
   assert.equal(evaluation.summary.samplePrecision, 1);
   assert.ok(!JSON.stringify(evaluation).includes(report.projectName));
+
+  const gateOutput = path.join(temporary, 'v1-calibration-gate.json');
+  const gateResult = spawnSync(
+    process.execPath,
+    [
+      '--experimental-strip-types',
+      path.resolve('src/cli/main.ts'),
+      'evaluate',
+      reportDirectory,
+      '--artifacts',
+      '--gate',
+      'v1',
+      '--output',
+      gateOutput,
+    ],
+    { cwd: temporary, encoding: 'utf8', env: process.env },
+  );
+  assert.equal(gateResult.status, 1, `${gateResult.stdout}\n${gateResult.stderr}`);
+  const gate = parseV1CalibrationGate(JSON.parse(await readFile(gateOutput, 'utf8')) as unknown);
+  assert.equal(gate.status, 'fail');
+  assert.equal(gate.calibration.summary.samplePrecision, 1);
 });

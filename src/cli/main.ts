@@ -55,6 +55,7 @@ import { codebasescanVersion } from '../domain/versions.ts';
 import {
   addCalibrationMiss,
   buildCalibrationReport,
+  buildV1CalibrationGate,
   calibrationOutcomes,
   calibrationRatings,
   candidateReviewStates,
@@ -69,7 +70,11 @@ import {
   type ExplanationRating,
   type FalseNegativeReviewState,
 } from '../domain/calibration.ts';
-import { parseCalibrationLedger, parseCalibrationReport } from '../domain/calibration-schema.ts';
+import {
+  parseCalibrationLedger,
+  parseCalibrationReport,
+  parseV1CalibrationGate,
+} from '../domain/calibration-schema.ts';
 import { buildAgentReport } from '../domain/agent-report.ts';
 import { agentReviewRulePack } from '../domain/agent-rules.ts';
 import { installCodexSkill } from './agent-skill.ts';
@@ -568,13 +573,18 @@ try {
       })),
     );
     const evaluation = parseCalibrationReport(buildCalibrationReport(inputs));
-    const output = `${JSON.stringify(evaluation, null, 2)}\n`;
+    const gate = option('--gate');
+    if (gate && gate !== 'v1') throw new Error('Use --gate with: v1.');
+    const artifact = gate ? parseV1CalibrationGate(buildV1CalibrationGate(evaluation)) : evaluation;
+    const output = `${JSON.stringify(artifact, null, 2)}\n`;
     const destination = option('--output');
     if (destination) {
       const resolved = path.resolve(destination);
       await writeFile(resolved, output, { mode: 0o600 });
-      console.log(`Saved calibration report ${resolved}`);
+      console.log(`Saved ${gate ? 'v1 calibration gate' : 'calibration report'} ${resolved}`);
     } else console.log(output);
+    if (gate && artifact.kind === 'codebasescan-v1-calibration-gate' && artifact.status !== 'pass')
+      process.exitCode = 1;
   } else if (command === 'finalize' && target) {
     const baselinePath = option('--baseline');
     const verificationPath = option('--verification');

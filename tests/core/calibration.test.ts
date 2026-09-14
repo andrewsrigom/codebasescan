@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   addCalibrationMiss,
   buildCalibrationReport,
+  buildV1CalibrationGate,
   updateCalibrationScope,
   upsertCalibrationEntry,
 } from '../../src/domain/calibration.ts';
@@ -11,6 +12,8 @@ import {
   calibrationReportJsonSchema,
   parseCalibrationLedger,
   parseCalibrationReport,
+  parseV1CalibrationGate,
+  v1CalibrationGateJsonSchema,
 } from '../../src/domain/calibration-schema.ts';
 import { sampleReport } from '../helpers.ts';
 
@@ -43,10 +46,65 @@ test('calibration keeps reviewer ground truth separate from scanner findings', (
   assert.equal(result.summary.reviewedCandidates, 1);
   assert.equal(result.summary.outcomes.true_positive, 1);
   assert.equal(result.summary.samplePrecision, 1);
+  assert.equal(result.summary.criticalHighSamplePrecision, 1);
   assert.equal(result.summary.reviewedRecall, 1);
   assert.equal(result.summary.accuracyClaimReady, true);
   assert.equal(result.projects[0]?.label, 'P01');
   assert.ok(!JSON.stringify(result).includes(report.projectName));
+});
+
+test('v1 calibration gate exposes measured failures without overstating release readiness', () => {
+  const report = sampleReport();
+  let ledger = upsertCalibrationEntry(undefined, report, {
+    findingId: report.findings[0]!.id,
+    outcome: 'true_positive',
+    evidenceAccuracy: 'correct',
+    locationAccuracy: 'correct',
+    explanationQuality: 'clear',
+    note: 'Independent source review confirmed this candidate.',
+    reviewer: 'reviewer-a',
+    reviewedAt: '2026-09-11T12:00:00.000Z',
+  });
+  ledger = updateCalibrationScope(ledger, report, {
+    candidateReview: 'complete',
+    falseNegativeReview: 'sampled',
+    note: 'Candidates were complete and source paths were sampled.',
+    reviewer: 'reviewer-a',
+    reviewedAt: '2026-09-11T12:05:00.000Z',
+  });
+  const calibration = buildCalibrationReport([{ report, ledger }], '2026-09-11T13:00:00.000Z');
+  const gate = parseV1CalibrationGate(buildV1CalibrationGate(calibration));
+  assert.equal(gate.status, 'fail');
+  assert.equal(gate.checks.find((check) => check.id === 'sample-precision')?.status, 'pass');
+  assert.equal(gate.checks.find((check) => check.id === 'repositories')?.actual, 1);
+  assert.match(gate.limitations[0]!, /calibration subset/);
+  assert.equal((v1CalibrationGateJsonSchema() as { type?: string }).type, 'object');
+});
+
+test('v1 calibration gate passes only when every measured threshold passes', () => {
+  const report = sampleReport();
+  const base = buildCalibrationReport([{ report }], '2026-09-11T13:00:00.000Z');
+  const calibration = parseCalibrationReport({
+    ...base,
+    summary: {
+      ...base.summary,
+      projects: 10,
+      reviewedCandidates: 200,
+      unreviewedCandidates: 0,
+      evidenceAccuracy: { correct: 194, incorrect: 4, uncertain: 2 },
+      locationAccuracy: { correct: 196, incorrect: 3, uncertain: 1 },
+      samplePrecision: 0.9,
+      criticalHighSamplePrecision: 0.95,
+    },
+    projects: Array.from({ length: 10 }, (_, index) => ({
+      ...base.projects[0]!,
+      label: `P${String(index + 1).padStart(2, '0')}`,
+      falseNegativeReview: index < 3 ? 'complete' : 'sampled',
+    })),
+  });
+  const gate = buildV1CalibrationGate(calibration);
+  assert.equal(gate.status, 'pass');
+  assert.ok(gate.checks.every((check) => check.status === 'pass'));
 });
 
 test('calibration stays partial until candidates and false negatives are reviewed', () => {

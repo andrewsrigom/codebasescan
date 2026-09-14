@@ -80,8 +80,10 @@ Compare two stored audits without changing scanner evidence.`,
   evaluate: `Usage:
   codebasescan evaluate <audit-id> [more-audit-ids...]
   codebasescan evaluate <report> [more-reports...] --artifacts [--output calibration.json]
+  codebasescan evaluate <report> [more-reports...] --artifacts --gate v1 [--output gate.json]
 
-Aggregate reviewer-labelled outcomes, evidence quality, location quality, explanation clarity, and manual misses.`,
+Aggregate reviewer-labelled outcomes, evidence quality, location quality, explanation clarity, and manual misses.
+The v1 gate checks the measurable real-project calibration subset and exits non-zero until it passes.`,
 };
 
 export function renderCliHelp(command?: string): string {

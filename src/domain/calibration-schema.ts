@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CalibrationLedger, CalibrationReport } from './calibration.ts';
+import type { CalibrationLedger, CalibrationReport, V1CalibrationGate } from './calibration.ts';
 
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
 const shortText = z.string().min(1).max(10_000);
@@ -95,7 +95,7 @@ const ledgerSchema = z.object({
 });
 
 const reportSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   kind: z.literal('codebasescan-calibration-report'),
   generatedAt: z.iso.datetime(),
   summary: z.object({
@@ -109,7 +109,10 @@ const reportSchema = z.object({
     evidenceAccuracy: ratingCounts,
     locationAccuracy: ratingCounts,
     explanationQuality: explanationCounts,
+    criticalHighReviewedCandidates: z.number().int().nonnegative(),
+    criticalHighOutcomes: outcomeCounts,
     samplePrecision: z.number().min(0).max(1).optional(),
+    criticalHighSamplePrecision: z.number().min(0).max(1).optional(),
     reviewedRecall: z.number().min(0).max(1).optional(),
     candidateReviewComplete: z.boolean(),
     falseNegativeReviewComplete: z.boolean(),
@@ -150,6 +153,28 @@ const reportSchema = z.object({
   limitations: z.array(shortText).max(100),
 });
 
+const gateCheckStatus = z.enum(['pass', 'fail', 'incomplete']);
+const v1CalibrationGateSchema = z.object({
+  schemaVersion: z.literal(1),
+  kind: z.literal('codebasescan-v1-calibration-gate'),
+  generatedAt: z.iso.datetime(),
+  status: gateCheckStatus,
+  checks: z
+    .array(
+      z.object({
+        id: shortText,
+        status: gateCheckStatus,
+        actual: z.union([z.number(), z.boolean(), z.null()]),
+        required: shortText,
+        detail: shortText,
+      }),
+    )
+    .min(1)
+    .max(100),
+  limitations: z.array(shortText).max(100),
+  calibration: reportSchema,
+});
+
 export function parseCalibrationLedger(value: unknown): CalibrationLedger {
   return ledgerSchema.parse(value) as CalibrationLedger;
 }
@@ -164,4 +189,15 @@ export function parseCalibrationReport(value: unknown): CalibrationReport {
 
 export function calibrationReportJsonSchema(): unknown {
   return z.toJSONSchema(reportSchema, { target: 'draft-07', unrepresentable: 'throw' });
+}
+
+export function parseV1CalibrationGate(value: unknown): V1CalibrationGate {
+  return v1CalibrationGateSchema.parse(value) as V1CalibrationGate;
+}
+
+export function v1CalibrationGateJsonSchema(): unknown {
+  return z.toJSONSchema(v1CalibrationGateSchema, {
+    target: 'draft-07',
+    unrepresentable: 'throw',
+  });
 }

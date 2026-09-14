@@ -78,6 +78,10 @@ record must publish their totals and the exact review scope separately.
 
 ## Completion rule
 
+The real-project subset can be checked mechanically with `codebasescan evaluate <reports...>
+--artifacts --gate v1`. The generated gate artifact states its narrower scope and remains separate
+from the other release evidence in this contract.
+
 The v1 gate passes only when every mandatory item above has current evidence. A waiver must name
 the failed item, owner, rationale, evidence, and expiry; it cannot convert missing evidence into a
 pass. Work outside the supported scope stays on the roadmap and does not delay the deterministic

@@ -4,7 +4,8 @@ import { digest } from './findings.ts';
 import type { AuditReport, Finding } from './types.ts';
 
 export const calibrationLedgerVersion = 1 as const;
-export const calibrationReportVersion = 1 as const;
+export const calibrationReportVersion = 2 as const;
+export const v1CalibrationGateVersion = 1 as const;
 
 export const calibrationOutcomes = [
   'true_positive',
@@ -93,7 +94,10 @@ export interface CalibrationReport {
     evidenceAccuracy: RatingCounts;
     locationAccuracy: RatingCounts;
     explanationQuality: ExplanationCounts;
+    criticalHighReviewedCandidates: number;
+    criticalHighOutcomes: OutcomeCounts;
     samplePrecision?: number;
+    criticalHighSamplePrecision?: number;
     reviewedRecall?: number;
     candidateReviewComplete: boolean;
     falseNegativeReviewComplete: boolean;
@@ -124,6 +128,24 @@ export interface CalibrationReport {
     explanationQuality: ExplanationCounts;
   }[];
   limitations: string[];
+}
+
+export type CalibrationGateCheckStatus = 'pass' | 'fail' | 'incomplete';
+
+export interface V1CalibrationGate {
+  schemaVersion: typeof v1CalibrationGateVersion;
+  kind: 'codebasescan-v1-calibration-gate';
+  generatedAt: string;
+  status: CalibrationGateCheckStatus;
+  checks: {
+    id: string;
+    status: CalibrationGateCheckStatus;
+    actual: number | boolean | null;
+    required: string;
+    detail: string;
+  }[];
+  limitations: string[];
+  calibration: CalibrationReport;
 }
 
 function isoTime(value = new Date().toISOString()): string {
@@ -328,6 +350,7 @@ export function buildCalibrationReport(
   const evidenceAccuracy = emptyRatings();
   const locationAccuracy = emptyRatings();
   const explanationQuality = emptyExplanationRatings();
+  const criticalHighOutcomes = emptyOutcomes();
   const ruleGroups = new Map<
     string,
     {
@@ -340,6 +363,7 @@ export function buildCalibrationReport(
     }
   >();
   let reviewedCandidates = 0;
+  let criticalHighReviewedCandidates = 0;
   let manualMisses = 0;
 
   const projects = inputs.map(({ report, ledger }, index) => {
@@ -357,6 +381,10 @@ export function buildCalibrationReport(
       locationAccuracy[entry.locationAccuracy]++;
       explanationQuality[entry.explanationQuality]++;
       reviewedCandidates++;
+      if (finding.severity === 'critical' || finding.severity === 'high') {
+        criticalHighOutcomes[entry.outcome]++;
+        criticalHighReviewedCandidates++;
+      }
     }
     for (const finding of report.findings) {
       const id = `${finding.source}:${finding.ruleId}`;
@@ -413,6 +441,8 @@ export function buildCalibrationReport(
     ({ ledger }) => ledger?.reviewScope?.falseNegativeReview === 'complete',
   );
   const decided = outcomes.true_positive + outcomes.false_positive;
+  const criticalHighDecided =
+    criticalHighOutcomes.true_positive + criticalHighOutcomes.false_positive;
   const recallDenominator = outcomes.true_positive + manualMisses;
   const accuracyClaimReady =
     candidateReviewComplete && falseNegativeReviewComplete && outcomes.inconclusive === 0;
@@ -432,7 +462,14 @@ export function buildCalibrationReport(
       evidenceAccuracy,
       locationAccuracy,
       explanationQuality,
+      criticalHighReviewedCandidates,
+      criticalHighOutcomes,
       ...(decided ? { samplePrecision: outcomes.true_positive / decided } : {}),
+      ...(criticalHighDecided
+        ? {
+            criticalHighSamplePrecision: criticalHighOutcomes.true_positive / criticalHighDecided,
+          }
+        : {}),
       ...(falseNegativeReviewComplete && recallDenominator
         ? { reviewedRecall: outcomes.true_positive / recallDenominator }
         : {}),
@@ -474,5 +511,102 @@ export function buildCalibrationReport(
       'Recall is omitted unless every project records a complete false-negative review.',
       'Project labels are anonymized and raw source is not included.',
     ],
+  };
+}
+
+function thresholdCheck(
+  id: string,
+  actual: number | undefined,
+  minimum: number,
+  detail: string,
+): V1CalibrationGate['checks'][number] {
+  return {
+    id,
+    status: actual === undefined ? 'incomplete' : actual >= minimum ? 'pass' : 'fail',
+    actual: actual ?? null,
+    required: `>= ${minimum}`,
+    detail,
+  };
+}
+
+function ratio(numerator: number, denominator: number): number | undefined {
+  return denominator > 0 ? numerator / denominator : undefined;
+}
+
+export function buildV1CalibrationGate(calibration: CalibrationReport): V1CalibrationGate {
+  const boundedFalseNegativeReviews = calibration.projects.filter(
+    (project) => project.falseNegativeReview !== 'not_performed',
+  ).length;
+  const completeFalseNegativeReviews = calibration.projects.filter(
+    (project) => project.falseNegativeReview === 'complete',
+  ).length;
+  const checks: V1CalibrationGate['checks'] = [
+    thresholdCheck(
+      'repositories',
+      calibration.summary.projects,
+      10,
+      'Structurally different authorized repositories in the aggregate.',
+    ),
+    thresholdCheck(
+      'reviewed-candidates',
+      calibration.summary.reviewedCandidates,
+      200,
+      'Candidates with source-backed reviewer labels.',
+    ),
+    thresholdCheck(
+      'sample-precision',
+      calibration.summary.samplePrecision,
+      0.85,
+      'True positives divided by decided true and false positives.',
+    ),
+    thresholdCheck(
+      'critical-high-sample-precision',
+      calibration.summary.criticalHighSamplePrecision,
+      0.9,
+      'Critical and high true positives divided by decided critical and high candidates.',
+    ),
+    thresholdCheck(
+      'evidence-accuracy',
+      ratio(calibration.summary.evidenceAccuracy.correct, calibration.summary.reviewedCandidates),
+      0.95,
+      'Reviewed candidates rated with correct evidence.',
+    ),
+    thresholdCheck(
+      'location-accuracy',
+      ratio(calibration.summary.locationAccuracy.correct, calibration.summary.reviewedCandidates),
+      0.95,
+      'Reviewed candidates rated with correct source locations.',
+    ),
+    {
+      id: 'bounded-false-negative-review',
+      status: boundedFalseNegativeReviews === calibration.summary.projects ? 'pass' : 'fail',
+      actual: boundedFalseNegativeReviews,
+      required: `= ${calibration.summary.projects}`,
+      detail: 'Repositories with at least a sampled false-negative review.',
+    },
+    thresholdCheck(
+      'complete-source-checklist-review',
+      completeFalseNegativeReviews,
+      3,
+      'Repositories with a complete review of the declared source-only checklist.',
+    ),
+  ];
+  const status: CalibrationGateCheckStatus = checks.some((check) => check.status === 'fail')
+    ? 'fail'
+    : checks.some((check) => check.status === 'incomplete')
+      ? 'incomplete'
+      : 'pass';
+  return {
+    schemaVersion: v1CalibrationGateVersion,
+    kind: 'codebasescan-v1-calibration-gate',
+    generatedAt: calibration.generatedAt,
+    status,
+    checks,
+    limitations: [
+      'This gate evaluates the real-project calibration subset of the v1 acceptance contract only.',
+      'Duplicate review, regression coverage, report, safety, portability, performance, and release-integrity evidence are evaluated by separate v1 gates.',
+      ...calibration.limitations,
+    ],
+    calibration,
   };
 }

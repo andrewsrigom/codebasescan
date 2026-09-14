@@ -10,12 +10,13 @@ project.
 
 Current contracts:
 
-- audit workflow `codebasescan-audit-v73`;
+- audit workflow `codebasescan-audit-v74`;
 - audit-mode pack `1.0.0`;
 - audit report schema v17;
 - rule-quality schema v3;
 - agent plan v5, task bundle v3, agent report v1, and review-rule pack v1;
 - static report manifest v1;
+- calibration report v2 and v1 calibration gate v1;
 - one current report root updated in place, with legacy history roots still readable.
 
 The packaged CLI has no LangChain, LangGraph, model provider, SQLite, Next.js, or React runtime
