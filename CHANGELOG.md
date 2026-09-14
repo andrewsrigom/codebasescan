@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Stopped requiring input-validation evidence for parameterless Server Actions while retaining the
+  rule for actions that accept caller-controlled parameters.
 - Proved local field wrappers that connect a visible label to a cloned child control with the same
   generated identifier, while retaining candidates for mismatched clones.
 - Excluded inert stored code examples from dynamic-execution and weak-token findings while

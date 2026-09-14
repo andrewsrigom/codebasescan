@@ -163,6 +163,34 @@ test('Next.js mutation rule does not treat a database read as a state change', (
   assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
 });
 
+test('Next.js mutation rule does not require validation for a parameterless Server Action', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': '{"dependencies":{"next":"16.0.0"}}',
+    'src/app/actions.ts': `
+      'use server';
+      export async function checkToolStatus() {
+        return execFile('git', ['--version']);
+      }
+    `,
+  });
+  const result = scanNextSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(!result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
+test('Next.js mutation rule retains validation candidates for Server Action input', () => {
+  const snapshot = snapshotFromFiles({
+    'package.json': '{"dependencies":{"next":"16.0.0"}}',
+    'src/app/actions.ts': `
+      'use server';
+      export async function runTool(tool: string) {
+        return execFile(tool, ['--version']);
+      }
+    `,
+  });
+  const result = scanNextSecurity(snapshot, profileProject(snapshot).profile);
+  assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-NEXT006'));
+});
+
 test('Next.js mutation rule does not require a body schema for a parameter-only delete', () => {
   const snapshot = snapshotOf(
     `

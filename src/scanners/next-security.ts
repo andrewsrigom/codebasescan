@@ -184,7 +184,34 @@ function consumesRequestPayload(
   profile: ProjectProfile,
   entrypoint: ProjectEntrypoint,
 ): boolean {
-  if (entrypoint.kind === 'trpc-procedure' || entrypoint.kind === 'server-action') return true;
+  if (entrypoint.kind === 'trpc-procedure') return true;
+  if (entrypoint.kind === 'server-action') {
+    let declarationFound = false;
+    let acceptsInput = false;
+    for (const fragment of reachableSourceFragments(snapshot, profile, entrypoint)) {
+      const source = ts.createSourceFile(entrypoint.file, fragment, ts.ScriptTarget.Latest, true);
+      const visit = (node: ts.Node): void => {
+        const namedDeclaration =
+          ts.isFunctionDeclaration(node) && node.name?.text === entrypoint.name
+            ? node
+            : ts.isVariableDeclaration(node) &&
+                ts.isIdentifier(node.name) &&
+                node.name.text === entrypoint.name &&
+                node.initializer &&
+                (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer))
+              ? node.initializer
+              : undefined;
+        if (namedDeclaration) {
+          declarationFound = true;
+          acceptsInput ||= namedDeclaration.parameters.length > 0;
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(source);
+    }
+    if (declarationFound) return acceptsInput;
+    return true;
+  }
   return reachableSourceFragments(snapshot, profile, entrypoint).some((source) =>
     /\b(?:request|req)\s*\.\s*(?:json|formData|text|arrayBuffer)\s*\(|\bformData\s*\.\s*(?:get|getAll|entries)\s*\(/i.test(
       source,
@@ -656,7 +683,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
         findings: 0,
         detail:
           'No supported Next.js framework signal was mapped. No clean Next.js result is implied.',
-        version: '0.5.0',
+        version: '0.5.1',
       },
     };
 
@@ -673,7 +700,7 @@ export function scanNextSecurity(snapshot: Snapshot, profile: ProjectProfile): N
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: limited.length,
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s) for authenticated reads, object scope, input validation, user-specific caching, public environment exposure, and sensitive response fields.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.5.0',
+      version: '0.5.1',
     },
   };
 }
