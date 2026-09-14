@@ -1022,6 +1022,50 @@ test('AST keeps unrelated nested members safe across mapped calls', () => {
   assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST005'));
 });
 
+test('AST retains nested taint through mutating Object.assign calls', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { downloadAudio } from '../services/audio';
+      app.post('/video', async (req, res) => {
+        const options = { audio: { customUrl: '' }, timeout: 5_000 };
+        Object.assign(options, { audio: { customUrl: req.body.audioUrl } });
+        await downloadAudio(options.audio);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudio(audio: { customUrl: string }) {
+        return https.get(audio.customUrl);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(findings.some((finding) => finding.ruleId === 'TW-AST005'));
+});
+
+test('mutating Object.assign keeps unrelated option members distinct', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { downloadAudio } from '../services/audio';
+      app.post('/video', async (req, res) => {
+        const options = { url: 'https://media.example.test/default.mp3', timeout: 5_000 };
+        Object.assign(options, { timeout: req.body.timeout });
+        await downloadAudio(options);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudio(options: { url: string; timeout: number }) {
+        return https.get(options.url);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST005'));
+});
+
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {

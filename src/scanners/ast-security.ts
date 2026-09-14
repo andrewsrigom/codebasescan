@@ -687,6 +687,80 @@ function configUrlBindingNames(
   );
 }
 
+interface ComposedObjectTaint {
+  wholeObject: boolean;
+  members: Set<string>;
+}
+
+function composedObjectTaint(
+  node: ts.Expression,
+  tainted: Set<string>,
+  serverOwnedUrls: Set<string>,
+  depth = 0,
+): ComposedObjectTaint {
+  if (depth > 6) return { wholeObject: false, members: new Set() };
+  const value = unwrapExpression(node);
+  if (!ts.isObjectLiteralExpression(value)) {
+    return {
+      wholeObject: isTaintedValue(value, tainted, serverOwnedUrls),
+      members: new Set(taintedMemberSuffixes(value, tainted)),
+    };
+  }
+
+  const result: ComposedObjectTaint = { wholeObject: false, members: new Set() };
+  const addNested = (propertyName: string, nested: ComposedObjectTaint): void => {
+    if (nested.wholeObject) result.members.add(propertyName);
+    for (const member of nested.members) result.members.add(`${propertyName}.${member}`);
+  };
+  for (const property of value.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      const nested = composedObjectTaint(property.expression, tainted, serverOwnedUrls, depth + 1);
+      if (nested.wholeObject) result.wholeObject = true;
+      for (const member of nested.members) result.members.add(member);
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(property)) {
+      if (isTaintedValue(property.name, tainted, serverOwnedUrls))
+        result.members.add(property.name.text);
+      continue;
+    }
+    if (!ts.isPropertyAssignment(property)) continue;
+    const propertyName =
+      ts.isIdentifier(property.name) ||
+      ts.isStringLiteralLike(property.name) ||
+      ts.isNumericLiteral(property.name)
+        ? property.name.text
+        : undefined;
+    if (!propertyName) {
+      if (isTaintedValue(property.initializer, tainted, serverOwnedUrls)) result.wholeObject = true;
+      continue;
+    }
+    addNested(
+      propertyName,
+      composedObjectTaint(property.initializer, tainted, serverOwnedUrls, depth + 1),
+    );
+  }
+  return result;
+}
+
+function objectAssignMutationTargets(
+  call: ts.CallExpression,
+  tainted: Set<string>,
+  serverOwnedUrls: Set<string>,
+): string[] {
+  if (callName(call) !== 'Object.assign') return [];
+  const [target, ...sources] = call.arguments;
+  const targetPath = expressionPath(target);
+  if (!targetPath) return [];
+  const targets = new Set<string>();
+  for (const source of sources) {
+    const composed = composedObjectTaint(source, tainted, serverOwnedUrls);
+    if (composed.wholeObject) targets.add(targetPath);
+    for (const member of composed.members) targets.add(`${targetPath}.${member}`);
+  }
+  return [...targets];
+}
+
 function functionTaint(
   node: ts.FunctionLikeDeclarationBase,
   taintedParameterIndexes?: Set<number>,
@@ -759,6 +833,12 @@ function functionTaint(
             }
           }
       }
+      if (ts.isCallExpression(child))
+        for (const target of objectAssignMutationTargets(child, tainted, serverOwnedUrls))
+          if (!tainted.has(target)) {
+            tainted.add(target);
+            changed = true;
+          }
       ts.forEachChild(child, visit);
     };
     if (node.body) visit(node.body);
@@ -1842,7 +1922,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.4',
+        version: '0.11.5',
       },
     };
 
@@ -1929,7 +2009,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.4',
+      version: '0.11.5',
     },
   };
 }

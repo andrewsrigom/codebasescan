@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Tracked nested request-derived members copied by mutating `Object.assign` calls while preserving
+  fixed outbound destinations beside unrelated tainted options.
 - Preserved exact nested member taint across mapped function calls without treating unrelated
   option fields as outbound destinations.
 - Tracked exact request-derived object members through property assignment, aliases, and
