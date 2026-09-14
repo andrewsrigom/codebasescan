@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Proved local React field components that render a visible label around forwarded children before
+  suppressing intrinsic-control accessible-name candidates.
 - Added a machine-readable v1 calibration gate with explicit repository, review-volume, overall and
   high-severity precision, evidence, location, and false-negative-scope checks.
 - Tracked nested request-derived members copied by mutating `Object.assign` calls while preserving

@@ -131,3 +131,24 @@ test('named field wrappers must match the nested intrinsic control id', () => {
     ['TW-A11Y004'],
   );
 });
+
+test('proven local wrappers that render label text around children provide naming evidence', () => {
+  const result = scanAccessibilityStatic(
+    snapshotFromFiles({
+      'src/form.tsx': `function EditorField({ children, label }) {
+        return <label><span>{label}</span>{children}</label>;
+      }
+      const BrokenField = ({ children, label }) => <div><span>{label}</span>{children}</div>;
+      export function Form() {
+        return <>
+          <EditorField label="Name"><input /></EditorField>
+          <BrokenField label="Country"><select /></BrokenField>
+        </>;
+      }`,
+    }),
+  );
+  assert.deepEqual(
+    result.findings.map((finding) => finding.ruleId),
+    ['TW-A11Y004'],
+  );
+});

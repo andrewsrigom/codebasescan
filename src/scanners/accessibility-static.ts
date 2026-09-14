@@ -108,6 +108,112 @@ function insideNamedFieldWrapper(node: ts.Node, id: string | undefined): boolean
   return false;
 }
 
+function unwrapExpression(expression: ts.Expression): ts.Expression {
+  let current = expression;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isTypeAssertionExpression(current) ||
+    ts.isNonNullExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  )
+    current = current.expression;
+  return current;
+}
+
+function returnedElement(node: ts.FunctionLikeDeclaration): ts.JsxElement | undefined {
+  if (!node.body) return undefined;
+  if (!ts.isBlock(node.body)) {
+    const expression = unwrapExpression(node.body);
+    return ts.isJsxElement(expression) ? expression : undefined;
+  }
+  const returns = node.body.statements.filter(ts.isReturnStatement);
+  if (returns.length !== 1 || !returns[0]?.expression) return undefined;
+  const expression = unwrapExpression(returns[0].expression);
+  return ts.isJsxElement(expression) ? expression : undefined;
+}
+
+function destructuredBinding(
+  parameter: ts.ParameterDeclaration | undefined,
+  property: string,
+): string | undefined {
+  if (!parameter || !ts.isObjectBindingPattern(parameter.name)) return undefined;
+  const element = parameter.name.elements.find((item) => {
+    const sourceName = item.propertyName ?? item.name;
+    return ts.isIdentifier(sourceName) && sourceName.text === property;
+  });
+  return element && ts.isIdentifier(element.name) ? element.name.text : undefined;
+}
+
+function elementContainsIdentifier(element: ts.JsxElement, name: string): boolean {
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (found) return;
+    if (ts.isJsxExpression(node) && node.expression && ts.isIdentifier(node.expression)) {
+      found = node.expression.text === name;
+      if (found) return;
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(element);
+  return found;
+}
+
+function provenLocalLabelWrapper(node: ts.FunctionLikeDeclaration): boolean {
+  const label = returnedElement(node);
+  if (!label || tagName(label.openingElement) !== 'label') return false;
+  const parameter = node.parameters[0];
+  const childrenBinding = destructuredBinding(parameter, 'children');
+  const labelBinding = destructuredBinding(parameter, 'label');
+  return Boolean(
+    childrenBinding &&
+    labelBinding &&
+    elementContainsIdentifier(label, childrenBinding) &&
+    elementContainsIdentifier(label, labelBinding),
+  );
+}
+
+function localLabelWrappers(source: ts.SourceFile): Set<string> {
+  const wrappers = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isFunctionDeclaration(node) &&
+      node.name &&
+      /^[A-Z]/.test(node.name.text) &&
+      provenLocalLabelWrapper(node)
+    )
+      wrappers.add(node.name.text);
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      /^[A-Z]/.test(node.name.text)
+    ) {
+      const initializer = node.initializer;
+      if (
+        initializer &&
+        (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
+        provenLocalLabelWrapper(initializer)
+      )
+        wrappers.add(node.name.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return wrappers;
+}
+
+function insideProvenLocalLabelWrapper(node: ts.Node, wrappers: Set<string>): boolean {
+  let parent = node.parent;
+  while (parent) {
+    if (ts.isJsxElement(parent)) {
+      const opening = parent.openingElement;
+      if (wrappers.has(tagName(opening)) && attribute(opening, 'label')) return true;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
 function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean } {
   const source = ts.createSourceFile(
     file.path,
@@ -120,6 +226,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
     .parseDiagnostics;
   if (diagnostics?.length) return { findings: [], parseFailed: true };
   const findings: Finding[] = [];
+  const provenLabelWrappers = localLabelWrappers(source);
   const labels = new Set<string>();
   const collectLabels = (node: ts.Node): void => {
     if (
@@ -227,6 +334,7 @@ function scanFile(file: SourceFile): { findings: Finding[]; parseFailed: boolean
           Boolean(attribute(opening, 'aria-labelledby')) ||
           Boolean(id && labels.has(id)) ||
           insideNamedFieldWrapper(opening, id) ||
+          insideProvenLocalLabelWrapper(opening, provenLabelWrappers) ||
           insideLabel(opening) ||
           hasSpreadAttributes(opening);
         if (!named)
@@ -393,7 +501,7 @@ export function scanAccessibilityStatic(snapshot: Snapshot): {
         detail: files.length
           ? `Inspected ${files.length} JSX file(s) for six bounded semantic candidates; ${parseFailures} parse failure(s). Runtime focus, contrast, layout, and assistive-technology behavior require imported external evidence.`
           : 'No runtime JSX source was available for static accessibility review.',
-        version: '0.6.0',
+        version: '0.7.0',
       },
       imported.run,
     ],
