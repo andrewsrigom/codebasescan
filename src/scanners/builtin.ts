@@ -128,15 +128,34 @@ function insideComment(index: number, ranges: { start: number; end: number }[]):
   return ranges.some((range) => index >= range.start && index < range.end);
 }
 
+function literalRanges(content: string, filePath: string): { start: number; end: number }[] {
+  const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
+  const ranges: { start: number; end: number }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isStringLiteralLike(node) ||
+      node.kind === ts.SyntaxKind.TemplateHead ||
+      node.kind === ts.SyntaxKind.TemplateMiddle ||
+      node.kind === ts.SyntaxKind.TemplateTail
+    )
+      ranges.push({ start: node.getStart(source), end: node.end });
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return ranges;
+}
+
 export function scanPatterns(snapshot: Snapshot): Finding[] {
   const findings: Finding[] = [];
   for (const file of snapshot.files) {
     if (!isRuntimeSource(file) || !/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
     const comments = commentRanges(file.content, file.path);
+    const literals = literalRanges(file.content, file.path);
     for (const rule of rules) {
       const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
       for (const match of file.content.matchAll(expression)) {
         if (insideComment(match.index, comments)) continue;
+        if (rule.id === 'TW-003' && insideComment(match.index, literals)) continue;
         if (findings.length >= 300) return findings;
         const line = file.content.slice(0, match.index).split('\n').length;
         findings.push(

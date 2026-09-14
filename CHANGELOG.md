@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Excluded inert stored code examples from dynamic-execution and weak-token findings while
+  retaining executable template substitutions and real entropy calls.
 - Recognized explicit Next.js metadata re-exports from root layouts without trusting unrelated
   exported identifiers.
 - Proved local React field components that render a visible label around forwarded children before

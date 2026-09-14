@@ -75,6 +75,14 @@ test('explicit global JavaScript evaluation remains a review candidate', () => {
   const findings = scanPatterns(snapshotOf('globalThis.eval(input); window.eval(other);'));
   assert.equal(findings.filter((finding) => finding.ruleId === 'TW-003').length, 2);
 });
+test('dynamic execution shown only inside a stored code example is not executable source', () => {
+  const findings = scanPatterns(
+    snapshotOf(
+      'const example = "async function run() { return eval(input); }"; globalThis.eval(realInput);',
+    ),
+  );
+  assert.equal(findings.filter((finding) => finding.ruleId === 'TW-003').length, 1);
+});
 test('caps findings to prevent unbounded output', () => {
   assert.equal(scanPatterns(snapshotOf('eval(input);\n'.repeat(500))).length, 300);
 });

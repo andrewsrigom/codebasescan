@@ -228,7 +228,7 @@ export function buildAuditPipeline(options: {
               findings: findings.length,
               detail:
                 'Seven bounded regex heuristics. Not a complete SAST engine or interprocedural analysis.',
-              version: '0.4.1',
+              version: '0.4.2',
             } satisfies ScannerRun,
           ],
         };

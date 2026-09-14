@@ -110,6 +110,11 @@ test('SaaS token rule reports predictable entropy but accepts crypto randomness'
     }
   `);
   assert.ok(!safe.some((finding) => finding.ruleId === 'TW-SAAS003'));
+
+  const inertExample = findingsFor(
+    'export const fixture = { code: "const resetToken = Date.now().toString() + Math.random();" };',
+  );
+  assert.ok(!inertExample.some((finding) => finding.ruleId === 'TW-SAAS003'));
 });
 
 test('SaaS error rule reports caught internals but accepts a stable public error', () => {

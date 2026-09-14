@@ -394,9 +394,29 @@ function urlLeak(call: ts.CallExpression, sensitiveNames: Set<string>): boolean 
 }
 
 function weakEntropy(node: ts.Node): boolean {
-  return /(?:Math\.random\s*\(|Date\.now\s*\(|new\s+Date\s*\(\s*\)\.getTime\s*\()/i.test(
-    node.getText(node.getSourceFile()),
-  );
+  let found = false;
+  const visit = (current: ts.Node): void => {
+    if (found || ts.isStringLiteralLike(current)) return;
+    if (ts.isCallExpression(current) && ts.isPropertyAccessExpression(current.expression)) {
+      const owner = current.expression.expression;
+      const method = current.expression.name.text;
+      if (
+        (ts.isIdentifier(owner) && owner.text === 'Math' && method === 'random') ||
+        (ts.isIdentifier(owner) && owner.text === 'Date' && method === 'now') ||
+        (method === 'getTime' &&
+          ts.isNewExpression(owner) &&
+          ts.isIdentifier(owner.expression) &&
+          owner.expression.text === 'Date' &&
+          (owner.arguments?.length ?? 0) === 0)
+      ) {
+        found = true;
+        return;
+      }
+    }
+    ts.forEachChild(current, visit);
+  };
+  visit(node);
+  return found;
 }
 
 function staticPublicErrorValue(node: ts.Expression): boolean {
@@ -1418,7 +1438,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.6',
+        version: '0.5.7',
       },
     };
 
@@ -1455,7 +1475,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.6',
+      version: '0.5.7',
     },
   };
 }
