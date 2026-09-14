@@ -198,6 +198,51 @@ test('ordered Express-style middleware can provide a request credential guard', 
   assert.ok(lateFindings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('ordered Fastify request hooks can provide an API-key membership guard', () => {
+  const protectedSnapshot = snapshotOf(`
+    app.addHook('onRequest', async (request, reply) => {
+      const authorization = request.headers.authorization?.replace('Bearer ', '').trim();
+      if (!authorization || !env.API_KEYS.includes(authorization)) {
+        return reply.code(401).send({ error: 'denied' });
+      }
+    });
+    app.put('/v1/preferences', async (request) =>
+      persistence.preferenceRepository.upsert(request.body)
+    );
+  `);
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const unprotectedSnapshot = snapshotOf(`
+    app.put('/v1/preferences', async (request) =>
+      persistence.preferenceRepository.upsert(request.body)
+    );
+  `);
+  const unprotectedFindings = scanAstSecurity(
+    unprotectedSnapshot,
+    profileProject(unprotectedSnapshot).profile,
+  ).findings;
+  assert.ok(unprotectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const lateSnapshot = snapshotOf(`
+    app.put('/v1/preferences', async (request) =>
+      persistence.preferenceRepository.upsert(request.body)
+    );
+    app.addHook('onRequest', async (request, reply) => {
+      const authorization = request.headers.authorization;
+      if (!env.API_KEYS.includes(authorization)) return reply.code(401).send();
+    });
+  `);
+  const lateFindings = scanAstSecurity(
+    lateSnapshot,
+    profileProject(lateSnapshot).profile,
+  ).findings;
+  assert.ok(lateFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('authentication wrappers protect mapped Next route callbacks', () => {
   const snapshot = snapshotOf(
     `

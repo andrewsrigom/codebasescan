@@ -42,7 +42,7 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
-export const projectProfileScannerVersion = '0.12.0';
+export const projectProfileScannerVersion = '0.12.1';
 
 interface ParsedFile {
   source: SourceFile;
@@ -308,6 +308,91 @@ function isRequestCredentialGuard(node: ts.BinaryExpression, source: ts.SourceFi
     (requestCredential.test(left) && trustedCredential.test(right)) ||
     (requestCredential.test(right) && trustedCredential.test(left))
   );
+}
+
+function guardedBranchExits(node: ts.Node): boolean {
+  let current = node;
+  while (current.parent && !ts.isFunctionLike(current.parent)) {
+    const parent = current.parent;
+    if (ts.isIfStatement(parent) && parent.expression === current) {
+      let exits = false;
+      const inspect = (child: ts.Node): void => {
+        if (ts.isReturnStatement(child) || ts.isThrowStatement(child)) exits = true;
+        if (!exits) ts.forEachChild(child, inspect);
+      };
+      inspect(parent.thenStatement);
+      return exits;
+    }
+    current = parent;
+  }
+  return false;
+}
+
+function isNegatedBeforeGuard(node: ts.CallExpression): boolean {
+  let current: ts.Node = node;
+  while (current.parent && !ts.isIfStatement(current.parent)) {
+    const parent = current.parent;
+    if (ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.ExclamationToken)
+      return true;
+    current = parent;
+  }
+  return false;
+}
+
+function requestCredentialAlias(
+  identifier: ts.Identifier,
+  node: ts.Node,
+  source: ts.SourceFile,
+): boolean {
+  let scope: ts.Node = node;
+  while (scope.parent && !ts.isFunctionLike(scope)) scope = scope.parent;
+  let found = false;
+  const inspect = (candidate: ts.Node): void => {
+    if (found || candidate.getStart(source) >= node.getStart(source)) return;
+    if (
+      ts.isVariableDeclaration(candidate) &&
+      ts.isIdentifier(candidate.name) &&
+      candidate.name.text === identifier.text &&
+      candidate.initializer &&
+      /(?:req|request|c\.req).*(?:header|headers|cookie).*(?:authorization|token|api[-_]?key)/i.test(
+        candidate.initializer.getText(source).replace(/\s+/g, ''),
+      )
+    ) {
+      found = true;
+      return;
+    }
+    ts.forEachChild(candidate, inspect);
+  };
+  inspect(scope);
+  return found;
+}
+
+function isRequestCredentialMembershipGuard(
+  node: ts.CallExpression,
+  source: ts.SourceFile,
+): boolean {
+  if (
+    !ts.isPropertyAccessExpression(node.expression) ||
+    node.expression.name.text !== 'includes' ||
+    node.arguments.length !== 1 ||
+    !isNegatedBeforeGuard(node) ||
+    !guardedBranchExits(node)
+  )
+    return false;
+  const trustedCollection = node.expression.expression
+    .getText(source)
+    .replace(/\s+/g, '')
+    .toLowerCase();
+  if (!/(?:token|secret|credential|api[-_]?keys?)/.test(trustedCollection)) return false;
+  const candidate = node.arguments[0]!;
+  const direct = candidate.getText(source).replace(/\s+/g, '').toLowerCase();
+  if (
+    /(?:req|request|c\.req).*(?:header|headers|cookie).*(?:authorization|token|api[-_]?key)/.test(
+      direct,
+    )
+  )
+    return true;
+  return ts.isIdentifier(candidate) && requestCredentialAlias(candidate, node, source);
 }
 
 function packageDependencies(snapshot: Snapshot): Map<string, DependencyDeclaration> {
@@ -1187,6 +1272,31 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
             symbolIds: handlerSymbol ? [handlerSymbol.id] : ownerSymbolId ? [ownerSymbolId] : [],
           });
         }
+        const fastifyHookArgument = node.arguments[0];
+        const fastifyHook =
+          /^(?:app|router)\.addHook$/i.test(callee) &&
+          fastifyHookArgument &&
+          ts.isStringLiteralLike(fastifyHookArgument)
+            ? fastifyHookArgument.text
+            : undefined;
+        if (
+          fastifyHook &&
+          /^(?:onRequest|preValidation|preHandler)$/i.test(fastifyHook) &&
+          callbackSymbol &&
+          !cap(entrypoints.length, maximumEntrypoints, 'Entrypoint')
+        )
+          entrypoints.push({
+            id: stableId('entrypoint', 'middleware', item.source.path, line, callee, fastifyHook),
+            kind: 'middleware',
+            file: item.source.path,
+            line,
+            name: `${callee}:${fastifyHook}`,
+            route: '/*',
+            matchers: ['/*'],
+            methods: [],
+            dynamicParameters: [],
+            symbolIds: [callbackSymbol.id],
+          });
         const trpcProcedure = /(?:^|\.)(query|mutation|subscription)$/i.exec(callee);
         if (
           trpcProcedure &&
@@ -1248,6 +1358,29 @@ export function profileProject(snapshot: Snapshot): ProjectProfileResult {
           file: item.source.path,
           line,
           signal: 'request credential guard',
+          ownerSymbolId,
+        });
+      }
+      if (
+        ts.isCallExpression(node) &&
+        ownerSymbolId &&
+        isRequestCredentialMembershipGuard(node, item.ast) &&
+        !cap(facts.length, maximumFacts, 'Security fact')
+      ) {
+        const line = lineOf(item.ast, node);
+        facts.push({
+          id: stableId(
+            'fact',
+            'authentication',
+            item.source.path,
+            line,
+            'request credential membership guard',
+            ownerSymbolId,
+          ),
+          kind: 'authentication',
+          file: item.source.path,
+          line,
+          signal: 'request credential membership guard',
           ownerSymbolId,
         });
       }

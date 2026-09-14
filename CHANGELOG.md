@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Mapped ordered Fastify request hooks and guarded API-key membership checks into structural
+  authentication evidence while retaining candidates when the hook is absent.
 - Stopped requiring input-validation evidence for parameterless Server Actions while retaining the
   rule for actions that accept caller-controlled parameters.
 - Proved local field wrappers that connect a visible label to a cloned child control with the same
