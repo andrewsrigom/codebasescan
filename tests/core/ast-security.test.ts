@@ -976,6 +976,52 @@ test('unrelated option members and matching property names do not inherit taint'
   assert.ok(!ids.includes('TW-AST005'));
 });
 
+test('AST preserves nested member taint across mapped calls', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { downloadAudio } from '../services/audio';
+      app.post('/video', async (req, res) => {
+        const options = { audio: { customUrl: '' } };
+        options.audio.customUrl = req.body.audioUrl;
+        await downloadAudio(options.audio);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudio(audio: { customUrl: string }) {
+        return https.get(audio.customUrl);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  const outbound = findings.find((finding) => finding.ruleId === 'TW-AST005');
+  assert.equal(outbound?.evidence[0]?.file, 'src/services/audio.ts');
+  assert.ok(outbound?.evidence.some((item) => item.file === 'src/routes/video.ts'));
+});
+
+test('AST keeps unrelated nested members safe across mapped calls', () => {
+  const snapshot = snapshotFromFiles({
+    'src/routes/video.ts': `
+      import { downloadAudio } from '../services/audio';
+      app.post('/video', async (req, res) => {
+        const options = { url: 'https://media.example.test/default.mp3', timeout: 5_000 };
+        options.timeout = req.body.timeout;
+        await downloadAudio(options);
+        res.send({ ok: true });
+      });
+    `,
+    'src/services/audio.ts': `
+      import https from 'node:https';
+      export function downloadAudio(options: { url: string; timeout: number }) {
+        return https.get(options.url);
+      }
+    `,
+  });
+  const findings = scanAstSecurity(snapshot, profileProject(snapshot).profile).findings;
+  assert.ok(!findings.some((finding) => finding.ruleId === 'TW-AST005'));
+});
+
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {

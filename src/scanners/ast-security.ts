@@ -690,14 +690,15 @@ function configUrlBindingNames(
 function functionTaint(
   node: ts.FunctionLikeDeclarationBase,
   taintedParameterIndexes?: Set<number>,
+  taintedParameterMembers = new Map<number, Set<string>>(),
 ): { tainted: Set<string>; serverOwnedUrls: Set<string> } {
-  const tainted = new Set(
-    node.parameters.flatMap((parameter, index) =>
-      !taintedParameterIndexes || taintedParameterIndexes.has(index)
-        ? bindingNames(parameter.name)
-        : [],
-    ),
-  );
+  const tainted = new Set<string>();
+  node.parameters.forEach((parameter, index) => {
+    if (!taintedParameterIndexes || taintedParameterIndexes.has(index))
+      for (const name of bindingNames(parameter.name)) tainted.add(name);
+    const memberSuffixes = taintedParameterMembers.get(index);
+    if (memberSuffixes) addBindingMemberTaint(parameter.name, [...memberSuffixes], tainted);
+  });
   const serverOwnedUrls = topLevelServerOwnedUrls(node.getSourceFile());
   // Bounded local propagation catches common request -> local -> sink flows without typechecking target code.
   for (let pass = 0; pass < 4; pass++) {
@@ -1451,6 +1452,21 @@ interface ParsedFunction {
   node: ExecutableFunction;
 }
 
+interface CrossFileTaintState {
+  symbolId: string;
+  depth: number;
+  taintedParameters: Set<number>;
+  taintedParameterMembers: Map<number, Set<string>>;
+}
+
+function parameterMemberStateKey(members: Map<number, Set<string>>): string {
+  return JSON.stringify(
+    [...members]
+      .sort(([left], [right]) => left - right)
+      .map(([index, suffixes]) => [index, [...suffixes].sort()]),
+  );
+}
+
 function parsedFunctions(snapshot: Snapshot, profile: ProjectProfile): Map<string, ParsedFunction> {
   const symbols = new Map(
     profile.symbols.map((symbol) => [`${symbol.file}:${symbol.line}:${symbol.name}`, symbol]),
@@ -1490,29 +1506,36 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
   }
 
   for (const entrypoint of profile.entrypoints) {
-    const queue = entrypointRoots(profile, entrypoint).flatMap((symbolId) => {
-      const parsed = functions.get(symbolId);
-      return parsed
-        ? [
-            {
-              symbolId,
-              depth: 0,
-              taintedParameters: new Set(parsed.node.parameters.map((_, index) => index)),
-            },
-          ]
-        : [];
-    });
+    const queue: CrossFileTaintState[] = entrypointRoots(profile, entrypoint).flatMap(
+      (symbolId) => {
+        const parsed = functions.get(symbolId);
+        return parsed
+          ? [
+              {
+                symbolId,
+                depth: 0,
+                taintedParameters: new Set(parsed.node.parameters.map((_, index) => index)),
+                taintedParameterMembers: new Map(),
+              },
+            ]
+          : [];
+      },
+    );
     const visited = new Set<string>();
     let inspected = 0;
     while (queue.length && inspected++ < 1_000 && findings.length < 300) {
       const current = queue.shift()!;
       if (current.depth > 5) continue;
-      const key = `${current.symbolId}:${[...current.taintedParameters].sort().join(',')}`;
+      const key = `${current.symbolId}:${[...current.taintedParameters].sort().join(',')}:${parameterMemberStateKey(current.taintedParameterMembers)}`;
       if (visited.has(key)) continue;
       visited.add(key);
       const parsed = functions.get(current.symbolId);
       if (!parsed) continue;
-      const { tainted, serverOwnedUrls } = functionTaint(parsed.node, current.taintedParameters);
+      const { tainted, serverOwnedUrls } = functionTaint(
+        parsed.node,
+        current.taintedParameters,
+        current.taintedParameterMembers,
+      );
       const calls = callsIn(parsed.node);
 
       if (current.depth > 0)
@@ -1638,14 +1661,20 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
         );
         if (!edge?.targetSymbolId) continue;
         const nextTaint = new Set<number>();
+        const nextMemberTaint = new Map<number, Set<string>>();
         call.arguments.forEach((argument, index) => {
           if (isTaintedValue(argument, tainted, serverOwnedUrls)) nextTaint.add(index);
+          else {
+            const suffixes = taintedMemberSuffixes(argument, tainted);
+            if (suffixes.length) nextMemberTaint.set(index, new Set(suffixes));
+          }
         });
-        if (nextTaint.size)
+        if (nextTaint.size || nextMemberTaint.size)
           queue.push({
             symbolId: edge.targetSymbolId,
             depth: current.depth + 1,
             taintedParameters: nextTaint,
+            taintedParameterMembers: nextMemberTaint,
           });
       }
     }
@@ -1813,7 +1842,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.3',
+        version: '0.11.4',
       },
     };
 
@@ -1900,7 +1929,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.3',
+      version: '0.11.4',
     },
   };
 }

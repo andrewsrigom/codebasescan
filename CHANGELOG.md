@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Preserved exact nested member taint across mapped function calls without treating unrelated
+  option fields as outbound destinations.
 - Tracked exact request-derived object members through property assignment, aliases, and
   destructuring without contaminating unrelated properties with the same name.
 - Retained request-derived taint through native object, array, clone, encoding, and promise
