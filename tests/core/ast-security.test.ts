@@ -933,6 +933,49 @@ test('native transformations that replace input with fixed URLs remain safe', ()
   assert.ok(!ids.includes('TW-AST005'));
 });
 
+test('AST retains exact member taint through assignments and destructuring', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const options = { timeout: 5_000 };
+      options.audio = {};
+      options.audio.customUrl = body.audioUrl;
+      const { audio: selectedAudio } = options;
+      return https.get(selectedAudio.customUrl);
+    }
+  `);
+  assert.ok(ids.includes('TW-AST005'));
+});
+
+test('AST recognizes tainted destination members in outbound option objects', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const options = { timeout: 5_000 };
+      options['hostname'] = body.hostname;
+      return https.request(options);
+    }
+  `);
+  assert.ok(ids.includes('TW-AST005'));
+});
+
+test('unrelated option members and matching property names do not inherit taint', () => {
+  const ids = astRuleIds(`
+    import https from 'node:https';
+    export async function POST(request: Request) {
+      const body = await request.json();
+      const { url } = body;
+      const options = { url: 'https://media.example.test/default.mp3' };
+      options.timeout = body.timeout;
+      void url;
+      return https.get(options);
+    }
+  `);
+  assert.ok(!ids.includes('TW-AST005'));
+});
+
 test('fixed process arguments, contained paths, and literal regexes avoid flow candidates', () => {
   const ids = astRuleIds(`
     export async function POST(request: Request) {

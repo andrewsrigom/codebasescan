@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Tracked exact request-derived object members through property assignment, aliases, and
+  destructuring without contaminating unrelated properties with the same name.
 - Retained request-derived taint through native object, array, clone, encoding, and promise
   transformations while recognizing fixed-output array mapping.
 - Defined a measurable v1 offline acceptance contract for result quality, report usefulness,

@@ -195,13 +195,47 @@ function isExecutableFunction(node: ts.Node): node is ExecutableFunction {
   );
 }
 
+function expressionPath(node: ts.Node | undefined): string | undefined {
+  if (!node) return undefined;
+  if (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isTypeAssertionExpression(node) ||
+    ts.isNonNullExpression(node)
+  )
+    return expressionPath(node.expression);
+  if (ts.isIdentifier(node)) return node.text;
+  if (ts.isPropertyAccessExpression(node)) {
+    const owner = expressionPath(node.expression);
+    return owner ? `${owner}.${node.name.text}` : undefined;
+  }
+  if (ts.isElementAccessExpression(node) && node.argumentExpression) {
+    const owner = expressionPath(node.expression);
+    const property = node.argumentExpression;
+    if (!owner || (!ts.isStringLiteralLike(property) && !ts.isNumericLiteral(property)))
+      return undefined;
+    return `${owner}.${property.text}`;
+  }
+  return undefined;
+}
+
+function isReferenceIdentifier(node: ts.Identifier): boolean {
+  const parent = node.parent;
+  if (ts.isPropertyAccessExpression(parent) && parent.name === node) return false;
+  if (ts.isPropertyAssignment(parent) && parent.name === node) return false;
+  return true;
+}
+
 function isTainted(node: ts.Node | undefined, tainted: Set<string>): boolean {
   if (!node) return false;
-  if (ts.isIdentifier(node)) return tainted.has(node.text);
+  const directPath = expressionPath(node);
+  if (directPath && tainted.has(directPath)) return true;
   let found = false;
   const visit = (child: ts.Node): void => {
     if (found) return;
-    if (ts.isIdentifier(child) && tainted.has(child.text)) {
+    const childPath = expressionPath(child);
+    const pathIsReference = !ts.isIdentifier(child) || isReferenceIdentifier(child);
+    if (pathIsReference && childPath && tainted.has(childPath)) {
       found = true;
       return;
     }
@@ -209,6 +243,64 @@ function isTainted(node: ts.Node | undefined, tainted: Set<string>): boolean {
   };
   visit(node);
   return found;
+}
+
+function taintedMemberSuffixes(node: ts.Expression, tainted: Set<string>): string[] {
+  const owner = expressionPath(node);
+  if (!owner) return [];
+  const prefix = `${owner}.`;
+  return [...tainted]
+    .filter((candidate) => candidate.startsWith(prefix))
+    .map((candidate) => candidate.slice(prefix.length));
+}
+
+function addBindingMemberTaint(
+  name: ts.BindingName,
+  suffixes: string[],
+  tainted: Set<string>,
+): boolean {
+  let changed = false;
+  const add = (value: string): void => {
+    if (tainted.has(value)) return;
+    tainted.add(value);
+    changed = true;
+  };
+  if (ts.isIdentifier(name)) {
+    for (const suffix of suffixes) add(suffix ? `${name.text}.${suffix}` : name.text);
+    return changed;
+  }
+  name.elements.forEach((element, index) => {
+    if (ts.isOmittedExpression(element)) return;
+    const property = element.propertyName;
+    const sourceName = property
+      ? ts.isIdentifier(property) ||
+        ts.isStringLiteralLike(property) ||
+        ts.isNumericLiteral(property)
+        ? property.text
+        : undefined
+      : ts.isObjectBindingPattern(name) && ts.isIdentifier(element.name)
+        ? element.name.text
+        : String(index);
+    if (!sourceName) {
+      for (const bound of bindingNames(element.name)) add(bound);
+      return;
+    }
+    const nested = suffixes.flatMap((suffix) => {
+      if (suffix === sourceName) return [''];
+      return suffix.startsWith(`${sourceName}.`) ? [suffix.slice(sourceName.length + 1)] : [];
+    });
+    if (addBindingMemberTaint(element.name, nested, tainted)) changed = true;
+  });
+  return changed;
+}
+
+const outboundDestinationMember =
+  /(?:^|\.)(?:[a-z0-9_]*(?:destination|endpoint|url|uri)|host|hostname|href|origin)$/i;
+
+function hasTaintedOutboundMember(node: ts.Expression, tainted: Set<string>): boolean {
+  return taintedMemberSuffixes(node, tainted).some((suffix) =>
+    outboundDestinationMember.test(suffix),
+  );
 }
 
 function hasServerOwnedUrlPrefix(
@@ -631,16 +723,40 @@ function functionTaint(
               tainted.add(name);
               changed = true;
             }
+        if (
+          !ownedNames.size &&
+          addBindingMemberTaint(
+            child.name,
+            taintedMemberSuffixes(child.initializer, tainted),
+            tainted,
+          )
+        )
+          changed = true;
       }
       if (
         ts.isBinaryExpression(child) &&
         child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-        ts.isIdentifier(child.left) &&
-        isTaintedValue(child.right, tainted, serverOwnedUrls) &&
-        !tainted.has(child.left.text)
+        (ts.isIdentifier(child.left) ||
+          ts.isPropertyAccessExpression(child.left) ||
+          ts.isElementAccessExpression(child.left))
       ) {
-        tainted.add(child.left.text);
-        changed = true;
+        const target = expressionPath(child.left);
+        if (
+          target &&
+          isTaintedValue(child.right, tainted, serverOwnedUrls) &&
+          !tainted.has(target)
+        ) {
+          tainted.add(target);
+          changed = true;
+        }
+        if (target)
+          for (const suffix of taintedMemberSuffixes(child.right, tainted)) {
+            const nestedTarget = `${target}.${suffix}`;
+            if (!tainted.has(nestedTarget)) {
+              tainted.add(nestedTarget);
+              changed = true;
+            }
+          }
       }
       ts.forEachChild(child, visit);
     };
@@ -1106,7 +1222,8 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
           if (
             isOutboundRequestSink(callee) &&
             destination &&
-            isTaintedValue(destination, tainted, serverOwnedUrls) &&
+            (isTaintedValue(destination, tainted, serverOwnedUrls) ||
+              hasTaintedOutboundMember(destination, tainted)) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorFixedUrlOrigin(destination, call, node) &&
             !hasPriorGuard(
@@ -1441,7 +1558,8 @@ function crossFileTaintFindings(snapshot: Snapshot, profile: ProjectProfile): Fi
             });
           if (
             destination &&
-            isTaintedValue(destination, tainted) &&
+            (isTaintedValue(destination, tainted) ||
+              hasTaintedOutboundMember(destination, tainted)) &&
             isOutboundRequestSink(callee) &&
             !isServerOwnedUrl(destination, tainted, serverOwnedUrls) &&
             !hasPriorGuard(
@@ -1695,7 +1813,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.2',
+        version: '0.11.3',
       },
     };
 
@@ -1782,7 +1900,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.2',
+      version: '0.11.3',
     },
   };
 }
