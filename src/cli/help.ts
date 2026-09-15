@@ -54,9 +54,13 @@ Options:
   finding: `Usage: codebasescan finding show <report-root> <finding-id> [--json]
 
 Read one verified finding with its captured evidence.`,
-  coverage: `Usage: codebasescan coverage show [report-root] [--json]
+  coverage: `Usage: codebasescan coverage show [report-root] [--limit 30] [--json]
 
-Show complete and incomplete capabilities without treating skipped work as safe.`,
+Show incomplete capabilities first, with at most 100 rows. Skipped work is not safe.`,
+  changes: `Usage: codebasescan changes show <before-report-root> <after-report-root> [--limit 20] [--json]
+
+Compare two verified portable packages. Shows new and absent candidates plus coverage changes;
+an absent finding is not proof of a fix. Preserve the whole before package before the next audit.`,
   finalize: `Usage: codebasescan finalize <after-report> --baseline <before-report> --verification <ledger.json> [options]
 
 Build a before/after report using explicit external verification evidence.`,
@@ -120,11 +124,12 @@ Start here:
   codebasescan findings list       List candidates by stable ID
   codebasescan finding show        Read one candidate and its evidence
   codebasescan coverage show       Inspect incomplete capabilities
+  codebasescan changes show        Compare verified before/after packages
   codebasescan agent install codex Install the optional Codex review skill
   codebasescan --version           Print the installed version
 
 Evidence workflow:
-  report, findings, finding, coverage  Read verified evidence
+  report, findings, finding, coverage, changes  Read verified evidence
   agent      Install agent integrations
   finalize   Build a verified before/after report
   task       Export one remediation task for an agent

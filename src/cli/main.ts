@@ -84,6 +84,7 @@ import {
   listFindings,
   renderFinding,
   reportVerification,
+  showChanges,
   showCoverage,
 } from './inspect-report.ts';
 
@@ -483,13 +484,35 @@ try {
   } else if (command === 'coverage' && target === 'show') {
     const location =
       arguments_[2] && !arguments_[2].startsWith('--') ? arguments_[2] : 'codebasescan-report';
-    const result = showCoverage(await loadReportPackage(location));
+    const limit = positiveIntegerOption('--limit') ?? 30;
+    if (limit > 100) throw new Error('Use --limit with a value no greater than 100.');
+    const result = showCoverage(await loadReportPackage(location), limit);
     console.log(
       arguments_.includes('--json')
         ? JSON.stringify(result, null, 2)
         : [
-            `Coverage: ${result.complete}/${result.total} complete; snapshot ${result.snapshotTruncated ? 'partial' : 'not truncated'} (audit ${result.auditId})`,
+            `Coverage: ${result.complete}/${result.total} complete, ${result.incomplete} incomplete, showing ${result.shown}; snapshot ${result.snapshotTruncated ? 'partial' : 'not truncated'} (audit ${result.auditId})`,
             ...result.capabilities.map((item) => `${item.status}  ${item.id}  ${item.detail}`),
+          ].join('\n'),
+    );
+  } else if (command === 'changes' && target === 'show' && arguments_[2] && arguments_[3]) {
+    const limit = positiveIntegerOption('--limit') ?? 20;
+    if (limit > 100) throw new Error('Use --limit with a value no greater than 100.');
+    const [before, after] = await Promise.all([
+      loadReportPackage(arguments_[2]),
+      loadReportPackage(arguments_[3]),
+    ]);
+    const result = showChanges(before, after, limit);
+    console.log(
+      arguments_.includes('--json')
+        ? JSON.stringify(result, null, 2)
+        : [
+            `Audit ${result.beforeAuditId} → ${result.afterAuditId}: ${result.newCount} new, ${result.resolvedCount} absent, ${result.unchangedCount} unchanged; ${result.coverageRegressionCount} coverage regression(s).`,
+            ...result.newFindings.map((item) => `NEW ${item.id}  ${item.severity}  ${item.title}`),
+            ...result.coverageRegressions.map(
+              (item) => `COVERAGE ${item.id}  ${item.before} → ${item.after}`,
+            ),
+            result.limitation,
           ].join('\n'),
     );
   } else if (command === 'advisories' && target === 'update' && arguments_[2]) {
@@ -888,6 +911,7 @@ try {
         'findings',
         'finding',
         'coverage',
+        'changes',
       ]);
       if (known.has(command))
         throw new Error(`Missing or invalid arguments. Run codebasescan ${command} --help.`);

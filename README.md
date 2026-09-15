@@ -124,6 +124,15 @@ cp codebasescan-report/audit-report.json codebasescan-baseline.json
 npx codebasescan audit . --baseline codebasescan-baseline.json
 ```
 
+For an agent-readable comparison with integrity checks, preserve the complete before report
+directory as `codebasescan-before/`, run the audit again, then inspect:
+
+```bash
+codebasescan changes show codebasescan-before codebasescan-report
+```
+
+This shows new candidates and coverage regressions. An absent candidate is not proof of a fix.
+
 ## Focused audits
 
 All modes run by default. Select a smaller set when needed:
