@@ -81,7 +81,7 @@ async function writeFixture(directory) {
   );
   await writeFile(
     path.join(directory, 'src', 'app', 'api', 'account', 'route.ts'),
-    `export async function GET(request: Request) {\n  const id = new URL(request.url).searchParams.get('id');\n  return Response.json({ id });\n}\n`,
+    `export async function GET(request: Request) {\n  const id = new URL(request.url).searchParams.get('id');\n  const unsafe = eval(id ?? '');\n  return Response.json({ unsafe });\n}\n`,
   );
 }
 
@@ -135,6 +135,7 @@ async function verifyReportServer(directory, reportDirectory) {
 }
 
 const temporary = await mkdtemp(path.join(os.tmpdir(), `codebasescan-install-${manager}-`));
+process.env.npm_config_cache = path.join(temporary, 'npm-cache');
 try {
   const packedDirectory = path.join(temporary, 'packed');
   const fixture = path.join(temporary, 'fixture');
@@ -168,6 +169,25 @@ try {
     ['audit', '.', '--report-dir', reportDirectory, '--non-interactive', '--quiet'],
     { capture: true },
   );
+  const verified = await runCodebaseScan(fixture, ['report', 'verify', reportDirectory, '--json'], {
+    capture: true,
+  });
+  const listed = await runCodebaseScan(
+    fixture,
+    ['findings', 'list', reportDirectory, '--limit', '1', '--json'],
+    { capture: true },
+  );
+  const candidates = JSON.parse(listed.stdout);
+  const findingId = candidates.findings?.[0]?.id;
+  if (!findingId) throw new Error('Installed CLI could not discover a known fixture finding.');
+  const exact = await runCodebaseScan(
+    fixture,
+    ['finding', 'show', reportDirectory, findingId, '--json'],
+    { capture: true },
+  );
+  const coverage = await runCodebaseScan(fixture, ['coverage', 'show', reportDirectory, '--json'], {
+    capture: true,
+  });
   const versionLines = version.stdout
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -179,6 +199,14 @@ try {
   rejectRuntimeWarnings('init', init);
   rejectRuntimeWarnings('agent skill', agentSkill);
   rejectRuntimeWarnings('audit', audit);
+  rejectRuntimeWarnings('report verify', verified);
+  rejectRuntimeWarnings('findings list', listed);
+  rejectRuntimeWarnings('finding show', exact);
+  rejectRuntimeWarnings('coverage show', coverage);
+  if (JSON.parse(verified.stdout).auditId !== JSON.parse(coverage.stdout).auditId)
+    throw new Error('Installed CLI inspection commands disagreed on the audit identity.');
+  if (JSON.parse(exact.stdout).id !== findingId)
+    throw new Error('Installed CLI did not read the exact discovered finding.');
   const installedSkill = await readFile(
     path.join(fixture, '.agents', 'skills', 'codebasescan-review', 'SKILL.md'),
     'utf8',
