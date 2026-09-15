@@ -48,9 +48,7 @@ test('embedded-app rules attach only to their exact evidence shapes', () => {
     description: 'A message handler processes an event without a visible origin check.',
   };
   assert.ok(
-    reviewRulesForFinding(messageFinding).some(
-      (rule) => rule.id === 'CBS-AI-EMBEDDED-MESSAGING',
-    ),
+    reviewRulesForFinding(messageFinding).some((rule) => rule.id === 'CBS-AI-EMBEDDED-MESSAGING'),
   );
 
   const unrelatedHeaders: Finding = {

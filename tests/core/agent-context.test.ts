@@ -98,8 +98,7 @@ test('agent context keeps observed embedded and authentication signals separate 
 test('agent context leaves authentication mechanism and CSRF applicability unresolved without evidence', () => {
   const context = buildAgentContext(sampleReport());
   assert.equal(
-    context.openQuestions.find((question) => question.id === 'authentication-mechanism')
-      ?.status,
+    context.openQuestions.find((question) => question.id === 'authentication-mechanism')?.status,
     'unresolved',
   );
   assert.equal(

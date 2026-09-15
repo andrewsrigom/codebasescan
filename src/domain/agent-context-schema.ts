@@ -17,14 +17,7 @@ const declaredContext = z
   .object({
     features: z
       .array(
-        z.enum([
-          'authentication',
-          'tenancy',
-          'billing',
-          'webhooks',
-          'administration',
-          'uploads',
-        ]),
+        z.enum(['authentication', 'tenancy', 'billing', 'webhooks', 'administration', 'uploads']),
       )
       .max(50),
     roles: z.array(text(80)).max(50),
@@ -79,18 +72,10 @@ export const agentContextSchema = z
           .max(100),
         components: z.number().int().nonnegative(),
         entrypoints: z
-          .array(
-            z
-              .object({ kind: text(100), count: z.number().int().positive() })
-              .strict(),
-          )
+          .array(z.object({ kind: text(100), count: z.number().int().positive() }).strict())
           .max(50),
         securityFacts: z
-          .array(
-            z
-              .object({ kind: text(100), count: z.number().int().positive() })
-              .strict(),
-          )
+          .array(z.object({ kind: text(100), count: z.number().int().positive() }).strict())
           .max(100),
       })
       .strict(),

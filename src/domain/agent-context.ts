@@ -188,7 +188,8 @@ export function buildAgentContext(report: AuditReport): AgentContext {
     {
       id: 'authentication-mechanism',
       status: authenticationEvidence.length ? 'partially_observed' : 'unresolved',
-      question: 'Do protected requests use browser-managed cookies, an explicit Authorization header, or both?',
+      question:
+        'Do protected requests use browser-managed cookies, an explicit Authorization header, or both?',
       why: authenticationEvidence.length
         ? 'Captured evidence narrows the investigation but does not establish the end-to-end request credential mechanism.'
         : 'Authentication-shaped code does not determine how credentials are attached to protected requests.',
@@ -204,7 +205,8 @@ export function buildAgentContext(report: AuditReport): AgentContext {
     {
       id: 'csrf-applicability',
       status: csrfCandidate || csrfFacts.length ? 'partially_observed' : 'unresolved',
-      question: 'Do browsers automatically attach authentication credentials to state-changing requests?',
+      question:
+        'Do browsers automatically attach authentication credentials to state-changing requests?',
       why: csrfCandidate
         ? 'Cookie-related evidence and mutating entry points were observed, so CSRF applicability needs direct confirmation.'
         : 'CSRF should not be promoted to a ticket unless browser-managed credentials reach a state-changing request.',
@@ -215,7 +217,8 @@ export function buildAgentContext(report: AuditReport): AgentContext {
     {
       id: 'runtime-boundaries',
       status: report.httpProbe ? 'observed' : 'unresolved',
-      question: 'Do the effective production headers, cookies, redirects, and proxy controls match source declarations?',
+      question:
+        'Do the effective production headers, cookies, redirects, and proxy controls match source declarations?',
       why: report.httpProbe
         ? 'One approved URL was observed; representative authenticated and mutation routes may still differ.'
         : 'No authorized runtime HTTP evidence was supplied to this audit.',

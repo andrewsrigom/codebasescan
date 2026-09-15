@@ -171,13 +171,13 @@ function render(report: AuditReport, format: string): string {
                   ? buildAgentReport(report)
                   : format === 'agent-context'
                     ? buildAgentContext(report)
-                  : format === 'agent-rules'
-                    ? agentReviewRulePack
-                    : format === 'rule-quality'
-                      ? buildRuleQualityReport(report)
-                      : format === 'plan' || format === 'agent-plan'
-                        ? buildRemediationPlan(report)
-                        : report,
+                    : format === 'agent-rules'
+                      ? agentReviewRulePack
+                      : format === 'rule-quality'
+                        ? buildRuleQualityReport(report)
+                        : format === 'plan' || format === 'agent-plan'
+                          ? buildRemediationPlan(report)
+                          : report,
           null,
           2,
         );
