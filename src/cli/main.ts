@@ -5,6 +5,7 @@ import { mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises
 import { configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
 import { captureSnapshot, estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
+import { assertPrivateSidecarDestination } from '../security/private-sidecar-path.ts';
 import { disableTelemetry } from '../security/privacy.ts';
 import {
   toCycloneDx,
@@ -391,6 +392,7 @@ async function legacyReviewLedgerDestination(location: string): Promise<string> 
 }
 
 async function writePrivateLedger(destination: string, value: unknown): Promise<void> {
+  assertPrivateSidecarDestination(destination);
   const temporary = `${destination}.${randomUUID()}.tmp`;
   try {
     await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
@@ -444,6 +446,7 @@ async function saveCalibrationLedger(location: string, ledger: CalibrationLedger
   const destination = path.resolve(
     option('--output') ?? (await defaultCalibrationLedgerDestination(location)),
   );
+  assertPrivateSidecarDestination(destination);
   await writeFile(destination, `${JSON.stringify(parseCalibrationLedger(ledger), null, 2)}\n`, {
     mode: 0o600,
   });
@@ -745,6 +748,7 @@ try {
       destinationPackage.report,
       sourceLedger,
     );
+    assertPrivateSidecarDestination(destination);
     await writeFile(destination, `${JSON.stringify(parseTriageLedger(result.ledger), null, 2)}\n`, {
       mode: 0o600,
       flag: 'wx',
@@ -773,6 +777,7 @@ try {
         ...(expiresAt ? { expiresAt } : {}),
       }),
     );
+    assertPrivateSidecarDestination(destination);
     await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
     console.log(`Saved suppression ledger ${destination}`);
   } else if (

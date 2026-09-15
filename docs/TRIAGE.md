@@ -36,6 +36,11 @@ refuses to overwrite an existing one. Stale or absent entries stay only in the o
 requires an explicit source and target report; it never treats an agent assessment as a human
 confirmation or changes the scan result.
 
+When the report is in WSL, run the CLI inside WSL for private sidecar writes. Windows cannot
+enforce `0600` permissions through `\\wsl.localhost` or `\\wsl$`; those destinations are refused
+instead of silently creating a world-readable ledger. Reading verified reports via UNC remains
+supported.
+
 Human-confirmed decisions use the existing, separate review ledger:
 
 ```bash
