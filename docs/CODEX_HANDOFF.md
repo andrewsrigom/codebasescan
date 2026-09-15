@@ -15,6 +15,7 @@ Current contracts:
 - audit report schema v17;
 - rule-quality schema v3;
 - agent context v1, agent plan v5, task bundle v3, agent report v1, and review-rule pack v2;
+- private external-agent triage ledger v1 (unreleased on main), separate from human review and policy;
 - static report manifest v1;
 - calibration report v2 and v1 calibration gate v1;
 - one current report root updated in place, with legacy history roots still readable.
@@ -34,6 +35,11 @@ CycloneDX, Markdown, schemas, hashes, and versioned agent context/rules/plans. V
 `report verify`, `findings list`, `finding show`, `coverage show`, and `changes show` commands let an
 agent inspect exact evidence without loading every artifact. Three bundled Codex skills cover
 review, gap review, and fix verification; none is part of audit execution.
+
+Unreleased `triage record` and `triage list` commands retain evidence-cited agent assessments in a
+private sidecar beside the report. Exact fingerprint, rule, evidence IDs, and source-file digests
+mark prior notes current or stale; they never become human dispositions. New human review ledgers
+also default outside the report root. Audit import still requires explicit `--reviews`.
 
 No production scanner or configuration default contains reference-project names or paths.
 

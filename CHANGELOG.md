@@ -4,6 +4,11 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added a private, versioned project-local ledger for evidence-cited external-agent triage.
+  Matching notes can be revisited across audits without changing deterministic findings or CI policy.
+- Moved new human review ledgers beside the report directory so review notes are not included in a
+  hosted static report by default; legacy ledgers are copied on the next review, not deleted.
+
 ## 0.4.0 — 2026-09-15
 
 - Added verified, bounded terminal reads for report integrity, finding IDs, exact evidence,

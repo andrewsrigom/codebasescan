@@ -12,6 +12,7 @@ Start here:
 - [Roadmap](ROADMAP.md) — release, calibration, CLI, coverage, and agent priorities.
 - [External agent review standard](AGENT_REVIEW_STANDARD.md) — safe use of the generated agent
   contracts.
+- [Project-local triage memory](TRIAGE.md) — retain agent assessments and separate human review.
 - [Releasing](RELEASING.md) — guarded npm publication and provenance checklist.
 
 Deeper references:

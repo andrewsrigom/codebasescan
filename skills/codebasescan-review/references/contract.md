@@ -9,6 +9,8 @@
 - `agent-rules.json`: versioned review questions, required evidence, risk signals, safe signals, and false-positive checks.
 
 The JSON Schema files beside these artifacts define the machine-readable contracts.
+`triage-ledger.schema.json` defines the private, project-local external-agent assessment sidecar.
+`codebasescan triage list` reconciles it with the current report without changing findings or policy.
 
 Read context as claims with different strength. An observed cookie operation does not prove that a
 request authenticates with cookies; a `postMessage` call does not prove which deployed application
@@ -25,6 +27,9 @@ Keep these layers distinct:
 5. **Human disposition**: confirmed, false positive, or accepted risk recorded outside the scanner result.
 
 Only the first two layers belong to the original audit. An agent may enrich them but cannot rewrite them.
+An agent assessment can be retained as `likely_valid`, `likely_false_positive`, or `inconclusive`
+only when the user requests persistence. It is stale when cited source-file digests or evidence IDs
+change; it is never a human disposition.
 
 ## Depths
 

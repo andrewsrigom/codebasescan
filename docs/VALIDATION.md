@@ -1,6 +1,6 @@
 # Validation
 
-Current release candidate: **0.4.0**. Last local evidence refresh: **2026-09-15 BRT**.
+Current published release: **0.4.0**. Last release-gate evidence refresh: **2026-09-15 BRT**.
 
 This record covers the declared Node.js, JavaScript, TypeScript, React, and Next.js scope. It is not
 a claim that every vulnerability is detectable, a recall estimate, or a security certification.
@@ -129,10 +129,10 @@ Disabled, unsupported, partial, failed, and zero-finding states stay distinct.
 
 ## Release state
 
-Version 0.3.0 remains the published npm release with verified provenance, matching tag, GitHub
-release, and clean registry installation. Version 0.4.0 is the current candidate and is not published
-by ordinary pushes. Its final tag, provenance, GitHub release, and registry verification require an
-explicit release action after the candidate commit and CI are green.
+Version 0.4.0 is [published on npm as `latest`](https://www.npmjs.com/package/codebasescan?activeTab=versions).
+Its [protected tag workflow](https://github.com/andrewsrigom/codebasescan/actions/runs/34933872056)
+completed after maintainer approval. Ordinary branch pushes do not publish. The project-local
+triage sidecar on `main` is unreleased development, not part of the 0.4.0 registry package.
 
 ## Reproduce
 

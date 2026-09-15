@@ -84,6 +84,12 @@ npx codebasescan coverage show codebasescan-report
 Other agents can consume the same versioned JSON and schemas. They should never silently rewrite,
 downgrade, suppress, or confirm scanner evidence.
 
+When an agent reviews a candidate, its evidence-backed assessment can be retained in a private
+project-side ledger. `codebasescan triage list codebasescan-report` shows which notes still match
+the current source; it does not change findings or CI policy. Human-confirmed false positives use
+the separate `review` command and an explicitly supplied `--reviews` ledger. See
+[project-local triage memory](docs/TRIAGE.md).
+
 pnpm and Yarn installations are also tested. CodebaseScan installs its own dependencies; an audit
 never installs the target project's dependencies or runs its scripts, configuration modules, tests,
 build, or application code.
