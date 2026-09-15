@@ -236,7 +236,7 @@ test('static report writes a self-contained report directory', async (context) =
   const calibrationReportSchema = JSON.parse(
     await readFile(path.join(result.directory, 'calibration-report.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
-  assert.equal(calibrationReportSchema.properties?.schemaVersion?.const, 1);
+  assert.equal(calibrationReportSchema.properties?.schemaVersion?.const, 2);
   const manifest = JSON.parse(
     await readFile(path.join(result.directory, 'manifest.json'), 'utf8'),
   ) as { kind: string; files: { sha256: string }[] };
