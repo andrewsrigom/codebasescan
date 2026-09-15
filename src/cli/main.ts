@@ -30,7 +30,7 @@ import { executeAudit } from '../engine/run.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { renderDoctor, runDoctor } from './doctor.ts';
 import { writeStaticReport } from '../reporting/static-report.ts';
-import { startReportServer } from '../reporting/report-server.ts';
+import { loadReportPackage, startReportServer } from '../reporting/report-server.ts';
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import {
   applyReviewLedger,
@@ -79,6 +79,13 @@ import { buildAgentReport } from '../domain/agent-report.ts';
 import { buildAgentContext } from '../domain/agent-context.ts';
 import { agentReviewRulePack } from '../domain/agent-rules.ts';
 import { installCodexSkill } from './agent-skill.ts';
+import {
+  findFinding,
+  listFindings,
+  renderFinding,
+  reportVerification,
+  showCoverage,
+} from './inspect-report.ts';
 
 disableTelemetry();
 process.umask(0o077);
@@ -419,6 +426,59 @@ try {
     const checks = await runDoctor(config);
     console.log(renderDoctor(checks));
     if (checks.some((check) => check.status === 'fail')) process.exitCode = 1;
+  } else if (command === 'report' && target === 'verify') {
+    const location =
+      arguments_[2] && !arguments_[2].startsWith('--') ? arguments_[2] : 'codebasescan-report';
+    const verified = reportVerification(await loadReportPackage(location));
+    console.log(
+      arguments_.includes('--json')
+        ? JSON.stringify(verified, null, 2)
+        : `Verified ${verified.artifactsVerified} artifacts for audit ${verified.auditId} in ${verified.directory}`,
+    );
+  } else if (command === 'findings' && target === 'list') {
+    const location =
+      arguments_[2] && !arguments_[2].startsWith('--') ? arguments_[2] : 'codebasescan-report';
+    const severity = option('--severity');
+    if (severity && !severities.includes(severity as Severity))
+      throw new Error('Use --severity with critical, high, medium, low, or info.');
+    const limit = positiveIntegerOption('--limit') ?? 20;
+    if (limit > 100) throw new Error('Use --limit with a value no greater than 100.');
+    const result = listFindings(await loadReportPackage(location), {
+      severity: severity as Severity | undefined,
+      rule: option('--rule'),
+      path: option('--path'),
+      limit,
+    });
+    console.log(
+      arguments_.includes('--json')
+        ? JSON.stringify(result, null, 2)
+        : [
+            `${result.shown} of ${result.total} matching finding candidates (audit ${result.auditId})`,
+            ...result.findings.map(
+              (finding) =>
+                `${finding.id}  ${finding.severity}  ${finding.title}  ${finding.location ?? 'no location'}`,
+            ),
+          ].join('\n'),
+    );
+  } else if (command === 'finding' && target === 'show' && arguments_[3]) {
+    const location =
+      arguments_[2] && !arguments_[2].startsWith('--') ? arguments_[2] : 'codebasescan-report';
+    const finding = findFinding(await loadReportPackage(location), arguments_[3]);
+    console.log(
+      arguments_.includes('--json') ? JSON.stringify(finding, null, 2) : renderFinding(finding),
+    );
+  } else if (command === 'coverage' && target === 'show') {
+    const location =
+      arguments_[2] && !arguments_[2].startsWith('--') ? arguments_[2] : 'codebasescan-report';
+    const result = showCoverage(await loadReportPackage(location));
+    console.log(
+      arguments_.includes('--json')
+        ? JSON.stringify(result, null, 2)
+        : [
+            `Coverage: ${result.complete}/${result.total} complete; snapshot ${result.snapshotTruncated ? 'partial' : 'not truncated'} (audit ${result.auditId})`,
+            ...result.capabilities.map((item) => `${item.status}  ${item.id}  ${item.detail}`),
+          ].join('\n'),
+    );
   } else if (command === 'advisories' && target === 'update' && arguments_[2]) {
     const root = await validateProjectRoot(arguments_[2], config.dataDirectory);
     await preflight(root, true);
@@ -811,6 +871,10 @@ try {
         'suppress',
         'calibration',
         'finalize',
+        'report',
+        'findings',
+        'finding',
+        'coverage',
       ]);
       if (known.has(command))
         throw new Error(`Missing or invalid arguments. Run codebasescan ${command} --help.`);

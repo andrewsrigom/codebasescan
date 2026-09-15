@@ -38,6 +38,25 @@ Serve a verified report package on 127.0.0.1.`,
   doctor: `Usage: codebasescan doctor
 
 Check the local runtime and optional scanner availability.`,
+  report: `Usage: codebasescan report verify [report-root] [--json]
+
+Verify the report manifest, every artifact hash, and audit identity before reading evidence.`,
+  findings: `Usage: codebasescan findings list [report-root] [options]
+
+List verified finding candidates. Default output is limited to 20 rows.
+
+Options:
+  --severity <value>  Exact severity: critical, high, medium, low, or info
+  --rule <rule-id>    Exact rule ID
+  --path <file>       Exact relative source path
+  --limit <1..100>   Maximum rows (default: 20)
+  --json             Compact machine-readable rows`,
+  finding: `Usage: codebasescan finding show <report-root> <finding-id> [--json]
+
+Read one verified finding with its captured evidence.`,
+  coverage: `Usage: codebasescan coverage show [report-root] [--json]
+
+Show complete and incomplete capabilities without treating skipped work as safe.`,
   finalize: `Usage: codebasescan finalize <after-report> --baseline <before-report> --verification <ledger.json> [options]
 
 Build a before/after report using explicit external verification evidence.`,
@@ -97,10 +116,15 @@ Start here:
   codebasescan audit [project]     Audit a project and update one stable report
   codebasescan open [report-root]  View the current audit
   codebasescan doctor              Check this installation
+  codebasescan report verify       Verify a portable report package
+  codebasescan findings list       List candidates by stable ID
+  codebasescan finding show        Read one candidate and its evidence
+  codebasescan coverage show       Inspect incomplete capabilities
   codebasescan agent install codex Install the optional Codex review skill
   codebasescan --version           Print the installed version
 
 Evidence workflow:
+  report, findings, finding, coverage  Read verified evidence
   agent      Install agent integrations
   finalize   Build a verified before/after report
   task       Export one remediation task for an agent
