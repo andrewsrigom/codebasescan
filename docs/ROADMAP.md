@@ -23,7 +23,7 @@ Items outside that supported scope do not block v1.
   exit codes;
 - verified, bounded report/finding/coverage/delta CLI reads, versioned external-agent rules and
   plans, and three focused Codex skills discoverable in `.agents/skills`;
-- private, evidence-cited project-local agent triage on unreleased `main`, distinct from explicitly
+- private, evidence-cited project-local agent triage, distinct from explicitly
   imported human review decisions;
 - benchmark fixtures, real-project portability runs, npm/pnpm/Yarn package smoke tests, and guarded
   public releases.

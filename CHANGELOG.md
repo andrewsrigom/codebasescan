@@ -4,10 +4,21 @@ Notable changes are recorded here.
 
 ## Unreleased
 
-- Added a private, versioned project-local ledger for evidence-cited external-agent triage.
-  Matching notes can be revisited across audits without changing deterministic findings or CI policy.
+No changes yet.
+
+## 0.5.0 — 2026-09-15
+
+- Added a private, versioned project-local ledger for evidence-cited external-agent triage and
+  transfer across matching project snapshots. Agent notes never change scanner findings, human
+  review, or CI policy.
 - Moved new human review ledgers beside the report directory so review notes are not included in a
   hosted static report by default; legacy ledgers are copied on the next review, not deleted.
+- Refused private ledger writes through Windows WSL UNC paths when file permissions cannot be
+  enforced, instead of silently creating a world-readable sidecar.
+- Excluded JSX HTML sinks only when the AST proves a direct static literal or a unique top-level
+  static binding. Dynamic and shadowed sources remain review candidates.
+- Clarified that sensitive-shaped log arguments are investigation candidates, not proof that
+  private fields reached the console or telemetry.
 
 ## 0.4.0 — 2026-09-15
 
