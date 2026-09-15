@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const manager = process.argv[2] ?? 'npm';
+const maximumPackedBytes = 2 * 1024 * 1024;
+const maximumInstalledBytes = 60 * 1024 * 1024;
 if (!['npm', 'pnpm', 'yarn'].includes(manager))
   throw new Error('Use npm, pnpm, or yarn for the package smoke test.');
 const executable = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
@@ -137,6 +139,10 @@ try {
   );
   const [packageData] = JSON.parse(packed.stdout);
   if (!packageData?.filename) throw new Error('npm pack did not return a tarball name.');
+  if (packageData.size > maximumPackedBytes)
+    throw new Error(
+      `Packed CLI is ${packageData.size} bytes; the v1 limit is ${maximumPackedBytes} bytes.`,
+    );
   const tarball = path.join(packedDirectory, packageData.filename);
   if (manager === 'yarn') {
     await run('yarn', ['config', 'set', 'nodeLinker', 'node-modules'], { cwd: fixture });
@@ -179,13 +185,18 @@ try {
   )
     throw new Error('Installed CLI did not create the current static report.');
   await verifyReportServer(fixture, reportDirectory);
+  const dependencyBytes = await installedBytes(path.join(fixture, 'node_modules'));
+  if (dependencyBytes > maximumInstalledBytes)
+    throw new Error(
+      `Clean ${manager} installation is ${dependencyBytes} bytes; the v1 limit is ${maximumInstalledBytes} bytes.`,
+    );
   const metrics = {
     manager,
     node: process.version,
     packageFiles: packageData.entryCount,
     tarballBytes: packageData.size,
     unpackedPackageBytes: packageData.unpackedSize,
-    installedBytes: await installedBytes(path.join(fixture, 'node_modules')),
+    installedBytes: dependencyBytes,
     installDurationMs: install.durationMs,
     auditDurationMs: audit.durationMs,
     reportArtifacts: reportManifest.files.length,

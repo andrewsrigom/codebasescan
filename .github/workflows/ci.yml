@@ -22,7 +22,7 @@ jobs:
 
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       CODEBASESCAN_SEMGREP: 'false'
@@ -59,7 +59,7 @@ jobs:
 
   package-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:

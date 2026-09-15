@@ -6,12 +6,15 @@ import { fileURLToPath } from 'node:url';
 const execute = promisify(execFile);
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const maximumPackedBytes = 2 * 1024 * 1024;
 const { stdout } = await execute(npm, ['pack', '--dry-run', '--json', '--ignore-scripts'], {
   cwd: root,
   maxBuffer: 16 * 1024 * 1024,
 });
 const [pack] = JSON.parse(stdout);
 if (!pack || !Array.isArray(pack.files)) throw new Error('npm did not return a package inventory.');
+if (pack.size > maximumPackedBytes)
+  throw new Error(`Packed CLI is ${pack.size} bytes; the v1 limit is ${maximumPackedBytes} bytes.`);
 const files = new Set(pack.files.map((file) => file.path));
 const required = [
   'LICENSE',
