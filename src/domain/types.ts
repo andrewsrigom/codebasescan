@@ -469,6 +469,11 @@ export interface ProjectDeclaredContext {
   externalServices: string[];
   priorityPaths: string[];
   outOfScopePaths: string[];
+  authenticationMethods?: ('cookie' | 'bearer' | 'external')[];
+  deploymentModel?: 'standalone' | 'embedded' | 'both' | 'unknown';
+  trustedParentOrigins?: string[];
+  trustBoundaries?: string[];
+  tenantIsolation?: ('application' | 'database-rls' | 'gateway')[];
 }
 export interface ProjectVerificationContext {
   packageManager: 'npm' | 'pnpm' | 'yarn';

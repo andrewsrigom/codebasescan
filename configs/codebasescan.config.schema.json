@@ -62,6 +62,16 @@
         "pattern": "^[A-Za-z0-9@._ /-]+$"
       }
     },
+    "origins": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 200,
+        "pattern": "^https?://[^/?#@]+$"
+      }
+    },
     "vocabulary": {
       "type": "object",
       "additionalProperties": false,
@@ -132,7 +142,22 @@
         "storageBoundaries": { "$ref": "#/$defs/labels" },
         "externalServices": { "$ref": "#/$defs/labels" },
         "priorityPaths": { "$ref": "#/$defs/pathPatterns" },
-        "outOfScopePaths": { "$ref": "#/$defs/pathPatterns" }
+        "outOfScopePaths": { "$ref": "#/$defs/pathPatterns" },
+        "authenticationMethods": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "enum": ["cookie", "bearer", "external"] }
+        },
+        "deploymentModel": { "enum": ["standalone", "embedded", "both", "unknown"] },
+        "trustedParentOrigins": { "$ref": "#/$defs/origins" },
+        "trustBoundaries": { "$ref": "#/$defs/labels" },
+        "tenantIsolation": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "enum": ["application", "database-rls", "gateway"] }
+        }
       }
     },
     "verification": {

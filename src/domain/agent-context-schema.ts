@@ -39,6 +39,17 @@ const declaredContext = z
     externalServices: z.array(text(80)).max(50),
     priorityPaths: z.array(text(300)).max(50),
     outOfScopePaths: z.array(text(300)).max(50),
+    authenticationMethods: z
+      .array(z.enum(['cookie', 'bearer', 'external']))
+      .max(50)
+      .optional(),
+    deploymentModel: z.enum(['standalone', 'embedded', 'both', 'unknown']).optional(),
+    trustedParentOrigins: z.array(text(200)).max(50).optional(),
+    trustBoundaries: z.array(text(80)).max(50).optional(),
+    tenantIsolation: z
+      .array(z.enum(['application', 'database-rls', 'gateway']))
+      .max(50)
+      .optional(),
   })
   .strict();
 

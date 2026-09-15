@@ -7,6 +7,8 @@ import {
 } from '../../src/domain/agent-context-schema.ts';
 import type { ProjectProfile } from '../../src/domain/types.ts';
 import { sampleReport } from '../helpers.ts';
+import { defaultSaasConfiguration } from '../../src/scanners/declarative-config.ts';
+import { parseAuditReport } from '../../src/domain/report-schema.ts';
 
 function embeddedProfile(): ProjectProfile {
   return {
@@ -109,6 +111,53 @@ test('agent context leaves authentication mechanism and CSRF applicability unres
     context.openQuestions.find((question) => question.id === 'csrf-applicability')?.why ?? '',
     /should not be promoted to a ticket/,
   );
+});
+
+test('declared app model narrows investigation but does not establish observed controls', () => {
+  const report = sampleReport();
+  const profile = embeddedProfile();
+  profile.entrypoints = [];
+  profile.calls = [];
+  profile.facts = [];
+  profile.saasSemantics = {
+    ...defaultSaasConfiguration,
+    sources: ['codebasescan.config.json'],
+    context: {
+      features: ['authentication', 'tenancy'],
+      roles: [],
+      sensitiveData: [],
+      storageBoundaries: [],
+      externalServices: [],
+      priorityPaths: [],
+      outOfScopePaths: [],
+      authenticationMethods: ['cookie'],
+      deploymentModel: 'embedded',
+      trustedParentOrigins: ['https://parent.example'],
+      trustBoundaries: ['browser'],
+      tenantIsolation: ['application'],
+    },
+  };
+  report.projectProfile = profile;
+  assert.equal(
+    parseAuditReport(report).projectProfile?.saasSemantics?.context?.deploymentModel,
+    'embedded',
+  );
+  const context = buildAgentContext(report);
+  assert.equal(context.declared?.deploymentModel, 'embedded');
+  assert.deepEqual(context.declared?.trustedParentOrigins, ['https://parent.example']);
+  assert.equal(
+    context.signals.find((item) => item.id === 'browser-session-cookie')?.status,
+    'not_observed',
+  );
+  assert.equal(
+    context.openQuestions.find((item) => item.id === 'authentication-mechanism')?.status,
+    'unresolved',
+  );
+  assert.equal(
+    context.openQuestions.find((item) => item.id === 'trusted-parent-origins')?.status,
+    'unresolved',
+  );
+  assert.deepEqual(parseAgentContext(context), context);
 });
 
 test('agent context schema is versioned', () => {

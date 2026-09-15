@@ -156,10 +156,17 @@ A root `codebasescan.config.json` or JSONC file can declare project vocabulary w
   "context": {
     "features": ["authentication", "tenancy", "billing"],
     "sensitiveData": ["personal", "financial"],
-    "externalServices": ["stripe"]
+    "externalServices": ["stripe"],
+    "authenticationMethods": ["cookie"],
+    "deploymentModel": "embedded",
+    "trustedParentOrigins": ["https://parent.example.com"],
+    "tenantIsolation": ["application"]
   }
 }
 ```
+
+These are project declarations for focused review, not verified runtime controls. Only exact origins
+without paths, credentials, or query strings are accepted; no declared origin is probed by default.
 
 JavaScript and TypeScript configuration files from the target repository are never imported. Lifecycle scripts, builds, tests, and application code are not executed.
 

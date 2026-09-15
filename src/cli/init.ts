@@ -72,6 +72,11 @@ export async function initializeProjectConfig(project = '.', force = false): Pro
       externalServices: [],
       priorityPaths: [],
       outOfScopePaths: [],
+      authenticationMethods: [],
+      deploymentModel: 'unknown',
+      trustedParentOrigins: [],
+      trustBoundaries: [],
+      tenantIsolation: [],
     },
     expectedUnauthenticatedRoutes: [],
     verification: {

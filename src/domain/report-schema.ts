@@ -275,6 +275,17 @@ const projectContext = z.object({
   externalServices: z.array(shortText).max(50),
   priorityPaths: z.array(shortText).max(50),
   outOfScopePaths: z.array(shortText).max(50),
+  authenticationMethods: z
+    .array(z.enum(['cookie', 'bearer', 'external']))
+    .max(50)
+    .optional(),
+  deploymentModel: z.enum(['standalone', 'embedded', 'both', 'unknown']).optional(),
+  trustedParentOrigins: z.array(shortText).max(50).optional(),
+  trustBoundaries: z.array(shortText).max(50).optional(),
+  tenantIsolation: z
+    .array(z.enum(['application', 'database-rls', 'gateway']))
+    .max(50)
+    .optional(),
 });
 const projectVerification = z.object({
   packageManager: z.enum(['npm', 'pnpm', 'yarn']),

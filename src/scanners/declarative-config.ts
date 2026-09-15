@@ -83,6 +83,11 @@ const contextKeys = new Set([
   'externalServices',
   'priorityPaths',
   'outOfScopePaths',
+  'authenticationMethods',
+  'deploymentModel',
+  'trustedParentOrigins',
+  'trustBoundaries',
+  'tenantIsolation',
 ]);
 const verificationKeys = new Set(['packageManager', 'testScripts', 'buildScripts']);
 
@@ -247,6 +252,24 @@ function safeContextLabel(value: unknown): string | undefined {
     : undefined;
 }
 
+function safeDeclaredOrigin(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 200) return undefined;
+  try {
+    const origin = new URL(value);
+    return ['https:', 'http:'].includes(origin.protocol) &&
+      !origin.username &&
+      !origin.password &&
+      !origin.search &&
+      !origin.hash &&
+      origin.pathname === '/' &&
+      value === origin.origin
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function safeScriptName(value: unknown): string | undefined {
   return typeof value === 'string' &&
     value.length > 0 &&
@@ -319,6 +342,11 @@ function sanitizeProjectContext(value: unknown): ProjectDeclaredContext | undefi
     typeof item === 'string' && sensitiveDataClasses.has(item as ProjectSensitiveDataClass)
       ? (item as ProjectSensitiveDataClass)
       : undefined;
+  const authenticationMethod = (item: unknown) =>
+    item === 'cookie' || item === 'bearer' || item === 'external' ? item : undefined;
+  const tenantIsolation = (item: unknown) =>
+    item === 'application' || item === 'database-rls' || item === 'gateway' ? item : undefined;
+  const deploymentModel = input.deploymentModel;
   return {
     features: boundedContextValues(input.features, feature) ?? [],
     roles: boundedContextValues(input.roles, safeIdentifier) ?? [],
@@ -327,6 +355,30 @@ function sanitizeProjectContext(value: unknown): ProjectDeclaredContext | undefi
     externalServices: boundedContextValues(input.externalServices, safeContextLabel) ?? [],
     priorityPaths: boundedContextValues(input.priorityPaths, safePathPattern) ?? [],
     outOfScopePaths: boundedContextValues(input.outOfScopePaths, safePathPattern) ?? [],
+    ...(input.authenticationMethods !== undefined
+      ? {
+          authenticationMethods:
+            boundedContextValues(input.authenticationMethods, authenticationMethod) ?? [],
+        }
+      : {}),
+    ...(deploymentModel === 'standalone' ||
+    deploymentModel === 'embedded' ||
+    deploymentModel === 'both' ||
+    deploymentModel === 'unknown'
+      ? { deploymentModel }
+      : {}),
+    ...(input.trustedParentOrigins !== undefined
+      ? {
+          trustedParentOrigins:
+            boundedContextValues(input.trustedParentOrigins, safeDeclaredOrigin) ?? [],
+        }
+      : {}),
+    ...(input.trustBoundaries !== undefined
+      ? { trustBoundaries: boundedContextValues(input.trustBoundaries, safeContextLabel) ?? [] }
+      : {}),
+    ...(input.tenantIsolation !== undefined
+      ? { tenantIsolation: boundedContextValues(input.tenantIsolation, tenantIsolation) ?? [] }
+      : {}),
   };
 }
 
@@ -413,6 +465,35 @@ function saasHasRejectedSettings(value: unknown): boolean {
     for (const key of ['priorityPaths', 'outOfScopePaths'] as const)
       if (context[key] !== undefined && rejectedContextValues(context[key], safePathPattern))
         return true;
+    if (
+      context.authenticationMethods !== undefined &&
+      rejectedContextValues(context.authenticationMethods, (item) =>
+        item === 'cookie' || item === 'bearer' || item === 'external' ? item : undefined,
+      )
+    )
+      return true;
+    if (
+      context.deploymentModel !== undefined &&
+      !['standalone', 'embedded', 'both', 'unknown'].includes(String(context.deploymentModel))
+    )
+      return true;
+    if (
+      context.trustedParentOrigins !== undefined &&
+      rejectedContextValues(context.trustedParentOrigins, safeDeclaredOrigin)
+    )
+      return true;
+    if (
+      context.trustBoundaries !== undefined &&
+      rejectedContextValues(context.trustBoundaries, safeContextLabel)
+    )
+      return true;
+    if (
+      context.tenantIsolation !== undefined &&
+      rejectedContextValues(context.tenantIsolation, (item) =>
+        item === 'application' || item === 'database-rls' || item === 'gateway' ? item : undefined,
+      )
+    )
+      return true;
   }
   const verification = object(input.verification);
   if (input.verification !== undefined) {

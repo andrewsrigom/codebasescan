@@ -401,3 +401,14 @@ are established. The audit report schema and workflow remain unchanged because t
 derived external-agent view; its own schema begins at v1. Review-rule pack v2 adds exact scanner
 rule and bounded evidence-text applicability filters, allowing embedded messaging and frame-policy
 guidance to attach only to relevant findings instead of every generic configuration candidate.
+
+## 2026-09-15 — additive project security-model declarations
+
+The root declarative config may optionally name authentication methods, deployment topology, exact
+trusted parent origins, trust-boundary labels, and tenant-isolation layers. These values guide
+external review only; they never select probe destinations, suppress scanner candidates, or turn
+deployment claims into observed facts. Config schema v1 and report schema v17 accept the optional
+fields while older reports and configs remain readable: absent fields stay absent, no default
+security conclusion is inferred, and generated agent context v1 preserves the declared/observed
+split. A future breaking change to field meaning will require new schema versions rather than
+reinterpretation of stored reports.

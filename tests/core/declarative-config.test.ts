@@ -63,7 +63,12 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
         "storageBoundaries": ["postgres"],
         "externalServices": ["stripe"],
         "priorityPaths": ["src/app/api/*"],
-        "outOfScopePaths": ["legacy/*"]
+        "outOfScopePaths": ["legacy/*"],
+        "authenticationMethods": ["cookie", "bearer"],
+        "deploymentModel": "embedded",
+        "trustedParentOrigins": ["https://parent.example.com"],
+        "trustBoundaries": ["browser", "billing gateway"],
+        "tenantIsolation": ["application", "database-rls"]
       },
       "verification": {
         "packageManager": "npm",
@@ -81,6 +86,10 @@ test('declarative SaaS configuration extends bounded generic semantics', () => {
   assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health', '/api/public/*']);
   assert.deepEqual(result.config.context?.features, ['authentication', 'tenancy', 'billing']);
   assert.deepEqual(result.config.context?.sensitiveData, ['personal', 'financial']);
+  assert.deepEqual(result.config.context?.authenticationMethods, ['cookie', 'bearer']);
+  assert.equal(result.config.context?.deploymentModel, 'embedded');
+  assert.deepEqual(result.config.context?.trustedParentOrigins, ['https://parent.example.com']);
+  assert.deepEqual(result.config.context?.tenantIsolation, ['application', 'database-rls']);
   assert.deepEqual(result.config.verification, {
     packageManager: 'npm',
     testScripts: ['test'],
@@ -97,7 +106,14 @@ test('unsafe SaaS settings are reported and removed without executing code', () 
       vocabulary: { tenantKeys: ['workspaceId', 'bad.name'] },
       helpers: { authorization: ['requireRole'], execute: ['targetCode'] },
       expectedUnauthenticatedRoutes: ['/api/health', '../outside', '/api/(.*)'],
-      context: { features: ['unknown-feature'], priorityPaths: ['../outside'] },
+      context: {
+        features: ['unknown-feature'],
+        priorityPaths: ['../outside'],
+        authenticationMethods: ['cookie', 'execute'],
+        deploymentModel: 'arbitrary',
+        trustedParentOrigins: ['https://safe.example', 'https://user:secret@unsafe.example/path'],
+        tenantIsolation: ['application', 'shell'],
+      },
       verification: { packageManager: 'shell', testScripts: ['test; remove-all'] },
       plugins: ['./target-code.ts'],
     }),
@@ -109,6 +125,9 @@ test('unsafe SaaS settings are reported and removed without executing code', () 
   assert.ok(!result.config.vocabulary.tenantKeys.includes('bad.name'));
   assert.deepEqual(result.config.expectedUnauthenticatedRoutes, ['/api/health']);
   assert.deepEqual(result.config.context?.features, []);
+  assert.deepEqual(result.config.context?.authenticationMethods, ['cookie']);
+  assert.deepEqual(result.config.context?.trustedParentOrigins, ['https://safe.example']);
+  assert.equal(result.config.context?.deploymentModel, undefined);
   assert.equal(result.config.verification, undefined);
   assert.equal((result.config.helpers as unknown as Record<string, unknown>).execute, undefined);
 });
