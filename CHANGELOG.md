@@ -4,6 +4,18 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+## 0.4.0 — 2026-09-15
+
+- Added verified, bounded terminal reads for report integrity, finding IDs, exact evidence,
+  coverage, and before/after coverage changes.
+- Installed three focused Codex skills into the repo-discoverable `.agents/skills` path and
+  verified discovery from an external project.
+- Added optional declarative application boundaries for authentication, embedding, parent origins,
+  and tenant isolation without treating declarations as observed controls.
+- Allowed up to three explicitly selected HTTP URLs with bounded sequential observation, partial
+  coverage on failure, and separate per-URL evidence.
+- Improved native Windows package checks without weakening the Linux release gate.
+
 - Added a versioned agent-context artifact that separates observed authentication, cookie, token,
   cross-document messaging, framing, and CSRF signals from deployment questions and unknowns.
 - Added exact-match agent review rules for embedded messaging and framing-policy candidates so

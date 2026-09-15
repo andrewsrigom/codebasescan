@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: andrewsrigom/codebasescan@v0.3.0
+      - uses: andrewsrigom/codebasescan@v0.4.0
         with:
           policy: balanced
           baseline-ref: ${{ github.event.pull_request.base.sha }}

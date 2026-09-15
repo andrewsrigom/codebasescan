@@ -10,7 +10,7 @@ project.
 
 Current contracts:
 
-- audit workflow `codebasescan-audit-v84`;
+- audit workflow `codebasescan-audit-v85`;
 - audit-mode pack `1.0.0`;
 - audit report schema v17;
 - rule-quality schema v3;
@@ -27,11 +27,13 @@ Implemented analysis includes project/profile mapping, bounded call relationship
 security, Next.js and React checks, static accessibility, privacy, reliability, environment, test,
 API, database, webhook, feature-flag, supply-chain, dependency, quality, dead-code, duplication,
 release, and web-posture evidence. Optional trusted Semgrep/Gitleaks, a local OSV cache, imported Axe
-output, and the explicit one-URL HTTP probe retain separate coverage.
+output, and up to three explicitly selected HTTP probe URLs retain separate coverage.
 
 Static output includes the human dashboard, complete report, run manifest, policy, SARIF,
-CycloneDX, Markdown, schemas, hashes, and versioned agent context/rules/plans. The bundled Codex skill is the
-reference external-agent workflow; it is not part of audit execution.
+CycloneDX, Markdown, schemas, hashes, and versioned agent context/rules/plans. Verified, bounded
+`report verify`, `findings list`, `finding show`, `coverage show`, and `changes show` commands let an
+agent inspect exact evidence without loading every artifact. Three bundled Codex skills cover
+review, gap review, and fix verification; none is part of audit execution.
 
 No production scanner or configuration default contains reference-project names or paths.
 

@@ -1,6 +1,6 @@
 # Validation
 
-Current release candidate: **0.4.0**. Last local v1 evidence refresh: **2026-09-14 BRT**.
+Current release candidate: **0.4.0**. Last local evidence refresh: **2026-09-15 BRT**.
 
 This record covers the declared Node.js, JavaScript, TypeScript, React, and Next.js scope. It is not
 a claim that every vulnerability is detectable, a recall estimate, or a security certification.
@@ -13,27 +13,28 @@ a claim that every vulnerability is detectable, a recall estimate, or a security
 - Semgrep 1.176.1 and Gitleaks 8.30.1;
 - dependency-cruiser 18.2.0 and jscpd 5.2.0.
 
-Linux and WSL are the verified local environments. The GitHub Actions package matrix provides the
-clean Node.js 22 evidence. Native Windows and macOS are not claimed.
+The original real-project calibration ran on Linux/WSL. The 0.4 candidate was also tested with
+native Windows Node 24 for core checks, fixtures, and npm/pnpm installation. The GitHub Actions
+package matrix provides clean Node 22 and Linux evidence. Native macOS is not claimed.
 
 ## Deterministic release gate
 
-| Check                    | Current evidence                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                    |
-| Format, types, lint      | Passed with zero warnings                                                                 |
-| Core tests               | 419 passed                                                                                |
-| Fixture benchmark        | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                            |
-| AST benchmark subset     | TP 11, FP 0, FN 0                                                                         |
-| Next.js benchmark subset | TP 7, FP 0, FN 0                                                                          |
-| React benchmark subset   | TP 9, FP 0, FN 0                                                                          |
-| SaaS benchmark subset    | TP 9, FP 0, FN 0                                                                          |
-| Integration tests        | 11 passed, including scanner isolation, cache, recovery, and no-network audit             |
-| Production build         | Passed                                                                                    |
-| Browser workflow         | 7 passed in Chromium                                                                      |
-| Package audit            | 0 known vulnerabilities at `--audit-level=low`                                            |
-| CLI diagnostics          | Runtime and bundled scanner checks passed; absent offline OSV data is an explicit warning |
-| Baseline policy          | Same snapshot produced 0 new, 0 resolved, and 0 gated high findings                       |
+| Check                    | Current evidence                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                                                             |
+| Format, types, lint      | Passed with zero warnings                                                                                                          |
+| Core tests               | 431 passed on native Windows                                                                                                       |
+| Fixture benchmark        | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                                                                     |
+| AST benchmark subset     | TP 11, FP 0, FN 0                                                                                                                  |
+| Next.js benchmark subset | TP 7, FP 0, FN 0                                                                                                                   |
+| React benchmark subset   | TP 9, FP 0, FN 0                                                                                                                   |
+| SaaS benchmark subset    | TP 9, FP 0, FN 0                                                                                                                   |
+| Integration tests        | 6 passed and 5 native-Windows-specific optional process/scanner cases skipped; prior Linux run had 11 passed                       |
+| Production build         | Passed                                                                                                                             |
+| Browser workflow         | 7 Chromium cases passed locally, but native-Windows runner did not exit after teardown; Linux release CI is the authoritative gate |
+| Package audit            | 0 known vulnerabilities at `--audit-level=low` in the native-Windows check                                                         |
+| CLI diagnostics          | Runtime and bundled scanner checks passed; absent offline OSV data is an explicit warning                                          |
+| Baseline policy          | Same snapshot produced 0 new, 0 resolved, and 0 gated high findings                                                                |
 
 The benchmark uses inert, declared ground truth. Its perfect fixture score is a regression signal,
 not a real-world accuracy claim.
@@ -41,17 +42,19 @@ not a real-world accuracy claim.
 ## Packed installation
 
 Each smoke test packed the actual CLI, installed it into an empty generated project, and ran the
-installed version, `doctor`, `init`, Codex skill installation, a static audit, report integrity, and
-the loopback report server. The release scripts now fail mechanically above 2 MiB packed or 60 MiB
-installed.
+installed version, `doctor`, `init`, all three Codex skill installations, a static audit, verified
+report and exact finding reads, and the loopback report server. The release scripts fail
+mechanically above 2 MiB packed or 60 MiB installed.
 
-| Runtime / manager |   Tarball | Unpacked package | Installed dependencies | Install |  Audit |
-| ----------------- | --------: | ---------------: | ---------------------: | ------: | -----: |
-| Node 24 / npm     | 279,022 B |      1,255,358 B |           51,861,429 B | 10.87 s | 2.43 s |
-| Node 24 / pnpm    | 279,022 B |      1,255,358 B |           51,945,629 B |  5.79 s | 2.53 s |
-| Node 24 / Yarn    | 279,022 B |      1,255,358 B |           61,780,371 B |  8.79 s | 2.67 s |
+| Runtime / manager                     |   Tarball | Unpacked package | Installed dependencies | Install |  Audit |
+| ------------------------------------- | --------: | ---------------: | ---------------------: | ------: | -----: |
+| Node 24 / npm, Windows                | 289,966 B |      1,303,556 B |           50,297,862 B | ~11.5 s | ~4.0 s |
+| Node 24 / pnpm, Windows               | 289,964 B |      1,303,556 B |           50,628,568 B |  6.77 s | 4.57 s |
+| Node 24 / Yarn, prior Linux candidate | 279,022 B |      1,255,358 B |           61,780,371 B |  8.79 s | 2.67 s |
 
-All three installations remain below 60 MiB (62,914,560 bytes). The tarball contains 100 files.
+The fresh npm/pnpm installations remain below 60 MiB (62,914,560 bytes), and the candidate tarball
+contains 105 files. Native Windows Yarn could not traverse the sandbox-restricted user profile; the
+prior Linux Yarn result is historical and must be refreshed in the release CI.
 Next.js, React, SQLite, LangChain, LangGraph, and model-provider packages are not installed with the
 CLI.
 
@@ -60,6 +63,11 @@ CLI.
 Sixteen authorized, structurally different repositories were scanned with workflow v84. The scans
 captured source and manifests only: no target module, lifecycle script, dependency installation,
 test, build, or application code ran.
+
+Those corpus results predate workflow v85 and are not a fresh claim for 0.4.0. Three separate
+inert local shapes were freshly audited on Windows: SaaS (8 findings), Next.js (8), and React (13);
+all three report manifests and bounded finding reads verified. The Windows host does not expose the
+previous WSL calibration repositories, so those were not rescanned locally.
 
 | Project | Files | Findings | Candidate review | False-negative scope |
 | ------- | ----: | -------: | ---------------- | -------------------- |

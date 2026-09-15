@@ -15,13 +15,14 @@ Items outside that supported scope do not block v1.
 - nine audit modes for Node.js, TypeScript, JavaScript, React, Next.js, and common SaaS mechanics;
 - TypeScript/AST, framework, supply-chain, accessibility, privacy, reliability, release, web, and
   maintainability analysis;
-- optional trusted Semgrep/Gitleaks, offline OSV evidence, imported Axe output, and an explicitly
-  approved one-URL posture probe;
+- optional trusted Semgrep/Gitleaks, offline OSV evidence, imported Axe output, and up to three
+  explicitly approved URL posture probes;
 - one current script-free report with JSON, SARIF, CycloneDX, schemas, policy, provenance, and
   artifact hashes;
 - reusable GitHub Action with full-context baseline comparison, HTML artifacts, SARIF, and policy
   exit codes;
-- versioned external-agent rules, plans, report contracts, and a bundled Codex review skill;
+- verified, bounded report/finding/coverage/delta CLI reads, versioned external-agent rules and
+  plans, and three focused Codex skills discoverable in `.agents/skills`;
 - benchmark fixtures, real-project portability runs, npm/pnpm/Yarn package smoke tests, and guarded
   public releases.
 
