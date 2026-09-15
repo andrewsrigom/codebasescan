@@ -103,5 +103,26 @@ export function auditOptions(value: unknown): AuditOptions {
       allowPrivateNetwork: probe.allowPrivateNetwork === true,
     };
   }
+  if (input.httpProbes !== undefined) {
+    if (input.httpProbe !== undefined)
+      throw new Error('Use either one HTTP probe or an explicit probe allowlist.');
+    if (
+      !Array.isArray(input.httpProbes) ||
+      input.httpProbes.length < 1 ||
+      input.httpProbes.length > 3
+    )
+      throw new Error('HTTP probe allowlist must contain one to three approved URLs.');
+    result.httpProbes = input.httpProbes.map((item) => {
+      const probe = record(item);
+      if (probe.approved !== true)
+        throw new Error('Every HTTP probe URL must be explicitly approved.');
+      if (probe.allowPrivateNetwork !== undefined && typeof probe.allowPrivateNetwork !== 'boolean')
+        throw new Error('allowPrivateNetwork must be a boolean.');
+      return {
+        url: text(probe.url, 'HTTP probe URL', 2048),
+        allowPrivateNetwork: probe.allowPrivateNetwork === true,
+      };
+    });
+  }
   return result;
 }

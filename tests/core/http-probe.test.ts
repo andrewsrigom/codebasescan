@@ -3,9 +3,15 @@ import assert from 'node:assert/strict';
 import { createServer, type RequestListener, type Server } from 'node:http';
 import { once } from 'node:events';
 import { validateProbeUrl } from '../../src/security/url-policy.ts';
-import { probeHttp, reconcileHttpPosture } from '../../src/scanners/http-probe.ts';
+import {
+  probeHttp,
+  probeHttpAllowlist,
+  reconcileHttpPosture,
+} from '../../src/scanners/http-probe.ts';
 import { snapshotOf } from '../helpers.ts';
 import { scanPosture } from '../../src/scanners/posture.ts';
+import { sampleReport } from '../helpers.ts';
+import { parseAuditReport } from '../../src/domain/report-schema.ts';
 
 async function localServer(handler: RequestListener): Promise<{
   server: Server;
@@ -72,6 +78,32 @@ test('probe uses a bounded HEAD request and discards cookie values', async (cont
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H003'));
   assert.ok(result.findings.some((finding) => finding.ruleId === 'TW-H004'));
   assert.ok(!JSON.stringify(result).includes('never-store-this-value'));
+});
+
+test('explicit allowlist keeps each observation and partial failures separate', async (context) => {
+  const paths: string[] = [];
+  const { server, url } = await localServer((request, response) => {
+    paths.push(request.url ?? '');
+    response.writeHead(204, { 'X-Content-Type-Options': 'nosniff' });
+    response.end();
+  });
+  context.after(() => server.close());
+  const result = await probeHttpAllowlist([
+    { url: new URL('/one', url).toString(), allowPrivateNetwork: false },
+    { url: 'file:///not-http', allowPrivateNetwork: false },
+    { url: new URL('/two', url).toString(), allowPrivateNetwork: false },
+  ]);
+  assert.equal(result.run.status, 'partial');
+  assert.equal(result.reports.length, 2);
+  assert.deepEqual(paths, ['/one', '/two']);
+  const report = sampleReport();
+  report.httpProbe = result.reports[0];
+  report.httpProbes = result.reports;
+  assert.equal(parseAuditReport(report).httpProbes?.length, 2);
+  await assert.rejects(
+    () => probeHttpAllowlist(Array(4).fill({ url, allowPrivateNetwork: false })),
+    /exceeds three/,
+  );
 });
 
 test('passive observation covers reflected CORS, shared cache, and broad script CSP', async (context) => {
@@ -234,4 +266,47 @@ test('runtime evidence is reconciled with a related static posture candidate', a
   const candidate = reconciled.find((finding) => finding.ruleId === 'TW-P001');
   assert.equal(candidate?.runtimeVerification?.status, 'corroborated');
   assert.ok(candidate?.evidence.some((evidence) => evidence.kind === 'observed'));
+});
+
+test('a later URL cannot be attributed to the first runtime observation', async (context) => {
+  const source = snapshotOf(
+    "export default { async headers() { return [{ headers: [{ key: 'X-Content-Type-Options', value: 'nosniff' }] }] } }",
+    'next.config.ts',
+  );
+  source.files.push({
+    path: 'package.json',
+    scope: 'runtime',
+    content: '{"dependencies":{"next":"16.3.4"}}',
+    digest: 'manifest',
+    bytes: 34,
+  });
+  const staticFindings = scanPosture(source);
+  const { server, url } = await localServer((request, response) => {
+    response.writeHead(
+      204,
+      request.url === '/safe'
+        ? {
+            'Content-Security-Policy': "default-src 'self'; frame-ancestors 'none'",
+            'X-Content-Type-Options': 'nosniff',
+            'Referrer-Policy': 'no-referrer',
+            'Permissions-Policy': 'camera=()',
+          }
+        : {},
+    );
+    response.end();
+  });
+  context.after(() => server.close());
+  const result = await probeHttpAllowlist([
+    { url: new URL('/safe', url).toString(), allowPrivateNetwork: false },
+    { url: new URL('/weak', url).toString(), allowPrivateNetwork: false },
+  ]);
+  const reconciled = reconcileHttpPosture(
+    [...staticFindings, ...result.findings],
+    result.reports[0],
+  );
+  const staticCandidate = reconciled.find((finding) => finding.ruleId === 'TW-P001');
+  const laterRuntime = reconciled.find((finding) => finding.ruleId === 'TW-H001');
+  assert.equal(staticCandidate?.runtimeVerification?.status, 'observed_safe');
+  assert.equal(staticCandidate?.runtimeVerification?.url, result.reports[0]?.finalUrl);
+  assert.equal(laterRuntime?.evidence[0]?.url, result.reports[1]?.finalUrl);
 });

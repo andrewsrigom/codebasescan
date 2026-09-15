@@ -76,11 +76,13 @@ export function buildAgentContext(report: AuditReport): AgentContext {
         `${finding.title} ${finding.description} ${finding.evidence.map((item) => item.observation).join(' ')}`,
       ),
   );
-  const runtimeHeaders = report.httpProbe?.headers ?? {};
+  const observedHttpProbes = report.httpProbes ?? (report.httpProbe ? [report.httpProbe] : []);
+  const firstHttpProbe = observedHttpProbes[0];
+  const runtimeHeaders = firstHttpProbe?.headers ?? {};
   const runtimeFramePolicy =
     runtimeHeaders['content-security-policy']?.toLowerCase().includes('frame-ancestors') ||
     ['deny', 'sameorigin'].includes(runtimeHeaders['x-frame-options']?.toLowerCase() ?? '');
-  const runtimeCookieEvidence: EvidencePointer[] = (report.httpProbe?.cookies ?? [])
+  const runtimeCookieEvidence: EvidencePointer[] = (firstHttpProbe?.cookies ?? [])
     .slice(0, 20)
     .map((cookie, index) => ({
       kind: 'runtime',
@@ -151,7 +153,7 @@ export function buildAgentContext(report: AuditReport): AgentContext {
       id: 'frame-policy',
       status: runtimeFramePolicy ? 'observed' : frameFindings.length ? 'candidate' : 'unknown',
       interpretation: runtimeFramePolicy
-        ? 'A runtime frame policy was observed for the single approved URL. Its allowed origins still require deployment context.'
+        ? 'A runtime frame policy was observed for the first approved URL. Other routes and allowed origins still require review.'
         : frameFindings.length
           ? 'Static or runtime evidence indicates that frame protection requires verification. An external proxy or CDN may supply it.'
           : 'No effective frame policy was observed. Source-only absence is not runtime proof.',
@@ -216,13 +218,13 @@ export function buildAgentContext(report: AuditReport): AgentContext {
     },
     {
       id: 'runtime-boundaries',
-      status: report.httpProbe ? 'observed' : 'unresolved',
+      status: observedHttpProbes.length ? 'observed' : 'unresolved',
       question:
         'Do the effective production headers, cookies, redirects, and proxy controls match source declarations?',
-      why: report.httpProbe
-        ? 'One approved URL was observed; representative authenticated and mutation routes may still differ.'
+      why: observedHttpProbes.length
+        ? `${observedHttpProbes.length} approved URL(s) were observed; representative authenticated and mutation routes may still differ.`
         : 'No authorized runtime HTTP evidence was supplied to this audit.',
-      evidenceIds: report.httpProbe ? ['runtime-http-probe'] : [],
+      evidenceIds: observedHttpProbes.length ? ['runtime-http-probe'] : [],
     },
   ];
 
@@ -256,7 +258,7 @@ export function buildAgentContext(report: AuditReport): AgentContext {
     limitations: [
       'Authentication mechanism, deployment topology, trusted parent origins, and CSRF applicability require end-to-end evidence.',
       'Absence of a captured signal does not prove that the behavior or control is absent.',
-      'The optional HTTP probe covers only the approved URL and observation time.',
+      'The optional HTTP probe covers only explicitly approved URLs and observation times; browser behavior is not established.',
     ],
   });
 }

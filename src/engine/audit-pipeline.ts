@@ -36,7 +36,7 @@ import { auditReportSchemaVersion } from '../domain/versions.ts';
 import { scanPatterns } from '../scanners/builtin.ts';
 import { scanPosture } from '../scanners/posture.ts';
 import { scanExternal } from '../scanners/external.ts';
-import { probeHttp, reconcileHttpPosture, skippedHttpProbe } from '../scanners/http-probe.ts';
+import { probeHttpAllowlist, reconcileHttpPosture } from '../scanners/http-probe.ts';
 import { scanOsv } from '../scanners/osv.ts';
 import { profileProject, projectProfileScannerVersion } from '../scanners/project-profile.ts';
 import { preferStructuralFindings, scanAstSecurity } from '../scanners/ast-security.ts';
@@ -83,6 +83,7 @@ interface State {
   normalizedFindings: Finding[];
   scanners: ScannerRun[];
   httpProbe: HttpProbeReport | null;
+  httpProbes: HttpProbeReport[];
   dependencies: Dependency[];
   projectProfile: ProjectProfile | null;
   architectureAnalysis: ArchitectureAnalysis | null;
@@ -109,6 +110,7 @@ function initialState(input: { auditId: string }): State {
     normalizedFindings: [],
     scanners: [],
     httpProbe: null,
+    httpProbes: [],
     dependencies: [],
     projectProfile: null,
     architectureAnalysis: null,
@@ -140,6 +142,7 @@ export function buildAuditPipeline(options: {
   config: Configuration;
   store: AuditExecutionStore;
   httpProbe?: HttpProbeOptions;
+  httpProbes?: HttpProbeOptions[];
   gitHistorySecrets?: boolean;
   modes?: AuditMode[];
   signal?: AbortSignal;
@@ -150,6 +153,7 @@ export function buildAuditPipeline(options: {
     config,
     store,
     httpProbe,
+    httpProbes,
     gitHistorySecrets = false,
     modes,
     signal,
@@ -774,13 +778,15 @@ export function buildAuditPipeline(options: {
           findings: [],
           scanners: [skippedByMode('http-probe', 'HTTP runtime posture', 'security')],
           httpProbe: null,
+          httpProbes: [],
         };
-      const result = httpProbe ? await probeHttp(httpProbe, signal) : skippedHttpProbe();
+      const result = await probeHttpAllowlist(httpProbes ?? (httpProbe ? [httpProbe] : []), signal);
       event(state, 'http_probe', `HTTP runtime posture: ${result.run.status}.`);
       return {
         findings: result.findings,
         scanners: [result.run],
-        httpProbe: result.report ?? null,
+        httpProbe: result.reports[0] ?? null,
+        httpProbes: result.reports,
       };
     })
     .addNode('inventory', async (state) => {
@@ -878,6 +884,7 @@ export function buildAuditPipeline(options: {
         ...(state.codeQualityAnalysis ? { codeQualityAnalysis: state.codeQualityAnalysis } : {}),
         checklist,
         ...(state.httpProbe ? { httpProbe: state.httpProbe } : {}),
+        ...(state.httpProbes.length > 1 ? { httpProbes: state.httpProbes } : {}),
         coverage: buildCoverage(state.scanners),
         publication: 'draft',
         limitations: [
@@ -885,7 +892,7 @@ export function buildAuditPipeline(options: {
           'No target code, package lifecycle script, exploit, crawl, or arbitrary request is executed.',
           ...(state.httpProbe
             ? [
-                'HTTP observations apply only to the explicitly approved URL, response, and time; they do not establish whole-application runtime coverage.',
+                `HTTP observations apply only to ${state.httpProbes.length} explicitly approved URL(s), responses, and times; they do not establish whole-application runtime coverage.`,
               ]
             : ['HTTP runtime posture was not run because no target was explicitly approved.']),
           'Agent review is external to the audit. Agent conclusions must remain separate from deterministic scanner evidence.',

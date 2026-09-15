@@ -259,6 +259,7 @@ export interface AuditModeSelection {
 }
 export interface AuditOptions {
   httpProbe?: HttpProbeOptions;
+  httpProbes?: HttpProbeOptions[];
   gitHistorySecrets?: boolean;
   modes?: AuditMode[];
   scopePreflight?: AuditScopePreflight;
@@ -1072,6 +1073,7 @@ export interface AuditReport {
   codeQualityAnalysis?: CodeQualityAnalysis;
   checklist?: SecurityChecklist;
   httpProbe?: HttpProbeReport;
+  httpProbes?: HttpProbeReport[];
   coverage?: CoverageCapability[];
   aiUsage?: AiUsage;
   reviewImport?: {

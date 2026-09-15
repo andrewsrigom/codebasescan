@@ -412,3 +412,13 @@ fields while older reports and configs remain readable: absent fields stay absen
 security conclusion is inferred, and generated agent context v1 preserves the declared/observed
 split. A future breaking change to field meaning will require new schema versions rather than
 reinterpretation of stored reports.
+
+## 2026-09-15 — explicit bounded HTTP URL allowlist
+
+The audit CLI accepts up to three repeated `--probe-url` arguments. It probes them sequentially
+using the existing SSRF, DNS pinning, redirect, method, timeout, and output limits. A partial
+failure remains partial coverage. Each successful observation is retained in optional
+`httpProbes`; the original `httpProbe` field points to the first observation for older readers.
+Report schema v17 can parse both shapes and older reports remain unchanged. Workflow v85 prevents
+stale checkpoint/cache reuse after the new runtime behavior. Declared project origins never
+automatically become probe destinations.

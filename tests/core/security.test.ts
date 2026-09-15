@@ -205,6 +205,30 @@ test('HTTP probe options require explicit approval', () => {
     }).httpProbe?.url,
     'http://127.0.0.1:3000/',
   );
+  assert.throws(
+    () =>
+      auditOptions({
+        httpProbes: [
+          { url: 'https://one.example', approved: true },
+          { url: 'https://two.example' },
+        ],
+      }),
+    /Every HTTP probe URL/,
+  );
+  assert.equal(
+    auditOptions({
+      httpProbes: [
+        { url: 'https://one.example', approved: true },
+        { url: 'https://two.example', approved: true },
+      ],
+    }).httpProbes?.length,
+    2,
+  );
+  assert.throws(
+    () =>
+      auditOptions({ httpProbes: Array(4).fill({ url: 'https://example.test', approved: true }) }),
+    /one to three/,
+  );
 });
 test('Git history secret scanning requires an explicit boolean option', () => {
   assert.throws(() => auditOptions({ gitHistorySecrets: 'yes' }), /must be a boolean/);

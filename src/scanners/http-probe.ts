@@ -704,6 +704,37 @@ export function skippedHttpProbe(): HttpProbeResult {
   };
 }
 
+export async function probeHttpAllowlist(
+  options: readonly HttpProbeOptions[],
+  signal?: AbortSignal,
+  runtime: ProbeRuntime = {},
+): Promise<{ findings: Finding[]; reports: HttpProbeReport[]; run: ScannerRun }> {
+  if (options.length > 3) throw new Error('HTTP probe allowlist exceeds three approved URLs.');
+  if (!options.length) return { ...skippedHttpProbe(), reports: [] };
+  const results: HttpProbeResult[] = [];
+  for (const option of options) {
+    signal?.throwIfAborted();
+    results.push(await probeHttp(option, signal, runtime));
+  }
+  const reports = results.flatMap((result) => (result.report ? [result.report] : []));
+  const findings = results.flatMap((result) => result.findings);
+  const failures = results.filter((result) => result.run.status === 'failed');
+  const status = failures.length === 0 ? 'completed' : reports.length ? 'partial' : 'failed';
+  return {
+    findings,
+    reports,
+    run: {
+      id: 'http-probe',
+      name: 'HTTP runtime posture',
+      status,
+      durationMs: results.reduce((total, result) => total + result.run.durationMs, 0),
+      findings: findings.length,
+      detail: `${reports.length} of ${options.length} explicitly approved URL(s) observed. Each request retained bounded headers and form metadata only; no crawl, login, or exploit was attempted.${failures.length ? ` ${failures.length} failed: ${failures.map((result) => result.run.detail).join(' ')}` : ''}`,
+      version: '0.4.0',
+    },
+  };
+}
+
 export function reconcileHttpPosture(findings: Finding[], report?: HttpProbeReport): Finding[] {
   if (!report) return findings;
   const pairs: Record<string, string> = {
@@ -716,7 +747,12 @@ export function reconcileHttpPosture(findings: Finding[], report?: HttpProbeRepo
     'TW-H007': 'TW-P005',
     'TW-H008': 'TW-P002',
   };
-  const runtime = findings.filter((item) => item.source === 'http-probe');
+  const allRuntime = findings.filter((item) => item.source === 'http-probe');
+  const runtime = allRuntime.filter((item) =>
+    item.evidence.some(
+      (evidence) => evidence.url === report.finalUrl && evidence.observedAt === report.observedAt,
+    ),
+  );
   const consumed = new Set<string>();
   const reconciled = findings
     .filter((item) => item.source !== 'http-probe')
@@ -749,5 +785,5 @@ export function reconcileHttpPosture(findings: Finding[], report?: HttpProbeRepo
         };
       return item;
     });
-  return [...reconciled, ...runtime.filter((item) => !consumed.has(item.id))];
+  return [...reconciled, ...allRuntime.filter((item) => !consumed.has(item.id))];
 }

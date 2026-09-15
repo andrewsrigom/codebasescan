@@ -183,6 +183,15 @@ CODEBASESCAN_OSV=true
 The scanner binaries must already be installed and trusted. OSV receives package names and exact
 resolved versions only. A normal audit does not call a model or require an API key.
 
+To check effective HTTP headers for known routes, pass each URL explicitly (up to three). The probe
+uses bounded HEAD/GET, validates DNS and redirects, and keeps no cookie values or form inputs:
+
+```bash
+codebasescan audit . --probe-url https://app.example.com/ --probe-url https://app.example.com/login
+```
+
+This does not crawl, log in, or prove that untested routes have the same headers.
+
 For browser accessibility evidence, generate a standard Axe JSON result outside CodebaseScan and
 place it at the project root as `codebasescan.axe.json`, `axe-results.json`, or
 `axe-report.json`. CodebaseScan imports bounded violation groups but does not launch the target

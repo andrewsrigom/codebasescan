@@ -114,17 +114,30 @@ const commandModes = (): AuditMode[] | undefined => {
   return selected as AuditMode[];
 };
 const commandAuditOptions = (): AuditOptions => {
-  const url = option('--probe-url');
+  const urls = arguments_.flatMap((argument, index) => {
+    if (argument !== '--probe-url') return [];
+    const value = arguments_[index + 1];
+    if (!value || value.startsWith('--')) throw new Error('Use --probe-url with an explicit URL.');
+    return [value];
+  });
+  if (urls.length > 3) throw new Error('At most three explicit --probe-url targets are allowed.');
   const modes = commandModes();
   return {
-    ...(url
+    ...(urls.length === 1
       ? {
           httpProbe: {
-            url,
+            url: urls[0]!,
             allowPrivateNetwork: arguments_.includes('--allow-private-network'),
           },
         }
-      : {}),
+      : urls.length > 1
+        ? {
+            httpProbes: urls.map((url) => ({
+              url,
+              allowPrivateNetwork: arguments_.includes('--allow-private-network'),
+            })),
+          }
+        : {}),
     ...(arguments_.includes('--secret-history') ? { gitHistorySecrets: true } : {}),
     ...(modes ? { modes } : {}),
   };

@@ -21,6 +21,7 @@ export async function executeAudit(
     config,
     store,
     httpProbe: audit.options.httpProbe,
+    httpProbes: audit.options.httpProbes,
     gitHistorySecrets: audit.options.gitHistorySecrets,
     modes: audit.options.modes,
     signal,

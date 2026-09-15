@@ -14,7 +14,7 @@ Options:
   --baseline <report.json>  Compare only new findings against a previous audit
   --reviews <ledger.json>   Apply portable human review decisions
   --suppressions <file>     Apply portable suppressions
-  --probe-url <url>         Explicitly run the bounded HTTP posture probe
+  --probe-url <url>         Explicit bounded HTTP posture probe (repeat up to 3 times)
   --allow-private-network   Allow the explicit probe URL to use a private address
   --secret-history          Inspect bounded Git history with Gitleaks when available
   --allow-partial-snapshot  Accept a project that exceeds snapshot limits

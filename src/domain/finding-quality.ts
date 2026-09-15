@@ -22,10 +22,11 @@ function confidence(finding: Finding): NonNullable<Finding['confidence']> {
   return 'low';
 }
 
-function runtimeExposure(report?: HttpProbeReport): Finding['exposure'] {
-  if (!report) return 'unknown';
+function runtimeExposure(finding: Finding, report?: HttpProbeReport): Finding['exposure'] {
+  const url = finding.evidence.find((evidence) => evidence.url)?.url ?? report?.finalUrl;
+  if (!url) return 'unknown';
   try {
-    const host = new URL(report.finalUrl).hostname.toLowerCase();
+    const host = new URL(url).hostname.toLowerCase();
     if (host === 'localhost' || host === '127.0.0.1' || host === '::1') return 'local';
     return 'potentially_public';
   } catch {
@@ -94,7 +95,7 @@ export function enrichFindingQuality(
         confidence: confidence(finding),
         exposure:
           finding.source === 'http-probe'
-            ? runtimeExposure(httpProbe)
+            ? runtimeExposure(finding, httpProbe)
             : sourceExposure(finding, profile),
       };
       enriched.priority = priority(enriched);

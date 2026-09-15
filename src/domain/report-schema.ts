@@ -1097,6 +1097,10 @@ export const auditReportSchema = z.looseObject({
   codeQualityAnalysis: codeQualityAnalysis.optional(),
   checklist: checklist.optional(),
   httpProbe: z.looseObject({ requestedUrl: shortText, finalUrl: shortText }).optional(),
+  httpProbes: z
+    .array(z.looseObject({ requestedUrl: shortText, finalUrl: shortText }))
+    .max(3)
+    .optional(),
   coverage: z
     .array(z.looseObject({ id: shortText, status: shortText }))
     .max(1_000)
@@ -1150,6 +1154,11 @@ const storedOptionsSchema = z.looseObject({
       url: shortText,
       allowPrivateNetwork: z.boolean(),
     })
+    .optional(),
+  httpProbes: z
+    .array(z.looseObject({ url: shortText, allowPrivateNetwork: z.boolean() }))
+    .min(1)
+    .max(3)
     .optional(),
   gitHistorySecrets: z.boolean().optional(),
   modes: z
