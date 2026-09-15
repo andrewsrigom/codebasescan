@@ -2869,7 +2869,7 @@
                     <strong>Project structure profile</strong>
                     <p>
                       Parsed 739 captured TypeScript/JavaScript file(s) as data; mapped 124 entry
-                      point(s), 5711 symbol(s), 9590 resolved call edge(s), 1659 security-relevant
+                      point(s), 5711 symbol(s), 9590 resolved call edge(s), 1784 security-relevant
                       fact(s), 15 declared component(s), 16 cross-component import edge(s), 21
                       declarative TypeScript path alias(es), 11 captured workspace package entry
                       point(s), and 0 declarative SaaS semantics file(s).
@@ -3191,7 +3191,7 @@
                     <span><strong>124</strong> entry points</span
                     ><span><strong>5711</strong> symbols</span
                     ><span><strong>9590</strong> call edges</span
-                    ><span><strong>1659</strong> security facts</span
+                    ><span><strong>1784</strong> security facts</span
                     ><span><strong>15</strong> components</span
                     ><span><strong>16</strong> cross-component imports</span>
                   </div>
@@ -3202,14 +3202,16 @@
                   <h3>Declared package boundaries</h3>
                   <ul>
                     <li><strong>Example SaaS Application</strong> (.): 52 source file(s).</li>
-                    <li><strong>@sample/analytics</strong> (apps/analytics): 74 source file(s).</li>
+                    <li>
+                      <strong>@example/analytics</strong> (apps/analytics): 74 source file(s).
+                    </li>
                     <li><strong>@example/docs</strong> (apps/docs): 28 source file(s).</li>
                     <li>
                       <strong>@example/marketing</strong> (apps/marketing): 469 source file(s).
                     </li>
                     <li><strong>@example/ai</strong> (packages/ai): 2 source file(s).</li>
                     <li>
-                      <strong>@sample/analytics-core</strong> (packages/analytics-core): 24 source
+                      <strong>@example/analytics-core</strong> (packages/analytics-core): 24 source
                       file(s).
                     </li>
                     <li>
@@ -3218,7 +3220,7 @@
                     <li><strong>@example/auth</strong> (packages/auth): 16 source file(s).</li>
                     <li><strong>@example/billing</strong> (packages/billing): 5 source file(s).</li>
                     <li>
-                      <strong>@sample/booking-core</strong> (packages/booking-core): 20 source
+                      <strong>@example/booking-core</strong> (packages/booking-core): 20 source
                       file(s).
                     </li>
                     <li>
@@ -3230,7 +3232,7 @@
                       file(s).
                     </li>
                     <li>
-                      <strong>@sample/referrals-core</strong> (packages/referrals-core): 19 source
+                      <strong>@example/referrals-core</strong> (packages/referrals-core): 19 source
                       file(s).
                     </li>
                     <li><strong>@example/saas</strong> (packages/saas): 17 source file(s).</li>
@@ -3240,7 +3242,7 @@
                   <ul>
                     <li>@example/marketing &rarr; @example/saas: 136 import(s).</li>
                     <li>@example/marketing &rarr; @example/auth: 53 import(s).</li>
-                    <li>@sample/analytics &rarr; @sample/analytics-core: 43 import(s).</li>
+                    <li>@example/analytics &rarr; @example/analytics-core: 43 import(s).</li>
                     <li>@example/marketing &rarr; @example/observability: 22 import(s).</li>
                     <li>@example/marketing &rarr; @example/analytics: 17 import(s).</li>
                     <li>@example/marketing &rarr; @example/billing: 10 import(s).</li>
@@ -3251,7 +3253,7 @@
                     <li>@example/marketing &rarr; @example/storage: 2 import(s).</li>
                     <li>@example/auth &rarr; @example/observability: 2 import(s).</li>
                     <li>@example/notification &rarr; @example/observability: 1 import(s).</li>
-                    <li>@sample/analytics &rarr; @example/auth: 1 import(s).</li>
+                    <li>@example/analytics &rarr; @example/auth: 1 import(s).</li>
                     <li>@example/ai &rarr; @example/observability: 1 import(s).</li>
                     <li>@example/auth &rarr; @example/saas: 1 import(s).</li>
                   </ul>
@@ -3273,12 +3275,12 @@
                       <strong>321</strong><span>Test files inspected</span>
                     </div>
                     <div class="summary-card">
-                      <strong>92</strong><span>Critical source files</span>
+                      <strong>115</strong><span>Critical source files</span>
                     </div>
                     <div class="summary-card">
-                      <strong>48</strong><span>Related imports observed</span>
+                      <strong>54</strong><span>Related imports observed</span>
                     </div>
-                    <div class="summary-card"><strong>44</strong><span>Not observed</span></div>
+                    <div class="summary-card"><strong>61</strong><span>Not observed</span></div>
                   </div>
                   <h3>Critical files without a related captured test import</h3>
                   <ul>
@@ -3316,16 +3318,22 @@
                     <li>apps/marketing/src/app/api/v1/analytics/usage/route.ts</li>
                     <li>apps/marketing/src/app/app/billing/actions.ts</li>
                     <li>apps/marketing/src/app/app/notifications/actions.ts</li>
+                    <li>apps/marketing/src/lib/blog.ts</li>
                     <li>apps/marketing/src/lib/mdx.tsx</li>
                     <li>apps/marketing/src/proxy.ts</li>
+                    <li>scripts/bootstrap-customer-repo.mjs</li>
+                    <li>scripts/check-production-smoke-report.mjs</li>
+                    <li>scripts/db-backup.mjs</li>
+                    <li>scripts/deploy-check.mjs</li>
                     <li>scripts/dev-marketing.mjs</li>
                     <li>scripts/docker-app-start.mjs</li>
                     <li>scripts/docker-compose.mjs</li>
+                    <li>scripts/import-stripe-products.mjs</li>
+                    <li>scripts/init-edition-upstreams.mjs</li>
+                    <li>scripts/init-env-local.mjs</li>
+                    <li>scripts/init-production-smoke-report.mjs</li>
+                    <li>scripts/publish-edition-upstreams.mjs</li>
                     <li>scripts/run-marketing-next.mjs</li>
-                    <li>scripts/run-playwright-web-server.mjs</li>
-                    <li>scripts/setup-local.mjs</li>
-                    <li>scripts/setup-verify.mjs</li>
-                    <li>scripts/sync-working-copy.mjs</li>
                   </ul>
                   <h3>Test evidence limitations</h3>
                   <ul>
@@ -3372,8 +3380,8 @@
                     <li>response: 187</li>
                     <li>outbound-transfer: 26</li>
                     <li>url-or-redirect: 136</li>
-                    <li>cookie: 7</li>
                     <li>browser-storage: 6</li>
+                    <li>cookie: 7</li>
                     <li>persistent-storage: 45</li>
                     <li>financial-operation: 2</li>
                   </ul>
@@ -3422,124 +3430,127 @@
                     <li>BETTER_AUTH_TRUSTED_ORIGINS — packages/auth/src/index.ts:326</li>
                     <li>DEPLOY_TARGET — scripts/deploy-check.mjs:7</li>
                     <li>
-                      sample_ANALYTICS_ACCOUNT_LINK_STORE_MODE —
+                      EXAMPLE_ANALYTICS_ACCOUNT_LINK_STORE_MODE —
                       apps/analytics/src/lib/account-link-store.ts:102
                     </li>
                     <li>
-                      sample_ANALYTICS_ACCOUNT_LINK_STORE_PATH —
+                      EXAMPLE_ANALYTICS_ACCOUNT_LINK_STORE_PATH —
                       apps/analytics/src/lib/account-link-store.ts:117
                     </li>
                     <li>
-                      sample_ANALYTICS_ACCOUNT_LINK_TABLE —
+                      EXAMPLE_ANALYTICS_ACCOUNT_LINK_TABLE —
                       apps/analytics/src/lib/account-link-store.ts:128
                     </li>
                     <li>
-                      sample_ANALYTICS_APP_URL —
+                      EXAMPLE_ANALYTICS_APP_URL —
                       apps/marketing/src/lib/platform-auth/analytics-handoff.ts:117
                     </li>
                     <li>
-                      sample_ANALYTICS_BILLING_PLAN_CURRENCY —
+                      EXAMPLE_ANALYTICS_BILLING_PLAN_CURRENCY —
                       apps/analytics/src/lib/commercial.ts:217
                     </li>
                     <li>
-                      sample_ANALYTICS_BILLING_PLAN_ID — apps/analytics/src/lib/commercial.ts:207
+                      EXAMPLE_ANALYTICS_BILLING_PLAN_ID — apps/analytics/src/lib/commercial.ts:207
                     </li>
                     <li>
-                      sample_ANALYTICS_BILLING_PLAN_LABEL — apps/analytics/src/lib/commercial.ts:210
+                      EXAMPLE_ANALYTICS_BILLING_PLAN_LABEL —
+                      apps/analytics/src/lib/commercial.ts:210
                     </li>
                     <li>
-                      sample_ANALYTICS_BILLING_PLAN_PRICE_LABEL —
+                      EXAMPLE_ANALYTICS_BILLING_PLAN_PRICE_LABEL —
                       apps/analytics/src/lib/commercial.ts:213
                     </li>
                     <li>
-                      sample_ANALYTICS_CONNECTION_ENCRYPTION_KEY —
+                      EXAMPLE_ANALYTICS_CONNECTION_ENCRYPTION_KEY —
                       apps/analytics/src/lib/connection-crypto.ts:16
                     </li>
                     <li>
-                      sample_ANALYTICS_CONNECTION_STORE_MODE —
+                      EXAMPLE_ANALYTICS_CONNECTION_STORE_MODE —
                       apps/analytics/src/lib/connections-store.ts:135
                     </li>
                     <li>
-                      sample_ANALYTICS_CONNECTION_STORE_PATH —
+                      EXAMPLE_ANALYTICS_CONNECTION_STORE_PATH —
                       apps/analytics/src/lib/connections-store.ts:150
                     </li>
                     <li>
-                      sample_ANALYTICS_CONNECTION_TABLE —
+                      EXAMPLE_ANALYTICS_CONNECTION_TABLE —
                       apps/analytics/src/lib/connections-store.ts:161
                     </li>
                     <li>
-                      sample_ANALYTICS_DATA_HANDLING_URL — apps/analytics/src/lib/onboarding.ts:109
+                      EXAMPLE_ANALYTICS_DATA_HANDLING_URL — apps/analytics/src/lib/onboarding.ts:109
                     </li>
                     <li>
-                      sample_ANALYTICS_ENCRYPTION_KEY —
+                      EXAMPLE_ANALYTICS_ENCRYPTION_KEY —
                       apps/analytics/src/lib/connection-crypto.ts:17
                     </li>
                     <li>
-                      sample_ANALYTICS_MAX_ACTIVE_CONNECTIONS —
+                      EXAMPLE_ANALYTICS_MAX_ACTIVE_CONNECTIONS —
                       apps/analytics/src/lib/operations.ts:270
                     </li>
-                    <li>sample_ANALYTICS_MAX_MEMBERS — apps/analytics/src/lib/membership.ts:74</li>
+                    <li>EXAMPLE_ANALYTICS_MAX_MEMBERS — apps/analytics/src/lib/membership.ts:74</li>
                     <li>
-                      sample_ANALYTICS_MAX_PROPERTIES — apps/analytics/src/lib/properties.ts:111
+                      EXAMPLE_ANALYTICS_MAX_PROPERTIES — apps/analytics/src/lib/properties.ts:111
                     </li>
                     <li>
-                      sample_ANALYTICS_MEMBERSHIP_STORE_MODE —
+                      EXAMPLE_ANALYTICS_MEMBERSHIP_STORE_MODE —
                       apps/analytics/src/lib/membership-store.ts:81
                     </li>
                     <li>
-                      sample_ANALYTICS_MEMBERSHIP_STORE_PATH —
+                      EXAMPLE_ANALYTICS_MEMBERSHIP_STORE_PATH —
                       apps/analytics/src/lib/membership-store.ts:96
                     </li>
                     <li>
-                      sample_ANALYTICS_MEMBERSHIP_TABLE —
+                      EXAMPLE_ANALYTICS_MEMBERSHIP_TABLE —
                       apps/analytics/src/lib/membership-store.ts:103
                     </li>
                     <li>
-                      sample_ANALYTICS_OFFBOARDING_EXPORTS_DURING_GRACE —
+                      EXAMPLE_ANALYTICS_OFFBOARDING_EXPORTS_DURING_GRACE —
                       apps/analytics/src/lib/launch-policy.ts:77
                     </li>
                     <li>
-                      sample_ANALYTICS_OFFBOARDING_GRACE_DAYS —
+                      EXAMPLE_ANALYTICS_OFFBOARDING_GRACE_DAYS —
                       apps/analytics/src/lib/launch-policy.ts:64
                     </li>
                     <li>
-                      sample_ANALYTICS_OFFBOARDING_RETENTION_DAYS —
+                      EXAMPLE_ANALYTICS_OFFBOARDING_RETENTION_DAYS —
                       apps/analytics/src/lib/launch-policy.ts:70
                     </li>
                     <li>
-                      sample_ANALYTICS_PLATFORM_AUTH_AUDIENCE —
+                      EXAMPLE_ANALYTICS_PLATFORM_AUTH_AUDIENCE —
                       apps/analytics/src/lib/handoff.ts:261
                     </li>
-                    <li>sample_ANALYTICS_PRIVACY_URL — apps/analytics/src/lib/onboarding.ts:106</li>
                     <li>
-                      sample_ANALYTICS_PROPERTY_STORE_MODE —
+                      EXAMPLE_ANALYTICS_PRIVACY_URL — apps/analytics/src/lib/onboarding.ts:106
+                    </li>
+                    <li>
+                      EXAMPLE_ANALYTICS_PROPERTY_STORE_MODE —
                       apps/analytics/src/lib/property-store.ts:43
                     </li>
                     <li>
-                      sample_ANALYTICS_PROPERTY_STORE_PATH —
+                      EXAMPLE_ANALYTICS_PROPERTY_STORE_PATH —
                       apps/analytics/src/lib/property-store.ts:58
                     </li>
                     <li>
-                      sample_ANALYTICS_PROPERTY_TABLE — apps/analytics/src/lib/property-store.ts:65
+                      EXAMPLE_ANALYTICS_PROPERTY_TABLE — apps/analytics/src/lib/property-store.ts:65
                     </li>
                     <li>
-                      sample_ANALYTICS_SUPPORT_EMAIL — apps/analytics/src/lib/onboarding.ts:104
+                      EXAMPLE_ANALYTICS_SUPPORT_EMAIL — apps/analytics/src/lib/onboarding.ts:104
                     </li>
                     <li>
-                      sample_ANALYTICS_SYNC_STORE_MODE — apps/analytics/src/lib/sync-store.ts:61
+                      EXAMPLE_ANALYTICS_SYNC_STORE_MODE — apps/analytics/src/lib/sync-store.ts:61
                     </li>
                     <li>
-                      sample_ANALYTICS_SYNC_STORE_PATH — apps/analytics/src/lib/sync-store.ts:76
+                      EXAMPLE_ANALYTICS_SYNC_STORE_PATH — apps/analytics/src/lib/sync-store.ts:76
                     </li>
-                    <li>sample_ANALYTICS_SYNC_TABLE — apps/analytics/src/lib/sync-store.ts:83</li>
-                    <li>sample_ANALYTICS_TERMS_URL — apps/analytics/src/lib/onboarding.ts:107</li>
-                    <li>sample_PLATFORM_AUTH_ISSUER — apps/analytics/src/lib/handoff.ts:253</li>
+                    <li>EXAMPLE_ANALYTICS_SYNC_TABLE — apps/analytics/src/lib/sync-store.ts:83</li>
+                    <li>EXAMPLE_ANALYTICS_TERMS_URL — apps/analytics/src/lib/onboarding.ts:107</li>
+                    <li>EXAMPLE_PLATFORM_AUTH_ISSUER — apps/analytics/src/lib/handoff.ts:253</li>
                     <li>
-                      sample_PLATFORM_AUTH_RETURN_ORIGINS — apps/analytics/src/lib/handoff.ts:269
+                      EXAMPLE_PLATFORM_AUTH_RETURN_ORIGINS — apps/analytics/src/lib/handoff.ts:269
                     </li>
-                    <li>sample_PLATFORM_AUTH_SECRET — apps/analytics/src/lib/handoff.ts:245</li>
+                    <li>EXAMPLE_PLATFORM_AUTH_SECRET — apps/analytics/src/lib/handoff.ts:245</li>
                     <li>
-                      sample_PLATFORM_AUTH_TTL_SECONDS —
+                      EXAMPLE_PLATFORM_AUTH_TTL_SECONDS —
                       apps/marketing/src/lib/platform-auth/analytics-handoff.ts:110
                     </li>
                     <li>HEALTHCHECK_URL — scripts/deploy-check.mjs:333</li>
@@ -3561,8 +3572,8 @@
                     <li>BILLING_SUBSCRIPTION_EXPERIMENT_INTERVAL</li>
                     <li>BILLING_SUBSCRIPTION_EXPERIMENT_PLANS</li>
                     <li>BILLING_USAGE_BASED_EXPERIMENT_PLANS</li>
-                    <li>example_LAUNCH_UPSTREAM_ORIGIN_URL</li>
-                    <li>example_SCALE_UPSTREAM_ORIGIN_URL</li>
+                    <li>EXAMPLE_LAUNCH_UPSTREAM_ORIGIN_URL</li>
+                    <li>EXAMPLE_SCALE_UPSTREAM_ORIGIN_URL</li>
                     <li>STORAGE_SIGNED_URL_TTL_SECONDS</li>
                     <li>STRIPE_CREDITS_GROWTH_PRICE_ID</li>
                     <li>STRIPE_CREDITS_SCALE_PRICE_ID</li>
