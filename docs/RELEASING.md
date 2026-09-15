@@ -19,8 +19,9 @@ Confirm the public GitHub `validate` and `package-smoke` jobs pass. Inspect `npm
 and one generated report directory for unexpected source excerpts, private paths, or secrets.
 Immediately before publishing, confirm the candidate version is not already present on npm.
 
-The `Publish CodebaseScan` workflow can be started manually from GitHub Actions. Manual runs only
-execute the release gate and npm dry-run; they cannot enter the publish job.
+The `Publish CodebaseScan` workflow can be started manually from GitHub Actions as an optional
+pre-tag dry-run. Manual runs only execute the release gate; they cannot enter the publish job. A
+tagged publish reruns the same release gate before publishing.
 
 ## Registry setup
 
@@ -41,16 +42,18 @@ this public repository. No long-lived npm token belongs in the repository.
 Only after the release candidate is green:
 
 1. update the changelog and Action's exact npm version, then commit the candidate;
-2. run `npm run release:check` and confirm the public CI matrix and manual dry-run are green;
+2. run `npm run release:check` and confirm the public CI matrix is green;
 3. create and push the exact tag `v<package-version>`;
 4. approve the protected `npm` environment;
 5. verify registry package, provenance, tarball contents, and a fresh clean install;
-6. create the matching GitHub release.
+6. verify the workflow created the matching GitHub release.
 
 `scripts/check-release.mjs` rejects a tag/version mismatch, missing provenance/public-access
 metadata, wrong repository identity, or a package that is still private. The workflow cannot
 publish from a fork. A rerun verifies the registry tarball against the local package integrity and
 finishes without trying to overwrite an identical published version; any mismatch fails closed.
+The matching GitHub release is created only after npm publication and is safe to check again on a
+workflow rerun. Its repository-scoped write permission applies only to the protected publish job.
 
 Do not weaken the workflow or commit an npm token when trusted publishing is unavailable. Keep the
 candidate untagged until the publisher and protected environment are ready.

@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 20
     environment: npm
     permissions:
-      contents: read
+      contents: write
       id-token: write
     env:
       NEXT_TELEMETRY_DISABLED: '1'
@@ -68,3 +68,11 @@ jobs:
         run: npm run release:check
       - name: Publish with trusted npm OIDC
         run: node scripts/publish-release.mjs
+      - name: Create matching GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "CodebaseScan $RELEASE_TAG" --generate-notes --verify-tag
+          fi
