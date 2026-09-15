@@ -19,7 +19,8 @@ The result is useful in three places:
 The report records what ran, what failed, what was unsupported, and what still requires manual
 evidence. Zero findings never means “proven safe.”
 
-> Active development. Linux/WSL and Node.js 22.16+ are the currently tested environment.
+> Requires Node.js 22.16+. Linux CI is the release gate; native Windows CLI and package smoke
+> checks also pass.
 
 ## What it checks
 

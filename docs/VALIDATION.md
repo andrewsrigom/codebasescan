@@ -19,22 +19,22 @@ package matrix provides clean Node 22 and Linux evidence. Native macOS is not cl
 
 ## Deterministic release gate
 
-| Check                    | Current evidence                                                                                                                   |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                                                             |
-| Format, types, lint      | Passed with zero warnings                                                                                                          |
-| Core tests               | 431 passed on native Windows                                                                                                       |
-| Fixture benchmark        | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                                                                     |
-| AST benchmark subset     | TP 11, FP 0, FN 0                                                                                                                  |
-| Next.js benchmark subset | TP 7, FP 0, FN 0                                                                                                                   |
-| React benchmark subset   | TP 9, FP 0, FN 0                                                                                                                   |
-| SaaS benchmark subset    | TP 9, FP 0, FN 0                                                                                                                   |
-| Integration tests        | 6 passed and 5 native-Windows-specific optional process/scanner cases skipped; prior Linux run had 11 passed                       |
-| Production build         | Passed                                                                                                                             |
-| Browser workflow         | 7 Chromium cases passed locally, but native-Windows runner did not exit after teardown; Linux release CI is the authoritative gate |
-| Package audit            | 0 known vulnerabilities at `--audit-level=low` in the native-Windows check                                                         |
-| CLI diagnostics          | Runtime and bundled scanner checks passed; absent offline OSV data is an explicit warning                                          |
-| Baseline policy          | Same snapshot produced 0 new, 0 resolved, and 0 gated high findings                                                                |
+| Check                    | Current evidence                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                                       |
+| Format, types, lint      | Passed with zero warnings                                                                                    |
+| Core tests               | 431 passed on native Windows                                                                                 |
+| Fixture benchmark        | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                                               |
+| AST benchmark subset     | TP 11, FP 0, FN 0                                                                                            |
+| Next.js benchmark subset | TP 7, FP 0, FN 0                                                                                             |
+| React benchmark subset   | TP 9, FP 0, FN 0                                                                                             |
+| SaaS benchmark subset    | TP 9, FP 0, FN 0                                                                                             |
+| Integration tests        | 6 passed and 5 native-Windows-specific optional process/scanner cases skipped; prior Linux run had 11 passed |
+| Production build         | Passed                                                                                                       |
+| Browser workflow         | 7 Chromium cases passed in Linux CI; native-Windows cases passed but runner did not exit after teardown      |
+| Package audit            | 0 known vulnerabilities at `--audit-level=low` in the native-Windows check                                   |
+| CLI diagnostics          | Runtime and bundled scanner checks passed; absent offline OSV data is an explicit warning                    |
+| Baseline policy          | Same snapshot produced 0 new, 0 resolved, and 0 gated high findings                                          |
 
 The benchmark uses inert, declared ground truth. Its perfect fixture score is a regression signal,
 not a real-world accuracy claim.
@@ -53,10 +53,14 @@ mechanically above 2 MiB packed or 60 MiB installed.
 | Node 24 / Yarn, prior Linux candidate | 279,022 B |      1,255,358 B |           61,780,371 B |  8.79 s | 2.67 s |
 
 The fresh npm/pnpm installations remain below 60 MiB (62,914,560 bytes), and the candidate tarball
-contains 105 files. Native Windows Yarn could not traverse the sandbox-restricted user profile; the
-prior Linux Yarn result is historical and must be refreshed in the release CI.
+contains 105 files. Native Windows Yarn could not traverse the sandbox-restricted user profile;
+the Node 22 Linux Yarn smoke passed in the public candidate CI. The table keeps only its earlier
+size/timing measurement, rather than inventing fresh metrics from an inaccessible job log.
 Next.js, React, SQLite, LangChain, LangGraph, and model-provider packages are not installed with the
 CLI.
+
+The [candidate CI run](https://github.com/andrewsrigom/codebasescan/actions/runs/34933185027)
+passed Node 22 validation, Chromium end-to-end workflow, and clean npm/pnpm/Yarn package installs.
 
 ## Real-project calibration
 
