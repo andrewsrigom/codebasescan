@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { Finding } from './types.ts';
 
-export const agentReviewRulePackVersion = 1 as const;
+export const agentReviewRulePackVersion = 2 as const;
 
 const findingCategories = [
   'authentication',
@@ -44,13 +44,14 @@ const boundedList = (maximumItems: number, maximumText: number) =>
 export const agentReviewRuleSchema = z
   .object({
     id: z.string().regex(/^CBS-AI-[A-Z0-9-]+$/),
-    version: z.literal(agentReviewRulePackVersion),
+    version: z.number().int().positive().max(agentReviewRulePackVersion),
     title: boundedText(160),
     domain: z.enum([
       'identity',
       'data-access',
       'input-flow',
       'secret-and-ai-boundaries',
+      'browser-boundary',
       'configuration',
       'supply-chain',
       'accessibility',
@@ -62,6 +63,8 @@ export const agentReviewRuleSchema = z
       .object({
         categories: z.array(z.enum(findingCategories)).min(1),
         sources: z.array(z.enum(findingSources)).optional(),
+        ruleIds: z.array(boundedText(100)).min(1).max(50).optional(),
+        textIncludesAny: z.array(boundedText(100)).min(1).max(20).optional(),
       })
       .strict(),
     objective: boundedText(500),
@@ -272,6 +275,102 @@ const rules: AgentReviewRule[] = [
     ],
   },
   {
+    id: 'CBS-AI-EMBEDDED-MESSAGING',
+    version: 1,
+    title: 'Embedded application messaging and token boundary',
+    domain: 'browser-boundary',
+    appliesTo: {
+      categories: ['authentication', 'authorization', 'secrets', 'configuration'],
+      sources: ['react'],
+      ruleIds: ['TW-REACT003', 'TW-REACT004', 'TW-REACT005'],
+    },
+    objective:
+      'Establish the parent/child browser boundary, credential flow, and exact origin checks before treating an embedded-app candidate as a confirmed risk.',
+    questions: [
+      'Is this code running as an embedded child, a parent host, a standalone page, or more than one of these?',
+      'Which exact origin is allowed for each message sender and receiver?',
+      'Does a message, URL, log, or browser-storage value contain a credential or privileged application context?',
+      'Does the server independently authorize every operation reached from a browser message?',
+    ],
+    evidenceRequired: [
+      'The message sender and receiver, including targetOrigin and event.origin validation.',
+      'The source, lifetime, storage, and server-side validation path for any credential-shaped value.',
+      'The intended parent and child origins for each deployed environment.',
+    ],
+    safeSignals: [
+      'Senders use an exact trusted target origin and receivers reject every other event.origin.',
+      'Messages carry bounded non-secret data and privileged requests are authorized again by the server.',
+    ],
+    riskSignals: [
+      'Wildcard message destinations or handlers that consume messages without an origin check.',
+      'Authentication tokens cross URLs, logs, Web Storage, or untrusted parent/child boundaries.',
+    ],
+    falsePositiveChecks: [
+      'Trace shared bridge wrappers and configuration that may validate the exact origin outside the reported line.',
+      'Do not infer that the app is embedded solely because it can send or receive a browser message.',
+      'Do not promote CSRF unless browser-managed credentials reach a state-changing request.',
+    ],
+    searchHints: [
+      'postMessage',
+      'event.origin',
+      'targetOrigin',
+      'window.parent',
+      'window.top',
+      'Authorization',
+      'localStorage',
+      'sessionStorage',
+    ],
+    limitations: [
+      'Source cannot establish deployed origin topology, identity-provider settings, or server policy.',
+    ],
+  },
+  {
+    id: 'CBS-AI-FRAME-POLICY',
+    version: 1,
+    title: 'Frame embedding policy',
+    domain: 'browser-boundary',
+    appliesTo: {
+      categories: ['configuration'],
+      sources: ['posture', 'http-probe'],
+      ruleIds: ['TW-P001', 'TW-H001'],
+      textIncludesAny: ['frame protection', 'frame-ancestors', 'x-frame-options'],
+    },
+    objective:
+      'Match the effective framing policy to the intended standalone or embedded deployment without assuming source declarations reach production.',
+    questions: [
+      'Should the application be frameable, and by which exact origins in each environment?',
+      'Where is the authoritative Content-Security-Policy response produced?',
+      'Does the effective frame-ancestors policy permit only intended parent applications?',
+    ],
+    evidenceRequired: [
+      'The intended deployment topology and exact authorized parent origins.',
+      'An effective response header from a representative deployed route or authoritative infrastructure policy.',
+    ],
+    safeSignals: [
+      "Standalone applications use frame-ancestors 'none' or another intentionally restrictive policy.",
+      'Embedded applications use an exact frame-ancestors allowlist that matches their authorized parents.',
+    ],
+    riskSignals: [
+      'No effective framing policy, an unnecessarily broad source list, or a policy that differs across sensitive routes.',
+      'A restrictive policy unexpectedly blocks the authorized parent, encouraging unsafe workarounds.',
+    ],
+    falsePositiveChecks: [
+      'Inspect the proxy, CDN, ingress, and representative runtime response before calling a source declaration absent.',
+      'Confirm whether the page is intentionally standalone before requesting an embedding allowlist.',
+    ],
+    searchHints: [
+      'frame-ancestors',
+      'X-Frame-Options',
+      'Content-Security-Policy',
+      'headers',
+      'ingress',
+      'proxy',
+    ],
+    limitations: [
+      'Only an authorized runtime response can show the effective policy for a specific URL and time.',
+    ],
+  },
+  {
     id: 'CBS-AI-SUPPLY-CHAIN',
     version: 1,
     title: 'Dependencies and supply-chain integrity',
@@ -447,10 +546,16 @@ export const agentReviewRulePack: AgentReviewRulePack = agentReviewRulePackSchem
 });
 
 export function reviewRulesForFinding(finding: Finding): AgentReviewRule[] {
+  const searchable = `${finding.title}\n${finding.description}\n${finding.evidence
+    .map((evidence) => evidence.observation)
+    .join('\n')}`.toLowerCase();
   return agentReviewRulePack.rules.filter(
     (rule) =>
       rule.appliesTo.categories.includes(finding.category) &&
-      (!rule.appliesTo.sources || rule.appliesTo.sources.includes(finding.source)),
+      (!rule.appliesTo.sources || rule.appliesTo.sources.includes(finding.source)) &&
+      (!rule.appliesTo.ruleIds || rule.appliesTo.ruleIds.includes(finding.ruleId)) &&
+      (!rule.appliesTo.textIncludesAny ||
+        rule.appliesTo.textIncludesAny.some((term) => searchable.includes(term.toLowerCase()))),
   );
 }
 

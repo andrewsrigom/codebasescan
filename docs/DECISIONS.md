@@ -388,3 +388,16 @@ OpenAI adapter keeps direct storage, timeout, retry, cache, and token-budget enf
 Codex skill may inspect an authorized working tree outside the built-in snapshot loop, but it must
 verify report hashes, apply the same rules, and keep new hypotheses separate from detector output.
 Workflow v33 and report schema v17 identify the changed persisted behavior.
+
+## 2026-09-15 — separate application context for external agents
+
+The portable report now emits `agent-context.json` and its JSON Schema beside the existing agent
+report, rules, and plan. This additive contract records observed framework and security signals,
+declared project context, explicit unknowns, and incomplete coverage without changing scanner
+findings. Authentication code, cookie evidence, client token state, cross-document messaging,
+framing policy, and CSRF evidence remain separate signals. In particular, CSRF is not promoted from
+an authentication-shaped finding unless browser-managed credentials and a state-changing boundary
+are established. The audit report schema and workflow remain unchanged because this artifact is a
+derived external-agent view; its own schema begins at v1. Review-rule pack v2 adds exact scanner
+rule and bounded evidence-text applicability filters, allowing embedded messaging and frame-policy
+guidance to attach only to relevant findings instead of every generic configuration candidate.

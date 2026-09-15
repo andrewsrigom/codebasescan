@@ -14,7 +14,7 @@ Current contracts:
 - audit-mode pack `1.0.0`;
 - audit report schema v17;
 - rule-quality schema v3;
-- agent plan v5, task bundle v3, agent report v1, and review-rule pack v1;
+- agent context v1, agent plan v5, task bundle v3, agent report v1, and review-rule pack v2;
 - static report manifest v1;
 - calibration report v2 and v1 calibration gate v1;
 - one current report root updated in place, with legacy history roots still readable.
@@ -30,7 +30,7 @@ release, and web-posture evidence. Optional trusted Semgrep/Gitleaks, a local OS
 output, and the explicit one-URL HTTP probe retain separate coverage.
 
 Static output includes the human dashboard, complete report, run manifest, policy, SARIF,
-CycloneDX, Markdown, schemas, hashes, and versioned agent rules/plans. The bundled Codex skill is the
+CycloneDX, Markdown, schemas, hashes, and versioned agent context/rules/plans. The bundled Codex skill is the
 reference external-agent workflow; it is not part of audit execution.
 
 No production scanner or configuration default contains reference-project names or paths.

@@ -28,7 +28,7 @@ test('agent report schema embeds the rule and remediation contracts', () => {
     };
   };
   assert.equal(schema.properties?.schemaVersion?.const, 1);
-  assert.equal(schema.properties?.rulePack?.properties?.schemaVersion?.const, 1);
+  assert.equal(schema.properties?.rulePack?.properties?.schemaVersion?.const, 2);
   assert.equal(schema.properties?.plan?.properties?.schemaVersion?.const, 5);
 });
 

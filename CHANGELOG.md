@@ -4,6 +4,10 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added a versioned agent-context artifact that separates observed authentication, cookie, token,
+  cross-document messaging, framing, and CSRF signals from deployment questions and unknowns.
+- Added exact-match agent review rules for embedded messaging and framing-policy candidates so
+  generic authentication and header findings do not automatically become CSRF or iframe tickets.
 - Completed the v1 calibration gate across sixteen authorized repositories and 210 source-backed
   candidate reviews, with explicit precision, evidence, location, duplicate, and false-negative
   scope instead of a generic accuracy claim.
