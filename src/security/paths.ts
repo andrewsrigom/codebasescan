@@ -239,7 +239,19 @@ export async function validateProjectRoot(input: string, dataDirectory: string):
   const root = await realpath(path.resolve(input));
   const metadata = await lstat(root);
   if (!metadata.isDirectory()) throw new Error('The project must be a directory.');
-  const home = await realpath(os.homedir());
+  const declaredHome = path.resolve(os.homedir());
+  let home = declaredHome;
+  try {
+    home = await realpath(declaredHome);
+  } catch (error) {
+    if (!(
+      error instanceof Error &&
+      'code' in error &&
+      (error.code === 'EACCES' || error.code === 'EPERM')
+    ))
+      throw error;
+    // A denied home path remains forbidden by its literal path, but must not block unrelated roots.
+  }
   if (root === path.parse(root).root || root === home)
     throw new Error('Register a project, not the filesystem root or home directory.');
   const data = path.resolve(dataDirectory);
