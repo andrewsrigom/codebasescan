@@ -7,6 +7,41 @@ import { profileProject } from '../../src/scanners/project-profile.ts';
 import { captureSnapshot } from '../../src/security/paths.ts';
 import { snapshotFromFiles, snapshotOf } from '../helpers.ts';
 
+test('synchronous filesystem mutations participate in authorization review', () => {
+  const vulnerableSnapshot = snapshotOf(
+    `
+      export async function PUT(request: Request) {
+        const body = await request.json();
+        writeFileSync('/srv/app/settings.json', JSON.stringify(body));
+        return Response.json({ ok: true });
+      }
+    `,
+    'src/app/api/settings/route.ts',
+  );
+  const vulnerable = scanAstSecurity(
+    vulnerableSnapshot,
+    profileProject(vulnerableSnapshot).profile,
+  ).findings;
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-AST001'));
+
+  const protectedSnapshot = snapshotOf(
+    `
+      export async function PUT(request: Request) {
+        await requireUser(request);
+        const body = await request.json();
+        writeFileSync('/srv/app/settings.json', JSON.stringify(body));
+        return Response.json({ ok: true });
+      }
+    `,
+    'src/app/api/settings/route.ts',
+  );
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST001'));
+});
+
 test('AST authorization rules connect mutating entry points to sensitive operations', async () => {
   const snapshot = await captureSnapshot(path.resolve('fixtures/ast-auth-vulnerable'));
   const profile = profileProject(snapshot).profile;
@@ -236,10 +271,7 @@ test('ordered Fastify request hooks can provide an API-key membership guard', ()
       if (!env.API_KEYS.includes(authorization)) return reply.code(401).send();
     });
   `);
-  const lateFindings = scanAstSecurity(
-    lateSnapshot,
-    profileProject(lateSnapshot).profile,
-  ).findings;
+  const lateFindings = scanAstSecurity(lateSnapshot, profileProject(lateSnapshot).profile).findings;
   assert.ok(lateFindings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 

@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Added synchronous Node.js filesystem operations to structural authorization and data-access
+  review, with paired protected and unprotected route coverage.
 - Mapped ordered Fastify request hooks and guarded API-key membership checks into structural
   authentication evidence while retaining candidates when the hook is absent.
 - Stopped requiring input-validation evidence for parameterless Server Actions while retaining the

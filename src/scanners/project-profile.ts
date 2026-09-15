@@ -42,7 +42,7 @@ const maximumComponents = 200;
 const maximumComponentEdges = 1_000;
 const maximumImportIdsPerComponentEdge = 20;
 
-export const projectProfileScannerVersion = '0.12.1';
+export const projectProfileScannerVersion = '0.12.2';
 
 interface ParsedFile {
   source: SourceFile;
@@ -239,7 +239,7 @@ function factKind(callee: string, configuration: TrustedSaasConfiguration): Proj
   )
     return 'command-execution';
   if (
-    /(?:^|\.)(?:readfile|writefile|appendfile|createwritestream|createreadstream|unlink|rename)$/.test(
+    /(?:^|\.)(?:readfile|readfilesync|writefile|writefilesync|appendfile|appendfilesync|createwritestream|createreadstream|unlink|unlinksync|rename|renamesync|open|opensync)$/.test(
       value,
     )
   )
