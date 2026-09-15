@@ -31,7 +31,7 @@ Create codebasescan.config.json with a bundled JSON Schema for editor autocomple
 Existing files are preserved unless --force is explicit.`,
   agent: `Usage: codebasescan agent install codex [project] [--force]
 
-Install the bundled CodebaseScan review skill into .codex/skills/codebasescan-review.`,
+Install the bundled CodebaseScan review skill into .agents/skills/codebasescan-review.`,
   open: `Usage: codebasescan open [report-directory] [--port 4173]
 
 Serve a verified report package on 127.0.0.1.`,

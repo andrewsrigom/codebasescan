@@ -30,10 +30,10 @@ export async function installCodexSkill(project: string, force = false): Promise
   if (!(await stat(projectRoot)).isDirectory())
     throw new Error('Skill target must be a directory.');
 
-  const codexDirectory = path.join(projectRoot, '.codex');
-  const skillsDirectory = path.join(codexDirectory, 'skills');
+  const agentDirectory = path.join(projectRoot, '.agents');
+  const skillsDirectory = path.join(agentDirectory, 'skills');
   const destination = path.join(skillsDirectory, skillName);
-  for (const location of [codexDirectory, skillsDirectory, destination])
+  for (const location of [agentDirectory, skillsDirectory, destination])
     await rejectSymlink(location);
 
   const source = fileURLToPath(new URL(`../../skills/${skillName}/`, import.meta.url));

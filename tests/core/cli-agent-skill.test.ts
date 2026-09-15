@@ -10,7 +10,7 @@ test('Codex skill installer writes the bundled review workflow', async (context)
   context.after(() => rm(project, { recursive: true, force: true }));
 
   const destination = await installCodexSkill(project);
-  assert.equal(destination, path.join(project, '.codex', 'skills', 'codebasescan-review'));
+  assert.equal(destination, path.join(project, '.agents', 'skills', 'codebasescan-review'));
   const skill = await readFile(path.join(destination, 'SKILL.md'), 'utf8');
   const metadata = await readFile(path.join(destination, 'agents', 'openai.yaml'), 'utf8');
   const contract = await readFile(path.join(destination, 'references', 'contract.md'), 'utf8');
@@ -39,7 +39,7 @@ test('Codex skill installer refuses a symlinked destination', async (context) =>
   context.after(() => rm(outside, { recursive: true, force: true }));
   await symlink(
     outside,
-    path.join(project, '.codex'),
+    path.join(project, '.agents'),
     process.platform === 'win32' ? 'junction' : 'dir',
   );
 

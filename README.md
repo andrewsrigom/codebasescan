@@ -66,7 +66,7 @@ For Codex:
 npx codebasescan agent install codex .
 ```
 
-This writes `.codex/skills/codebasescan-review` in the target project. The skill verifies report
+This writes `.agents/skills/codebasescan-review` in the target project. The skill verifies report
 hashes, reads the generated rules and work plan, inspects relevant repository context, challenges
 likely false positives, and keeps new hypotheses separate from deterministic findings.
 
