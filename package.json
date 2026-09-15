@@ -81,7 +81,7 @@
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^22.15.30",
+    "@types/node": "^26.5.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "class-variance-authority": "^0.7.1",
