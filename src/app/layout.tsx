@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Icon } from '../components/icon.tsx';
 import { Navigation } from '../components/navigation.tsx';
+import { codebasescanVersion } from '../domain/versions.ts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </Link>
           <Navigation />
           <div className="sidebar-bottom">
-            <div className="sidebar-version">v0.3.0</div>
+            <div className="sidebar-version">v{codebasescanVersion}</div>
           </div>
         </aside>
         <div className="app-shell">
