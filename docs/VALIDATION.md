@@ -1,6 +1,6 @@
 # Validation
 
-Current published release: **0.4.0**. Last release-gate evidence refresh: **2026-09-15 BRT**.
+Current published release: **0.5.0**. Last release-gate evidence refresh: **2026-09-15 BRT**.
 
 This record covers the declared Node.js, JavaScript, TypeScript, React, and Next.js scope. It is not
 a claim that every vulnerability is detectable, a recall estimate, or a security certification.
@@ -17,9 +17,31 @@ The original real-project calibration ran on Linux/WSL. The 0.4 candidate was al
 native Windows Node 24 for core checks, fixtures, and npm/pnpm installation. The GitHub Actions
 package matrix provides clean Node 22 and Linux evidence. Native macOS is not claimed.
 
-## Deterministic release gate
+## 0.5.0 release verification
 
-| Check                    | Current evidence                                                                                             |
+The local `release:check` passed on Node 24: format, types, lint, core tests, the declared fixture
+benchmark (56 true positives, 0 false positives, 0 false negatives), integration tests (6 passed,
+5 optional Windows cases skipped), production build, packed npm installation, publish dry-run,
+package audit (0 known vulnerabilities at `--audit-level=low`), and CLI diagnostics. The packed
+candidate had 108 files and measured 293,951 bytes.
+
+All six jobs in the [tag CI run](https://github.com/andrewsrigom/codebasescan/actions/runs/35029681753)
+passed, including Node 22/24 npm, Node 22 pnpm/Yarn, the reusable Action, and Linux Chromium
+browser tests. The [protected publish run](https://github.com/andrewsrigom/codebasescan/actions/runs/35029681807)
+passed after maintainer approval. npm reports 0.5.0 as `latest` with a SLSA provenance attestation;
+the [matching GitHub release](https://github.com/andrewsrigom/codebasescan/releases/tag/v0.5.0)
+is public.
+
+A fresh isolated registry installation with lifecycle scripts disabled reported CLI version 0.5.0
+and exposed the `triage` commands. SHA-256 hashes of all 108 extracted package files matched the
+tagged checkout. A Windows dry-run tarball had a different whole-tarball integrity from the
+Linux-published tarball; the file-content comparison is the cross-platform check recorded here.
+Seven browser tests passed locally on Windows, but that runner required interruption after hanging
+during teardown. Linux CI completed the same workflow normally.
+
+## 0.4.0 reference gate
+
+| Check                    | 0.4.0 evidence                                                                                               |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                                       |
 | Format, types, lint      | Passed with zero warnings                                                                                    |
@@ -39,9 +61,9 @@ package matrix provides clean Node 22 and Linux evidence. Native macOS is not cl
 The benchmark uses inert, declared ground truth. Its perfect fixture score is a regression signal,
 not a real-world accuracy claim.
 
-## Packed installation
+## 0.4.0 packed installation reference
 
-Each smoke test packed the actual CLI, installed it into an empty generated project, and ran the
+Each 0.4.0 smoke test packed the actual CLI, installed it into an empty generated project, and ran the
 installed version, `doctor`, `init`, all three Codex skill installations, a static audit, verified
 report and exact finding reads, and the loopback report server. The release scripts fail
 mechanically above 2 MiB packed or 60 MiB installed.
@@ -68,7 +90,7 @@ Sixteen authorized, structurally different repositories were scanned with workfl
 captured source and manifests only: no target module, lifecycle script, dependency installation,
 test, build, or application code ran.
 
-Those corpus results predate workflow v85 and are not a fresh claim for 0.4.0. Three separate
+Those corpus results predate workflow v85 and are not a fresh claim for 0.5.0. Three separate
 inert local shapes were freshly audited on Windows: SaaS (8 findings), Next.js (8), and React (13);
 all three report manifests and bounded finding reads verified. The Windows host does not expose the
 previous WSL calibration repositories, so those were not rescanned locally.
@@ -129,10 +151,10 @@ Disabled, unsupported, partial, failed, and zero-finding states stay distinct.
 
 ## Release state
 
-Version 0.4.0 is [published on npm as `latest`](https://www.npmjs.com/package/codebasescan?activeTab=versions).
-Its [protected tag workflow](https://github.com/andrewsrigom/codebasescan/actions/runs/34933872056)
-completed after maintainer approval. Ordinary branch pushes do not publish. The project-local
-triage sidecar on `main` is unreleased development, not part of the 0.4.0 registry package.
+Version 0.5.0 is [published on npm as `latest`](https://www.npmjs.com/package/codebasescan?activeTab=versions).
+Its protected tag workflow completed after maintainer approval. Ordinary branch pushes do not
+publish. The private project-local triage sidecar is part of 0.5.0 and remains outside the hosted
+static report; it never changes scanner findings, human review, or policy.
 
 ## Reproduce
 

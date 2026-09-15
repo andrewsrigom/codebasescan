@@ -10,12 +10,12 @@ project.
 
 Current contracts:
 
-- audit workflow `codebasescan-audit-v87` (0.5.0 candidate);
+- audit workflow `codebasescan-audit-v87` (published in 0.5.0);
 - audit-mode pack `1.0.0`;
 - audit report schema v17;
 - rule-quality schema v3;
 - agent context v1, agent plan v5, task bundle v3, agent report v1, and review-rule pack v2;
-- private external-agent triage ledger v1 (0.5.0 candidate), separate from human review and policy;
+- private external-agent triage ledger v1 (published in 0.5.0), separate from human review and policy;
 - static report manifest v1;
 - calibration report v2 and v1 calibration gate v1;
 - one current report root updated in place, with legacy history roots still readable.
