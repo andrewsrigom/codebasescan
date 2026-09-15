@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -13,6 +14,17 @@ if (!['npm', 'pnpm', 'yarn'].includes(manager))
 const executable = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
 function invocation(command, arguments_) {
+  if (process.platform === 'win32' && ['pnpm', 'yarn'].includes(command)) {
+    const corepackCli = path.join(
+      path.dirname(process.execPath),
+      'node_modules',
+      'corepack',
+      'dist',
+      `${command}.js`,
+    );
+    if (existsSync(corepackCli))
+      return { command: process.execPath, arguments: [corepackCli, ...arguments_] };
+  }
   const npmExecPath = process.env.npm_execpath;
   if (process.platform !== 'win32' || !npmExecPath || !['npm', 'npx'].includes(command))
     return { command: executable(command), arguments: arguments_ };
@@ -136,6 +148,7 @@ async function verifyReportServer(directory, reportDirectory) {
 
 const temporary = await mkdtemp(path.join(os.tmpdir(), `codebasescan-install-${manager}-`));
 process.env.npm_config_cache = path.join(temporary, 'npm-cache');
+process.env.COREPACK_HOME = path.join(temporary, 'corepack-cache');
 try {
   const packedDirectory = path.join(temporary, 'packed');
   const fixture = path.join(temporary, 'fixture');
@@ -155,7 +168,9 @@ try {
     );
   const tarball = path.join(packedDirectory, packageData.filename);
   if (manager === 'yarn') {
-    await run('yarn', ['config', 'set', 'nodeLinker', 'node-modules'], { cwd: fixture });
+    const yarnVersion = await run('yarn', ['--version'], { cwd: fixture, capture: true });
+    if (!yarnVersion.stdout.trim().startsWith('1.'))
+      await run('yarn', ['config', 'set', 'nodeLinker', 'node-modules'], { cwd: fixture });
   }
   const install = await run(manager, installArguments(tarball), { cwd: fixture });
   const version = await runCodebaseScan(fixture, ['--version'], { capture: true });
