@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Traced caught error details through returned response-helper calls while retaining stable public
+  error wrappers as clean source evidence.
 - Added synchronous Node.js filesystem operations to structural authorization and data-access
   review, with paired protected and unprotected route coverage.
 - Mapped ordered Fastify request hooks and guarded API-key membership checks into structural

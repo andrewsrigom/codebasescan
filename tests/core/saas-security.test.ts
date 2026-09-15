@@ -148,6 +148,29 @@ test('SaaS error rule reports caught internals but accepts a stable public error
   `);
   assert.ok(aliasedResponseWrapper.some((finding) => finding.ruleId === 'TW-SAAS004'));
 
+  const returnedErrorWrapper = findingsFor(`
+    export async function POST() {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        return respondError('internal_error', 'Unexpected internal error', {
+          reason: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  `);
+  assert.ok(returnedErrorWrapper.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
+  const stableErrorWrapper = findingsFor(`
+    export async function POST() {
+      try { return Response.json(await database.invoice.create({ data: {} })); }
+      catch (error) {
+        logger.error({ error }, 'invoice failed');
+        return respondError('internal_error', 'Unexpected internal error');
+      }
+    }
+  `);
+  assert.ok(!stableErrorWrapper.some((finding) => finding.ruleId === 'TW-SAAS004'));
+
   const derivedStatus = findingsFor(`
     export async function POST(request: Request) {
       try { return Response.json(await database.invoice.create({ data: {} })); }

@@ -1129,7 +1129,7 @@ function caughtErrorExposure(
     if (ts.isCallExpression(node)) {
       const name = callName(node);
       if (
-        /(?:^|\.)(?:json|send|api(?:Legacy)?Error)$/i.test(name) &&
+        isErrorResponseSink(node, name) &&
         !isValidationBranch(node) &&
         node.arguments.some(
           (argument) => containsCaught(argument) && !onlySafeLiteralPayload(argument),
@@ -1141,6 +1141,23 @@ function caughtErrorExposure(
   };
   visit(catchClause.block);
   return exposed;
+}
+
+function isErrorResponseSink(node: ts.CallExpression, name: string): boolean {
+  if (/(?:^|\.)(?:json|send|api(?:Legacy)?Error)$/i.test(name)) return true;
+  if (!/(?:^|\.)(?:(?:respond|send|create|build|format)(?:Api)?)?Error(?:Response)?$/i.test(name))
+    return false;
+
+  let parent: ts.Node = node.parent;
+  while (
+    ts.isAwaitExpression(parent) ||
+    ts.isParenthesizedExpression(parent) ||
+    ts.isAsExpression(parent) ||
+    ts.isTypeAssertionExpression(parent) ||
+    ts.isNonNullExpression(parent)
+  )
+    parent = parent.parent;
+  return ts.isReturnStatement(parent);
 }
 
 function scanFile(
@@ -1438,7 +1455,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
         findings: 0,
         detail:
           'No supported TypeScript or JavaScript profile was available. No clean SaaS result is implied.',
-        version: '0.5.7',
+        version: '0.5.8',
       },
     };
 
@@ -1475,7 +1492,7 @@ export function scanSaasSecurity(snapshot: Snapshot, profile: ProjectProfile): S
       findings: findings.length,
       detail:
         'Nine bounded TypeScript/JavaScript rules review client-controlled billing, ownership or privilege assignment, token lifecycle, internal error exposure, sensitive logging and URLs, and OAuth redirect trust. Findings are source candidates, not runtime proof.',
-      version: '0.5.7',
+      version: '0.5.8',
     },
   };
 }
