@@ -73,6 +73,12 @@ inert local shapes were freshly audited on Windows: SaaS (8 findings), Next.js (
 all three report manifests and bounded finding reads verified. The Windows host does not expose the
 previous WSL calibration repositories, so those were not rescanned locally.
 
+Two larger local source snapshots were also pressure-tested with the 0.4 candidate: the current
+CodebaseScan repository (367 supported files, 2.46 MiB, 8 candidates) and its separate, older
+Traceward workbench snapshot (79 files, 0.17 MiB, 5 candidates). Both advisory runs reported zero
+blocking coverage issues, and their report manifests and bounded finding reads verified. These
+are execution/portability checks, not reviewed ground truth or a new precision claim.
+
 | Project | Files | Findings | Candidate review | False-negative scope |
 | ------- | ----: | -------: | ---------------- | -------------------- |
 | P01     | 2,555 |       45 | 45 / 45          | sampled              |
