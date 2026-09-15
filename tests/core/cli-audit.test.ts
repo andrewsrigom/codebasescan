@@ -65,6 +65,7 @@ test('CLI probes only the explicit URL allowlist and keeps both observations', a
   await execute(
     process.execPath,
     [
+      '--experimental-strip-types',
       path.join(repository, 'src/cli/main.ts'),
       'audit',
       path.join(repository, 'fixtures/review-worthy-saas'),

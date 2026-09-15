@@ -148,7 +148,8 @@ async function verifyReportServer(directory, reportDirectory) {
 
 const temporary = await mkdtemp(path.join(os.tmpdir(), `codebasescan-install-${manager}-`));
 process.env.npm_config_cache = path.join(temporary, 'npm-cache');
-process.env.COREPACK_HOME = path.join(temporary, 'corepack-cache');
+if (process.platform === 'win32')
+  process.env.COREPACK_HOME = path.join(temporary, 'corepack-cache');
 try {
   const packedDirectory = path.join(temporary, 'packed');
   const fixture = path.join(temporary, 'fixture');

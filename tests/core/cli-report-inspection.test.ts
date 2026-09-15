@@ -12,7 +12,9 @@ const execute = promisify(execFile);
 const cli = path.resolve('src/cli/main.ts');
 
 async function run(...arguments_: string[]) {
-  return execute(process.execPath, [cli, ...arguments_], { timeout: 30_000 });
+  return execute(process.execPath, ['--experimental-strip-types', cli, ...arguments_], {
+    timeout: 30_000,
+  });
 }
 
 test('report commands read bounded findings and coverage by stable ID', async (context) => {
