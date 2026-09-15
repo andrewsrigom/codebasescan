@@ -14,6 +14,7 @@ if (!['npm', 'pnpm', 'yarn'].includes(manager))
 const executable = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
 function invocation(command, arguments_) {
+  if (command === process.execPath) return { command, arguments: arguments_ };
   if (process.platform === 'win32' && ['pnpm', 'yarn'].includes(command)) {
     const corepackCli = path.join(
       path.dirname(process.execPath),
@@ -23,7 +24,10 @@ function invocation(command, arguments_) {
       `${command}.js`,
     );
     if (existsSync(corepackCli))
-      return { command: process.execPath, arguments: [corepackCli, ...arguments_] };
+      return {
+        command: process.execPath,
+        arguments: [corepackCli, ...(command === 'yarn' ? ['--no-default-rc'] : []), ...arguments_],
+      };
   }
   const npmExecPath = process.env.npm_execpath;
   if (process.platform !== 'win32' || !npmExecPath || !['npm', 'npx'].includes(command))
@@ -62,7 +66,10 @@ function run(command, arguments_, options = {}) {
 function managerCommand(arguments_) {
   if (manager === 'npm') return ['npx', ['--no-install', 'codebasescan', ...arguments_]];
   if (manager === 'pnpm') return ['pnpm', ['exec', 'codebasescan', ...arguments_]];
-  return ['yarn', ['exec', 'codebasescan', '--', ...arguments_]];
+  return [
+    process.execPath,
+    [path.join('node_modules', 'codebasescan', 'dist', 'cli', 'main.js'), ...arguments_],
+  ];
 }
 
 async function runCodebaseScan(directory, arguments_, options = {}) {
