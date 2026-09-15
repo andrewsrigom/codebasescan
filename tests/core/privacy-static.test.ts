@@ -17,6 +17,16 @@ test('privacy rules find sensitive URL, logging, and browser-storage candidates'
   );
 });
 
+test('helper-shaped logging candidates describe uncertainty instead of asserting a leak', () => {
+  const result = scanPrivacyStatic(
+    snapshotOf('logger.info(getSessionResultLogProperties(session));'),
+  );
+  const finding = result.findings.find((candidate) => candidate.ruleId === 'TW-PRIV002');
+  assert.ok(finding);
+  assert.match(finding.description, /does not prove which fields reach the logger/);
+  assert.match(finding.remediation, /console and telemetry destinations/);
+});
+
 test('non-sensitive keys and protected log values avoid privacy candidates', () => {
   const result = scanPrivacyStatic(
     snapshotOf(`

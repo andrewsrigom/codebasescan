@@ -392,7 +392,7 @@ export function buildAuditPipeline(options: {
           scanners: [skippedByMode('privacy-static', 'Static privacy review', 'privacy')],
         };
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'privacy-static', '0.3.0', ['privacy-static'], () =>
+      const result = await cachedScan(source, 'privacy-static', '0.3.1', ['privacy-static'], () =>
         scanPrivacyStatic(source),
       );
       event(state, 'privacy_static', `${result.findings.length} static privacy candidate(s).`);
