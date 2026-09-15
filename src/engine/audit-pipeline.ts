@@ -218,7 +218,7 @@ export function buildAuditPipeline(options: {
           scanners: [skippedByMode('builtin', 'Built-in patterns', 'security')],
         };
       const source = await checkedSnapshot(state);
-      const result = await cachedScan(source, 'builtin', '0.4.1', ['builtin'], () => {
+      const result = await cachedScan(source, 'builtin', '0.4.2', ['builtin'], () => {
         const started = performance.now();
         const findings = scanPatterns(source);
         return {

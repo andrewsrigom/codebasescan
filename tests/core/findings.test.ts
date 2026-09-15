@@ -65,6 +65,47 @@ test('comment examples do not become source findings', () => {
   const findings = scanPatterns(snapshotOf('// Do not use eval(input) anymore.'));
   assert.equal(findings.length, 0);
 });
+test('literal HTML sinks are not mistaken for attacker-controlled markup', () => {
+  const source = snapshotOf(
+    `const PRELOAD = \`document.documentElement.classList.add('ready');\`;
+     export function Layout() {
+       return <><script dangerouslySetInnerHTML={{ __html: PRELOAD }} />
+         <div dangerouslySetInnerHTML={{ __html: '<b>fixed</b>' }} /></>;
+     }`,
+    'src/layout.tsx',
+  );
+  assert.ok(!scanPatterns(source).some((finding) => finding.ruleId === 'TW-002'));
+});
+test('dynamic and shadowed HTML sources remain review candidates', () => {
+  const source = snapshotOf(
+    `const markup = '<b>fixed</b>';
+     export function Page(markup: string, userInput: string) {
+       return <><div dangerouslySetInnerHTML={{ __html: markup }} />
+         <div dangerouslySetInnerHTML={{ __html: \`<b>\${userInput}</b>\` }} />
+         <div dangerouslySetInnerHTML={{ __html: userInput }} /></>;
+     }`,
+    'src/page.tsx',
+  );
+  assert.equal(scanPatterns(source).filter((finding) => finding.ruleId === 'TW-002').length, 3);
+});
+test('function declarations shadowing a static HTML name stay reviewable', () => {
+  const source = snapshotOf(
+    `const markup = '<b>fixed</b>';
+     export function Page() {
+       function markup() { return '<b>dynamic</b>'; }
+       return <div dangerouslySetInnerHTML={{ __html: markup }} />;
+     }`,
+    'src/page.tsx',
+  );
+  assert.equal(scanPatterns(source).filter((finding) => finding.ruleId === 'TW-002').length, 1);
+});
+test('HTML sink names inside ordinary strings are not findings', () => {
+  assert.ok(
+    !scanPatterns(snapshotOf(`const message = 'dangerouslySetInnerHTML= is a JSX prop';`)).some(
+      (finding) => finding.ruleId === 'TW-002',
+    ),
+  );
+});
 test('Redis Lua evaluation is not treated as JavaScript dynamic execution', () => {
   const findings = scanPatterns(
     snapshotOf('client.withCommandOptions({ abortSignal }).eval(SCRIPT, { keys, arguments });'),

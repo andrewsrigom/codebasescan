@@ -124,8 +124,90 @@ function commentRanges(content: string, filePath: string): { start: number; end:
   return ranges;
 }
 
-function insideComment(index: number, ranges: { start: number; end: number }[]): boolean {
+function insideRange(index: number, ranges: { start: number; end: number }[]): boolean {
   return ranges.some((range) => index >= range.start && index < range.end);
+}
+
+function staticHtmlBindings(source: ts.SourceFile): Set<string> {
+  const counts = new Map<string, number>();
+  const count = (name: ts.Node | undefined): void => {
+    if (name && ts.isIdentifier(name)) counts.set(name.text, (counts.get(name.text) ?? 0) + 1);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) || ts.isParameter(node) || ts.isBindingElement(node))
+      count(node.name);
+    else if (
+      ts.isImportClause(node) ||
+      ts.isImportSpecifier(node) ||
+      ts.isImportEqualsDeclaration(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isFunctionExpression(node) ||
+      ts.isClassDeclaration(node) ||
+      ts.isClassExpression(node) ||
+      ts.isEnumDeclaration(node) ||
+      ts.isModuleDeclaration(node)
+    )
+      count(node.name);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+
+  const staticNames = new Set<string>();
+  for (const statement of source.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    )
+      continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.initializer &&
+        (ts.isStringLiteral(declaration.initializer) ||
+          ts.isNoSubstitutionTemplateLiteral(declaration.initializer)) &&
+        counts.get(declaration.name.text) === 1
+      )
+        staticNames.add(declaration.name.text);
+    }
+  }
+  return staticNames;
+}
+
+function staticHtmlRanges(content: string, filePath: string): { start: number; end: number }[] {
+  const source = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true);
+  const diagnostics = (source as ts.SourceFile & { parseDiagnostics?: readonly ts.Diagnostic[] })
+    .parseDiagnostics;
+  if (diagnostics?.length) return [];
+  const staticNames = staticHtmlBindings(source);
+  const ranges: { start: number; end: number }[] = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isJsxAttribute(node) &&
+      node.name.getText(source) === 'dangerouslySetInnerHTML' &&
+      node.initializer &&
+      ts.isJsxExpression(node.initializer) &&
+      node.initializer.expression &&
+      ts.isObjectLiteralExpression(node.initializer.expression)
+    ) {
+      const html = node.initializer.expression.properties.find(
+        (property) =>
+          ts.isPropertyAssignment(property) &&
+          (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)) &&
+          property.name.text === '__html',
+      );
+      if (html && ts.isPropertyAssignment(html)) {
+        const value = html.initializer;
+        const staticValue =
+          ts.isStringLiteral(value) ||
+          ts.isNoSubstitutionTemplateLiteral(value) ||
+          (ts.isIdentifier(value) && staticNames.has(value.text));
+        if (staticValue) ranges.push({ start: node.name.getStart(source), end: node.end });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return ranges;
 }
 
 function literalRanges(content: string, filePath: string): { start: number; end: number }[] {
@@ -151,11 +233,16 @@ export function scanPatterns(snapshot: Snapshot): Finding[] {
     if (!isRuntimeSource(file) || !/\.(?:[cm]?[jt]sx?)$/.test(file.path)) continue;
     const comments = commentRanges(file.content, file.path);
     const literals = literalRanges(file.content, file.path);
+    const staticHtml = file.content.includes('dangerouslySetInnerHTML')
+      ? staticHtmlRanges(file.content, file.path)
+      : [];
     for (const rule of rules) {
       const expression = new RegExp(rule.pattern.source, rule.pattern.flags);
       for (const match of file.content.matchAll(expression)) {
-        if (insideComment(match.index, comments)) continue;
-        if (rule.id === 'TW-003' && insideComment(match.index, literals)) continue;
+        if (insideRange(match.index, comments)) continue;
+        if ((rule.id === 'TW-002' || rule.id === 'TW-003') && insideRange(match.index, literals))
+          continue;
+        if (rule.id === 'TW-002' && insideRange(match.index, staticHtml)) continue;
         if (findings.length >= 300) return findings;
         const line = file.content.slice(0, match.index).split('\n').length;
         findings.push(
