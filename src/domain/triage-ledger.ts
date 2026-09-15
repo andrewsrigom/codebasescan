@@ -106,3 +106,30 @@ export function matchTriageLedger(report: AuditReport, ledger: TriageLedger): Tr
     return { entry, status: current ? 'current' : 'stale', findingId: finding.id };
   });
 }
+
+export function transferCurrentTriage(
+  source: AuditReport,
+  target: AuditReport,
+  ledger: TriageLedger,
+): { ledger: TriageLedger; transferred: number; skipped: number } {
+  const sourceMatches = matchTriageLedger(source, ledger);
+  const currentEntries = sourceMatches
+    .filter((item) => item.status === 'current')
+    .map((item) => item.entry);
+  const renamed: TriageLedger = {
+    ...ledger,
+    projectName: target.projectName,
+    entries: currentEntries,
+  };
+  const targetMatches = matchTriageLedger(target, renamed);
+  const entries = targetMatches
+    .filter((item) => item.status === 'current')
+    .map((item) => item.entry);
+  if (!entries.length)
+    throw new Error('No unchanged, evidence-matched triage entries to transfer.');
+  return {
+    ledger: { ...renamed, updatedAt: new Date().toISOString(), entries },
+    transferred: entries.length,
+    skipped: ledger.entries.length - entries.length,
+  };
+}

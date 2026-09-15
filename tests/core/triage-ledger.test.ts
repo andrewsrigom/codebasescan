@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchTriageLedger, upsertTriageLedger } from '../../src/domain/triage-ledger.ts';
+import {
+  matchTriageLedger,
+  transferCurrentTriage,
+  upsertTriageLedger,
+} from '../../src/domain/triage-ledger.ts';
 import {
   parseTriageLedger,
   triageLedgerJsonSchema,
@@ -59,4 +63,72 @@ test('agent triage JSON Schema is versioned', () => {
     properties?: { schemaVersion?: { const?: number } };
   };
   assert.equal(schema.properties?.schemaVersion?.const, 1);
+});
+
+test('triage transfer only carries unchanged cited evidence across a project rename', () => {
+  const source = sampleReport();
+  const finding = source.findings[0]!;
+  const ledger = upsertTriageLedger(undefined, source, {
+    findingId: finding.id,
+    assessment: 'likely_valid',
+    evidenceIds: [finding.evidence[0]!.id],
+    note: 'The cited source reaches the reported sink.',
+  });
+  const target = structuredClone(source);
+  target.projectName = 'linked-worktree';
+  const transfer = transferCurrentTriage(source, target, ledger);
+  assert.deepEqual(
+    { transferred: transfer.transferred, skipped: transfer.skipped },
+    {
+      transferred: 1,
+      skipped: 0,
+    },
+  );
+  assert.equal(transfer.ledger.projectName, target.projectName);
+  assert.equal(matchTriageLedger(target, transfer.ledger)[0]?.status, 'current');
+  assert.equal(source.findings[0]?.disposition, 'needs_review');
+
+  target.findings[0]!.evidence[0]!.fileDigest = 'b'.repeat(64);
+  assert.throws(() => transferCurrentTriage(source, target, ledger), /No unchanged/);
+  target.findings = [];
+  assert.throws(() => transferCurrentTriage(source, target, ledger), /No unchanged/);
+  assert.throws(
+    () => transferCurrentTriage({ ...source, projectName: 'unrelated' }, source, ledger),
+    /different project/,
+  );
+});
+
+test('triage transfer leaves stale entries in the source ledger', () => {
+  const source = sampleReport();
+  const first = source.findings[0]!;
+  const second = structuredClone(first);
+  second.id = 'second-finding';
+  second.fingerprint = 'c'.repeat(64);
+  second.evidence[0]!.id = 'second-evidence';
+  source.findings.push(second);
+  const firstLedger = upsertTriageLedger(undefined, source, {
+    findingId: first.id,
+    assessment: 'likely_valid',
+    evidenceIds: [first.evidence[0]!.id],
+    note: 'The cited source reaches the reported sink.',
+  });
+  const ledger = upsertTriageLedger(firstLedger, source, {
+    findingId: second.id,
+    assessment: 'likely_false_positive',
+    evidenceIds: [second.evidence[0]!.id],
+    note: 'The second sink is inert in the supplied fixture.',
+  });
+  const target = structuredClone(source);
+  target.projectName = 'linked-worktree';
+  target.findings[1]!.evidence[0]!.fileDigest = 'b'.repeat(64);
+  const transfer = transferCurrentTriage(source, target, ledger);
+  assert.deepEqual(
+    { transferred: transfer.transferred, skipped: transfer.skipped },
+    {
+      transferred: 1,
+      skipped: 1,
+    },
+  );
+  assert.equal(transfer.ledger.entries[0]?.fingerprint, first.fingerprint);
+  assert.equal(ledger.entries.length, 2);
 });

@@ -41,6 +41,7 @@ import {
 import { parseReviewLedger } from '../domain/review-ledger-schema.ts';
 import {
   matchTriageLedger,
+  transferCurrentTriage,
   triageAssessments,
   upsertTriageLedger,
   type TriageAssessment,
@@ -715,6 +716,42 @@ try {
           );
       }
     }
+  } else if (
+    command === 'triage' &&
+    target === 'transfer' &&
+    arguments_[2] &&
+    arguments_[3] &&
+    !arguments_[2].startsWith('--') &&
+    !arguments_[3].startsWith('--')
+  ) {
+    const [sourcePackage, destinationPackage] = await Promise.all([
+      loadReportPackage(arguments_[2]),
+      loadReportPackage(arguments_[3]),
+    ]);
+    const sourceLedgerPath = path.resolve(
+      option('--ledger') ?? (await defaultTriageLedgerDestination(arguments_[2])),
+    );
+    const destination = path.resolve(
+      option('--output') ?? (await defaultTriageLedgerDestination(arguments_[3])),
+    );
+    if (sourceLedgerPath === destination)
+      throw new Error('Transfer requires a different destination ledger.');
+    const sourceLedger = await existingTriageLedger(sourceLedgerPath);
+    if (!sourceLedger) throw new Error('No source agent triage ledger recorded.');
+    if (await existingTriageLedger(destination))
+      throw new Error('Destination triage ledger already exists; transfer will not overwrite it.');
+    const result = transferCurrentTriage(
+      sourcePackage.report,
+      destinationPackage.report,
+      sourceLedger,
+    );
+    await writeFile(destination, `${JSON.stringify(parseTriageLedger(result.ledger), null, 2)}\n`, {
+      mode: 0o600,
+      flag: 'wx',
+    });
+    console.log(
+      `Transferred ${result.transferred} current agent assessment(s) to ${destination}; ${result.skipped} stale or unmatched entry/entries stayed in the source ledger. Scanner findings and policy are unchanged.`,
+    );
   } else if (command === 'suppress' && target && arguments_[2] && !arguments_[2].startsWith('--')) {
     const report = await loadReportArtifact(target);
     const destination = path.resolve(

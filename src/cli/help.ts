@@ -74,6 +74,7 @@ The default ledger is private beside the report directory, not inside the public
   triage: `Usage:
   codebasescan triage record <report> <finding-id> <assessment> --evidence <evidence-id> --note <reason> [--output ledger.json]
   codebasescan triage list <report> [--ledger ledger.json] [--limit 20] [--json]
+  codebasescan triage transfer <source-report> <target-report> [--ledger source.json] [--output target.json]
 
 Assessments: likely_valid, likely_false_positive, inconclusive.
 Repeat --evidence for multiple IDs from the selected finding. Agent triage is a private

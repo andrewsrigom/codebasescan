@@ -21,6 +21,21 @@ absent findings `unmatched`. Stale and unmatched notes remain readable but never
 Triage does not change findings, severity, coverage, policy, or SARIF. Agents may use a current note
 to avoid repeating context gathering, but must verify the cited evidence before relying on it.
 
+If the same codebase is audited from a differently named Git worktree, the report project name
+changes. Transfer only assessments whose fingerprint, rule, cited evidence IDs, and source-file
+digests still match both reports:
+
+```bash
+codebasescan triage transfer old-report new-report
+codebasescan triage list new-report --json
+```
+
+The command verifies both static report packages, reads the old private sidecar, writes a new
+private sidecar beside `new-report`, and
+refuses to overwrite an existing one. Stale or absent entries stay only in the old ledger. It
+requires an explicit source and target report; it never treats an agent assessment as a human
+confirmation or changes the scan result.
+
 Human-confirmed decisions use the existing, separate review ledger:
 
 ```bash
