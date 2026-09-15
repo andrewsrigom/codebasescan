@@ -33,25 +33,21 @@ Items outside that supported scope do not block v1.
 4. regenerate the public demo and fixture exports from the current engine;
 5. publish only after README, changelog, schemas, package contents, tag, and provenance agree.
 
-## Phase 2 — trustworthy results
+## Phase 2 — trustworthy results (v1 gate complete)
 
-1. independently label candidates in at least five structurally different authorized repositories;
+1. keep candidate labels current across at least ten structurally different authorized repositories;
 2. record manual misses and false-negative review scope rather than inferring recall;
-3. turn repeated false positives and misses into paired vulnerable/benign regression fixtures;
-4. publish per-rule evidence, location, and explanation quality without inventing a global score;
+3. turn every reproducible false positive and miss into paired vulnerable/benign regression fixtures;
+4. publish per-rule evidence, location, explanation, and duplicate quality without inventing a
+   global score;
 5. add provider, ORM, auth, queue, upload, WebSocket, and monorepo shapes only from reproducible
    evidence.
 
-The existing multi-project corpus proves bounded execution and portability, not generic accuracy.
-`accuracyClaimReady` must remain false until independent review is complete.
-
-The latest expansion calibration has 67 completely reviewed candidates across five authorized
-snapshots: 59 true positives and 8 false positives, for 88.1% observed sample precision. Every
-project has a bounded false-negative sample, but none has a complete false-negative review. A
-workflow-v69 follow-up reduced the large P03 sample from 22 to 14 candidates, removing all eight
-reviewer-labelled false positives while retaining its 14 labelled true positives. The historical
-nested outbound-URL miss now has a paired regression fixture, but its original private source still
-needs a fresh scan before the ledger can be closed. No recall claim is made.
+The v84 corpus contains 210 completely reviewed candidates across sixteen authorized snapshots.
+Observed sample precision is 94.1%, critical/high sample precision is 93.8%, and evidence and
+location accuracy are 100%. Every repository has a bounded false-negative review and three have a
+complete source-checklist review. This proves the v1 sample gate, not generic accuracy. Recall stays
+unreported and `accuracyClaimReady` remains false until complete independent review exists.
 
 ## Phase 3 — complete CLI cycle
 
@@ -70,8 +66,7 @@ baseline policy limits blocking to newly introduced findings.
 
 Priority order:
 
-1. extend taint beyond the covered `Object.assign` pattern to additional nested option and object
-   transformations;
+1. extend taint only when a reproducible real-project miss identifies an unsupported composition;
 2. richer static accessibility semantics and stronger imported Axe provenance;
 3. API, database, environment, webhook, feature-flag, and test-evidence correlation;
 4. authentication/session libraries, authorization wrappers, tenant boundaries, billing, jobs,

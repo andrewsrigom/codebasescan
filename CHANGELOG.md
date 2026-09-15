@@ -4,6 +4,12 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Completed the v1 calibration gate across sixteen authorized repositories and 210 source-backed
+  candidate reviews, with explicit precision, evidence, location, duplicate, and false-negative
+  scope instead of a generic accuracy claim.
+- Enforced the 2 MiB packed and 60 MiB clean-install limits in package smoke tests and bounded the
+  GitHub validation and package jobs to the ten-minute v1 CI target.
+- Refreshed the anonymized public demo from the final workflow-v84 reviewed report.
 - Limited fail-open authentication detection to empty trusted credential collections so ordinary
   rejection of invalid request tokens and absent database matches remains clean.
 - Identified reachable authentication helpers that continue when credential configuration is empty,

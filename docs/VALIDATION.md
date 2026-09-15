@@ -1,111 +1,120 @@
 # Validation
 
-Last full local release gate: **2026-09-12 BRT**.
+Current release candidate: **0.4.0**. Last local v1 evidence refresh: **2026-09-14 BRT**.
 
-## Environment
+This record covers the declared Node.js, JavaScript, TypeScript, React, and Next.js scope. It is not
+a claim that every vulnerability is detectable, a recall estimate, or a security certification.
 
-- WSL2, Ubuntu 24.04.4 LTS
-- Node.js 24.19.0 and npm 11.17.0
-- Next.js 16.3.4
-- Semgrep 1.176.1
-- Gitleaks 8.30.1
-- dependency-cruiser 18.2.0
-- jscpd 5.2.0
+## Reference environment
 
-Linux/WSL is the supported 0.3 candidate environment. Native Windows and macOS are not claimed.
+- WSL2 with Ubuntu 24.04.4 LTS;
+- Node.js 24.19.0 and npm 11.17.0;
+- Next.js 16.3.4;
+- Semgrep 1.176.1 and Gitleaks 8.30.1;
+- dependency-cruiser 18.2.0 and jscpd 5.2.0.
 
-## Release gate
+Linux and WSL are the verified local environments. The GitHub Actions package matrix provides the
+clean Node.js 22 evidence. Native Windows and macOS are not claimed.
 
-| Check                       | Result                                                                                  |
-| --------------------------- | --------------------------------------------------------------------------------------- |
-| npm run release:metadata    | Passed; 0.3.0 candidate metadata valid and `private: false`                             |
-| npm run format:check        | Passed                                                                                  |
-| npm run typecheck           | Passed                                                                                  |
-| npm run lint                | Passed, zero warnings                                                                   |
-| npm test                    | 384 passed                                                                              |
-| npm run benchmark           | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                          |
-| AST benchmark subset        | TP 11, FP 0, FN 0; precision 1.00, recall 1.00                                          |
-| Next.js benchmark subset    | TP 7, FP 0, FN 0; precision 1.00, recall 1.00                                           |
-| React benchmark subset      | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
-| SaaS benchmark subset       | TP 9, FP 0, FN 0; precision 1.00, recall 1.00                                           |
-| npm run test:integration    | 11 passed, including real scanners, deterministic fan-in, cache, and worker recovery    |
-| npm run build               | Passed                                                                                  |
-| npm run test:e2e            | 7 passed in Chromium                                                                    |
-| npm audit --audit-level=low | 0 known vulnerabilities                                                                 |
-| codebasescan doctor         | Runtime and bundled scanner checks passed; offline OSV cache absent warning is explicit |
+## Deterministic release gate
 
-The benchmark measures declared inert fixtures. It is not a generic accuracy claim or a security
-certification.
+| Check                    | Current evidence                                                                          |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| Metadata                 | `codebasescan@0.4.0`; MIT, public package metadata, provenance enabled                    |
+| Format, types, lint      | Passed with zero warnings                                                                 |
+| Core tests               | 419 passed                                                                                |
+| Fixture benchmark        | TP 56, FP 0, FN 0; precision 1.00, recall 1.00                                            |
+| AST benchmark subset     | TP 11, FP 0, FN 0                                                                         |
+| Next.js benchmark subset | TP 7, FP 0, FN 0                                                                          |
+| React benchmark subset   | TP 9, FP 0, FN 0                                                                          |
+| SaaS benchmark subset    | TP 9, FP 0, FN 0                                                                          |
+| Integration tests        | 11 passed, including scanner isolation, cache, recovery, and no-network audit             |
+| Production build         | Passed                                                                                    |
+| Browser workflow         | 7 passed in Chromium                                                                      |
+| Package audit            | 0 known vulnerabilities at `--audit-level=low`                                            |
+| CLI diagnostics          | Runtime and bundled scanner checks passed; absent offline OSV data is an explicit warning |
+| Baseline policy          | Same snapshot produced 0 new, 0 resolved, and 0 gated high findings                       |
+
+The benchmark uses inert, declared ground truth. Its perfect fixture score is a regression signal,
+not a real-world accuracy claim.
 
 ## Packed installation
 
-The actual tarball was installed into an empty generated project. Each smoke ran the installed
-`doctor`, `init`, full static `audit`, current report package, and loopback report server.
+Each smoke test packed the actual CLI, installed it into an empty generated project, and ran the
+installed version, `doctor`, `init`, Codex skill installation, a static audit, report integrity, and
+the loopback report server. The release scripts now fail mechanically above 2 MiB packed or 60 MiB
+installed.
 
-| Runtime / manager | Tarball   | Unpacked package | Installed dependencies | Install | Audit  |
-| ----------------- | --------- | ---------------- | ---------------------- | ------- | ------ |
-| Node 24 / npm     | 268,998 B | 1,201,886 B      | 51,795,441 B           | 5.00 s  | 1.77 s |
-| Node 24 / pnpm    | 268,998 B | 1,201,886 B      | 51,879,641 B           | 1.65 s  | 1.89 s |
-| Node 24 / Yarn    | 268,998 B | 1,201,886 B      | 61,293,286 B           | 3.86 s  | 1.76 s |
+| Runtime / manager |   Tarball | Unpacked package | Installed dependencies | Install |  Audit |
+| ----------------- | --------: | ---------------: | ---------------------: | ------: | -----: |
+| Node 24 / npm     | 279,022 B |      1,255,358 B |           51,861,429 B | 10.87 s | 2.43 s |
+| Node 24 / pnpm    | 279,022 B |      1,255,358 B |           51,945,629 B |  5.79 s | 2.53 s |
+| Node 24 / Yarn    | 279,022 B |      1,255,358 B |           61,780,371 B |  8.79 s | 2.67 s |
 
-The tarball contains 100 files. Next.js, React, SQLite, LangChain, LangGraph, and model-provider
-packages are not installed for the CLI.
+All three installations remain below 60 MiB (62,914,560 bytes). The tarball contains 100 files.
+Next.js, React, SQLite, LangChain, LangGraph, and model-provider packages are not installed with the
+CLI.
 
 ## Real-project calibration
 
-These audits parsed captured source and manifests only. No target configuration module,
-dependency installation, lifecycle script, test, build, or application code ran.
+Sixteen authorized, structurally different repositories were scanned with workflow v84. The scans
+captured source and manifests only: no target module, lifecycle script, dependency installation,
+test, build, or application code ran.
 
-| Project | Snapshot complete | Findings                           | Candidate review | False-negative review | Core coverage          |
-| ------- | ----------------- | ---------------------------------- | ---------------- | --------------------- | ---------------------- |
-| P01     | 1,200 files       | 9: 1 high, 2 medium, 4 low, 2 info | 9 / 9 complete   | sampled               | 14 complete, 2 partial |
-| P02     | 2,555 files       | 45: 6 high, 29 medium, 10 low      | 45 / 45 complete | sampled               | 12 complete, 4 partial |
-| P03     | 415 files         | 0                                  | complete         | sampled               | 12 complete, 0 partial |
-| P04     | 326 files         | 0                                  | complete         | not performed         | 14 complete, 0 partial |
+| Project | Files | Findings | Candidate review | False-negative scope |
+| ------- | ----: | -------: | ---------------- | -------------------- |
+| P01     | 2,555 |       45 | 45 / 45          | sampled              |
+| P02     | 1,200 |        9 | 9 / 9            | sampled              |
+| P03     | 1,082 |       14 | 14 / 14          | sampled              |
+| P04     | 1,411 |       14 | 14 / 14          | sampled              |
+| P05     |   721 |        9 | 9 / 9            | sampled              |
+| P06     |   123 |       19 | 19 / 19          | sampled              |
+| P07     |   277 |       10 | 10 / 10          | sampled              |
+| P08     |    40 |       11 | 11 / 11          | complete checklist   |
+| P09     |   291 |        3 | 3 / 3            | sampled              |
+| P10     |   329 |        4 | 4 / 4            | sampled              |
+| P11     |   839 |        3 | 3 / 3            | sampled              |
+| P12     |    90 |        5 | 5 / 5            | sampled              |
+| P13     |    66 |        2 | 2 / 2            | sampled              |
+| P14     | 2,255 |       57 | 57 / 57          | sampled              |
+| P15     |    58 |        4 | 4 / 4            | complete checklist   |
+| P16     |    35 |        1 | 1 / 1            | complete checklist   |
 
-The workflow-v54 aggregate contains 54 reviewer-labelled candidates: 39 true positives, 2 false
-positives, and 13 not applicable. Sample precision is 95.1%; 53 of 54 evidence assessments were
-correct, all 54 locations were correct, and 53 of 54 explanations were clear. The two remaining
-false positives are documented broad generic-rule boundaries rather than silently removed.
+The corpus contains 11,372 supported files and 210 reviewed candidates: 160 true positives, 10
+false positives, 40 not applicable, and 0 inconclusive. Observed sample precision is 94.1%; the
+critical/high subset is 93.8% (15 true positives, 1 false positive, and 15 not applicable). Evidence,
+location, and explanation assessments are correct or clear for all 210 reviewed candidates.
 
-The refreshed snapshots emitted all eight misses from the preceding bounded manual sample, so the
-current ledgers record no outstanding miss. False-negative review is still incomplete for the
-corpus, no recall is reported, and `accuracyClaimReady` remains false. Semgrep, Gitleaks, OSV, Axe,
-and the HTTP probe were disabled or not performed in these four runs to isolate built-in source
-rules. A separate trusted OSV refresh cached 805 exact package versions and passed `doctor`.
+Every repository received a bounded false-negative review and three received a complete review of
+the declared source-only checklist. The final ledgers contain no outstanding reproducible miss.
+False-negative review is not complete for the whole corpus, so recall is intentionally omitted and
+`accuracyClaimReady` remains false.
 
-## What the gate covers
+The cause-oriented action queue contains 427 tasks. A canonical root-cause, file, title, and expected
+change comparison found 0 duplicate tasks and 0 candidates assigned to more than one task. Forty-five
+repeated occurrences are intentionally collapsed into their shared root-cause task. The observed
+actionable duplicate rate is therefore 0%, below the 5% v1 limit.
 
-- bounded snapshot, path, symlink, size, and hostile-input protections;
-- runtime/test/example scope separation;
-- project profiling and code-first security rules;
-- Node.js manifest and npm/pnpm/Yarn lockfile integrity checks;
-- nine audit modes with explicit coverage and applicability;
-- paired static accessibility and web-posture rules plus bounded Axe import;
-- deterministic pipeline dependency validation, concurrent fan-in, focused modes, exact cache
-  reuse, and worker recovery;
-- Semgrep and Gitleaks isolated local adapters;
-- dependency structure, duplication, dead code, complexity, and imported coverage summaries;
-- OSV and HTTP boundaries with opt-in and bounded failure behavior;
-- versioned agent report/rule schemas and the packaged Codex review skill installer;
-- one current report package, stale-artifact cleanup, legacy-root reading, schemas, integrity
-  manifest, comparison, and policy;
-- reusable GitHub Action with full-context baseline comparison, HTML artifact upload, SARIF upload,
-  and policy exit propagation;
-- CLI initialization, diagnostics, non-interactive behavior, package installation, and report server;
-- persistent review UI, mobile/keyboard paths, mutation protections, and Chromium workflow.
+## Performance
 
-## Release status
+A complete default audit of P03 processed 1,081 supported files and 5.56 MiB without truncation in
+20.43 seconds wall time on the reference environment. Peak resident memory was 576,832 KiB. This is
+below the 120-second v1 limit; it is a reference measurement, not a universal hardware guarantee.
 
-Version 0.3.0 is published on npm with verified provenance, a matching Git tag, and a public GitHub
-release. Its release gate passed locally and in GitHub Actions; clean registry installation reports
-the exact version with no npm audit findings. Ordinary pushes cannot publish. Future releases still
-require the clean release gate, packed-artifact inspection, registry verification, provenance, and
-a matching tag/release.
+## Safety and report contract
 
-Independent owner-confirmed ground truth, native platforms, signed reviewer/executor identity,
-sharding beyond the 4,000-file / 32 MiB snapshot, and formal trademark clearance remain later
-maturity work.
+Automated tests cover snapshot containment, symlink and hostile-path rejection, bounded input,
+timeouts, report escaping and hashes, secret redaction, explicit network and Git-history approval,
+and the no-network default. Static output contains no executable script and includes validated HTML,
+JSON, Markdown, SARIF, CycloneDX, policy, provenance, coverage, agent, and integrity artifacts.
+Disabled, unsupported, partial, failed, and zero-finding states stay distinct.
+
+## Release state
+
+Version 0.3.0 remains the published npm release with verified provenance, matching tag, GitHub
+release, and clean registry installation. Version 0.4.0 is the current candidate and is not published
+by ordinary pushes. Its final tag, provenance, GitHub release, and registry verification require an
+explicit release action after the candidate commit and CI are green.
 
 ## Reproduce
 
@@ -117,6 +126,6 @@ npm run test:package:pnpm
 npm run test:package:yarn
 ```
 
-External scanner integration tests require trusted Semgrep and Gitleaks binaries on `PATH`.
-The audit has no built-in model provider. External coding agents use separately authorized,
+External scanner integration tests require trusted Semgrep and Gitleaks binaries on `PATH`. The
+default audit has no model provider. External coding agents consume separately authorized,
 versioned report and rule contracts.
