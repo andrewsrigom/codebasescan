@@ -33,6 +33,8 @@ import {
 } from '../domain/calibration-schema.ts';
 import { buildAgentReport } from '../domain/agent-report.ts';
 import { agentReportJsonSchema, parseAgentReport } from '../domain/agent-report-schema.ts';
+import { buildAgentContext } from '../domain/agent-context.ts';
+import { agentContextJsonSchema, parseAgentContext } from '../domain/agent-context-schema.ts';
 import {
   agentReviewRulePack,
   agentReviewRulePackJsonSchema,
@@ -275,6 +277,7 @@ export async function writeStaticReport(
   const previousArtifacts = await managedArtifactPaths(root);
 
   const plan = parseRemediationPlan(buildRemediationPlan(report));
+  const agentContext = parseAgentContext(buildAgentContext(report));
   const agentReport = parseAgentReport(buildAgentReport(report));
   const agentRules = parseAgentReviewRulePack(agentReviewRulePack);
   const ruleQuality = parseRuleQualityReport(buildRuleQualityReport(report));
@@ -375,6 +378,16 @@ export async function writeStaticReport(
       path: 'agent-plan.json',
       mediaType: 'application/json',
       content: json(plan),
+    },
+    {
+      path: 'agent-context.json',
+      mediaType: 'application/json',
+      content: json(agentContext),
+    },
+    {
+      path: 'agent-context.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(agentContextJsonSchema()),
     },
     {
       path: 'agent-report.json',

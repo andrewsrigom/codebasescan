@@ -76,6 +76,7 @@ import {
   parseV1CalibrationGate,
 } from '../domain/calibration-schema.ts';
 import { buildAgentReport } from '../domain/agent-report.ts';
+import { buildAgentContext } from '../domain/agent-context.ts';
 import { agentReviewRulePack } from '../domain/agent-rules.ts';
 import { installCodexSkill } from './agent-skill.ts';
 
@@ -146,13 +147,14 @@ function render(report: AuditReport, format: string): string {
       'bundle',
       'plan',
       'agent-plan',
+      'agent-context',
       'agent-report',
       'agent-rules',
       'rule-quality',
     ].includes(format)
   )
     throw new Error(
-      'Use json, md, html, sarif, sbom, bundle, plan, agent-plan, agent-report, agent-rules, or rule-quality.',
+      'Use json, md, html, sarif, sbom, bundle, plan, agent-plan, agent-context, agent-report, agent-rules, or rule-quality.',
     );
   return format === 'html'
     ? toHtml(report)
@@ -167,6 +169,8 @@ function render(report: AuditReport, format: string): string {
                 ? toInvestigationBundle(report)
                 : format === 'agent-report'
                   ? buildAgentReport(report)
+                  : format === 'agent-context'
+                    ? buildAgentContext(report)
                   : format === 'agent-rules'
                     ? agentReviewRulePack
                     : format === 'rule-quality'
@@ -757,6 +761,7 @@ try {
         'sbom',
         'plan',
         'agent-plan',
+        'agent-context',
         'agent-report',
         'agent-rules',
         'rule-quality',

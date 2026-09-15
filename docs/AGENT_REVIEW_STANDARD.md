@@ -12,9 +12,14 @@ An agent should start with the generated package:
 
 1. validate `manifest.json` and the hashes of referenced artifacts;
 2. read `run-manifest.json` to understand scanner status and incomplete coverage;
-3. read `agent-report.json`, `agent-rules.json`, and `agent-plan.json`;
+3. read `agent-context.json`, `agent-report.json`, `agent-rules.json`, and `agent-plan.json`;
 4. select a bounded task or finding before inspecting source;
 5. inspect only relevant repository context under the user's authorization.
+
+`agent-context.json` separates observed source/runtime signals, declared project context, and open
+questions. In particular, it prevents an agent from treating authentication-shaped code as proof
+of cookie authentication, promoting CSRF without browser-managed credentials, or assuming an app
+is standalone when cross-document messaging or framing evidence needs review.
 
 The bundled Codex skill automates this reading order:
 

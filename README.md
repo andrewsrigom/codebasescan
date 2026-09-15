@@ -96,7 +96,7 @@ history. It contains:
 - `audit-report.json` — complete machine-readable result;
 - `run-manifest.json` and `manifest.json` — coverage, versions, limits, hashes, and integrity;
 - `policy-result.json` — CI decision and exit-code evidence;
-- `agent-report.json`, `agent-rules.json`, and `agent-plan.json` — external-agent contracts;
+- `agent-context.json`, `agent-report.json`, `agent-rules.json`, and `agent-plan.json` — external-agent contracts;
 - `report.sarif`, `report.md`, and `sbom.cdx.json` — portable integration formats;
 - JSON Schemas for generated workflow artifacts.
 

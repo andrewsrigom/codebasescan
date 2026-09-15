@@ -12,6 +12,7 @@ import { parseRuleQualityReport } from '../../src/domain/rule-quality-schema.ts'
 import { parseRunManifest } from '../../src/domain/run-manifest-schema.ts';
 import { parsePolicyResult } from '../../src/domain/policy-schema.ts';
 import { parseAgentReport } from '../../src/domain/agent-report-schema.ts';
+import { parseAgentContext } from '../../src/domain/agent-context-schema.ts';
 import { parseAgentReviewRulePack } from '../../src/domain/agent-rules.ts';
 import {
   sampleApiContract,
@@ -51,6 +52,8 @@ test('static report writes a self-contained report directory', async (context) =
       'webhook-contract.json',
       'feature-flags.json',
       'agent-plan.json',
+      'agent-context.json',
+      'agent-context.schema.json',
       'agent-report.json',
       'agent-report.schema.json',
       'agent-rules.json',
@@ -91,6 +94,8 @@ test('static report writes a self-contained report directory', async (context) =
   assert.ok(html.includes('DETERMINISTIC POLICY'));
   assert.ok(html.includes('Policy result'));
   assert.ok(html.includes('href="agent-plan.json"'));
+  assert.ok(html.includes('href="agent-context.json"'));
+  assert.ok(html.includes('href="agent-context.schema.json"'));
   assert.ok(html.includes('href="agent-report.json"'));
   assert.ok(html.includes('href="agent-report.schema.json"'));
   assert.ok(html.includes('href="agent-rules.json"'));
@@ -118,6 +123,14 @@ test('static report writes a self-contained report directory', async (context) =
   assert.ok(html.includes('RULE TRANSPARENCY'));
   assert.ok(html.includes('Applied rule quality'));
   const agentPlan = await readFile(path.join(result.directory, 'agent-plan.json'), 'utf8');
+  const agentContext = parseAgentContext(
+    JSON.parse(await readFile(path.join(result.directory, 'agent-context.json'), 'utf8')),
+  );
+  assert.equal(agentContext.audit.id, report.auditId);
+  const agentContextSchema = JSON.parse(
+    await readFile(path.join(result.directory, 'agent-context.schema.json'), 'utf8'),
+  ) as { properties?: { schemaVersion?: { const?: number } } };
+  assert.equal(agentContextSchema.properties?.schemaVersion?.const, 1);
   const riskPaths = JSON.parse(
     await readFile(path.join(result.directory, 'risk-paths.json'), 'utf8'),
   ) as { summary: { paths: number } };
@@ -168,7 +181,7 @@ test('static report writes a self-contained report directory', async (context) =
   const agentRulesSchema = JSON.parse(
     await readFile(path.join(result.directory, 'agent-rules.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };
-  assert.equal(agentRulesSchema.properties?.schemaVersion?.const, 1);
+  assert.equal(agentRulesSchema.properties?.schemaVersion?.const, 2);
   const schema = JSON.parse(
     await readFile(path.join(result.directory, 'agent-plan.schema.json'), 'utf8'),
   ) as { properties?: { schemaVersion?: { const?: number } } };

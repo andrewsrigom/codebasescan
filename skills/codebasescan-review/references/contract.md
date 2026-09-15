@@ -2,12 +2,17 @@
 
 ## Required artifacts
 
+- `agent-context.json`: observed application signals, declared context, unresolved questions, and coverage warnings.
 - `agent-report.json`: workflow, review depths, prioritized tasks, and rule guidance.
 - `audit-report.json`: immutable deterministic findings and captured evidence.
 - `run-manifest.json`: executed scanner coverage, limitations, artifact paths, and SHA-256 hashes.
 - `agent-rules.json`: versioned review questions, required evidence, risk signals, safe signals, and false-positive checks.
 
 The JSON Schema files beside these artifacts define the machine-readable contracts.
+
+Read context as claims with different strength. An observed cookie operation does not prove that a
+request authenticates with cookies; a `postMessage` call does not prove which deployed application
+is the parent; and a missing source declaration does not prove a missing proxy or CDN control.
 
 ## Evidence model
 

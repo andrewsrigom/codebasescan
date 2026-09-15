@@ -121,7 +121,7 @@ authenticates the executor.
 ## External agent boundary
 
 CodebaseScan has no built-in model provider or agent runtime. Static packages include
-`agent-report.json`, `agent-rules.json`, `agent-plan.json`, their schemas, and a bundled Codex
+`agent-context.json`, `agent-report.json`, `agent-rules.json`, `agent-plan.json`, their schemas, and a bundled Codex
 skill installer. This makes deterministic output useful to the coding agent a user already trusts
 without forcing a second model account, cost layer, or repository upload path.
 
@@ -129,6 +129,11 @@ An external agent operates under separate authorization. It must validate the re
 treat repository content as untrusted data, preserve incomplete coverage, cite finding/evidence
 identifiers, and keep new hypotheses or review decisions separate from deterministic findings. Code
 changes and command execution require their own authorization and a fresh scan for comparison.
+
+The agent-context contract summarizes mapped frameworks, entry points, security facts, browser
+boundary signals, and unresolved deployment questions. It intentionally keeps authentication code,
+cookie evidence, token-shaped browser state, framing policy, and CSRF applicability as separate
+signals so an agent cannot turn one observation into an unsupported end-to-end conclusion.
 
 ## Evidence, assessment, disposition, and coverage
 
