@@ -275,6 +275,46 @@ test('ordered Fastify request hooks can provide an API-key membership guard', ()
   assert.ok(lateFindings.some((finding) => finding.ruleId === 'TW-AST001'));
 });
 
+test('reachable authentication helpers fail closed when credentials are not configured', () => {
+  const vulnerableSnapshot = snapshotOf(`
+    function ensureAuthorized(request) {
+      const token = request.headers.authorization;
+      if (env.API_KEYS.length === 0) return null;
+      if (env.API_KEYS.includes(token)) return null;
+      return Response.json({ error: 'denied' }, { status: 401 });
+    }
+    app.post('/v1/events', async (request) => {
+      const unauthorized = ensureAuthorized(request);
+      if (unauthorized) return unauthorized;
+      return database.events.create({ data: request.body });
+    });
+  `);
+  const vulnerable = scanAstSecurity(
+    vulnerableSnapshot,
+    profileProject(vulnerableSnapshot).profile,
+  ).findings;
+  assert.ok(vulnerable.some((finding) => finding.ruleId === 'TW-AST019'));
+
+  const protectedSnapshot = snapshotOf(`
+    function ensureAuthorized(request) {
+      const token = request.headers.authorization;
+      if (env.API_KEYS.length === 0) throw new Error('API_KEYS must be configured');
+      if (env.API_KEYS.includes(token)) return null;
+      return Response.json({ error: 'denied' }, { status: 401 });
+    }
+    app.post('/v1/events', async (request) => {
+      const unauthorized = ensureAuthorized(request);
+      if (unauthorized) return unauthorized;
+      return database.events.create({ data: request.body });
+    });
+  `);
+  const protectedFindings = scanAstSecurity(
+    protectedSnapshot,
+    profileProject(protectedSnapshot).profile,
+  ).findings;
+  assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST019'));
+});
+
 test('authentication wrappers protect mapped Next route callbacks', () => {
   const snapshot = snapshotOf(
     `

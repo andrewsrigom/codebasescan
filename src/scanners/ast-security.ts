@@ -18,6 +18,7 @@ import {
   isMutatingEntrypoint,
   isWebhookEntrypoint,
   reachableFacts,
+  reachableSymbols,
   sensitiveProjectFactKinds,
 } from '../domain/project-graph.ts';
 
@@ -1026,6 +1027,58 @@ function functionName(node: ts.FunctionLikeDeclarationBase): string | null {
   return null;
 }
 
+function branchAllowsAnonymousContinuation(node: ts.Statement): boolean {
+  let allows = false;
+  const visit = (child: ts.Node): void => {
+    if (allows || (child !== node && isExecutableFunction(child))) return;
+    if (ts.isReturnStatement(child)) {
+      const value = child.expression ? unwrapExpression(child.expression) : undefined;
+      allows =
+        !value ||
+        value.kind === ts.SyntaxKind.NullKeyword ||
+        value.kind === ts.SyntaxKind.TrueKeyword ||
+        (ts.isCallExpression(value) && /(?:^|\.)next$/i.test(callName(value)));
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return allows;
+}
+
+function isEmptyCredentialConfiguration(node: ts.Expression, source: ts.SourceFile): boolean {
+  const text = node.getText(source).replace(/\s+/g, '').toLowerCase();
+  if (!/(?:api[_-]?keys?|auth|tokens?|secrets?|credentials?)/i.test(text)) return false;
+  return (
+    /\.(?:length|size)(?:===|==|<=)0/.test(text) ||
+    /0(?:===|==|>=)[a-z0-9_.$?]+\.(?:length|size)/.test(text) ||
+    /^![a-z0-9_.$?]*(?:api[_-]?key|auth|token|secret|credential)/.test(text)
+  );
+}
+
+function failOpenAuthenticationBranch(
+  node: ts.FunctionLikeDeclarationBase,
+  source: ts.SourceFile,
+  firstCredentialGuardLine: number,
+): ts.IfStatement | null {
+  let bypass: ts.IfStatement | null = null;
+  const visit = (child: ts.Node): void => {
+    if (bypass || (child !== node.body && isExecutableFunction(child))) return;
+    if (
+      ts.isIfStatement(child) &&
+      lineOf(source, child) < firstCredentialGuardLine &&
+      isEmptyCredentialConfiguration(child.expression, source) &&
+      branchAllowsAnonymousContinuation(child.thenStatement)
+    ) {
+      bypass = child;
+      return;
+    }
+    ts.forEachChild(child, visit);
+  };
+  if (node.body) visit(node.body);
+  return bypass;
+}
+
 function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding[] {
   const findings: Finding[] = [];
   const symbolsByLocation = new Map(
@@ -1035,6 +1088,21 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
   for (const entrypoint of profile.entrypoints)
     for (const symbolId of entrypoint.symbolIds)
       entrypointsBySymbol.set(symbolId, [...(entrypointsBySymbol.get(symbolId) ?? []), entrypoint]);
+  const authenticationFactsBySymbol = new Map<string, ProjectFact[]>();
+  const authenticationEntrypointBySymbol = new Map<string, ProjectEntrypoint>();
+  for (const fact of profile.facts) {
+    if (!fact.ownerSymbolId || fact.kind !== 'authentication') continue;
+    authenticationFactsBySymbol.set(fact.ownerSymbolId, [
+      ...(authenticationFactsBySymbol.get(fact.ownerSymbolId) ?? []),
+      fact,
+    ]);
+  }
+  for (const entrypoint of profile.entrypoints)
+    for (const symbolId of reachableSymbols(profile, entrypoint))
+      authenticationEntrypointBySymbol.set(
+        symbolId,
+        authenticationEntrypointBySymbol.get(symbolId) ?? entrypoint,
+      );
 
   for (const file of snapshot.files.filter(
     (item) => isRuntimeSource(item) && /\.[cm]?[jt]sx?$/.test(item.path),
@@ -1081,6 +1149,47 @@ function directAstFindings(snapshot: Snapshot, profile: ProjectProfile): Finding
       };
       visitSecret(source);
     }
+
+    const visitAuthenticationHelpers = (node: ts.Node): void => {
+      if (isExecutableFunction(node) && node.body) {
+        const name = functionName(node);
+        const line = lineOf(source, node);
+        const symbol = name ? symbolsByLocation.get(`${file.path}:${line}:${name}`) : undefined;
+        const facts = symbol ? (authenticationFactsBySymbol.get(symbol.id) ?? []) : [];
+        const entrypoint = symbol ? authenticationEntrypointBySymbol.get(symbol.id) : undefined;
+        const authenticationShaped =
+          facts.length > 0 ||
+          Boolean(name && /(?:auth|authoriz|credential|api.?key|session)/i.test(name));
+        if (entrypoint && authenticationShaped) {
+          const firstCredentialGuardLine = facts.length
+            ? Math.min(...facts.map((fact) => fact.line))
+            : Number.MAX_SAFE_INTEGER;
+          const bypass = failOpenAuthenticationBranch(node, source, firstCredentialGuardLine);
+          if (bypass) {
+            const candidate = directFinding({
+              snapshot,
+              file: file.path,
+              line: lineOf(source, bypass),
+              entrypoint,
+              ruleId: 'TW-AST019',
+              title: 'Authentication guard can fail open without credentials configured',
+              category: 'authentication',
+              severity: 'high',
+              description:
+                'A reachable authentication helper returns a success-shaped value when its credential configuration is empty, before the mapped credential check. A missing or malformed deployment secret may therefore make protected routes public.',
+              remediation:
+                'Fail closed when credential configuration is absent. Reject startup or deny the request, and add a production configuration test that proves an empty credential set cannot authorize access.',
+              cwe: ['CWE-306', 'CWE-636'],
+              observation:
+                'An empty credential configuration reaches a permissive return before the mapped credential guard.',
+            });
+            if (candidate) findings.push(candidate);
+          }
+        }
+      }
+      ts.forEachChild(node, visitAuthenticationHelpers);
+    };
+    visitAuthenticationHelpers(source);
 
     const visitFunction = (node: ts.Node): void => {
       if (!isExecutableFunction(node) || !node.body) {
@@ -1922,7 +2031,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.6',
+        version: '0.11.7',
       },
     };
 
@@ -2009,7 +2118,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.6',
+      version: '0.11.7',
     },
   };
 }

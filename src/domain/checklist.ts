@@ -118,7 +118,7 @@ export function buildSecurityChecklist(input: ChecklistInput): SecurityChecklist
   const saasRefs = references('scanner', [saasRun?.id]);
   const controls: SecurityControlResult[] = [];
 
-  const authGaps = findingsByRule(findings, ['TW-AST001']);
+  const authGaps = findingsByRule(findings, ['TW-AST001', 'TW-AST019']);
   const authenticated = mutations.filter((context) =>
     context.facts.some((fact) => ['authentication', 'authorization'].includes(fact.kind)),
   );

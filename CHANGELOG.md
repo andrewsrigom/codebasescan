@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Identified reachable authentication helpers that continue when credential configuration is empty,
+  while accepting helpers that fail closed before checking request credentials.
 - Traced caught error details through returned response-helper calls while retaining stable public
   error wrappers as clean source evidence.
 - Added synchronous Node.js filesystem operations to structural authorization and data-access
