@@ -416,7 +416,7 @@ try {
   } else if (command === 'agent' && target === 'install' && arguments_[2] === 'codex') {
     const project = arguments_[3] && !arguments_[3].startsWith('--') ? arguments_[3] : '.';
     const destination = await installCodexSkill(project, arguments_.includes('--force'));
-    console.log(`Installed CodebaseScan review skill at ${destination}`);
+    console.log(`Installed CodebaseScan agent skills at ${path.dirname(destination)}`);
   } else if (command === 'open') {
     if (nonInteractive)
       throw new Error('The report server is interactive. Remove --non-interactive and CI=true.');

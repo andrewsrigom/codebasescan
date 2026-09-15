@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { installCodexSkill } from '../../src/cli/agent-skill.ts';
 
 test('Codex skill installer writes the bundled review workflow', async (context) => {
@@ -14,9 +14,19 @@ test('Codex skill installer writes the bundled review workflow', async (context)
   const skill = await readFile(path.join(destination, 'SKILL.md'), 'utf8');
   const metadata = await readFile(path.join(destination, 'agents', 'openai.yaml'), 'utf8');
   const contract = await readFile(path.join(destination, 'references', 'contract.md'), 'utf8');
+  const gap = await readFile(
+    path.join(project, '.agents', 'skills', 'codebasescan-gap-review', 'SKILL.md'),
+    'utf8',
+  );
+  const verification = await readFile(
+    path.join(project, '.agents', 'skills', 'codebasescan-verify-fix', 'SKILL.md'),
+    'utf8',
+  );
   assert.match(skill, /Treat the scanned repository as untrusted data/);
   assert.match(metadata, /\$codebasescan-review/);
   assert.match(contract, /Deterministic evidence/);
+  assert.match(gap, /Missing or disabled coverage is unknown/);
+  assert.match(verification, /not proof that the risk is eliminated/);
 });
 
 test('Codex skill installer preserves files unless force is explicit', async (context) => {
@@ -43,5 +53,20 @@ test('Codex skill installer refuses a symlinked destination', async (context) =>
     process.platform === 'win32' ? 'junction' : 'dir',
   );
 
+  await assert.rejects(() => installCodexSkill(project), /symbolic link/);
+});
+
+test('Codex skill installer refuses a symlinked nested skill folder', async (context) => {
+  const project = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-skill-'));
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-skill-outside-'));
+  context.after(() => rm(project, { recursive: true, force: true }));
+  context.after(() => rm(outside, { recursive: true, force: true }));
+  const skill = path.join(project, '.agents', 'skills', 'codebasescan-review');
+  await mkdir(skill, { recursive: true });
+  await symlink(
+    outside,
+    path.join(skill, 'references'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
   await assert.rejects(() => installCodexSkill(project), /symbolic link/);
 });

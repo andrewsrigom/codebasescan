@@ -66,9 +66,19 @@ For Codex:
 npx codebasescan agent install codex .
 ```
 
-This writes `.agents/skills/codebasescan-review` in the target project. The skill verifies report
-hashes, reads the generated rules and work plan, inspects relevant repository context, challenges
-likely false positives, and keeps new hypotheses separate from deterministic findings.
+This writes three repo-scoped skills under `.agents/skills/`: `codebasescan-review` for one finding,
+`codebasescan-gap-review` for questions the scanner could not settle, and
+`codebasescan-verify-fix` for an explicitly authorized before/after check. They use the verified
+report and keep new hypotheses separate from deterministic findings.
+
+The same evidence is readable from the terminal without loading the whole report:
+
+```bash
+npx codebasescan report verify codebasescan-report
+npx codebasescan findings list codebasescan-report --limit 20
+npx codebasescan finding show codebasescan-report <finding-id>
+npx codebasescan coverage show codebasescan-report
+```
 
 Other agents can consume the same versioned JSON and schemas. They should never silently rewrite,
 downgrade, suppress, or confirm scanner evidence.

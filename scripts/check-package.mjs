@@ -32,6 +32,8 @@ const required = [
   'skills/codebasescan-review/SKILL.md',
   'skills/codebasescan-review/agents/openai.yaml',
   'skills/codebasescan-review/references/contract.md',
+  'skills/codebasescan-gap-review/SKILL.md',
+  'skills/codebasescan-verify-fix/SKILL.md',
   'package.json',
 ];
 for (const file of required)
