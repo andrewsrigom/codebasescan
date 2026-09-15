@@ -4,6 +4,8 @@ Notable changes are recorded here.
 
 ## Unreleased
 
+- Limited fail-open authentication detection to empty trusted credential collections so ordinary
+  rejection of invalid request tokens and absent database matches remains clean.
 - Identified reachable authentication helpers that continue when credential configuration is empty,
   while accepting helpers that fail closed before checking request credentials.
 - Traced caught error details through returned response-helper calls while retaining stable public

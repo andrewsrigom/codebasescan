@@ -313,6 +313,26 @@ test('reachable authentication helpers fail closed when credentials are not conf
     profileProject(protectedSnapshot).profile,
   ).findings;
   assert.ok(!protectedFindings.some((finding) => finding.ruleId === 'TW-AST019'));
+
+  const invalidRequestCredentialSnapshot = snapshotOf(`
+    function authenticateWorkspaceApiKey(secret) {
+      if (!secret.startsWith('sk_')) return null;
+      if (secret.length < 24) return null;
+      const apiKey = database.apiKeys.findFirst({ where: { secret } });
+      if (!apiKey) return null;
+      return apiKey;
+    }
+    app.post('/v1/events', async (request) => {
+      const apiKey = authenticateWorkspaceApiKey(request.headers.authorization);
+      if (!apiKey) return Response.json({ error: 'denied' }, { status: 401 });
+      return database.events.create({ data: request.body });
+    });
+  `);
+  const invalidRequestCredentialFindings = scanAstSecurity(
+    invalidRequestCredentialSnapshot,
+    profileProject(invalidRequestCredentialSnapshot).profile,
+  ).findings;
+  assert.ok(!invalidRequestCredentialFindings.some((finding) => finding.ruleId === 'TW-AST019'));
 });
 
 test('authentication wrappers protect mapped Next route callbacks', () => {

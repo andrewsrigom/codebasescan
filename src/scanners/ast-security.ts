@@ -1048,11 +1048,12 @@ function branchAllowsAnonymousContinuation(node: ts.Statement): boolean {
 
 function isEmptyCredentialConfiguration(node: ts.Expression, source: ts.SourceFile): boolean {
   const text = node.getText(source).replace(/\s+/g, '').toLowerCase();
-  if (!/(?:api[_-]?keys?|auth|tokens?|secrets?|credentials?)/i.test(text)) return false;
+  const trustedCredentialCollection =
+    /(?:api[_-]?keys|allowed[a-z0-9_]*(?:tokens|secrets|credentials)|trusted[a-z0-9_]*(?:tokens|secrets|credentials)|credentials|authproviders?)/;
+  if (!trustedCredentialCollection.test(text)) return false;
   return (
     /\.(?:length|size)(?:===|==|<=)0/.test(text) ||
-    /0(?:===|==|>=)[a-z0-9_.$?]+\.(?:length|size)/.test(text) ||
-    /^![a-z0-9_.$?]*(?:api[_-]?key|auth|token|secret|credential)/.test(text)
+    /0(?:===|==|>=)[a-z0-9_.$?]+\.(?:length|size)/.test(text)
   );
 }
 
@@ -2031,7 +2032,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
         findings: 0,
         detail:
           'No supported structural profile was available. No clean authorization result is implied.',
-        version: '0.11.7',
+        version: '0.11.8',
       },
     };
 
@@ -2118,7 +2119,7 @@ export function scanAstSecurity(snapshot: Snapshot, profile: ProjectProfile): As
       durationMs: Math.max(0, Math.round(performance.now() - started)),
       findings: Math.min(findings.length, 300),
       detail: `Evaluated ${profile.entrypoints.length} mapped entry point(s), request-data flows, SQL/NoSQL, process, filesystem, outbound, deserialization, regex, object-write, upload, cookie, and client/server boundaries. Cross-file authorization and selected taint flows follow explicit call relationships up to five hops and include applicable Next.js middleware. Missing runtime, RLS, and external policy evidence remains unverified.${partial ? ' Structural coverage was partial.' : ''}`,
-      version: '0.11.7',
+      version: '0.11.8',
     },
   };
 }
