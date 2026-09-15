@@ -1,6 +1,7 @@
 import path from 'node:path';
 import os from 'node:os';
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { configuration } from '../server/config.ts';
 import type { AuditStore } from '../server/store.ts';
 import { captureSnapshot, estimateProjectScope, validateProjectRoot } from '../security/paths.ts';
@@ -38,6 +39,13 @@ import {
   upsertReviewLedger,
 } from '../domain/review-ledger.ts';
 import { parseReviewLedger } from '../domain/review-ledger-schema.ts';
+import {
+  matchTriageLedger,
+  triageAssessments,
+  upsertTriageLedger,
+  type TriageAssessment,
+} from '../domain/triage-ledger.ts';
+import { parseTriageLedger } from '../domain/triage-ledger-schema.ts';
 import { buildPolicyResult, policyProfiles, type PolicyProfile } from '../domain/policy.ts';
 import {
   applySuppressionLedger,
@@ -247,6 +255,18 @@ async function loadReviewLedger(file: string) {
   }
 }
 
+async function loadTriageLedger(file: string) {
+  const resolved = path.resolve(file);
+  const metadata = await stat(resolved);
+  if (!metadata.isFile() || metadata.size > 2 * 1024 * 1024)
+    throw new Error('Triage ledger must be a regular JSON file no larger than 2 MB.');
+  try {
+    return parseTriageLedger(JSON.parse(await readFile(resolved, 'utf8')) as unknown);
+  } catch {
+    throw new Error('Triage ledger is not valid CodebaseScan JSON.');
+  }
+}
+
 async function loadSuppressionLedger(file: string): Promise<SuppressionLedger> {
   const resolved = path.resolve(file);
   const metadata = await stat(resolved);
@@ -297,6 +317,20 @@ async function existingReviewLedger(file: string) {
   }
 }
 
+async function existingTriageLedger(file: string) {
+  try {
+    return await loadTriageLedger(file);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as NodeJS.ErrnoException).code === 'ENOENT'
+    )
+      return undefined;
+    throw error;
+  }
+}
+
 async function existingSuppressionLedger(file: string) {
   try {
     return await loadSuppressionLedger(file);
@@ -332,11 +366,37 @@ function portableReviewDecision(value: string | undefined): PortableReviewDecisi
 }
 
 async function defaultReviewLedgerDestination(location: string): Promise<string> {
+  return privateLedgerDestination(location, 'review-ledger');
+}
+
+async function defaultTriageLedgerDestination(location: string): Promise<string> {
+  return privateLedgerDestination(location, 'triage-ledger');
+}
+
+async function privateLedgerDestination(location: string, name: string): Promise<string> {
   const resolved = path.resolve(location);
   const metadata = await stat(resolved);
-  return metadata.isDirectory()
-    ? path.join(resolved, 'review-ledger.json')
-    : path.join(path.dirname(resolved), 'review-ledger.json');
+  const reportDirectory = metadata.isDirectory() ? resolved : path.dirname(resolved);
+  return path.join(path.dirname(reportDirectory), `${path.basename(reportDirectory)}.${name}.json`);
+}
+
+async function legacyReviewLedgerDestination(location: string): Promise<string> {
+  const resolved = path.resolve(location);
+  const metadata = await stat(resolved);
+  return path.join(
+    metadata.isDirectory() ? resolved : path.dirname(resolved),
+    'review-ledger.json',
+  );
+}
+
+async function writePrivateLedger(destination: string, value: unknown): Promise<void> {
+  const temporary = `${destination}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600, flag: 'wx' });
+    await rename(temporary, destination);
+  } finally {
+    await rm(temporary, { force: true });
+  }
 }
 
 async function defaultSuppressionLedgerDestination(location: string): Promise<string> {
@@ -550,12 +610,17 @@ try {
     !arguments_[3].startsWith('--')
   ) {
     const report = await loadReportArtifact(target);
+    const requestedOutput = option('--output');
     const destination = path.resolve(
-      option('--output') ?? (await defaultReviewLedgerDestination(target)),
+      requestedOutput ?? (await defaultReviewLedgerDestination(target)),
     );
     const note = option('--note');
     if (!note) throw new Error('Use --note with the evidence supporting this review decision.');
-    const current = await existingReviewLedger(destination);
+    const privateLedger = await existingReviewLedger(destination);
+    const legacyPath = requestedOutput ? undefined : await legacyReviewLedgerDestination(target);
+    const legacyLedger =
+      !privateLedger && legacyPath ? await existingReviewLedger(legacyPath) : undefined;
+    const current = privateLedger ?? legacyLedger;
     const ledger = parseReviewLedger(
       upsertReviewLedger(current, report, {
         findingId: arguments_[2],
@@ -563,8 +628,93 @@ try {
         note,
       }),
     );
-    await writeFile(destination, `${JSON.stringify(ledger, null, 2)}\n`, { mode: 0o600 });
+    await writePrivateLedger(destination, ledger);
     console.log(`Saved review ledger ${destination}`);
+    if (legacyLedger)
+      console.error(
+        `The old ledger remains in the report directory: ${legacyPath}. Exclude it before public hosting.`,
+      );
+  } else if (
+    command === 'triage' &&
+    target === 'record' &&
+    arguments_[2] &&
+    arguments_[3] &&
+    arguments_[4] &&
+    !arguments_[2].startsWith('--') &&
+    !arguments_[3].startsWith('--') &&
+    !arguments_[4].startsWith('--')
+  ) {
+    const location = arguments_[2];
+    const report = await loadReportArtifact(location);
+    const assessment = enumValue<TriageAssessment>('assessment', arguments_[4], triageAssessments);
+    const evidenceIds = arguments_.flatMap((argument, index) => {
+      if (argument !== '--evidence') return [];
+      const id = arguments_[index + 1];
+      if (!id || id.startsWith('--')) throw new Error('Use --evidence with a finding evidence ID.');
+      return [id];
+    });
+    const note = option('--note');
+    if (!note) throw new Error('Use --note with the evidence supporting this assessment.');
+    const destination = path.resolve(
+      option('--output') ?? (await defaultTriageLedgerDestination(location)),
+    );
+    const ledger = parseTriageLedger(
+      upsertTriageLedger(await existingTriageLedger(destination), report, {
+        findingId: arguments_[3],
+        assessment,
+        evidenceIds,
+        note,
+      }),
+    );
+    await writePrivateLedger(destination, ledger);
+    console.log(`Saved agent triage ledger ${destination}`);
+  } else if (
+    command === 'triage' &&
+    target === 'list' &&
+    arguments_[2] &&
+    !arguments_[2].startsWith('--')
+  ) {
+    const location = arguments_[2];
+    const report = await loadReportArtifact(location);
+    const ledgerPath = path.resolve(
+      option('--ledger') ?? (await defaultTriageLedgerDestination(location)),
+    );
+    const ledger = await existingTriageLedger(ledgerPath);
+    if (!ledger) {
+      const missing = { status: 'not_recorded', ledger: ledgerPath, entries: 0 };
+      console.log(
+        arguments_.includes('--json')
+          ? JSON.stringify(missing)
+          : 'No agent triage ledger recorded.',
+      );
+    } else {
+      const matches = matchTriageLedger(report, ledger);
+      const counts = {
+        current: matches.filter((item) => item.status === 'current').length,
+        stale: matches.filter((item) => item.status === 'stale').length,
+        unmatched: matches.filter((item) => item.status === 'unmatched').length,
+      };
+      const limit = positiveIntegerOption('--limit') ?? 20;
+      if (limit > 100) throw new Error('Use --limit with at most 100 entries.');
+      if (arguments_.includes('--json'))
+        console.log(
+          JSON.stringify({
+            status: 'recorded',
+            ledger: ledgerPath,
+            counts,
+            entries: matches.slice(0, limit),
+          }),
+        );
+      else {
+        console.log(
+          `Agent triage: ${counts.current} current, ${counts.stale} stale, ${counts.unmatched} unmatched. Scanner findings and policy are unchanged.`,
+        );
+        for (const item of matches.slice(0, limit))
+          console.log(
+            `${item.status} ${item.entry.assessment} ${item.findingId ?? item.entry.fingerprint}`,
+          );
+      }
+    }
   } else if (command === 'suppress' && target && arguments_[2] && !arguments_[2].startsWith('--')) {
     const report = await loadReportArtifact(target);
     const destination = path.resolve(

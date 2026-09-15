@@ -69,7 +69,15 @@ Build a before/after report using explicit external verification evidence.`,
 Export one bounded remediation task for an agent or another tool.`,
   review: `Usage: codebasescan review <report> <finding-id> <decision> --note <evidence> [--output ledger.json]
 
-Record confirmed, false_positive, or accepted_risk as portable human review evidence.`,
+Record confirmed, false_positive, or accepted_risk as portable human review evidence.
+The default ledger is private beside the report directory, not inside the public report.`,
+  triage: `Usage:
+  codebasescan triage record <report> <finding-id> <assessment> --evidence <evidence-id> --note <reason> [--output ledger.json]
+  codebasescan triage list <report> [--ledger ledger.json] [--limit 20] [--json]
+
+Assessments: likely_valid, likely_false_positive, inconclusive.
+Repeat --evidence for multiple IDs from the selected finding. Agent triage is a private
+project-side ledger. It never changes scanner findings, human review, or policy.`,
   suppress: `Usage: codebasescan suppress <report> <finding-id> --owner <name> --justification <reason> --evidence <record> [options]
 
 Create or update a portable, expiring suppression ledger.`,
@@ -133,6 +141,7 @@ Evidence workflow:
   agent      Install agent integrations
   finalize   Build a verified before/after report
   task       Export one remediation task for an agent
+  triage     Record or list external-agent assessments
   review     Record a portable human decision
   suppress   Record an evidence-backed suppression
   calibration Record independent detector-quality ground truth

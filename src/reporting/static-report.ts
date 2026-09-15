@@ -20,6 +20,7 @@ import {
 import { buildRuleQualityReport } from '../domain/rule-quality.ts';
 import { parseRuleQualityReport, ruleQualityJsonSchema } from '../domain/rule-quality-schema.ts';
 import { reviewLedgerJsonSchema } from '../domain/review-ledger-schema.ts';
+import { triageLedgerJsonSchema } from '../domain/triage-ledger-schema.ts';
 import { buildRunManifest, type RunManifestOutput } from '../domain/run-manifest.ts';
 import { parseRunManifest, runManifestJsonSchema } from '../domain/run-manifest-schema.ts';
 import { buildPolicyResult, type PolicyResult } from '../domain/policy.ts';
@@ -448,6 +449,11 @@ export async function writeStaticReport(
       path: 'review-ledger.schema.json',
       mediaType: 'application/schema+json',
       content: json(reviewLedgerJsonSchema()),
+    },
+    {
+      path: 'triage-ledger.schema.json',
+      mediaType: 'application/schema+json',
+      content: json(triageLedgerJsonSchema()),
     },
     {
       path: 'calibration-ledger.schema.json',

@@ -66,6 +66,7 @@ test('static report writes a self-contained report directory', async (context) =
       'rule-quality.json',
       'rule-quality.schema.json',
       'review-ledger.schema.json',
+      'triage-ledger.schema.json',
       'calibration-ledger.schema.json',
       'calibration-report.schema.json',
       'suppression-ledger.schema.json',
@@ -103,6 +104,7 @@ test('static report writes a self-contained report directory', async (context) =
   assert.ok(html.includes('href="agent-plan.schema.json"'));
   assert.ok(html.includes('href="rule-quality.json"'));
   assert.ok(html.includes('href="review-ledger.schema.json"'));
+  assert.ok(html.includes('href="triage-ledger.schema.json"'));
   assert.ok(html.includes('href="calibration-ledger.schema.json"'));
   assert.ok(html.includes('href="calibration-report.schema.json"'));
   assert.ok(html.includes('REMEDIATION QUEUE'));
