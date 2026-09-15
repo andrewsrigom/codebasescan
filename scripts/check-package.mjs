@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 const execute = promisify(execFile);
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const npmArguments = ['pack', '--dry-run', '--json', '--ignore-scripts'];
+const npmExecPath = process.env.npm_execpath;
+const npmCommand = process.platform === 'win32' && npmExecPath ? process.execPath : 'npm';
+const npmCommandArguments =
+  process.platform === 'win32' && npmExecPath ? [npmExecPath, ...npmArguments] : npmArguments;
 const maximumPackedBytes = 2 * 1024 * 1024;
-const { stdout } = await execute(npm, ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+const { stdout } = await execute(npmCommand, npmCommandArguments, {
   cwd: root,
   maxBuffer: 16 * 1024 * 1024,
 });

@@ -37,7 +37,11 @@ test('Codex skill installer refuses a symlinked destination', async (context) =>
   const outside = await mkdtemp(path.join(os.tmpdir(), 'codebasescan-skill-outside-'));
   context.after(() => rm(project, { recursive: true, force: true }));
   context.after(() => rm(outside, { recursive: true, force: true }));
-  await symlink(outside, path.join(project, '.codex'));
+  await symlink(
+    outside,
+    path.join(project, '.codex'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
 
   await assert.rejects(() => installCodexSkill(project), /symbolic link/);
 });

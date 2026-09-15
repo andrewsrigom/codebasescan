@@ -19,7 +19,11 @@ test('worker startup removes only recognized stale scanner staging', async (cont
   await writeFile(path.join(temporary, 'keep-me', 'note.txt'), 'keep');
   await writeFile(path.join(temporary, 'semgrep-regular-file'), 'keep');
   await writeFile(path.join(outside, 'marker.txt'), 'outside');
-  await symlink(outside, path.join(temporary, 'gitleaks-link'), 'dir');
+  await symlink(
+    outside,
+    path.join(temporary, 'gitleaks-link'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
 
   assert.equal(await cleanupStaleScannerStaging(temporary), 3);
   await assert.rejects(lstat(path.join(temporary, 'semgrep-old')), { code: 'ENOENT' });

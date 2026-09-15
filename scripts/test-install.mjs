@@ -12,10 +12,19 @@ if (!['npm', 'pnpm', 'yarn'].includes(manager))
   throw new Error('Use npm, pnpm, or yarn for the package smoke test.');
 const executable = (name) => (process.platform === 'win32' ? `${name}.cmd` : name);
 
+function invocation(command, arguments_) {
+  const npmExecPath = process.env.npm_execpath;
+  if (process.platform !== 'win32' || !npmExecPath || !['npm', 'npx'].includes(command))
+    return { command: executable(command), arguments: arguments_ };
+  const cli = command === 'npm' ? npmExecPath : path.join(path.dirname(npmExecPath), 'npx-cli.js');
+  return { command: process.execPath, arguments: [cli, ...arguments_] };
+}
+
 function run(command, arguments_, options = {}) {
   const started = performance.now();
   return new Promise((resolve, reject) => {
-    const child = spawn(executable(command), arguments_, {
+    const resolved = invocation(command, arguments_);
+    const child = spawn(resolved.command, resolved.arguments, {
       cwd: options.cwd ?? root,
       env: options.env ?? process.env,
       stdio: options.capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
